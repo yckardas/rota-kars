@@ -1,0 +1,411 @@
+import { useEffect, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
+import {
+  ArrowRight,
+  MapPin,
+  Phone,
+  Mail,
+  Instagram,
+  ExternalLink,
+  Check,
+  BedDouble,
+  Search,
+  LoaderCircle,
+  Compass,
+} from "lucide-react";
+import { RequestForm } from "../components/RequestForm";
+import { ReservationTicket } from "./Booking";
+import { api, post } from "../lib/api";
+import type { Catalog, Hotel, Reservation } from "../lib/types";
+export function Hotels() {
+  const [hotels, setHotels] = useState<Hotel[]>([]),
+    [request, setRequest] = useState(false),
+    [hotelId, setHotelId] = useState<string>(),
+    [error, setError] = useState(false);
+  useEffect(() => {
+    api<Hotel[]>("/hotels")
+      .then(setHotels)
+      .catch(() => setError(true));
+  }, []);
+  return (
+    <>
+      <section className="hotel-hero">
+        <img src="/images/stay.jpg" alt="Temsili konaklama görseli" />
+        <div className="container">
+          <span className="section-note">
+            Yolculuğunuza bir gece daha ekleyin
+          </span>
+          <h1>
+            Kars’ta güzel
+            <br />
+            bir mola.
+          </h1>
+          <p>
+            Anlaşmalı otellerimizde konaklamanızı planlayın.
+            <br />
+            Tarihlerinizi paylaşın, size uygun seçenekleri birlikte bulalım.
+          </p>
+          <button className="btn btn-white" onClick={() => setRequest(true)}>
+            Konaklama talebi oluştur <ArrowRight size={17} />
+          </button>
+        </div>
+        <small>Temsili oda görseli</small>
+      </section>
+      <section className="container section">
+        <div className="section-heading">
+          <div>
+            <span className="section-note">
+              Sizin için birlikte planlıyoruz
+            </span>
+            <h2>İyi bir yolculuğa, iyi bir konaklama.</h2>
+          </div>
+        </div>
+        {hotels.length > 0 ? (
+          <div className="tour-grid">
+            {hotels.map((h) => (
+              <article className="hotel-card" key={h.id}>
+                {h.image && <img src={h.image} alt={h.name} loading="lazy" />}
+                <div>
+                  <span className="muted">
+                    <MapPin size={14} />
+                    {h.location}
+                  </span>
+                  <h3>{h.name}</h3>
+                  <p>{h.description}</p>
+                  <div className="hotel-amenities">
+                    {h.amenities.map((a) => (
+                      <span key={a}>
+                        <Check size={13} />
+                        {a}
+                      </span>
+                    ))}
+                  </div>
+                  <button
+                    className="btn"
+                    onClick={() => {
+                      setHotelId(h.id);
+                      setRequest(true);
+                    }}
+                  >
+                    Müsaitlik talep et
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="hotel-empty">
+            <BedDouble size={42} strokeWidth={1} />
+            <div>
+              <h3>Konaklamanızı size göre planlayalım.</h3>
+              <p>
+                {error
+                  ? "Otel listesine şu anda erişilemiyor. Talep bırakarak seçeneklerinizi sorabilirsiniz."
+                  : "Otel seçeneklerini tarihlerinize ve oda tercihinize göre acentemizle netleştirebilirsiniz."}
+              </p>
+            </div>
+            <button className="btn" onClick={() => setRequest(true)}>
+              Tarihlerimi paylaşayım
+            </button>
+          </div>
+        )}
+        <div className="stay-process">
+          <div>
+            <span>1</span>
+            <h3>Tarihlerinizi paylaşın</h3>
+            <p>Giriş, çıkış ve kişi sayısını bize iletin.</p>
+          </div>
+          <div>
+            <span>2</span>
+            <h3>Seçenekleri değerlendirin</h3>
+            <p>Acente güncel müsaitlik ve fiyatı teyit eder.</p>
+          </div>
+          <div>
+            <span>3</span>
+            <h3>Konaklamanız netleşsin</h3>
+            <p>Seçiminiz ve acente onayı sonrasında rezervasyon kesinleşir.</p>
+          </div>
+        </div>
+      </section>
+      {request && (
+        <RequestForm
+          hotels={hotels}
+          hotelId={hotelId}
+          onClose={() => setRequest(false)}
+        />
+      )}
+    </>
+  );
+}
+export function Lookup({ catalog }: { catalog: Catalog }) {
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState(""),
+    [result, setResult] = useState<Reservation | null>(null),
+    [credentials, setCredentials] = useState({ reference: "", email: "" }),
+    [confirm, setConfirm] = useState(false);
+  async function lookup(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    setResult(null);
+    setConfirm(false);
+    try {
+      setResult(await post<Reservation>("/reservations/lookup", credentials));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function cancel() {
+    setBusy(true);
+    try {
+      setResult(await post<Reservation>("/reservations/cancel", credentials));
+      setConfirm(false);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="container lookup-page">
+      <span className="section-note">Yolculuğunuzun detayları</span>
+      <h1>Rezervasyonunuz burada.</h1>
+      <p className="muted">
+        Ön rezervasyon referansınız ve e-posta adresinizle sorgulayın.
+      </p>
+      <form className="lookup-form" onSubmit={lookup}>
+        <label className="field">
+          Referans numarası
+          <input
+            value={credentials.reference}
+            onChange={(e) =>
+              setCredentials({ ...credentials, reference: e.target.value })
+            }
+            placeholder="RK-…"
+            maxLength={30}
+            required
+          />
+        </label>
+        <label className="field">
+          E-posta adresiniz
+          <input
+            type="email"
+            value={credentials.email}
+            onChange={(e) =>
+              setCredentials({ ...credentials, email: e.target.value })
+            }
+            autoComplete="email"
+            required
+          />
+        </label>
+        <button className="btn" disabled={busy}>
+          {busy ? (
+            <LoaderCircle className="spin" size={17} />
+          ) : (
+            <Search size={17} />
+          )}
+          Sorgula
+        </button>
+      </form>
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      {result && (
+        <>
+          <ReservationTicket reservation={result} catalog={catalog} />
+          {result.status === "pending_agency" &&
+            (confirm ? (
+              <div className="cancel-confirm">
+                <p>
+                  Ön rezervasyon iptal edilecek ve koltuklarınız serbest
+                  bırakılacak.
+                </p>
+                <div className="button-row">
+                  <button
+                    className="btn btn-danger"
+                    onClick={cancel}
+                    disabled={busy}
+                  >
+                    İptali onayla
+                  </button>
+                  <button
+                    className="btn btn-outline"
+                    onClick={() => setConfirm(false)}
+                  >
+                    Vazgeç
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button className="text-link" onClick={() => setConfirm(true)}>
+                Ön rezervasyonumu iptal etmek istiyorum
+              </button>
+            ))}
+        </>
+      )}
+    </div>
+  );
+}
+export function About() {
+  const [request, setRequest] = useState<"private-tour" | "vehicle" | null>(
+    null,
+  );
+  return (
+    <>
+      <section className="container about-layout section">
+        <div>
+          <span className="section-note">Kars’ı tanıyanlarla yola çıkın.</span>
+          <h1>
+            Bu coğrafyanın
+            <br />
+            bir parçasıyız.
+          </h1>
+          <p className="lead-copy">
+            Rota Kars Turizm olarak Kars merkezli turlar, özel grup programları
+            ve turizm taşımacılığı hizmetleri sunuyoruz.
+          </p>
+          <p>
+            Bir şehri tanımanın en güzel yolu, hikâyesini bilen insanlarla
+            yürümek. Ani’den Çıldır’a, Sarıkamış’tan komşu rotalara uzanan
+            programlarımızda bu yaklaşımı benimsiyoruz.
+          </p>
+          <p>
+            Küçük gruplar için VIP minibüslerle ulaşımı, rehberli geziyi ve
+            konaklama planlamasını bir arada ele alıyoruz.
+          </p>
+          <div className="button-row">
+            <button className="btn" onClick={() => setRequest("private-tour")}>
+              Özel tur planlayın
+            </button>
+            <button
+              className="btn btn-outline"
+              onClick={() => setRequest("vehicle")}
+            >
+              Araç kiralama talebi
+            </button>
+          </div>
+        </div>
+        <img src="/images/kars.webp" alt="Ani’de kış manzarası" />
+      </section>
+      <section className="about-note">
+        <div className="container">
+          <Compass size={35} strokeWidth={1} />
+          <h2>
+            İyi bildiğimiz yollar,
+            <br />
+            birlikte biriktireceğimiz anılar.
+          </h2>
+          <Link to="/turlar" className="text-link">
+            Rotalarımızla tanışın <ArrowRight size={17} />
+          </Link>
+        </div>
+      </section>
+      {request && (
+        <RequestForm kind={request} onClose={() => setRequest(null)} />
+      )}
+    </>
+  );
+}
+export function Contact({ catalog }: { catalog: Catalog }) {
+  const b = catalog.business;
+  return (
+    <div className="container contact-page section">
+      <div>
+        <span className="section-note">Bir telefon kadar yakınız.</span>
+        <h1>
+          Yolculuğu
+          <br />
+          birlikte konuşalım.
+        </h1>
+        <p>
+          Tur, ulaşım ve konaklama planlarınız için
+          <br />
+          Kars’taki ekibimizle iletişime geçin.
+        </p>
+        <a href="tel:+905459353410" className="btn">
+          <Phone size={17} />
+          0545 935 34 10
+        </a>
+      </div>
+      <div className="contact-details">
+        <a href={b.mapsUrl} target="_blank" rel="noreferrer">
+          <MapPin />
+          <div>
+            <span>Ofisimiz</span>
+            <strong>{b.address}</strong>
+            <small>
+              Google Haritalar’da yol tarifi <ExternalLink size={12} />
+            </small>
+          </div>
+        </a>
+        <a href="tel:+904742239163">
+          <Phone />
+          <div>
+            <span>Sabit hat</span>
+            <strong>{b.phone}</strong>
+          </div>
+        </a>
+        <a href={"mailto:" + b.email}>
+          <Mail />
+          <div>
+            <span>E-posta</span>
+            <strong>{b.email}</strong>
+          </div>
+        </a>
+        <a href={b.instagram} target="_blank" rel="noreferrer">
+          <Instagram />
+          <div>
+            <span>Instagram</span>
+            <strong>@rotakarstur</strong>
+          </div>
+        </a>
+      </div>
+    </div>
+  );
+}
+export function Information() {
+  return (
+    <article className="container legal-page section">
+      <span className="section-note">Yerel geliştirme sürümü</span>
+      <h1>Ön rezervasyon ve veri bilgilendirmesi</h1>
+      <div className="info-note">
+        <p>
+          Bu sayfa yerel geliştirme sürecine ait açıklamadır. Canlı yayından
+          önce firmanın hukuki ve ticari bilgileriyle onaylı aydınlatma,
+          mesafeli sözleşme ve iptal/iade metinleri tamamlanmalıdır.
+        </p>
+      </div>
+      <h2>Ön rezervasyon</h2>
+      <p>
+        Tur tarihi, koltuklar ve yolcu bilgileriyle oluşturulan kayıt acente
+        onayı bekleyen bir taleptir. Kesin bilet veya ödeme belgesi değildir.
+        Online ödeme aktif değildir ve kart bilgisi alınmaz. Onay bekleyen
+        koltuklar 24 saat sonra serbest kalır.
+      </p>
+      <h2>Yerel veri kaydı</h2>
+      <p>
+        İletilen ad, e-posta, telefon, yolcu adları ve rezervasyon tercihi bu
+        bilgisayardaki yerel veritabanında saklanır. Bu sürüm otomatik e-posta
+        veya SMS göndermez. Testlerde gerçek kimlik veya kart bilgisi
+        kullanmayın.
+      </p>
+      <h2>Google yorumları</h2>
+      <p>
+        Google bağlantısı etkinleştirildiğinde yorumlar kaynak ve yazar
+        bilgileriyle gösterilir. Rota sayfaları ilgili turdan bahseden veya
+        yönetici tarafından o turla eşleştirilen yorumları içerir. İşletme
+        puanı, tur puanı olarak sunulmaz.
+      </p>
+      <h2>Konaklama</h2>
+      <p>
+        Konaklama talepleri güncel müsaitlik ve fiyat teyidine tabidir. Talep
+        oluşturmak otelde kesin rezervasyon yapıldığı anlamına gelmez. Otel
+        listesi yalnızca acentenin doğruladığı anlaşmalı tesislerle doldurulur.
+      </p>
+    </article>
+  );
+}
