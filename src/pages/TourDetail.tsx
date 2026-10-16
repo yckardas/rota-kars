@@ -67,7 +67,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
           </span>
           <span>
             <Armchair size={16} />
-            9+1 VIP minibüs
+            18+1 VIP midibüs
           </span>
         </div>
       </section>
@@ -154,8 +154,8 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
             <details>
               <summary>Rehber koltuğunu seçebilir miyim?</summary>
               <p>
-                9+1 VIP aracın ön yolcu koltuğu rehbere ayrılmıştır. Şoför ve
-                rehber dışında 8 misafir için koltuk seçilebilir.
+                18+1 VIP aracın şoför yanındaki ön koltuğu rehbere ayrılmıştır.
+                Şoför ve rehber dışında 17 misafir için koltuk seçilebilir.
               </p>
             </details>
             <details>
@@ -201,7 +201,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
           <div className="aside-benefits">
             <span>
               <Armchair size={15} />
-              Seçebileceğiniz 8 yolcu koltuğu
+              Seçebileceğiniz 17 yolcu koltuğu
             </span>
             <span>
               <Check size={15} />

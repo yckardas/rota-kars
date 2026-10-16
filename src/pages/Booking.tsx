@@ -32,7 +32,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     [departures, setDepartures] = useState<Departure[]>([]),
     [departureId, setDepartureId] = useState(""),
     [count, setCount] = useState(
-      Math.min(8, Math.max(1, Number(params.get("guests")) || 1)),
+      Math.min(17, Math.max(1, Number(params.get("guests")) || 1)),
     ),
     [seats, setSeats] = useState<Seat[]>([]),
     [selected, setSelected] = useState<number[]>([]),
@@ -294,7 +294,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                     }}
                     aria-label="Yolcu sayısı"
                   >
-                    {Array.from({ length: 8 }, (_, i) => (
+                    {Array.from({ length: 17 }, (_, i) => (
                       <option key={i} value={i + 1}>
                         {i + 1} kişi
                       </option>
@@ -335,7 +335,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                     iyi bir yerle başlar.
                   </h3>
                   <p className="muted">
-                    Şoförün yanındaki ön koltuk rehberinize ayrıldı. Diğer 8
+                    Şoförün yanındaki ön koltuk rehberinize ayrıldı. Diğer 17
                     koltuktan dilediğinizi seçin.
                   </p>
                   <div className="seat-legend">
@@ -574,7 +574,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
             </p>
             <p>
               <Armchair size={15} />
-              {count} yolcu · VIP minibüs
+              {count} yolcu · 18+1 VIP midibüs
             </p>
             <div className="summary-total">
               <span>Toplam örnek tur bedeli</span>

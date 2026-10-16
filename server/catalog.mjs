@@ -7,22 +7,84 @@ export const business = {
     "Yeni Mah. Cumhuriyet Cad. Köşk Apt. No:26 İç Kapı:13, Merkez / Kars",
   mapsUrl: "https://www.google.com/maps?cid=1539703208462618989",
   instagram: "https://www.instagram.com/rotakarstur/",
+  facebook: "https://www.facebook.com/profile.php?id=100063759990737",
+  whatsapp: "905464802136",
+  whatsappLabel: "0546 480 21 36",
+  hours: "Her gün · 22:00'ye kadar",
+  tursabNo: "13948",
+  founded: 2010,
 };
+export const features = [
+  {
+    icon: "sparkles",
+    title: "Yeni açılan turlar",
+    text: "Kars, Van, Batum ve Kafkasya'ya her sezon yeni rotalar.",
+  },
+  {
+    icon: "shield",
+    title: "Koşulsuz iptal",
+    text: "Yurt içinde son 3 güne, yurt dışında son 5 güne kadar kesintisiz iade.",
+  },
+  {
+    icon: "lira",
+    title: "Türk Lirası ile ödeme",
+    text: "Yurt dışı turlar dahil tüm ödemeler TL ile, kur riski yok.",
+  },
+  {
+    icon: "heart",
+    title: "Müşteri memnuniyeti",
+    text: "Google'da 456 değerlendirmede 4,9 puan.",
+  },
+];
+export const services = [
+  {
+    title: "Turizm taşımacılığı",
+    image: "/images/service-tur.jpeg",
+    text: "Yerli ve yabancı misafirlerimizin transferlerinde zamanlama, konfor ve emniyeti ön planda tutan uzman bir kadro.",
+  },
+  {
+    title: "VIP transfer",
+    image: "/images/service-vip.jpeg",
+    text: "Özel üretilmiş, prestijli ve konforlu VIP araç filomuzla dilediğiniz destinasyona eğitimli personelle ulaşım.",
+  },
+  {
+    title: "Kongre ve toplantı",
+    image: "/images/service-kongre.jpeg",
+    text: "Fuar, seminer ve toplantı katılımcılarınızın transferleri için dakik ve güvenilir çözüm ortağı.",
+  },
+  {
+    title: "Express tur",
+    image: "/images/service-express.jpeg",
+    text: "Gezi, eğitim, kültür, sanat ve eğlence etkinlikleri için size özel planlanan ulaşım.",
+  },
+];
+export const fleet = {
+  note: "Araçlarımız şoförlü olarak kiralanır. Kaptanlarımız bölgeye hâkim, işinde profesyoneldir.",
+  tourism: ["13+1", "16+1", "19+1", "27+1", "29+1", "31+1", "35+1", "38+1", "46+1"],
+  vip: ["4+1", "9+1", "11+1"],
+  perks: ["D2 ve B2 belgeli", "Lüks ve klimalı", "Mikrofonlu", "Buzdolaplı"],
+};
+export const cancellationPolicy =
+  "Yurt dışı paket turlarımızda son 5 güne, yurt içi paketlerimizde son 3 güne kadar hiçbir koşul aranmadan turunuzu iptal edebilirsiniz. Yurt içi paketlerde iptal güvence paketi ile 72 saate kadar koşulsuz iptal hakkı bulunur (uçaklı paketlerde geçerli değildir). Ödediğiniz ücreti kesintisiz geri alırsınız.";
 export const vehicle = {
-  id: "vip-9-plus-1",
-  name: "VIP minibüs",
-  passengerSeats: 9,
+  id: "vip-18-plus-1",
+  name: "VIP midibüs",
+  passengerSeats: 18,
   driverSeats: 1,
   guideSeats: 1,
-  sellableSeats: 8,
+  sellableSeats: 17,
+  // Sütunlar: sol çift koltuk, koridor, sağ tekli koltuk. İlk sıranın sağı kapı.
   layout: [
-    ["driver", null, "guide"],
-    [1, 2, 3],
-    [4, 5, 6],
-    [7, 8, null],
+    ["driver", null, null, "guide"],
+    [1, 2, null, "door"],
+    [3, 4, null, 5],
+    [6, 7, null, 8],
+    [9, 10, null, 11],
+    [12, 13, null, 14],
+    [15, 16, null, 17],
   ],
   description:
-    "9 yolcu + 1 şoför. Şoför yanı rehbere ayrılır. 8 koltuk rezervasyona açıktır.",
+    "18 yolcu + 1 şoför. Şoför yanındaki ön koltuk rehbere ayrılır. 17 koltuk rezervasyona açıktır.",
 };
 export const tours = [
   {
@@ -180,26 +242,132 @@ export const tours = [
     source: "https://rotakarsturizm.com/tur/gunubirlik-batum-turu/",
   },
   {
+    id: "van-gunubirlik",
+    name: "Günübirlik Van Turu",
+    subtitle: "Şelaleden Akdamar'a, tek günde Van.",
+    category: "Kültür",
+    duration: "Günübirlik",
+    location: "Kars · Muradiye · Van",
+    image: "/images/van-day.jpg",
+    gallery: ["/images/van-day.jpg", "/images/akdamar.jpg"],
+    price: 300000,
+    departure: "03:00",
+    end: "Gece",
+    inquiryOnly: false,
+    season: "Yaz rotası",
+    summary:
+      "Tendürek Geçidi'nden Muradiye Şelalesi'ne, meşhur Van kahvaltısından Akdamar Adası'na ve Van Kalesi'ne uzanan dolu dolu bir gün.",
+    included: [
+      "Sabah kahvaltısı",
+      "Ulaşım ve profesyonel rehberlik",
+      "Araç içi ikramlar ve seyahat sigortası",
+    ],
+    excluded: [
+      "Öğle ve akşam yemekleri",
+      "Van Kalesi, müze ve ören yeri girişleri",
+      "Akdamar Adası tekne ücreti",
+    ],
+    itinerary: [
+      {
+        time: "03:00",
+        title: "Kars'tan hareket",
+        text: "Tendürek Geçidi (2.644 m) ve Çaldıran Ovası üzerinden yolculuk.",
+      },
+      {
+        time: "Sabah",
+        title: "Muradiye Şelalesi ve Van kahvaltısı",
+        text: "Şelalede serbest zaman, ardından meşhur Van kahvaltısı.",
+      },
+      {
+        time: "Öğlen",
+        title: "Gümüş Atölyesi, Kedi Evi, Akdamar",
+        text: "Urartu gümüş sanatı, Van kedileri ve tekneyle Akdamar Adası'ndaki Kutsal Haç Kilisesi.",
+      },
+      {
+        time: "Akşamüstü",
+        title: "Van Müzesi ve Van Kalesi",
+        text: "Urartu medeniyetinin izleri, Tuşba ve gün batımında göl manzarası. Ardından dönüş.",
+      },
+    ],
+    note: "Program hava ve yol koşullarına göre değişebilir.",
+    source: "https://rotakarsturizm.com/tur/gunubirlik-van-turu/",
+  },
+  {
     id: "van",
     name: "Konaklamalı Van Turu",
-    subtitle: "Yolculuğa biraz daha zaman ayırın.",
+    subtitle: "Tuz Mağarası ve İshak Paşa Sarayı dahil.",
     category: "Konaklamalı",
-    duration: "Programa bağlı",
-    location: "Van ve çevresi",
+    duration: "2 gün · 1 gece",
+    location: "Iğdır · Doğubayazıt · Van",
     image: "/images/van.webp",
-    gallery: ["/images/van.webp"],
+    gallery: ["/images/van.webp", "/images/tuz-magarasi.jpg", "/images/akdamar.jpg"],
     price: 600000,
+    departure: "07:00",
+    end: "2. gün akşam",
+    inquiryOnly: false,
+    season: "Konaklamalı rota",
+    summary:
+      "Tuzluca Tuz Mağarası ve İshak Paşa Sarayı ile başlayıp Muradiye, Akdamar ve Van Kalesi ile tamamlanan iki günlük program.",
+    included: [
+      "2 sabah kahvaltısı ve 1 gece konaklama",
+      "Ulaşım, profesyonel rehberlik ve acente refakati",
+      "Araç içi ikramlar ve seyahat sigortası",
+    ],
+    excluded: [
+      "Öğle ve akşam yemekleri",
+      "Van Kalesi, müze ve ören yeri girişleri",
+      "Akdamar Adası tekne ücreti",
+    ],
+    itinerary: [
+      {
+        time: "1. gün 07:00",
+        title: "Tuz Mağarası ve İshak Paşa Sarayı",
+        text: "Iğdır yönüne hareket, Tuzluca Tuz Mağarası ve Doğubayazıt'ta İshak Paşa Sarayı.",
+      },
+      {
+        time: "1. gün öğleden sonra",
+        title: "Muradiye, Gümüş Atölyesi, Kedi Evi",
+        text: "Tendürek Geçidi, Muradiye Şelalesi ve Van'da otele yerleşme.",
+      },
+      {
+        time: "2. gün",
+        title: "Akdamar ve Van Kalesi",
+        text: "Otelde kahvaltı, tekneyle Akdamar Adası, Van Müzesi ve Van Kalesi. Ardından Kars'a dönüş.",
+      },
+    ],
+    note: "Otel ve kesin program tur tarihinden önce acente tarafından teyit edilir.",
+    source:
+      "https://rotakarsturizm.com/tur/konaklamali-van-turu-tuz-magarasi-ve-ishak-pasa-sarayi-dahil/",
+  },
+  {
+    id: "van-havzasi",
+    name: "Van Havzası Turu",
+    subtitle: "Nemrut Krater Gölü'nden Ahlat'a üç gün.",
+    category: "Konaklamalı",
+    duration: "3 gün · 2 gece",
+    location: "Van · Tatvan · Bitlis · Ahlat",
+    image: "/images/van-havza.webp",
+    gallery: ["/images/van-havza.webp", "/images/tuz-magarasi.jpg", "/images/akdamar.jpg"],
+    price: 700000,
     departure: "Acente onayı",
-    end: "Programa bağlı",
+    end: "3. gün akşam",
     inquiryOnly: true,
     season: "Konaklamalı rota",
     summary:
-      "Van, Tuz Mağarası ve İshak Paşa Sarayı’nı kapsayan programın güncel tarih ve konaklama seçenekleri için bize ulaşın.",
-    included: ["Güncel kapsam teklif aşamasında paylaşılır"],
-    excluded: ["Program ve otel seçimine göre belirlenir"],
+      "Tuz Mağarası, İshak Paşa Sarayı, Muradiye, Akdamar, Van Kalesi, Ahlat Selçuklu Mezarlığı, Nemrut Krater Gölü, Bitlis ve Tatvan'ı kapsayan geniş program.",
+    included: [
+      "3 sabah kahvaltısı",
+      "2 gece konaklama (Tatvan – Van)",
+      "Ulaşım, rehberlik, acente refakati ve seyahat sigortası",
+    ],
+    excluded: [
+      "Öğle ve akşam yemekleri",
+      "Müze ve ören yeri girişleri",
+      "Akdamar Adası tekne ücreti",
+    ],
     itinerary: [],
-    note: "Güncel program, otel, süre ve fiyat acente teyidi gerektirir.",
-    source: "https://rotakarsturizm.com/",
+    note: "Güncel tarih ve kontenjan için bizimle iletişime geçin.",
+    source: "https://rotakarsturizm.com/tur/van-havzasi-turu/",
   },
 ];
 export const stories = [

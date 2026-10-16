@@ -137,3 +137,17 @@ test("invalid hotel dates and unknown partner never create confirmed bookings", 
   assert.equal((await response.json()).status, "received");
   assert.equal(store.dashboard().requests.length, 1);
 });
+test("chat answers locally without an API key and offers WhatsApp handoff", async () => {
+  const { createChatService } = await import("../server/chat.mjs");
+  const chat = createChatService({});
+  assert.equal(chat.provider, "local");
+  const seats = await chat.reply([
+    { role: "user", content: "Araçta kaç koltuk var, rehber nerede oturuyor?" },
+  ]);
+  assert.match(seats.text, /18\+1/);
+  assert.match(seats.text, /17/);
+  const batum = await chat.reply([{ role: "user", content: "Batum turu ne kadar?" }]);
+  assert.match(batum.text, /2\.500/);
+  const unknown = await chat.reply([{ role: "user", content: "Vize işlemleri?" }]);
+  assert.equal(unknown.handoff, true);
+});

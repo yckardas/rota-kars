@@ -20,7 +20,7 @@ export function openStore(
   );
   db.exec(`CREATE TABLE IF NOT EXISTS departures(id TEXT PRIMARY KEY,tour_id TEXT NOT NULL,date TEXT NOT NULL,price INTEGER NOT NULL CHECK(price>0),active INTEGER NOT NULL DEFAULT 1);
  CREATE TABLE IF NOT EXISTS holds(token TEXT PRIMARY KEY,departure_id TEXT NOT NULL REFERENCES departures(id),seats TEXT NOT NULL,expires_at INTEGER NOT NULL);
- CREATE TABLE IF NOT EXISTS seat_locks(departure_id TEXT NOT NULL REFERENCES departures(id),seat INTEGER NOT NULL CHECK(seat BETWEEN 1 AND 8),owner TEXT NOT NULL,expires_at INTEGER NOT NULL,PRIMARY KEY(departure_id,seat));
+ CREATE TABLE IF NOT EXISTS seat_locks(departure_id TEXT NOT NULL REFERENCES departures(id),seat INTEGER NOT NULL CHECK(seat >= 1),owner TEXT NOT NULL,expires_at INTEGER NOT NULL,PRIMARY KEY(departure_id,seat));
  CREATE TABLE IF NOT EXISTS reservations(id TEXT PRIMARY KEY,reference TEXT NOT NULL UNIQUE,departure_id TEXT NOT NULL REFERENCES departures(id),email TEXT NOT NULL,name TEXT NOT NULL,phone TEXT NOT NULL,passengers TEXT NOT NULL,seats TEXT NOT NULL,total INTEGER NOT NULL,deposit INTEGER NOT NULL,status TEXT NOT NULL,created_at INTEGER NOT NULL,expires_at INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS requests(id TEXT PRIMARY KEY,kind TEXT NOT NULL,body TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'new',created_at INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS hotels(id TEXT PRIMARY KEY,name TEXT NOT NULL,location TEXT NOT NULL,description TEXT NOT NULL,amenities TEXT NOT NULL,image TEXT,active INTEGER NOT NULL DEFAULT 0);
@@ -110,7 +110,7 @@ export function openStore(
       return {
         departure: d,
         vehicle,
-        seats: Array.from({ length: 8 }, (_, i) => ({
+        seats: Array.from({ length: vehicle.sellableSeats }, (_, i) => ({
           number: i + 1,
           status: db
             .prepare(
@@ -126,13 +126,13 @@ export function openStore(
       if (
         !Array.isArray(seats) ||
         seats.length < 1 ||
-        seats.length > 8 ||
+        seats.length > vehicle.sellableSeats ||
         new Set(seats).size !== seats.length ||
-        seats.some((s) => !Number.isInteger(s) || s < 1 || s > 8)
+        seats.some((s) => !Number.isInteger(s) || s < 1 || s > vehicle.sellableSeats)
       )
         throw new AppError(
           400,
-          "Yalnızca 1–8 numaralı yolcu koltukları seçilebilir.",
+          `Yalnızca 1–${vehicle.sellableSeats} numaralı yolcu koltukları seçilebilir.`,
         );
       return tx(() => {
         cleanup();

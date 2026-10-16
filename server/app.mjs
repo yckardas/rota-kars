@@ -1,7 +1,17 @@
 import express from "express";
 import { randomBytes, createHash, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
-import { business, tours, stories, vehicle } from "./catalog.mjs";
+import {
+  business,
+  tours,
+  stories,
+  vehicle,
+  features,
+  services,
+  fleet,
+  cancellationPolicy,
+} from "./catalog.mjs";
+import { createChatService } from "./chat.mjs";
 import { AppError } from "./store.mjs";
 import { createReviewsService } from "./reviews.mjs";
 import { paymentStatus, createPayment } from "./payments.mjs";
@@ -46,13 +56,17 @@ const bookingSchema = z.object({
   name: clean,
   email,
   phone,
-  passengers: z.array(clean).min(1).max(8),
+  passengers: z.array(clean).min(1).max(vehicle.sellableSeats),
   paymentMode: z.enum(["deposit", "full"]),
   consent: z.literal(true),
 });
 export function createApp(
   store,
-  { env = process.env, reviewsService = createReviewsService(env) } = {},
+  {
+    env = process.env,
+    reviewsService = createReviewsService(env),
+    chatService = createChatService(env),
+  } = {},
 ) {
   const app = express(),
     sessions = new Map(),
@@ -76,8 +90,12 @@ export function createApp(
       if (req.headers["x-rota-client"] !== "web")
         return res.status(403).json({ message: "Geçersiz istek." });
     }
-    const key =
-        req.ip + ":" + (req.path.includes("/admin/login") ? "login" : "api"),
+    const bucket = req.path.includes("/admin/login")
+        ? "login"
+        : req.path === "/chat"
+          ? "chat"
+          : "api",
+      key = req.ip + ":" + bucket,
       now = Date.now();
     let l = limits.get(key);
     if (!l || l.reset < now) {
@@ -85,7 +103,7 @@ export function createApp(
       limits.set(key, l);
     }
     l.n++;
-    if (l.n > (key.endsWith("login") ? 10 : 300))
+    if (l.n > { login: 10, chat: 60, api: 300 }[bucket])
       return res
         .status(429)
         .json({ message: "Çok fazla istek. Biraz sonra tekrar deneyin." });
@@ -120,6 +138,10 @@ export function createApp(
       tours,
       stories,
       vehicle,
+      features,
+      services,
+      fleet,
+      cancellationPolicy,
       payment: paymentStatus,
       preview: true,
     }),
@@ -138,7 +160,7 @@ export function createApp(
       const input = z
         .object({
           departureId: z.string().min(1).max(100),
-          seats: z.array(z.number().int()).min(1).max(8),
+          seats: z.array(z.number().int()).min(1).max(vehicle.sellableSeats),
         })
         .parse(q.body);
       r.status(201).json(store.hold(input.departureId, input.seats));
@@ -177,6 +199,26 @@ export function createApp(
         .object({ reference: z.string().trim().min(3).max(30), email })
         .parse(q.body);
       r.json(store.cancel(input.reference, input.email));
+    }),
+  );
+  app.post(
+    "/api/chat",
+    route(async (q, r) => {
+      const { messages } = z
+        .object({
+          messages: z
+            .array(
+              z.object({
+                role: z.enum(["user", "assistant"]),
+                content: z.string().trim().min(1).max(1200),
+              }),
+            )
+            .min(1)
+            .max(24)
+            .refine((m) => m[0].role === "user" && m.at(-1).role === "user"),
+        })
+        .parse(q.body);
+      r.json(await chatService.reply(messages));
     }),
   );
   app.get("/api/payment/status", (_q, r) => r.json(paymentStatus));

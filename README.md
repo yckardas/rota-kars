@@ -35,21 +35,23 @@ Panelde ön rezervasyonlar ve talepler görüntülenir, gerçek anlaşmalı otel
 ## Tamamlanan kapsam
 
 - Responsive ana sayfa, tur listesi ve detayları, kısa fotoğraflı hikâyeler.
-- VIP 9+1 minibüs: 1 şoför, şoför yanında 1 rehber, 8 satılabilir yolcu koltuğu.
+- VIP 18+1 midibüs: 1 şoför, şoför yanında 1 rehber (varsayılan, satışa kapalı), 17 satılabilir yolcu koltuğu.
 - Sunucuda kontrol edilen koltuk seçimi, 10 dakikalık tutma, tarih bazında doluluk ve çakışma engeli.
 - Yolcu/iletişim bilgileri, %30 veya tam ödeme tercihi; gerçek tahsilat yapılmadan ön rezervasyon.
 - Referans + e-posta ile sorgulama ve bekleyen ön rezervasyonu iptal etme.
 - Onaylanmayan ön rezervasyonlarda koltukları 24 saat sonra serbest bırakma.
 - Otel, özel tur ve araç kiralama taleplerini yerel veritabanında saklama.
 - Google Business Profile ve Places API (New) bağlantı kodu, otomatik tur eşleştirmesi ve yönetici düzeltmesi.
-- Ana sayfanın en sonunda “Müşterilerimizin gözünden Rota Kars” bölümü.
+- Ana sayfanın en sonunda “Müşterilerimizin gözünden Rota Kars” bölümü: Google puanı (4,9 / 456), gerçek Google yorumları ve canlı Google Haritalar kartı.
+- Canlı siteden taşınan içerik: Yeni açılan turlar / Koşulsuz iptal / TL ile ödeme / Müşteri memnuniyeti şeridi, Hizmetlerimiz (turizm taşımacılığı, VIP, kongre, express), şoförlü araç kiralama filosu, Günübirlik Van ve Van Havzası turları, tur iptali koşulları, TÜRSAB 13948 rozeti.
+- Sağ altta akıllı asistan: `ANTHROPIC_API_KEY` tanımlıysa Claude (`CHAT_MODEL`, varsayılan `claude-opus-5-5`) katalog bilgisiyle yanıt verir; anahtar yoksa yerleşik kural tabanlı Türkçe asistan çalışır. Her iki durumda da gerektiğinde WhatsApp'a (0546 480 21 36) devir düğmesi çıkar; ayrıca kalıcı WhatsApp butonu vardır.
 - Parola korumalı yerel yönetim paneli.
 
 ## Henüz bağlanmayan servisler
 
 **Banka/POS:** Kullanıcının talebiyle sağlayıcı bağlantısı kapsam dışında. Kart alanı yoktur; ödeme servisi 503 `PAYMENT_NOT_CONFIGURED` döndürür. Kapora/tam tutar seçimi yalnızca ödeme tercihidir, tahsilat değildir.
 
-**Google yorumları:** İşletmenin doğru Haritalar bağlantısı eklendi. API anahtarı veya işletme OAuth yetkisi henüz verilmedi. Bağlantı yokken gerçekmiş gibi yorum, puan veya müşteri sayısı gösterilmez. Bu durumda işletmenin Google yorumlarına yönlendiren alan görünür. Kurulum için `docs/INTEGRATIONS.md`.
+**Google yorumları:** API anahtarı veya işletme OAuth yetkisi yokken `server/reviews-snapshot.json` kullanılır: Google Haritalar'daki herkese açık işletme sayfasından 16 Ekim 2026'da alınan gerçek puan (4,9 / 456) ve Google'ın öne çıkardığı 5 yorum. Yorumlar Google'ın sınırlı görünümünden alındığı için tam liste değildir; puan ve yorum sayısı zamanla eskir. `.env` içinde Business Profile veya Places API bilgileri tanımlanınca canlı veri otomatik olarak devreye girer, hata olursa yine bu kayda düşer. Kurulum için `docs/INTEGRATIONS.md`.
 
 **Anlaşmalı oteller:** Otel adları ve ortaklık teyitleri henüz verilmedi. Liste boş bırakıldı. Konaklama talebi çalışır; gerçek oteller panelden eklenebilir. Konaklama fotoğrafı temsilidir.
 

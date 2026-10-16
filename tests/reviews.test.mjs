@@ -13,10 +13,18 @@ test("tour matching handles Turkish and avoids ani within unrelated words", () =
   );
 });
 test("unconfigured Google never returns invented reviews or stars", async () => {
-  const r = await createReviewsService({}).get();
+  const r = await createReviewsService({}, fetch, null).get();
   assert.equal(r.status, "not_configured");
   assert.deepEqual(r.reviews, []);
   assert.equal(r.rating, null);
+});
+test("unconfigured Google falls back to the real Maps snapshot", async () => {
+  const r = await createReviewsService({}).get();
+  assert.equal(r.status, "snapshot");
+  assert.equal(r.rating, 4.9);
+  assert.equal(r.total, 456);
+  assert.ok(r.reviews.length >= 5);
+  assert.ok(r.reviews.every((x) => x.rating >= 1 && x.text));
 });
 test("Places reviews preserve authors/text, all scores and manual override", async () => {
   let calls = 0;
@@ -134,6 +142,6 @@ test("Google error has safe fallback and no leaked credentials", async () => {
     async () => ({ ok: false }),
   );
   const r = await s.get();
-  assert.equal(r.status, "temporarily_unavailable");
+  assert.equal(r.status, "snapshot");
   assert.ok(!JSON.stringify(r).includes("secret"));
 });

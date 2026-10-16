@@ -9,8 +9,12 @@ import {
   Ticket,
   Mail,
   ExternalLink,
+  MessageCircle,
+  Facebook,
 } from "lucide-react";
 import type { Catalog } from "../lib/types";
+import { ChatBot } from "./ChatBot";
+import { whatsappLink } from "../lib/whatsapp";
 export function Layout({
   catalog,
   children,
@@ -73,6 +77,7 @@ export function Layout({
               Ana sayfa
             </NavLink>
             <NavLink to="/turlar">Turlarımız</NavLink>
+            <a href="/#hizmetler">Hizmetler</a>
             <NavLink to="/konaklama">Konaklama</NavLink>
             <NavLink to="/hakkimizda">Hakkımızda</NavLink>
             <NavLink to="/iletisim">İletişim</NavLink>
@@ -82,7 +87,12 @@ export function Layout({
               <Ticket size={18} />
               <span>Rezervasyonum</span>
             </Link>
-            <a className="btn btn-small header-cta" href="tel:+905459353410">
+            <a
+              className="btn btn-small header-cta"
+              href={whatsappLink(b.whatsapp, "Merhaba, rotakarsturizm.com sitesinden yazıyorum.")}
+              target="_blank"
+              rel="noreferrer"
+            >
               Birlikte planlayalım
             </a>
             <button
@@ -97,6 +107,7 @@ export function Layout({
         </div>
       </header>
       <main id="main">{children}</main>
+      <ChatBot whatsapp={b.whatsapp} />
       <footer className="footer">
         <div className="container footer-main">
           <div className="footer-brand">
@@ -122,6 +133,29 @@ export function Layout({
               <Instagram size={18} />
               <span>Yolculuğumuza katılın</span>
             </a>
+            <a
+              href={b.facebook}
+              target="_blank"
+              rel="noreferrer"
+              className="social-link"
+            >
+              <Facebook size={18} />
+              <span>Facebook</span>
+            </a>
+            <a
+              href="https://www.tursab.org.tr/tr/ddsv"
+              target="_blank"
+              rel="noreferrer"
+              className="tursab-badge"
+            >
+              <img
+                src="/images/tursab.png"
+                width="145"
+                height="66"
+                alt={`TÜRSAB üyesi, belge no ${b.tursabNo}`}
+                loading="lazy"
+              />
+            </a>
           </div>
           <div>
             <h3>Bir rota seçin</h3>
@@ -136,6 +170,7 @@ export function Layout({
             <Link to="/konaklama">Konaklama seçenekleri</Link>
             <Link to="/hakkimizda">Rota Kars hakkında</Link>
             <Link to="/rezervasyonum">Ön rezervasyon sorgulama</Link>
+            <Link to="/bilgilendirme#iptal">Tur iptali</Link>
             <Link to="/bilgilendirme">Bilgilendirme ve gizlilik</Link>
           </div>
           <div className="footer-contact">
@@ -148,6 +183,14 @@ export function Layout({
               <Phone size={16} />
               {b.phone}
             </a>
+            <a href={"tel:+90" + b.mobile.replace(/\D/g, "").slice(1)}>
+              <Phone size={16} />
+              {b.mobile}
+            </a>
+            <a href={whatsappLink(b.whatsapp)} target="_blank" rel="noreferrer">
+              <MessageCircle size={16} />
+              WhatsApp {b.whatsappLabel}
+            </a>
             <a href={"mailto:" + b.email}>
               <Mail size={16} />
               {b.email}
@@ -159,7 +202,9 @@ export function Layout({
         </div>
         <div className="container footer-bottom">
           <span>© {new Date().getFullYear()} Rota Kars Turizm</span>
-          <span>Yerel önizleme. Fiyatlar ve sefer tarihleri örnektir.</span>
+          <span>
+            TÜRSAB A Grubu · Belge No {b.tursabNo} · {b.founded}’dan beri
+          </span>
         </div>
       </footer>
     </>

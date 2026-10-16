@@ -1,4 +1,10 @@
+import { readFileSync } from "node:fs";
 import { business } from "./catalog.mjs";
+// Google Haritalar'daki herkese açık işletme sayfasından alınmış gerçek puan ve
+// yorumlar. API bağlantısı kurulana kadar sitede bunlar gösterilir.
+export const reviewSnapshot = JSON.parse(
+  readFileSync(new URL("./reviews-snapshot.json", import.meta.url), "utf8"),
+);
 const normalize = (s) =>
   s
     .toLocaleLowerCase("tr-TR")
@@ -13,7 +19,7 @@ export function matchTourIds(text) {
         /(^|[^a-z])ani([^a-z]|$)|cildir/.test(s) ? "ani-cildir" : null,
         /sarikamis/.test(s) ? "sarikamis" : null,
         /batum/.test(s) ? "batum" : null,
-        /(^|[^a-z])van([^a-z]|$)|ishak pasa/.test(s) ? "van" : null,
+        /(^|[^a-z])van([^a-z]|$)|ishak pasa|akdamar/.test(s) ? "van" : null,
       ].filter(Boolean),
     ),
   ];
@@ -26,7 +32,11 @@ const safeUrl = (u) => {
     return null;
   }
 };
-export function createReviewsService(env = process.env, fetcher = fetch) {
+export function createReviewsService(
+  env = process.env,
+  fetcher = fetch,
+  snapshot = reviewSnapshot,
+) {
   let cache = null,
     inflight = null,
     accessToken = null,
@@ -132,9 +142,29 @@ export function createReviewsService(env = process.env, fetcher = fetch) {
       })),
     };
   }
+  const fromSnapshot = (assignments, tourId) => {
+    const items = snapshot.reviews.map((r) => ({
+      ...r,
+      authorUrl: null,
+      url: mapsUrl,
+      tourIds: Object.hasOwn(assignments, r.id)
+        ? assignments[r.id]
+        : matchTourIds(r.text),
+    }));
+    return {
+      status: "snapshot",
+      rating: snapshot.rating,
+      total: snapshot.total,
+      mapsUrl,
+      fetchedAt: snapshot.fetchedAt,
+      sort: `Google Haritalar'dan ${new Date(snapshot.fetchedAt + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })} tarihinde alınan en alakalı yorumlar.`,
+      reviews: tourId ? items.filter((r) => r.tourIds.includes(tourId)) : items,
+    };
+  };
   return {
     configured,
     async get(assignments = {}, tourId = null) {
+      if (!configured && snapshot) return fromSnapshot(assignments, tourId);
       if (!configured)
         return {
           status: "not_configured",
@@ -171,6 +201,7 @@ export function createReviewsService(env = process.env, fetcher = fetch) {
             : items,
         };
       } catch {
+        if (snapshot) return fromSnapshot(assignments, tourId);
         return {
           status: "temporarily_unavailable",
           reviews: [],

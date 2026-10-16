@@ -274,7 +274,7 @@ export function About() {
             programlarımızda bu yaklaşımı benimsiyoruz.
           </p>
           <p>
-            Küçük gruplar için VIP minibüslerle ulaşımı, rehberli geziyi ve
+            Küçük gruplar için VIP midibüslerle ulaşımı, rehberli geziyi ve
             konaklama planlamasını bir arada ele alıyoruz.
           </p>
           <div className="button-row">
@@ -379,6 +379,21 @@ export function Information() {
           mesafeli sözleşme ve iptal/iade metinleri tamamlanmalıdır.
         </p>
       </div>
+      <h2 id="iptal">Tur iptali</h2>
+      <p>
+        Yurt dışı paket turlarımızda son 5 güne, yurt içi paketlerimizde son 3
+        güne kadar hiçbir koşul aranmadan turunuzu iptal edebilirsiniz. Yurt içi
+        paketlerde iptal güvence paketi ile 72 saate kadar koşulsuz iptal hakkı
+        bulunur (uçaklı paketlerde geçerli değildir). Ödediğiniz ücreti
+        kesintisiz geri alırsınız.
+      </p>
+      <h2>Yapay zekâ asistanı</h2>
+      <p>
+        Sağ alttaki asistana yazdığınız mesajlar yalnızca yanıt üretmek için
+        kullanılır ve sunucuda saklanmaz. API anahtarı tanımlıysa yanıtlar
+        Anthropic Claude ile üretilir. Kişisel veya ödeme bilgisi paylaşmayın;
+        rezervasyon için WhatsApp hattımıza yönlendirilirsiniz.
+      </p>
       <h2>Ön rezervasyon</h2>
       <p>
         Tur tarihi, koltuklar ve yolcu bilgileriyle oluşturulan kayıt acente

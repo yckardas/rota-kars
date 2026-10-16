@@ -19,15 +19,16 @@ const person = (holdToken) => ({
   passengers: ["Birinci Yolcu"],
   paymentMode: "deposit",
 });
-test("9+1 model has guide excluded and exactly eight sellable seats", () => {
+test("18+1 model has guide excluded and exactly seventeen sellable seats", () => {
   const { s, id } = fixture();
   try {
     const a = s.availability(id);
-    assert.equal(a.vehicle.passengerSeats, 9);
+    assert.equal(a.vehicle.passengerSeats, 18);
     assert.equal(a.vehicle.driverSeats, 1);
     assert.equal(a.vehicle.guideSeats, 1);
-    assert.equal(a.seats.length, 8);
-    for (const seats of [[0], [9], ["guide"], ["driver"], [1, 1], [], [1.5]])
+    assert.equal(a.seats.length, 17);
+    assert.equal(a.vehicle.layout[0][3], "guide");
+    for (const seats of [[0], [18], ["guide"], ["driver"], [1, 1], [], [1.5]])
       assert.throws(
         () => s.hold(id, seats),
         (e) => e.status === 400,
@@ -48,7 +49,7 @@ test("competing holds reject an already locked seat atomically", () => {
       s.availability(id).seats.find((x) => x.number === 2).status,
       "available",
     );
-    assert.equal(s.listDepartures("ani-cildir")[0].available, 7);
+    assert.equal(s.listDepartures("ani-cildir")[0].available, 16);
   } finally {
     s.db.close();
   }

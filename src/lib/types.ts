@@ -46,7 +46,17 @@ export type Catalog = {
     address: string;
     mapsUrl: string;
     instagram: string;
+    facebook: string;
+    whatsapp: string;
+    whatsappLabel: string;
+    hours: string;
+    tursabNo: string;
+    founded: number;
   };
+  features: { icon: string; title: string; text: string }[];
+  services: { title: string; image: string; text: string }[];
+  fleet: { note: string; tourism: string[]; vip: string[]; perks: string[] };
+  cancellationPolicy: string;
   tours: Tour[];
   stories: Story[];
   vehicle: Vehicle;
@@ -97,6 +107,7 @@ export type Review = {
   date: string;
   url: string;
   tourIds: string[];
+  relativeDate?: string;
 };
 export type ReviewsResponse = {
   status: string;
@@ -105,6 +116,7 @@ export type ReviewsResponse = {
   total: number | null;
   mapsUrl: string;
   sort: string | null;
+  fetchedAt?: string;
 };
 export const currency = (value: number) =>
   new Intl.NumberFormat("tr-TR", {

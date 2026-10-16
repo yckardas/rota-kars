@@ -8,21 +8,33 @@ import {
   ChevronDown,
   Play,
   Compass,
-  Mountain,
   ShieldCheck,
   Armchair,
   Search,
   ExternalLink,
   BedDouble,
   ChevronRight,
+  Sparkles,
+  Banknote,
+  HeartHandshake,
+  Bus,
+  Star,
+  MessageCircle,
 } from "lucide-react";
 import type { Catalog, Story } from "../lib/types";
 import { today } from "../lib/types";
 import { TourCard } from "../components/TourCard";
-import { Reviews } from "../components/Reviews";
+import { Reviews, GoogleMark } from "../components/Reviews";
+import { whatsappLink } from "../lib/whatsapp";
 import { SeatMap } from "../components/SeatMap";
 import { StoryPlayer } from "../components/StoryPlayer";
 import { RequestForm } from "../components/RequestForm";
+const featureIcons: Record<string, typeof Compass> = {
+  sparkles: Sparkles,
+  shield: ShieldCheck,
+  lira: Banknote,
+  heart: HeartHandshake,
+};
 export function Home({ catalog }: { catalog: Catalog }) {
   const [filter, setFilter] = useState("Tüm rotalar"),
     [story, setStory] = useState<Story | null>(null),
@@ -64,9 +76,17 @@ export function Home({ catalog }: { catalog: Catalog }) {
             <br />
             Bu coğrafyanın insanlarıyla, size özel bir yolculuk.
           </p>
-          <Link className="btn btn-white" to="/turlar">
-            Rotaları keşfedin <ArrowRight size={17} />
-          </Link>
+          <div className="button-row">
+            <Link className="btn btn-white" to="/turlar">
+              Rotaları keşfedin <ArrowRight size={17} />
+            </Link>
+            <a className="hero-rating" href="#yorumlar">
+              <GoogleMark size={20} />
+              <strong>4,9</strong>
+              <Star size={15} fill="currentColor" />
+              <span>456 Google yorumu</span>
+            </a>
+          </div>
         </div>
         <div className="hero-bottom">
           <div className="container">
@@ -113,7 +133,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
             <span>
               Yol arkadaşlarınız
               <select name="guests" aria-label="Yolcu sayısı">
-                {Array.from({ length: 8 }, (_, i) => (
+                {Array.from({ length: 17 }, (_, i) => (
                   <option key={i} value={i + 1}>
                     {i + 1} kişi
                   </option>
@@ -127,19 +147,19 @@ export function Home({ catalog }: { catalog: Catalog }) {
           </button>
         </form>
       </div>
-      <div className="container intro-strip">
-        <span>
-          <Compass size={22} />
-          <span>Bir yerel gibi keşfedin</span>
-        </span>
-        <span>
-          <Armchair size={22} />
-          <span>Az kişi, rahat bir yolculuk</span>
-        </span>
-        <span>
-          <Mountain size={22} />
-          <span>Her mevsime bir rota</span>
-        </span>
+      <div className="container feature-strip">
+        {catalog.features.map((f) => {
+          const Icon = featureIcons[f.icon] || Compass;
+          return (
+            <div className="feature" key={f.title}>
+              <Icon size={24} strokeWidth={1.4} />
+              <div>
+                <strong>{f.title}</strong>
+                <span>{f.text}</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
       <section className="container section tours-section" id="turlar">
         <div className="section-heading">
@@ -169,7 +189,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
         <div className="tour-grid">
           {catalog.tours
             .filter((t) => filter === "Tüm rotalar" || t.category === filter)
-            .slice(0, 3)
+            .slice(0, 6)
             .map((t) => (
               <TourCard key={t.id} tour={t} />
             ))}
@@ -227,21 +247,21 @@ export function Home({ catalog }: { catalog: Catalog }) {
               Kars’a daha yakın.
             </h2>
             <p>
-              VIP minibüslerimizle küçük bir grupla yola çıkın. Rehberiniz yanı
+              18+1 VIP midibüslerimizle küçük bir grupla yola çıkın. Rehberiniz yanı
               başınızda, keşfe ayıracak daha çok zamanınız olsun.
             </p>
             <div className="vip-facts">
               <div>
-                <strong>9+1</strong>
-                <span>VIP minibüs düzeni</span>
+                <strong>18+1</strong>
+                <span>VIP midibüs düzeni</span>
               </div>
               <div>
-                <strong>8</strong>
+                <strong>17</strong>
                 <span>Misafir için koltuk</span>
               </div>
               <div>
                 <ShieldCheck size={27} />
-                <span>Rehbere ayrılan ön koltuk</span>
+                <span>Şoför yanı rehbere ayrılır</span>
               </div>
             </div>
             <Link className="btn btn-white" to="/rezervasyon/ani-cildir">
@@ -257,6 +277,82 @@ export function Home({ catalog }: { catalog: Catalog }) {
             <span className="vip-visual-foot">
               Şoför ve rehber koltukları satışa kapalıdır.
             </span>
+          </div>
+        </div>
+      </section>
+      <section className="container section services-section" id="hizmetler">
+        <div className="section-heading">
+          <div>
+            <span className="section-note">
+              {catalog.business.founded}’dan bu yana Doğu Anadolu’da
+            </span>
+            <h2>Hizmetlerimiz</h2>
+          </div>
+          <a
+            className="text-link"
+            href={whatsappLink(catalog.business.whatsapp, "Merhaba, hizmetleriniz hakkında bilgi almak istiyorum.")}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Teklif alın <ArrowRight size={17} />
+          </a>
+        </div>
+        <div className="service-grid">
+          {catalog.services.map((s) => (
+            <article className="service-card" key={s.title}>
+              <img src={s.image} alt="" loading="lazy" />
+              <h3>{s.title}</h3>
+              <p>{s.text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+      <section className="fleet-section">
+        <div className="container fleet-inner">
+          <div className="fleet-photo">
+            <img
+              src="/images/rota-bus.jpg"
+              alt="Rota Kars Tur logolu turizm otobüsü"
+              loading="lazy"
+            />
+          </div>
+          <div className="fleet-copy">
+            <span className="section-note">Araç kiralama hizmeti</span>
+            <h2>Grubunuz kaç kişi olursa olsun, aracı bizde.</h2>
+            <p>{catalog.fleet.note}</p>
+            <div className="fleet-groups">
+              <div>
+                <small>Turizm taşımacılığı</small>
+                <div className="chips">
+                  {catalog.fleet.tourism.map((c) => (
+                    <span key={c}>{c}</span>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <small>VIP taşımacılık</small>
+                <div className="chips">
+                  {catalog.fleet.vip.map((c) => (
+                    <span key={c}>{c}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <ul className="fleet-perks">
+              {catalog.fleet.perks.map((p) => (
+                <li key={p}>
+                  <Bus size={15} /> {p}
+                </li>
+              ))}
+            </ul>
+            <a
+              className="btn"
+              href={whatsappLink(catalog.business.whatsapp, "Merhaba, şoförlü araç kiralama için teklif almak istiyorum.")}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <MessageCircle size={17} /> Araç için teklif alın
+            </a>
           </div>
         </div>
       </section>
@@ -306,7 +402,12 @@ export function Home({ catalog }: { catalog: Catalog }) {
             </span>
             <h2>Yol arkadaşlarınızı alın, gerisini bize bırakın.</h2>
           </div>
-          <a className="btn btn-outline" href="tel:+905459353410">
+          <a
+            className="btn btn-outline"
+            href={whatsappLink(catalog.business.whatsapp, "Merhaba, kişiye özel bir tur planlamak istiyorum.")}
+            target="_blank"
+            rel="noreferrer"
+          >
             Özel turunuzu konuşalım <ExternalLink size={16} />
           </a>
         </div>
