@@ -33,9 +33,11 @@ export function Reviews({ tourId }: { tourId?: string }) {
               Yol arkadaşlarımızın hikâyeleri
             </span>
             <h2>
-              {tourId
-                ? "Bu rotayı gezenlerin gözünden"
-                : "Müşterilerimizin gözünden Rota Kars"}
+              {!tourId
+                ? "Müşterilerimizin gözünden Rota Kars"
+                : data?.scope === "agency"
+                  ? "Rota Kars ile yola çıkanların gözünden"
+                  : "Bu rotayı gezenlerin gözünden"}
             </h2>
           </div>
           <a className="text-link" href={url} target="_blank" rel="noreferrer">
@@ -85,9 +87,11 @@ export function Reviews({ tourId }: { tourId?: string }) {
           <>
             <p className="review-order">
               {data.sort}{" "}
-              {tourId
-                ? "Yalnızca bu rotayla eşleşen yorumlar gösteriliyor."
-                : ""}
+              {data.scope === "tour"
+                ? `Yorumunda ${termLabel(data.terms)} geçen misafirlerimiz.`
+                : data.scope === "agency"
+                  ? "Bu rotaya özel yorum henüz yok; acentemizin diğer turlarına gelen yorumlar gösteriliyor."
+                  : ""}
             </p>
             <div className="review-list">
               {data.reviews.slice(0, tourId ? 6 : 9).map((r) => (
@@ -122,7 +126,10 @@ export function Reviews({ tourId }: { tourId?: string }) {
                     <Quote className="quote-icon" size={25} />
                   </div>
                   <Stars rating={r.rating} />
-                  <ReviewText text={r.text} />
+                  <ReviewText
+                    text={r.text}
+                    terms={data.scope === "tour" ? data.terms : undefined}
+                  />
                   <a
                     href={r.url}
                     target="_blank"
@@ -164,14 +171,56 @@ export function Reviews({ tourId }: { tourId?: string }) {
     </section>
   );
 }
-function ReviewText({ text }: { text: string }) {
+type Term = { term: string; exact: boolean };
+const fold = (s: string) =>
+  s
+    .toLocaleLowerCase("tr-TR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ı/g, "i");
+const display: Record<string, string> = {
+  ani: "Ani",
+  cildir: "Çıldır",
+  sarikamis: "Sarıkamış",
+  kayak: "kayak",
+  batum: "Batum",
+  gonio: "Gonio",
+  van: "Van",
+  akdamar: "Akdamar",
+  muradiye: "Muradiye",
+  ishak: "İshak Paşa",
+  tuzluca: "Tuzluca",
+  dogubayazit: "Doğubayazıt",
+  nemrut: "Nemrut",
+  ahlat: "Ahlat",
+  tatvan: "Tatvan",
+  bitlis: "Bitlis",
+};
+function termLabel(terms: Term[] = []) {
+  const names = terms.slice(0, 3).map((t) => `“${display[t.term] || t.term}”`);
+  return names.length > 1
+    ? names.slice(0, -1).join(", ") + " veya " + names.at(-1)
+    : names[0] || "bu rota";
+}
+// Sunucudaki eşleştirme kuralıyla aynı: tam kelime veya kelime başı.
+function highlight(text: string, terms?: Term[]) {
+  if (!terms?.length) return text;
+  return text.split(/([\p{L}\p{N}]+)/u).map((part, i) => {
+    const w = fold(part);
+    const hit =
+      i % 2 === 1 &&
+      terms.some((t) => (t.exact ? w === t.term : w.startsWith(t.term)));
+    return hit ? <mark key={i}>{part}</mark> : part;
+  });
+}
+function ReviewText({ text, terms }: { text: string; terms?: Term[] }) {
   const [open, setOpen] = useState(false);
   if (!text) return <p>Bu misafir yalnızca puan bırakmış.</p>;
   const long = text.length > 260;
   return (
     <>
       <p className={long && !open ? "review-text clamped" : "review-text"}>
-        {text}
+        {highlight(text, terms)}
       </p>
       {long && (
         <button className="review-more" onClick={() => setOpen(!open)}>

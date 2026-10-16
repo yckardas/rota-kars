@@ -407,7 +407,7 @@ export function Admin({ catalog }: { catalog: Catalog }) {
               düzenleyebilirsiniz. Boş seçim yorumu tur sayfalarından çıkarır,
               genel yorumlar alanında korur.
             </p>
-            {reviews?.status !== "connected" ? (
+            {!reviews?.reviews.length ? (
               <div className="info-note">
                 <MessageSquareText size={22} />
                 <div>

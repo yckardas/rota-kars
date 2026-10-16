@@ -4666,3 +4666,10 @@ input[type="radio"] {
     animation: none;
   }
 }
+
+.review-text mark {
+  background: #f3e6cc;
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 2px;
+}

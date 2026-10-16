@@ -11,18 +11,54 @@ const normalize = (s) =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/ı/g, "i");
+const VAN_TOURS = ["van-gunubirlik", "van", "van-havzasi"];
+// Yorum metninde aranan kelimeler. exact: kelimenin tamamı eşleşmeli
+// ("ani" → "Ani'de" evet, "anılar" hayır); diğerleri kelime başıyla eşleşir.
+export const TOUR_TERMS = [
+  { term: "ani", exact: true, tours: ["ani-cildir"] },
+  { term: "cildir", tours: ["ani-cildir"] },
+  { term: "sarikamis", tours: ["sarikamis"] },
+  { term: "kayak", tours: ["sarikamis"] },
+  { term: "batum", tours: ["batum"] },
+  { term: "gonio", tours: ["batum"] },
+  { term: "van", exact: true, tours: VAN_TOURS },
+  { term: "akdamar", tours: VAN_TOURS },
+  { term: "muradiye", tours: VAN_TOURS },
+  { term: "ishak", tours: ["van", "van-havzasi"] },
+  { term: "tuzluca", tours: ["van", "van-havzasi"] },
+  { term: "dogubayazit", tours: ["van", "van-havzasi"] },
+  { term: "nemrut", tours: ["van-havzasi"] },
+  { term: "ahlat", tours: ["van-havzasi"] },
+  { term: "tatvan", tours: ["van-havzasi"] },
+  { term: "bitlis", tours: ["van-havzasi"] },
+];
+export const tokenize = (text) =>
+  normalize(text || "")
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+const termHits = (word, t) => (t.exact ? word === t.term : word.startsWith(t.term));
 export function matchTourIds(text) {
-  const s = normalize(text || "");
+  const words = tokenize(text);
   return [
     ...new Set(
-      [
-        /(^|[^a-z])ani([^a-z]|$)|cildir/.test(s) ? "ani-cildir" : null,
-        /sarikamis/.test(s) ? "sarikamis" : null,
-        /batum/.test(s) ? "batum" : null,
-        /(^|[^a-z])van([^a-z]|$)|ishak pasa|akdamar/.test(s) ? "van" : null,
-      ].filter(Boolean),
+      TOUR_TERMS.filter((t) => words.some((w) => termHits(w, t))).flatMap(
+        (t) => t.tours,
+      ),
     ),
   ];
+}
+// Tur sayfasında vurgulanacak kelimeler (istemci aynı kuralla eşleştirir).
+export const tourTerms = (tourId) =>
+  TOUR_TERMS.filter((t) => t.tours.includes(tourId)).map(({ term, exact }) => ({
+    term,
+    exact: Boolean(exact),
+  }));
+function scoped(items, tourId) {
+  if (!tourId) return { scope: "all", reviews: items };
+  const matched = items.filter((r) => r.tourIds.includes(tourId));
+  return matched.length
+    ? { scope: "tour", terms: tourTerms(tourId), reviews: matched }
+    : { scope: "agency", terms: tourTerms(tourId), reviews: items };
 }
 const safeUrl = (u) => {
   try {
@@ -158,7 +194,7 @@ export function createReviewsService(
       mapsUrl,
       fetchedAt: snapshot.fetchedAt,
       sort: `Google Haritalar'dan ${new Date(snapshot.fetchedAt + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })} tarihinde alınan en alakalı yorumlar.`,
-      reviews: tourId ? items.filter((r) => r.tourIds.includes(tourId)) : items,
+      ...scoped(items, tourId),
     };
   };
   return {
@@ -196,9 +232,7 @@ export function createReviewsService(
           total: cache.total,
           mapsUrl,
           sort: cache.sort,
-          reviews: tourId
-            ? items.filter((r) => r.tourIds.includes(tourId))
-            : items,
+          ...scoped(items, tourId),
         };
       } catch {
         if (snapshot) return fromSnapshot(assignments, tourId);

@@ -6,7 +6,15 @@ test("tour matching handles Turkish and avoids ani within unrelated words", () =
     "ani-cildir",
   ]);
   assert.deepEqual(matchTourIds("Sarıkamış kayak turu"), ["sarikamis"]);
-  assert.deepEqual(matchTourIds("Batum ve Van turu"), ["batum", "van"]);
+  assert.deepEqual(matchTourIds("Batum ve Van turu"), [
+    "batum",
+    "van-gunubirlik",
+    "van",
+    "van-havzasi",
+  ]);
+  assert.deepEqual(matchTourIds("Ani'de rehberimiz harikaydı"), ["ani-cildir"]);
+  assert.deepEqual(matchTourIds("Nemrut Krater Gölü"), ["van-havzasi"]);
+  assert.deepEqual(matchTourIds("İshak Paşa Sarayı"), ["van", "van-havzasi"]);
   assert.deepEqual(
     matchTourIds("Şahane bir organizasyon, anılarımız güzel."),
     [],
@@ -144,4 +152,27 @@ test("Google error has safe fallback and no leaked credentials", async () => {
   const r = await s.get();
   assert.equal(r.status, "snapshot");
   assert.ok(!JSON.stringify(r).includes("secret"));
+});
+
+test("tour page shows matching reviews, otherwise agency-wide ones", async () => {
+  const snapshot = {
+    rating: 5,
+    total: 2,
+    fetchedAt: "2026-10-16",
+    reviews: [
+      { id: "a", author: "A", rating: 5, date: "2026-01-01", text: "Ani ve Çıldır muhteşemdi" },
+      { id: "b", author: "B", rating: 5, date: "2026-01-01", text: "Tiflis turu çok iyiydi" },
+    ],
+  };
+  const s = createReviewsService({}, fetch, snapshot);
+  const ani = await s.get({}, "ani-cildir");
+  assert.equal(ani.scope, "tour");
+  assert.deepEqual(ani.reviews.map((r) => r.id), ["a"]);
+  assert.ok(ani.terms.some((t) => t.term === "ani" && t.exact));
+  const batum = await s.get({}, "batum");
+  assert.equal(batum.scope, "agency");
+  assert.equal(batum.reviews.length, 2);
+  const manual = await s.get({ b: ["batum"] }, "batum");
+  assert.equal(manual.scope, "tour");
+  assert.deepEqual(manual.reviews.map((r) => r.id), ["b"]);
 });

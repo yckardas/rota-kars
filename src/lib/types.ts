@@ -117,6 +117,8 @@ export type ReviewsResponse = {
   mapsUrl: string;
   sort: string | null;
   fetchedAt?: string;
+  scope?: "all" | "tour" | "agency";
+  terms?: { term: string; exact: boolean }[];
 };
 export const currency = (value: number) =>
   new Intl.NumberFormat("tr-TR", {
