@@ -2,12 +2,14 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { openStore } from "../server/store.mjs";
 const base = Date.UTC(2026, 9, 16, 12);
-function fixture() {
+async function fixture() {
   let now = base;
-  const s = openStore(":memory:", { clock: () => now });
+  const s = await openStore(":memory:", {
+    clock: () => now,
+  });
   return {
     s,
-    id: s.listDepartures("ani-cildir")[0].id,
+    id: (await s.listDepartures("ani-cildir"))[0].id,
     tick: (n) => (now += n),
   };
 }
@@ -19,61 +21,61 @@ const person = (holdToken) => ({
   passengers: ["Birinci Yolcu"],
   paymentMode: "deposit",
 });
-test("18+1 model has guide excluded and exactly seventeen sellable seats", () => {
-  const { s, id } = fixture();
+test("18+1 model has guide excluded and exactly seventeen sellable seats", async () => {
+  const { s, id } = await fixture();
   try {
-    const a = s.availability(id);
+    const a = await s.availability(id);
     assert.equal(a.vehicle.passengerSeats, 18);
     assert.equal(a.vehicle.driverSeats, 1);
     assert.equal(a.vehicle.guideSeats, 1);
     assert.equal(a.seats.length, 17);
     assert.equal(a.vehicle.layout[0][3], "guide");
     for (const seats of [[0], [18], ["guide"], ["driver"], [1, 1], [], [1.5]])
-      assert.throws(
-        () => s.hold(id, seats),
+      await assert.rejects(
+        async () => await s.hold(id, seats),
         (e) => e.status === 400,
       );
   } finally {
-    s.db.close();
+    await s.db.close();
   }
 });
-test("competing holds reject an already locked seat atomically", () => {
-  const { s, id } = fixture();
+test("competing holds reject an already locked seat atomically", async () => {
+  const { s, id } = await fixture();
   try {
-    s.hold(id, [1]);
-    assert.throws(
-      () => s.hold(id, [2, 1]),
+    await s.hold(id, [1]);
+    await assert.rejects(
+      async () => await s.hold(id, [2, 1]),
       (e) => e.status === 409,
     );
     assert.equal(
-      s.availability(id).seats.find((x) => x.number === 2).status,
+      (await s.availability(id)).seats.find((x) => x.number === 2).status,
       "available",
     );
-    assert.equal(s.listDepartures("ani-cildir")[0].available, 16);
+    assert.equal((await s.listDepartures("ani-cildir"))[0].available, 16);
   } finally {
-    s.db.close();
+    await s.db.close();
   }
 });
-test("expired hold releases seats and cannot become a reservation", () => {
-  const { s, id, tick } = fixture();
+test("expired hold releases seats and cannot become a reservation", async () => {
+  const { s, id, tick } = await fixture();
   try {
-    const h = s.hold(id, [1]);
+    const h = await s.hold(id, [1]);
     tick(10 * 60 * 1000 + 1);
-    assert.equal(s.availability(id).seats[0].status, "available");
-    assert.throws(
-      () => s.reserve(person(h.token)),
+    assert.equal((await s.availability(id)).seats[0].status, "available");
+    await assert.rejects(
+      async () => await s.reserve(person(h.token)),
       (e) => e.status === 410,
     );
-    assert.ok(s.hold(id, [1]));
+    assert.ok(await s.hold(id, [1]));
   } finally {
-    s.db.close();
+    await s.db.close();
   }
 });
-test("price uses server amount, deposit is correct, replay is rejected", () => {
-  const { s, id } = fixture();
+test("price uses server amount, deposit is correct, replay is rejected", async () => {
+  const { s, id } = await fixture();
   try {
-    const h = s.hold(id, [1, 2]);
-    const r = s.reserve({
+    const h = await s.hold(id, [1, 2]);
+    const r = await s.reserve({
       ...person(h.token),
       passengers: ["Birinci Yolcu", "İkinci Yolcu"],
       total: 1,
@@ -82,60 +84,60 @@ test("price uses server amount, deposit is correct, replay is rejected", () => {
     assert.equal(r.deposit, 60000);
     assert.equal(r.status, "pending_agency");
     assert.equal(
-      s.lookup(r.reference, "test@example.com").reference,
+      (await s.lookup(r.reference, "test@example.com")).reference,
       r.reference,
     );
-    assert.throws(
-      () =>
-        s.reserve({
+    await assert.rejects(
+      async () =>
+        await s.reserve({
           ...person(h.token),
           passengers: ["Birinci Yolcu", "İkinci Yolcu"],
         }),
       (e) => e.status === 410,
     );
-    assert.equal(s.availability(id).seats[0].status, "occupied");
+    assert.equal((await s.availability(id)).seats[0].status, "occupied");
   } finally {
-    s.db.close();
+    await s.db.close();
   }
 });
-test("each selected seat needs a passenger, validation does not lose the hold", () => {
-  const { s, id } = fixture();
+test("each selected seat needs a passenger, validation does not lose the hold", async () => {
+  const { s, id } = await fixture();
   try {
-    const h = s.hold(id, [1, 2]);
-    assert.throws(
-      () => s.reserve(person(h.token)),
+    const h = await s.hold(id, [1, 2]);
+    await assert.rejects(
+      async () => await s.reserve(person(h.token)),
       (e) => e.status === 400,
     );
     assert.ok(
-      s.reserve({
+      await s.reserve({
         ...person(h.token),
         passengers: ["Birinci Yolcu", "İkinci Yolcu"],
       }),
     );
   } finally {
-    s.db.close();
+    await s.db.close();
   }
 });
-test("lookup requires matching email, cancellation releases seats, pending request expires", () => {
-  const { s, id, tick } = fixture();
+test("lookup requires matching email, cancellation releases seats, pending request expires", async () => {
+  const { s, id, tick } = await fixture();
   try {
-    let r = s.reserve(person(s.hold(id, [1]).token));
-    assert.throws(
-      () => s.lookup(r.reference, "wrong@example.com"),
+    let r = await s.reserve(person((await s.hold(id, [1])).token));
+    await assert.rejects(
+      async () => await s.lookup(r.reference, "wrong@example.com"),
       (e) => e.status === 404,
     );
-    assert.equal(s.cancel(r.reference, r.email).status, "cancelled");
-    assert.equal(s.availability(id).seats[0].status, "available");
-    r = s.reserve(person(s.hold(id, [1]).token));
+    assert.equal((await s.cancel(r.reference, r.email)).status, "cancelled");
+    assert.equal((await s.availability(id)).seats[0].status, "available");
+    r = await s.reserve(person((await s.hold(id, [1])).token));
     tick(24 * 3600 * 1000 + 1);
-    assert.equal(s.lookup(r.reference, r.email).status, "expired");
-    assert.equal(s.availability(id).seats[0].status, "available");
+    assert.equal((await s.lookup(r.reference, r.email)).status, "expired");
+    assert.equal((await s.availability(id)).seats[0].status, "available");
   } finally {
-    s.db.close();
+    await s.db.close();
   }
 });
-test("hotels are unpublished by default and only active partners appear", () => {
-  const { s } = fixture();
+test("hotels are unpublished by default and only active partners appear", async () => {
+  const { s } = await fixture();
   try {
     const h = {
       name: "Test Oteli",
@@ -144,13 +146,21 @@ test("hotels are unpublished by default and only active partners appear", () => 
       amenities: ["Wi-Fi"],
       active: false,
     };
-    const { id } = s.upsertHotel(h);
-    assert.equal(s.hotels().length, 0);
-    s.upsertHotel({ ...h, id, active: true });
-    assert.equal(s.hotels().length, 1);
-    s.upsertHotel({ ...h, id, active: false });
-    assert.equal(s.hotels().length, 0);
+    const { id } = await s.upsertHotel(h);
+    assert.equal((await s.hotels()).length, 0);
+    await s.upsertHotel({
+      ...h,
+      id,
+      active: true,
+    });
+    assert.equal((await s.hotels()).length, 1);
+    await s.upsertHotel({
+      ...h,
+      id,
+      active: false,
+    });
+    assert.equal((await s.hotels()).length, 0);
   } finally {
-    s.db.close();
+    await s.db.close();
   }
 });

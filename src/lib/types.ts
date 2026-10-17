@@ -1,5 +1,7 @@
 export type Tour = {
   id: string;
+  salesOpen: boolean;
+  vehicle: Vehicle;
   name: string;
   subtitle: string;
   category: string;
@@ -27,7 +29,16 @@ export type Story = {
   location: string;
   scenes: { title: string; text: string }[];
 };
+export type VehicleModel = {
+  id: string;
+  name: string;
+  min: number;
+  max: number;
+  seats: number;
+  columns: number;
+};
 export type Vehicle = {
+  modelId?: string;
   id: string;
   name: string;
   passengerSeats: number;
@@ -54,14 +65,26 @@ export type Catalog = {
     founded: number;
   };
   features: { icon: string; title: string; text: string }[];
-  services: { title: string; image: string; text: string }[];
+  services: { id: string; title: string; image: string; text: string }[];
   fleet: { note: string; tourism: string[]; vip: string[]; perks: string[] };
   cancellationPolicy: string;
   tours: Tour[];
   stories: Story[];
   vehicle: Vehicle;
+  vehicleModels: VehicleModel[];
+  photoCredits: {
+    id: string;
+    path: string;
+    title: string;
+    author: string;
+    license: string;
+    licenseUrl: string;
+    source: string;
+    changes: string;
+  }[];
   payment: { enabled: boolean; message: string };
   preview: boolean;
+  demo?: boolean;
 };
 export type Departure = {
   id: string;
@@ -70,10 +93,36 @@ export type Departure = {
   price: number;
   active: number;
   available: number;
+  start_time: string;
+  pickup: string;
+  guide_name: string;
+  guide_phone: string;
+  vehicle: Vehicle;
 };
 export type Seat = { number: number; status: "occupied" | "available" };
 export type Hold = { token: string; seats: number[]; expiresAt: number };
 export type Reservation = {
+  ticket_token: string;
+  ticketUrl?: string;
+  qrDataUrl?: string;
+  net_paid?: number;
+  paid_total?: number;
+  refunded_total?: number;
+  balance_due?: number;
+  start_time?: string;
+  pickup?: string;
+  guide_name?: string;
+  cancellation_requested_at?: number;
+  ledger?: {
+    id: string;
+    kind: string;
+    amount: number;
+    method: string;
+    external_reference: string;
+  }[];
+  vehicle?: Vehicle | null;
+  subtotal?: number;
+  discount_amount?: number;
   reference: string;
   departure_id: string;
   email: string;

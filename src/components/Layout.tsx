@@ -11,8 +11,11 @@ import {
   ExternalLink,
   MessageCircle,
   Facebook,
+  UserRound,
 } from "lucide-react";
 import type { Catalog } from "../lib/types";
+import { MembershipInvite } from "./MembershipInvite";
+import { useMember } from "../lib/member";
 import { ChatBot } from "./ChatBot";
 import { whatsappLink } from "../lib/whatsapp";
 export function Layout({
@@ -37,6 +40,7 @@ export function Layout({
     return () => document.removeEventListener("keydown", f);
   }, [open]);
   const b = catalog.business;
+  const { member } = useMember();
   return (
     <>
       <a href="#main" className="skip-link">
@@ -45,7 +49,10 @@ export function Layout({
       <div className="topbar">
         <div className="container">
           <span>
-            <MapPin size={12} /> Kars’tan başlayan güzel hikâyeler
+            <MapPin size={12} />{" "}
+            {catalog.demo
+              ? "Canlı demo · Örnek tarihler ve fiyatlar"
+              : "Kars’tan başlayan güzel hikâyeler"}
           </span>
           <div>
             <a href="tel:+904742239163">
@@ -77,19 +84,29 @@ export function Layout({
               Ana sayfa
             </NavLink>
             <NavLink to="/turlar">Turlarımız</NavLink>
-            <a href="/#hizmetler">Hizmetler</a>
+            <NavLink to="/hizmetler">Hizmetler</NavLink>
             <NavLink to="/konaklama">Konaklama</NavLink>
             <NavLink to="/hakkimizda">Hakkımızda</NavLink>
             <NavLink to="/iletisim">İletişim</NavLink>
           </nav>
           <div className="header-actions">
+            <Link
+              to={member ? "/hesabim" : "/uyelik"}
+              className="member-header-link"
+            >
+              <UserRound size={18} />
+              <span>{member ? "Hesabım" : "Üye ol / Giriş"}</span>
+            </Link>
             <Link to="/rezervasyonum" className="reservation-link">
               <Ticket size={18} />
               <span>Rezervasyonum</span>
             </Link>
             <a
               className="btn btn-small header-cta"
-              href={whatsappLink(b.whatsapp, "Merhaba, rotakarsturizm.com sitesinden yazıyorum.")}
+              href={whatsappLink(
+                b.whatsapp,
+                "Merhaba, rotakarsturizm.com sitesinden yazıyorum.",
+              )}
               target="_blank"
               rel="noreferrer"
             >
@@ -108,6 +125,7 @@ export function Layout({
       </header>
       <main id="main">{children}</main>
       <ChatBot whatsapp={b.whatsapp} />
+      <MembershipInvite />
       <footer className="footer">
         <div className="container footer-main">
           <div className="footer-brand">
@@ -172,6 +190,7 @@ export function Layout({
             <Link to="/rezervasyonum">Ön rezervasyon sorgulama</Link>
             <Link to="/bilgilendirme#iptal">Tur iptali</Link>
             <Link to="/bilgilendirme">Bilgilendirme ve gizlilik</Link>
+            <Link to="/gorsel-kaynaklari">Fotoğraf kaynakları</Link>
           </div>
           <div className="footer-contact">
             <h3>Kars’tayız, bekleriz.</h3>

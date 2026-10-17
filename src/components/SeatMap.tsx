@@ -1,4 +1,10 @@
-import { Armchair, CircleGauge, UserRound, Check, DoorOpen } from "lucide-react";
+import {
+  Armchair,
+  CircleGauge,
+  UserRound,
+  Check,
+  DoorOpen,
+} from "lucide-react";
 import type { Seat, Vehicle } from "../lib/types";
 export function SeatMap({
   vehicle,
@@ -28,7 +34,10 @@ export function SeatMap({
       </div>
       <div className="vehicle-body">
         <div className="windshield" />
-        <div className="seat-row cockpit">
+        <div
+          className="seat-row cockpit"
+          style={{ gridTemplateColumns: `repeat(${cockpit.length}, 1fr)` }}
+        >
           {cockpit.map((cell, i) =>
             cell === "driver" ? (
               <div className="crew-seat" key={i}>
@@ -55,7 +64,11 @@ export function SeatMap({
           <span>Yolcu bölümü</span>
         </div>
         {rows.map((row, i) => (
-          <div className="seat-row passenger-row" key={i}>
+          <div
+            className="seat-row passenger-row"
+            key={i}
+            style={{ gridTemplateColumns: `repeat(${cockpit.length}, 1fr)` }}
+          >
             {row.map((cell, j) => {
               if (typeof cell !== "number")
                 return cell === "door" ? (
@@ -72,9 +85,7 @@ export function SeatMap({
                   key={"s" + cell}
                   disabled={!interactive || st === "occupied"}
                   onClick={() => onSelect?.(cell)}
-                  className={
-                    "vehicle-seat " + (st !== "available" ? st : "")
-                  }
+                  className={"vehicle-seat " + (st !== "available" ? st : "")}
                   aria-label={`${cell} numaralı koltuk, ${st === "selected" ? "seçili" : st === "occupied" ? "dolu" : "boş"}`}
                   aria-pressed={st === "selected"}
                 >
@@ -91,7 +102,7 @@ export function SeatMap({
         <div className="vehicle-rear" />
       </div>
       <div className="seat-caption">
-        {vehicle.passengerSeats}+{vehicle.driverSeats} VIP midibüs{" "}
+        {vehicle.passengerSeats}+{vehicle.driverSeats} · {vehicle.name}{" "}
         <span>
           {vehicle.sellableSeats} misafir + {vehicle.guideSeats} rehber +{" "}
           {vehicle.driverSeats} şoför

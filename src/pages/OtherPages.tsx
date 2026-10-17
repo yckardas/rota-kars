@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { useMember } from "../lib/member";
 import {
   ArrowRight,
   MapPin,
@@ -138,11 +139,23 @@ export function Hotels() {
   );
 }
 export function Lookup({ catalog }: { catalog: Catalog }) {
+  const [params] = useSearchParams(),
+    { member } = useMember();
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [result, setResult] = useState<Reservation | null>(null),
-    [credentials, setCredentials] = useState({ reference: "", email: "" }),
+    [credentials, setCredentials] = useState({
+      reference: (params.get("ref") || "").slice(0, 30),
+      email: member?.email || "",
+    }),
     [confirm, setConfirm] = useState(false);
+  useEffect(() => {
+    if (member)
+      setCredentials((current) => ({
+        ...current,
+        email: current.email || member.email,
+      }));
+  }, [member]);
   async function lookup(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -217,12 +230,20 @@ export function Lookup({ catalog }: { catalog: Catalog }) {
       {result && (
         <>
           <ReservationTicket reservation={result} catalog={catalog} />
-          {result.status === "pending_agency" &&
+          {Boolean(result.cancellation_requested_at) &&
+            result.status !== "cancelled" && (
+              <p className="notice-success">
+                İptal talebiniz acente değerlendirmesini bekliyor.
+              </p>
+            )}
+          {["pending_agency", "confirmed"].includes(result.status) &&
+            !result.cancellation_requested_at &&
             (confirm ? (
               <div className="cancel-confirm">
                 <p>
-                  Ön rezervasyon iptal edilecek ve koltuklarınız serbest
-                  bırakılacak.
+                  {result.net_paid
+                    ? "İptal talebiniz acenteye iletilecek. Ödenen tutarların iadesi acente tarafından ayrıca değerlendirilir; otomatik iade yapılmaz."
+                    : "Ön rezervasyon iptal edilecek ve koltuklarınız serbest bırakılacak."}
                 </p>
                 <div className="button-row">
                   <button
@@ -242,7 +263,7 @@ export function Lookup({ catalog }: { catalog: Catalog }) {
               </div>
             ) : (
               <button className="text-link" onClick={() => setConfirm(true)}>
-                Ön rezervasyonumu iptal etmek istiyorum
+                İptal talebi oluşturmak istiyorum
               </button>
             ))}
         </>
@@ -407,6 +428,31 @@ export function Information() {
         bilgisayardaki yerel veritabanında saklanır. Bu sürüm otomatik e-posta
         veya SMS göndermez. Testlerde gerçek kimlik veya kart bilgisi
         kullanmayın.
+      </p>
+      <h2 id="uyelik">Üyelik ve kampanyalar</h2>
+      <p>
+        Üyelik ücretsizdir. Ad, e-posta ve parola ile oluşturulan hesaplarda
+        parola tek yönlü güvenli özet olarak saklanır. Oturum için zorunlu bir
+        çerez kullanılır. E-posta doğrulama ve parola yenileme bağlantıları
+        gönderim hizmeti tanımlandığında e-postayla iletilir. Sosyal girişler
+        yalnız firma tarafından yapılandırılan sağlayıcılarla açılır.
+      </p>
+      <p>
+        Şans çarkı hesap başına bir kez çevrilebilir. %5, %10 veya %15 sonuçları
+        yönetici tarafından belirlenen altı eşit olasılıklı dilimden sunucuda
+        seçilir. Kuponlar üzerlerinde belirtilen son tarihe kadar geçerlidir,
+        tek kullanımlıdır ve devredilemez. Aynı rezervasyonda yalnız bir kupon
+        uygulanır. Konaklama ve ekstra hizmetler kapsam dışındadır.
+      </p>
+      <p>
+        Davet koduyla üye olan arkadaş turunu tamamladığında veya kampanya
+        ayarına göre tam ödemesi kaydedildiğinde, davet eden ve davet edilen
+        hesabın her birine sonraki rezervasyonda kullanılmak üzere birer %10
+        kupon tanımlanır. Aynı arkadaş için ödül yalnız bir kez verilir. Kişi
+        kendi hesabını davet edemez. Ön rezervasyon iptal edilirse kullanılan ve
+        süresi geçmemiş kupon yeniden kullanılabilir; davet ödülü tekrarlanmaz.
+        Kampanya indirimleri tahsilat veya kesin bilet oluşturmaz; güncel tur
+        kapsamı acente tarafından teyit edilir.
       </p>
       <h2>Google yorumları</h2>
       <p>

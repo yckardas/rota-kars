@@ -29,6 +29,7 @@ import { whatsappLink } from "../lib/whatsapp";
 import { SeatMap } from "../components/SeatMap";
 import { StoryPlayer } from "../components/StoryPlayer";
 import { RequestForm } from "../components/RequestForm";
+import { InstagramSection } from "../components/InstagramSection";
 const featureIcons: Record<string, typeof Compass> = {
   sparkles: Sparkles,
   shield: ShieldCheck,
@@ -38,7 +39,18 @@ const featureIcons: Record<string, typeof Compass> = {
 export function Home({ catalog }: { catalog: Catalog }) {
   const [filter, setFilter] = useState("Tüm rotalar"),
     [story, setStory] = useState<Story | null>(null),
-    [request, setRequest] = useState(false);
+    [request, setRequest] = useState(false),
+    [searchTour, setSearchTour] = useState("");
+  const previewTour = catalog.tours.find((t) => t.salesOpen),
+    previewVehicle = previewTour?.vehicle || catalog.vehicle;
+  const guestLimit =
+    catalog.tours.find((t) => t.id === searchTour)?.vehicle.sellableSeats ||
+    Math.max(
+      ...catalog.tours
+        .filter((t) => t.salesOpen)
+        .map((t) => t.vehicle.sellableSeats),
+      1,
+    );
   const navigate = useNavigate();
   function search(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -103,7 +115,12 @@ export function Home({ catalog }: { catalog: Catalog }) {
             <MapPin size={18} />
             <span>
               Rotanız
-              <select name="tour" aria-label="Rotanız">
+              <select
+                name="tour"
+                aria-label="Rotanız"
+                value={searchTour}
+                onChange={(e) => setSearchTour(e.target.value)}
+              >
                 <option value="">Nereye gitmek istersiniz?</option>
                 {catalog.tours
                   .filter((t) => !t.inquiryOnly)
@@ -133,7 +150,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
             <span>
               Yol arkadaşlarınız
               <select name="guests" aria-label="Yolcu sayısı">
-                {Array.from({ length: 17 }, (_, i) => (
+                {Array.from({ length: guestLimit }, (_, i) => (
                   <option key={i} value={i + 1}>
                     {i + 1} kişi
                   </option>
@@ -242,21 +259,22 @@ export function Home({ catalog }: { catalog: Catalog }) {
               Yolculuğun kendisi de güzel olsun.
             </span>
             <h2>
-              Kalabalıktan uzak,
+              Yolculuğunuza uygun,
               <br />
-              Kars’a daha yakın.
+              size ayrılmış bir yer.
             </h2>
             <p>
-              18+1 VIP midibüslerimizle küçük bir grupla yola çıkın. Rehberiniz yanı
-              başınızda, keşfe ayıracak daha çok zamanınız olsun.
+              Grubunuza uygun araçla yola çıkın. Araç ve koltuk düzenini tur
+              sayfasında inceleyin; şoför yanındaki ön koltuk rehberinize
+              ayrılmış olsun.
             </p>
             <div className="vip-facts">
               <div>
-                <strong>18+1</strong>
-                <span>VIP midibüs düzeni</span>
+                <strong>{previewVehicle.passengerSeats}+1</strong>
+                <span>{previewTour?.name || "Örnek araç düzeni"}</span>
               </div>
               <div>
-                <strong>17</strong>
+                <strong>{previewVehicle.sellableSeats}</strong>
                 <span>Misafir için koltuk</span>
               </div>
               <div>
@@ -264,7 +282,10 @@ export function Home({ catalog }: { catalog: Catalog }) {
                 <span>Şoför yanı rehbere ayrılır</span>
               </div>
             </div>
-            <Link className="btn btn-white" to="/rezervasyon/ani-cildir">
+            <Link
+              className="btn btn-white"
+              to={previewTour ? "/rezervasyon/" + previewTour.id : "/turlar"}
+            >
               Yeriniz şimdiden belli olsun <ArrowRight size={17} />
             </Link>
           </div>
@@ -273,7 +294,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
               <Armchair size={17} />
               <span>Koltuk seçimi sizin elinizde.</span>
             </div>
-            <SeatMap vehicle={catalog.vehicle} interactive={false} />
+            <SeatMap vehicle={previewVehicle} interactive={false} />
             <span className="vip-visual-foot">
               Şoför ve rehber koltukları satışa kapalıdır.
             </span>
@@ -290,7 +311,10 @@ export function Home({ catalog }: { catalog: Catalog }) {
           </div>
           <a
             className="text-link"
-            href={whatsappLink(catalog.business.whatsapp, "Merhaba, hizmetleriniz hakkında bilgi almak istiyorum.")}
+            href={whatsappLink(
+              catalog.business.whatsapp,
+              "Merhaba, hizmetleriniz hakkında bilgi almak istiyorum.",
+            )}
             target="_blank"
             rel="noreferrer"
           >
@@ -299,11 +323,14 @@ export function Home({ catalog }: { catalog: Catalog }) {
         </div>
         <div className="service-grid">
           {catalog.services.map((s) => (
-            <article className="service-card" key={s.title}>
+            <Link className="service-card" key={s.id} to={"/hizmetler/" + s.id}>
               <img src={s.image} alt="" loading="lazy" />
               <h3>{s.title}</h3>
               <p>{s.text}</p>
-            </article>
+              <span className="service-discover">
+                Hizmeti keşfet <ArrowRight size={15} />
+              </span>
+            </Link>
           ))}
         </div>
       </section>
@@ -347,7 +374,10 @@ export function Home({ catalog }: { catalog: Catalog }) {
             </ul>
             <a
               className="btn"
-              href={whatsappLink(catalog.business.whatsapp, "Merhaba, şoförlü araç kiralama için teklif almak istiyorum.")}
+              href={whatsappLink(
+                catalog.business.whatsapp,
+                "Merhaba, şoförlü araç kiralama için teklif almak istiyorum.",
+              )}
               target="_blank"
               rel="noreferrer"
             >
@@ -404,7 +434,10 @@ export function Home({ catalog }: { catalog: Catalog }) {
           </div>
           <a
             className="btn btn-outline"
-            href={whatsappLink(catalog.business.whatsapp, "Merhaba, kişiye özel bir tur planlamak istiyorum.")}
+            href={whatsappLink(
+              catalog.business.whatsapp,
+              "Merhaba, kişiye özel bir tur planlamak istiyorum.",
+            )}
             target="_blank"
             rel="noreferrer"
           >
@@ -412,6 +445,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
           </a>
         </div>
       </section>
+      <InstagramSection profileUrl={catalog.business.instagram} />
       <Reviews />
       {story && (
         <StoryPlayer story={story} onClose={() => setStory(null)} />

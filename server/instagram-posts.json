@@ -1,0 +1,42 @@
+[
+  {
+    "id": "a8534ee1-6000-4000-8000-000000000001",
+    "title": "Yolculuklarımızdan",
+    "permalink": "https://www.instagram.com/reel/DJ9cqtzI9EE/",
+    "cover": "/images/ani.jpg",
+    "position": 0,
+    "active": true
+  },
+  {
+    "id": "a8534ee1-6000-4000-8000-000000000002",
+    "title": "Rotadan anlar",
+    "permalink": "https://www.instagram.com/reel/Cy0fU7io4jF/",
+    "cover": "/images/cildir.jpg",
+    "position": 1,
+    "active": true
+  },
+  {
+    "id": "a8534ee1-6000-4000-8000-000000000003",
+    "title": "Birlikte yoldayız",
+    "permalink": "https://www.instagram.com/reel/CxqwQ5Boiai/",
+    "cover": "/images/rota-bus.jpg",
+    "position": 2,
+    "active": true
+  },
+  {
+    "id": "a8534ee1-6000-4000-8000-000000000004",
+    "title": "Keşif günlüğü",
+    "permalink": "https://www.instagram.com/reel/CvaGIDyIpUH/",
+    "cover": "/images/sarikamis.png",
+    "position": 3,
+    "active": true
+  },
+  {
+    "id": "a8534ee1-6000-4000-8000-000000000005",
+    "title": "Rota Kars’tan",
+    "permalink": "https://www.instagram.com/reel/CvMsAm_Ig_1/",
+    "cover": "/images/batum.jpg",
+    "position": 4,
+    "active": true
+  }
+]

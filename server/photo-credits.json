@@ -1,0 +1,62 @@
+[
+  {
+    "id": "ani",
+    "path": "/images/tours/ani.jpg",
+    "title": "Landscape with Cathedral of Ani",
+    "author": "Martin Lopatka",
+    "license": "CC BY-SA 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Landscape_with_Cathedral_of_Ani.jpg",
+    "changes": "Resized by Wikimedia; displayed cropped to card."
+  },
+  {
+    "id": "sarikamis",
+    "path": "/images/tours/sarikamis.jpg",
+    "title": "Allahuekber mountain",
+    "author": "Nurseva",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Allahuekber_mountain.jpg",
+    "changes": "Resized by Wikimedia; displayed cropped to card."
+  },
+  {
+    "id": "batum",
+    "path": "/images/tours/batum.jpg",
+    "title": "Batumi Skyline (31)",
+    "author": "herr.eichhorn from Berlin, Germany",
+    "license": "CC BY-SA 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Batumi_Skyline_(31).jpg",
+    "changes": "Resized by Wikimedia; displayed cropped to card."
+  },
+  {
+    "id": "van",
+    "path": "/images/tours/van.jpg",
+    "title": "AkdamarIslandChurch",
+    "author": "Mcdrwal",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:AkdamarIslandChurch.jpg",
+    "changes": "Resized by Wikimedia; displayed cropped to card."
+  },
+  {
+    "id": "van-havza",
+    "path": "/images/tours/van-havza.jpg",
+    "title": "Lake Nemrut, blue and green lakes",
+    "author": "Gogo2020g",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Lake_Nemrut,_blue_and_green_lakes.jpg",
+    "changes": "Resized by Wikimedia; displayed cropped to card."
+  },
+  {
+    "id": "van-day",
+    "path": "/images/tours/van-day.jpg",
+    "title": "Akhtamar Island on Lake Van with the Armenian Cathedral of the Holy Cross",
+    "author": "gozturk",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Akhtamar_Island_on_Lake_Van_with_the_Armenian_Cathedral_of_the_Holy_Cross.jpg",
+    "changes": "Resized for web; displayed cropped to card."
+  }
+]

@@ -7,11 +7,13 @@ export function RequestForm({
   kind = "hotel",
   hotels = [],
   hotelId,
+  initialNotes = "",
   onClose,
 }: {
   kind?: "hotel" | "private-tour" | "vehicle";
   hotels?: Hotel[];
   hotelId?: string;
+  initialNotes?: string;
   onClose: () => void;
 }) {
   const [busy, setBusy] = useState(false),
@@ -151,6 +153,7 @@ export function RequestForm({
             Eklemek istedikleriniz
             <textarea
               name="notes"
+              defaultValue={initialNotes}
               rows={3}
               maxLength={2000}
               placeholder="Oda, ulaşım veya tur tercihiniz…"
