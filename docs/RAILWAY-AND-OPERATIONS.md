@@ -5,26 +5,21 @@ Veritabanı **MongoDB**'dir. Rezervasyon, koltuk kilidi, kupon ve ödeme defteri
 ## Railway'de MongoDB (replica set) kurulumu
 
 1. Railway projesine **MongoDB** servisini ekleyin (Railway şablonu `mongo` imajını, kullanıcı adı/parola ve `/data/db` volume'üyle kurar).
-2. Mongo servisinin **Settings → Deploy → Custom Start Command** alanına aşağıdakini yazın. Bu komut kalıcı volume üzerinde bir kez keyFile üretir ve mongod'u replica set olarak başlatır:
+2. Mongo servisinin **Settings → Deploy → Custom Start Command** alanına aşağıdakini yazın ve servisi yeniden başlatın (Redeploy). Komut kalıcı volume'de bir kez keyFile üretir, mongod'u `rs0` replica set'i olarak ve Railway iç ağı için IPv6 dahil tüm adresleri dinleyerek başlatır:
 
    ```sh
-   bash -c 'if [ ! -f /data/db/rs.key ]; then openssl rand -base64 756 > /data/db/rs.key; fi; chmod 400 /data/db/rs.key; chown 999:999 /data/db/rs.key; exec docker-entrypoint.sh mongod --replSet rs0 --bind_ip_all --keyFile /data/db/rs.key'
+   bash -c 'if [ ! -f /data/db/rs.key ]; then openssl rand -base64 756 > /data/db/rs.key; fi; chmod 400 /data/db/rs.key; chown 999:999 /data/db/rs.key; exec docker-entrypoint.sh mongod --replSet rs0 --ipv6 --bind_ip ::,0.0.0.0 --keyFile /data/db/rs.key'
    ```
 
-3. Servis yeniden başladıktan sonra replica set'i **bir kez** başlatın. Mongo servisinin bağlantı bilgileriyle kendi bilgisayarınızdan (Railway TCP proxy adresi) veya Railway'in servis kabuğundan:
-
-   ```sh
-   mongosh "mongodb://KULLANICI:PAROLA@ADRES:PORT/?authSource=admin&directConnection=true" \
-     --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"mongodb.railway.internal:27017"}]})'
-   ```
-
-   `host` değeri, uygulama servisinin Mongo'ya ulaştığı **özel ağ adresi** olmalıdır (servis adınız farklıysa `<servis-adı>.railway.internal`). `rs.status().ok` 1 dönmelidir.
+3. `rs.initiate()` için ayrıca bir şey yapmanız gerekmez: uygulama ilk açılışta replica set'in başlatılmadığını görürse onu, bağlandığı adresle (`<mongo-servisi>.railway.internal:27017`) tek üyeli olarak kendisi başlatır ve logda `MongoDB replica set "rs0" başlatıldı` yazar. (Kapatmak için uygulamaya `MONGODB_AUTO_INIT=0`.) Mongo hiç `--replSet` ile açılmamışsa uygulama yukarıdaki komutu yazan bir hatayla durur.
 4. Uygulama servisinin **Variables** alanına Mongo servisinin bağlantı değişkenini referansla verin ve replica set parametresini ekleyin:
 
    ```dotenv
-   MONGODB_URI="${{MongoDB.MONGO_URL}}/?replicaSet=rs0&authSource=admin"
+   MONGO_URL="${{MongoDB.MONGO_URL}}"
    MONGODB_DB=rota-kars
    ```
+
+   Uygulama adrese `replicaSet=rs0` ve `authSource=admin` parametrelerini kendisi ekler.
 
    Referanstaki servis adı (`MongoDB`) ve değişken adı (`MONGO_URL`), Railway'deki Mongo servisinizin Variables sekmesindekilerle aynı olmalıdır; şablon sürümüne göre değişebilir, oradan kontrol edin. Çözülmemiş `${{...}}` ifadesi açık hata verir. Bağlantı adresini loglara yazmayın.
 5. **Yedek:** Mongo servisinin volume'ü için Railway'de otomatik yedeklemeyi açın. Ayrıca belirli aralıklarla `mongodump --uri "$MONGODB_URI" --archive=rota-kars-$(date +%F).gz --gzip` ile yedeği Railway dışına alın.

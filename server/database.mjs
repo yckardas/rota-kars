@@ -57,6 +57,69 @@ export function mongoConfiguration(env = process.env) {
   return { uri, dbName: env.MONGODB_DB || "", autoReplicaSet };
 }
 
+// Railway Mongo servisi için "Custom Start Command". Kalıcı volume'de bir kez keyFile
+// üretir (yetki açık replica set için zorunlu) ve Railway iç ağı IPv6 olduğu için
+// IPv6 dahil tüm adresleri dinler.
+export const RAILWAY_MONGO_START_COMMAND =
+  "bash -c 'if [ ! -f /data/db/rs.key ]; then openssl rand -base64 756 > /data/db/rs.key; fi; chmod 400 /data/db/rs.key; chown 999:999 /data/db/rs.key; exec docker-entrypoint.sh mongod --replSet rs0 --ipv6 --bind_ip ::,0.0.0.0 --keyFile /data/db/rs.key'";
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const hideCredentials = (text) =>
+  String(text || "").replace(/\/\/[^@/]*@/g, "//***@").slice(0, 300);
+
+// Mongo --replSet ile açılmış ama henüz başlatılmamışsa (rs.initiate yapılmamış)
+// replica set'i, uygulamanın bağlandığı adresle tek üyeli olarak başlatır.
+// Hiç --replSet ile açılmamışsa ne yapılacağını söyleyen hata verir.
+export async function prepareReplicaSet(uri, name) {
+  const direct = new URL(uri);
+  direct.searchParams.delete("replicaSet");
+  direct.searchParams.set("directConnection", "true");
+  const client = new MongoClient(direct.toString(), { serverSelectionTimeoutMS: 15000 });
+  try {
+    await client.connect();
+  } catch (e) {
+    throw new Error(
+      "MongoDB'ye hiç bağlanılamadı (adres, port, kullanıcı/parola veya ağ). Ayrıntı: " +
+        hideCredentials(e?.message),
+    );
+  }
+  try {
+    const admin = client.db("admin");
+    const hello = await admin.command({ hello: 1 });
+    if (hello.setName && hello.setName !== name)
+      throw new Error(
+        `Mongo "${hello.setName}" adlı replica set olarak çalışıyor. Uygulamaya MONGODB_REPLICA_SET=${hello.setName} değişkenini verin.`,
+      );
+    if (hello.setName)
+      throw new Error(
+        `Replica set "${name}" başlatılmış ama üyesine (${(hello.hosts || []).join(", ") || "?"}) uygulamadan ulaşılamıyor. rs.conf() içindeki host, uygulamanın kullandığı adresle (${direct.host}) aynı olmalı.`,
+      );
+    try {
+      await admin.command({ replSetGetStatus: 1 });
+    } catch (e) {
+      if (e?.code === 76 || /not running with --replSet/i.test(e?.message || ""))
+        throw new Error(
+          `MongoDB tek düğümlü çalışıyor; rezervasyon transaction'ları için replica set gerekli. Railway'de Mongo servisinin Settings → Deploy → Custom Start Command alanına şunu yazıp servisi yeniden başlatın, uygulama gerisini kendisi yapar:\n${RAILWAY_MONGO_START_COMMAND}`,
+        );
+      if (e?.code !== 94) throw e; // 94 = NotYetInitialized: başlatılabilir.
+    }
+    const host = `${direct.hostname.replace(/^\[|\]$/g, "")}:${direct.port || 27017}`;
+    await admin.command({
+      replSetInitiate: { _id: name, members: [{ _id: 0, host }] },
+    });
+    for (let i = 0; i < 30; i++) {
+      if ((await admin.command({ hello: 1 })).isWritablePrimary) {
+        console.log(`MongoDB replica set "${name}" başlatıldı (${host}).`);
+        return "initiated";
+      }
+      await sleep(1000);
+    }
+    throw new Error(`Replica set "${name}" başlatıldı ama 30 saniyede birincil (primary) olmadı.`);
+  } finally {
+    await client.close().catch(() => {});
+  }
+}
+
 let memoryServer = null,
   memoryUsers = 0,
   memoryStopTimer = null;
@@ -89,7 +152,7 @@ const strip = (doc) => {
 };
 
 export async function connectDatabase({ path, env = process.env } = {}) {
-  let { uri, dbName, autoReplicaSet } = mongoConfiguration(env);
+  let { uri, dbName } = mongoConfiguration(env);
   const memory = path === ":memory:";
   if (memory) {
     uri = await memoryUri();
@@ -99,22 +162,31 @@ export async function connectDatabase({ path, env = process.env } = {}) {
     throw new Error(
       "MONGODB_URI tanımlı değil. Yerelde `docker compose up -d mongo` çalıştırıp .env içine MONGODB_URI=mongodb://127.0.0.1:27017/rota-kars?replicaSet=rs0&directConnection=true yazın.",
     );
-  const client = new MongoClient(uri, {
-    serverSelectionTimeoutMS: 15000,
-    retryWrites: true,
-  });
+  const open = async () => {
+    const c = new MongoClient(uri, { serverSelectionTimeoutMS: 15000, retryWrites: true });
+    try {
+      await c.connect();
+      return c;
+    } catch (e) {
+      await c.close().catch(() => {});
+      throw e;
+    }
+  };
+  let client;
   try {
-    await client.connect();
+    client = await open();
   } catch (e) {
-    await client.close().catch(() => {});
-    // replicaSet adı eklenmiş ama sunucu replica set değilse sürücü yalnız zaman aşımı verir.
-    if (autoReplicaSet && e?.name === "MongoServerSelectionError")
-      throw new Error(
-        `MongoDB'ye "${autoReplicaSet}" replica set'i olarak bağlanılamadı. Mongo servisi --replSet ${autoReplicaSet} ile başlatılıp rs.initiate() yapılmamış olabilir (docs/RAILWAY-AND-OPERATIONS.md). Adres ve parola doğruysa önce bunu kontrol edin.`,
-      );
-    throw new Error(
-      "MongoDB'ye bağlanılamadı: " + String(e?.message || e).replace(/\/\/[^@/]*@/g, "//***@").slice(0, 200),
-    );
+    const replicaSet = new URL(uri.replace(/^mongodb\+srv:/, "https:")).searchParams.get("replicaSet");
+    // replicaSet adıyla bağlanılamıyorsa sunucu henüz replica set olmayabilir:
+    // başlatılmamışsa uygulama başlatır, hiç --replSet yoksa yol gösterir.
+    if (replicaSet && e?.name === "MongoServerSelectionError" && env.MONGODB_AUTO_INIT !== "0" && !uri.startsWith("mongodb+srv:")) {
+      await prepareReplicaSet(uri, replicaSet);
+      try {
+        client = await open();
+      } catch (again) {
+        throw new Error("Replica set hazırlandı ama bağlanılamadı: " + hideCredentials(again?.message));
+      }
+    } else throw new Error("MongoDB'ye bağlanılamadı: " + hideCredentials(e?.message || e));
   }
   // Transaction yalnız replica set (veya sharded) Mongo'da çalışır; tek düğümlü
   // sunucuda ilk rezervasyonda hata almak yerine açılışta net uyarı verilir.
