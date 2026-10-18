@@ -33,6 +33,22 @@ Veritabanı **MongoDB**'dir. Rezervasyon, koltuk kilidi, kupon ve ödeme defteri
 
 Ek değişkenler: güçlü benzersiz `ADMIN_PASSWORD`, `SITE_URL` ve `PUBLIC_BASE_URL=https://firmanin-domaini`, `TRUST_PROXY=1` (tek güvenilir reverse proxy), `PAYMENT_PROVIDER=disabled`. `PORT` Railway tarafından verilir, sunucu `0.0.0.0` dinler. Gerçek üretimde `DEMO_MODE` ve `SEED_DEMO` kapalı kalmalıdır; örnek seferler otomatik eklenmez.
 
+## Dosya depolama (Railway Storage Bucket)
+
+Yönetim panelinden yüklenen görseller ve videolar (Instagram kapakları/videoları vb.) S3 uyumlu Railway bucket'ında saklanır. Bucket özeldir; dosyalar sitede `/media/<id>.<uzantı>` adresiyle görünür ve bu adres 1 saatlik imzalı bağlantıya yönlendirir. Dosya türü uzantıya değil içeriğe bakılarak belirlenir (JPG, PNG, WebP, AVIF ≤ 8 MB; MP4, WebM ≤ 150 MB); SVG/HTML kabul edilmez.
+
+Uygulama servisinin Variables alanına bucket servisinin değişkenlerini referansla verin (servis adı sizin bucket'ınızın adı, örn. `buffered-basket`):
+
+```dotenv
+ENDPOINT="${{buffered-basket.ENDPOINT}}"
+REGION="${{buffered-basket.REGION}}"
+ACCESS_KEY_ID="${{buffered-basket.ACCESS_KEY_ID}}"
+SECRET_ACCESS_KEY="${{buffered-basket.SECRET_ACCESS_KEY}}"
+BUCKET="${{buffered-basket.BUCKET}}"
+```
+
+`RAILWAY_BUCKET_NAME` S3 API'de kullanılmaz; `BUCKET` kullanılır. Bucket'ın Credentials sekmesi path-style URL istiyorsa `S3_FORCE_PATH_STYLE=true` ekleyin. Bucket tanımlı değilse yükleme düğmesi eksik değişkenleri söyleyen bir hata gösterir; site çalışmaya devam eder.
+
 ## Docker ve Railway
 
 - **Yerelde üretim benzeri çalıştırma:** `docker compose up -d --build` → http://localhost:8080. Mongo tek düğümlü replica set olarak `mongo-data` volume'ünde çalışır ve ilk açılışta kendini başlatır. Geliştirme sunucusu (`npm run dev`) için `.env` içinde `MONGODB_URI=mongodb://127.0.0.1:27017/?replicaSet=rs0&directConnection=true` kullanın.

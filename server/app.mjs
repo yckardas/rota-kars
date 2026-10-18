@@ -19,6 +19,7 @@ import {
 } from "./catalog.mjs";
 import { createChatService } from "./chat.mjs";
 import { attachSeoRoutes } from "./seo.mjs";
+import { createStorage, MEDIA_LIMITS } from "./storage.mjs";
 import { vehicleModels } from "./operations.mjs";
 import { attachSocialAuth, cookieValue } from "./social-auth.mjs";
 import { normalizeInstagramUrl, createInstagramFeed } from "./instagram.mjs";
@@ -74,6 +75,9 @@ const bookingSchema = z.object({
     .regex(/^[a-f0-9]{32}$/)
     .optional(),
 });
+// Sitedeki görseller: paketlenmiş /images dosyaları veya bucket'a yüklenen /media dosyaları.
+const localImage = /^(\/images\/[\w.-]+|\/media\/[a-f0-9-]{36}\.(jpg|png|webp|avif))$/;
+const localVideo = /^(\/videos\/[A-Za-z0-9_-]+\.(mp4|webm)|\/media\/[a-f0-9-]{36}\.(mp4|webm))$/;
 export function createApp(
   store,
   {
@@ -87,6 +91,7 @@ export function createApp(
       env,
       settings: store.instagramSettings,
     }),
+    storage = createStorage({ env, db: store.db }),
   } = {},
 ) {
   const app = express(),
@@ -401,6 +406,38 @@ export function createApp(
       database,
     });
   });
+  // Yüklenen görsel/videolar: bucket özel olduğu için kısa ömürlü imzalı adrese yönlendirilir.
+  app.get(
+    "/media/:file",
+    route(async (q, r) => {
+      const url = await storage.signedUrl("/media/" + q.params.file);
+      r.set("Cache-Control", "private, max-age=300");
+      r.redirect(302, url);
+    }),
+  );
+  app.get("/api/admin/uploads", requireAdmin, async (_q, r) =>
+    r.json({ configured: storage.configured, items: storage.configured ? await storage.list() : [] }),
+  );
+  app.post(
+    "/api/admin/uploads",
+    requireAdmin,
+    express.raw({ type: () => true, limit: MEDIA_LIMITS.video }),
+    route(async (q, r) => {
+      let name = "";
+      try {
+        name = decodeURIComponent(String(q.headers["x-file-name"] || ""));
+      } catch {}
+      r.status(201).json(await storage.upload(q.body, { name }));
+    }),
+  );
+  app.delete(
+    "/api/admin/uploads/:id",
+    requireAdmin,
+    route(async (q, r) => {
+      await storage.remove(z.string().uuid().parse(q.params.id));
+      r.status(204).end();
+    }),
+  );
   attachSeoRoutes(app, env);
   app.get("/api/catalog", async (_q, r) =>
     r.json({
@@ -610,10 +647,10 @@ export function createApp(
               Boolean,
               "Geçerli bir Instagram Reels veya gönderi bağlantısı girin.",
             ),
-          cover: z.string().regex(/^\/images\/[\w.-]+$/),
+          cover: z.string().regex(localImage),
           videoSrc: z
             .string()
-            .regex(/^\/videos\/[A-Za-z0-9_-]+\.(mp4|webm)$/)
+            .regex(localVideo)
             .nullable()
             .optional(),
           position: z.number().int().min(0).max(99),
@@ -706,10 +743,7 @@ export function createApp(
           location: clean,
           description: z.string().trim().min(10).max(2000),
           amenities: z.array(z.string().trim().min(1).max(80)).max(12),
-          image: z
-            .string()
-            .regex(/^\/images\/[\w.-]+$/)
-            .optional(),
+          image: z.string().regex(localImage).optional(),
           active: z.boolean(),
         })
         .parse(q.body);
@@ -760,6 +794,10 @@ export function createApp(
     if (err instanceof AppError)
       return r.status(err.status).json({
         message: err.message,
+      });
+    if (err.type === "entity.too.large")
+      return r.status(413).json({
+        message: "Dosya çok büyük. Görseller en fazla 8 MB, videolar en fazla 150 MB olabilir.",
       });
     if (err.type === "entity.parse.failed")
       return r.status(400).json({

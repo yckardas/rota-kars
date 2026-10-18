@@ -6550,3 +6550,31 @@ input[type="radio"] {
     opacity: 1;
   }
 }
+
+/* Yönetim paneli: bucket'a dosya yükleme */
+.media-field {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.media-field > input,
+.media-field > select {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.media-upload {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.media-upload .btn {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  white-space: nowrap;
+}
+.form-error {
+  color: #a3332b;
+  font-size: 11px;
+}

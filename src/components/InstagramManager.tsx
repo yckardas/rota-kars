@@ -3,12 +3,15 @@ import { ExternalLink, Plus, LoaderCircle } from "lucide-react";
 import { api, post } from "../lib/api";
 import type { InstagramPost } from "./InstagramSection";
 import type { Catalog } from "../lib/types";
+import { MediaUploadButton } from "./MediaUpload";
 export function InstagramManager({ catalog }: { catalog: Catalog }) {
   const [posts, setPosts] = useState<InstagramPost[]>([]),
     [editing, setEditing] = useState<InstagramPost | null | false>(false),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
-    [notice, setNotice] = useState("");
+    [notice, setNotice] = useState(""),
+    [cover, setCover] = useState(""),
+    [videoSrc, setVideoSrc] = useState("");
   async function load() {
     try {
       setPosts(await api<InstagramPost[]>("/admin/instagram"));
@@ -19,6 +22,12 @@ export function InstagramManager({ catalog }: { catalog: Catalog }) {
   useEffect(() => {
     load();
   }, []);
+  // Düzenleme formu açılınca kapak ve video alanları o paylaşımla doldurulur.
+  useEffect(() => {
+    if (editing === false) return;
+    setCover(editing?.cover || catalog.tours[0].image);
+    setVideoSrc(editing?.videoSrc || "");
+  }, [editing, catalog.tours]);
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -111,36 +120,53 @@ export function InstagramManager({ catalog }: { catalog: Catalog }) {
           </label>
           <label className="field">
             Otomatik önizleme için video dosyası (isteğe bağlı)
-            <input
-              name="videoSrc"
-              defaultValue={editing?.videoSrc || ""}
-              placeholder="/videos/ani-turu.mp4"
-              pattern="/videos/[A-Za-z0-9_-]+\.(mp4|webm)"
-            />
+            <span className="media-field">
+              <input
+                name="videoSrc"
+                value={videoSrc}
+                onChange={(e) => setVideoSrc(e.target.value)}
+                placeholder="/media/… veya /videos/ani-turu.mp4"
+                pattern="(/videos/[A-Za-z0-9_-]+|/media/[a-f0-9-]{36})\.(mp4|webm)"
+              />
+              <MediaUploadButton
+                accept="video/mp4,video/webm"
+                label="Video yükle"
+                onUploaded={(m) => setVideoSrc(m.url)}
+              />
+            </span>
             <small>
-              Özgün MP4/WebM dosyasını public/videos klasörüne koyup yolunu
-              yazın. Boş bırakılırsa Instagram oynatıcısı açılır.
+              MP4/WebM videoyu yükleyin (en fazla 150 MB); kartta üzerine
+              gelince oynar. Boş bırakılırsa Instagram oynatıcısı açılır.
             </small>
           </label>
           <div className="form-grid">
             <label className="field">
               Kapak görseli
-              <select
-                name="cover"
-                defaultValue={editing?.cover || catalog.tours[0].image}
-              >
-                {[
-                  ...new Set([
-                    ...catalog.tours.map((t) => t.image),
-                    "/images/cildir.jpg",
-                    "/images/rota-bus.jpg",
-                  ]),
-                ].map((img) => (
-                  <option key={img} value={img}>
-                    {img.split("/").at(-1)}
-                  </option>
-                ))}
-              </select>
+              <span className="media-field">
+                <select
+                  name="cover"
+                  value={cover}
+                  onChange={(e) => setCover(e.target.value)}
+                >
+                  {[
+                    ...new Set([
+                      cover,
+                      ...catalog.tours.map((t) => t.image),
+                      "/images/cildir.jpg",
+                      "/images/rota-bus.jpg",
+                    ]),
+                  ].map((img) => (
+                    <option key={img} value={img}>
+                      {img.startsWith("/media/") ? "Yüklenen görsel" : img.split("/").at(-1)}
+                    </option>
+                  ))}
+                </select>
+                <MediaUploadButton
+                  accept="image/jpeg,image/png,image/webp,image/avif"
+                  label="Görsel yükle"
+                  onUploaded={(m) => setCover(m.url)}
+                />
+              </span>
             </label>
             <label className="field">
               Sıra

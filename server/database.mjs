@@ -23,6 +23,7 @@ export const fromJson = (value, fallback = null) => {
 // Railway Mongo şablonu MONGO_URL (veya MONGOHOST/MONGOPORT/MONGOUSER/MONGOPASSWORD)
 // verir; adreste replica set ve yetki veritabanı yoksa güvenli varsayılanlar eklenir.
 export function mongoConfiguration(env = process.env) {
+  let autoReplicaSet = null;
   let uri = env.MONGODB_URI || env.MONGO_URL || env.DATABASE_URL || "";
   if (!uri && env.MONGOHOST) {
     const auth = env.MONGOUSER
@@ -44,14 +45,16 @@ export function mongoConfiguration(env = process.env) {
       throw new Error("MONGODB_URI geçersiz. Bağlantı biçimini kontrol edin.");
     }
     const replicaSet = env.MONGODB_REPLICA_SET ?? "rs0";
-    if (replicaSet && !parsed.searchParams.has("replicaSet") && !parsed.searchParams.has("directConnection"))
+    if (replicaSet && !parsed.searchParams.has("replicaSet") && !parsed.searchParams.has("directConnection")) {
       parsed.searchParams.set("replicaSet", replicaSet);
+      autoReplicaSet = replicaSet;
+    }
     if (parsed.username && !parsed.searchParams.has("authSource"))
       parsed.searchParams.set("authSource", "admin");
     if (parsed.pathname === "") parsed.pathname = "/";
     uri = parsed.toString();
   }
-  return { uri, dbName: env.MONGODB_DB || "" };
+  return { uri, dbName: env.MONGODB_DB || "", autoReplicaSet };
 }
 
 let memoryServer = null,
@@ -86,7 +89,7 @@ const strip = (doc) => {
 };
 
 export async function connectDatabase({ path, env = process.env } = {}) {
-  let { uri, dbName } = mongoConfiguration(env);
+  let { uri, dbName, autoReplicaSet } = mongoConfiguration(env);
   const memory = path === ":memory:";
   if (memory) {
     uri = await memoryUri();
@@ -100,7 +103,19 @@ export async function connectDatabase({ path, env = process.env } = {}) {
     serverSelectionTimeoutMS: 15000,
     retryWrites: true,
   });
-  await client.connect();
+  try {
+    await client.connect();
+  } catch (e) {
+    await client.close().catch(() => {});
+    // replicaSet adı eklenmiş ama sunucu replica set değilse sürücü yalnız zaman aşımı verir.
+    if (autoReplicaSet && e?.name === "MongoServerSelectionError")
+      throw new Error(
+        `MongoDB'ye "${autoReplicaSet}" replica set'i olarak bağlanılamadı. Mongo servisi --replSet ${autoReplicaSet} ile başlatılıp rs.initiate() yapılmamış olabilir (docs/RAILWAY-AND-OPERATIONS.md). Adres ve parola doğruysa önce bunu kontrol edin.`,
+      );
+    throw new Error(
+      "MongoDB'ye bağlanılamadı: " + String(e?.message || e).replace(/\/\/[^@/]*@/g, "//***@").slice(0, 200),
+    );
+  }
   // Transaction yalnız replica set (veya sharded) Mongo'da çalışır; tek düğümlü
   // sunucuda ilk rezervasyonda hata almak yerine açılışta net uyarı verilir.
   const hello = await client.db("admin").command({ hello: 1 });
