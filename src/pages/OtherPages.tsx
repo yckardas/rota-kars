@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { useMember } from "../lib/member";
 import {
   ArrowRight,
   MapPin,
@@ -16,6 +17,7 @@ import {
 import { RequestForm } from "../components/RequestForm";
 import { ReservationTicket } from "./Booking";
 import { api, post } from "../lib/api";
+import { telHref } from "../lib/phone";
 import type { Catalog, Hotel, Reservation } from "../lib/types";
 export function Hotels() {
   const [hotels, setHotels] = useState<Hotel[]>([]),
@@ -138,11 +140,23 @@ export function Hotels() {
   );
 }
 export function Lookup({ catalog }: { catalog: Catalog }) {
+  const [params] = useSearchParams(),
+    { member } = useMember();
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [result, setResult] = useState<Reservation | null>(null),
-    [credentials, setCredentials] = useState({ reference: "", email: "" }),
+    [credentials, setCredentials] = useState({
+      reference: (params.get("ref") || "").slice(0, 30),
+      email: member?.email || "",
+    }),
     [confirm, setConfirm] = useState(false);
+  useEffect(() => {
+    if (member)
+      setCredentials((current) => ({
+        ...current,
+        email: current.email || member.email,
+      }));
+  }, [member]);
   async function lookup(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -217,12 +231,20 @@ export function Lookup({ catalog }: { catalog: Catalog }) {
       {result && (
         <>
           <ReservationTicket reservation={result} catalog={catalog} />
-          {result.status === "pending_agency" &&
+          {Boolean(result.cancellation_requested_at) &&
+            result.status !== "cancelled" && (
+              <p className="notice-success">
+                İptal talebiniz acente değerlendirmesini bekliyor.
+              </p>
+            )}
+          {["pending_agency", "confirmed"].includes(result.status) &&
+            !result.cancellation_requested_at &&
             (confirm ? (
               <div className="cancel-confirm">
                 <p>
-                  Ön rezervasyon iptal edilecek ve koltuklarınız serbest
-                  bırakılacak.
+                  {result.net_paid
+                    ? "İptal talebiniz acenteye iletilecek. Ödenen tutarların iadesi acente tarafından ayrıca değerlendirilir; otomatik iade yapılmaz."
+                    : "Ön rezervasyon iptal edilecek ve koltuklarınız serbest bırakılacak."}
                 </p>
                 <div className="button-row">
                   <button
@@ -242,7 +264,7 @@ export function Lookup({ catalog }: { catalog: Catalog }) {
               </div>
             ) : (
               <button className="text-link" onClick={() => setConfirm(true)}>
-                Ön rezervasyonumu iptal etmek istiyorum
+                İptal talebi oluşturmak istiyorum
               </button>
             ))}
         </>
@@ -274,7 +296,7 @@ export function About() {
             programlarımızda bu yaklaşımı benimsiyoruz.
           </p>
           <p>
-            Küçük gruplar için VIP minibüslerle ulaşımı, rehberli geziyi ve
+            Küçük gruplar için VIP midibüslerle ulaşımı, rehberli geziyi ve
             konaklama planlamasını bir arada ele alıyoruz.
           </p>
           <div className="button-row">
@@ -326,9 +348,9 @@ export function Contact({ catalog }: { catalog: Catalog }) {
           <br />
           Kars’taki ekibimizle iletişime geçin.
         </p>
-        <a href="tel:+905459353410" className="btn">
+        <a href={telHref(b.mobile)} className="btn">
           <Phone size={17} />
-          0545 935 34 10
+          {b.mobile}
         </a>
       </div>
       <div className="contact-details">
@@ -342,7 +364,7 @@ export function Contact({ catalog }: { catalog: Catalog }) {
             </small>
           </div>
         </a>
-        <a href="tel:+904742239163">
+        <a href={telHref(b.phone)}>
           <Phone />
           <div>
             <span>Sabit hat</span>
@@ -367,18 +389,38 @@ export function Contact({ catalog }: { catalog: Catalog }) {
     </div>
   );
 }
-export function Information() {
+export function Information({ catalog }: { catalog: Catalog }) {
+  const demo = Boolean(catalog.demo);
   return (
     <article className="container legal-page section">
-      <span className="section-note">Yerel geliştirme sürümü</span>
+      <span className="section-note">
+        {demo ? "Demo sürümü" : "Bilgilendirme"}
+      </span>
       <h1>Ön rezervasyon ve veri bilgilendirmesi</h1>
-      <div className="info-note">
-        <p>
-          Bu sayfa yerel geliştirme sürecine ait açıklamadır. Canlı yayından
-          önce firmanın hukuki ve ticari bilgileriyle onaylı aydınlatma,
-          mesafeli sözleşme ve iptal/iade metinleri tamamlanmalıdır.
-        </p>
-      </div>
+      {demo && (
+        <div className="info-note">
+          <p>
+            Bu sayfa demo sürümüne ait açıklamadır. Canlı yayından önce firmanın
+            hukuki ve ticari bilgileriyle onaylı aydınlatma, mesafeli sözleşme
+            ve iptal/iade metinleri tamamlanmalıdır.
+          </p>
+        </div>
+      )}
+      <h2 id="iptal">Tur iptali</h2>
+      <p>
+        Yurt dışı paket turlarımızda son 5 güne, yurt içi paketlerimizde son 3
+        güne kadar hiçbir koşul aranmadan turunuzu iptal edebilirsiniz. Yurt içi
+        paketlerde iptal güvence paketi ile 72 saate kadar koşulsuz iptal hakkı
+        bulunur (uçaklı paketlerde geçerli değildir). Ödediğiniz ücreti
+        kesintisiz geri alırsınız.
+      </p>
+      <h2>Yapay zekâ asistanı</h2>
+      <p>
+        Sağ alttaki asistana yazdığınız mesajlar yalnızca yanıt üretmek için
+        kullanılır ve sunucuda saklanmaz. API anahtarı tanımlıysa yanıtlar
+        Anthropic Claude ile üretilir. Kişisel veya ödeme bilgisi paylaşmayın;
+        rezervasyon için WhatsApp hattımıza yönlendirilirsiniz.
+      </p>
       <h2>Ön rezervasyon</h2>
       <p>
         Tur tarihi, koltuklar ve yolcu bilgileriyle oluşturulan kayıt acente
@@ -386,12 +428,44 @@ export function Information() {
         Online ödeme aktif değildir ve kart bilgisi alınmaz. Onay bekleyen
         koltuklar 24 saat sonra serbest kalır.
       </p>
-      <h2>Yerel veri kaydı</h2>
+      <h2>Veri kaydı</h2>
+      {demo ? (
+        <p>
+          Demo sürümünde iletilen ad, e-posta, telefon, yolcu adları ve
+          rezervasyon tercihi yerel veritabanında saklanır. Bu sürüm otomatik
+          e-posta veya SMS göndermez. Testlerde gerçek kimlik veya kart bilgisi
+          kullanmayın.
+        </p>
+      ) : (
+        <p>
+          İletilen ad, e-posta, telefon, yolcu adları ve rezervasyon tercihi, ön
+          rezervasyon talebinizin acentemizce işlenmesi için saklanır.
+        </p>
+      )}
+      <h2 id="uyelik">Üyelik ve kampanyalar</h2>
       <p>
-        İletilen ad, e-posta, telefon, yolcu adları ve rezervasyon tercihi bu
-        bilgisayardaki yerel veritabanında saklanır. Bu sürüm otomatik e-posta
-        veya SMS göndermez. Testlerde gerçek kimlik veya kart bilgisi
-        kullanmayın.
+        Üyelik ücretsizdir. Ad, e-posta ve parola ile oluşturulan hesaplarda
+        parola tek yönlü güvenli özet olarak saklanır. Oturum için zorunlu bir
+        çerez kullanılır. E-posta doğrulama ve parola yenileme bağlantıları
+        gönderim hizmeti tanımlandığında e-postayla iletilir. Sosyal girişler
+        yalnız firma tarafından yapılandırılan sağlayıcılarla açılır.
+      </p>
+      <p>
+        Şans çarkı hesap başına bir kez çevrilebilir. %5, %10 veya %15 sonuçları
+        yönetici tarafından belirlenen altı eşit olasılıklı dilimden sunucuda
+        seçilir. Kuponlar üzerlerinde belirtilen son tarihe kadar geçerlidir,
+        tek kullanımlıdır ve devredilemez. Aynı rezervasyonda yalnız bir kupon
+        uygulanır. Konaklama ve ekstra hizmetler kapsam dışındadır.
+      </p>
+      <p>
+        Davet koduyla üye olan arkadaş turunu tamamladığında veya kampanya
+        ayarına göre tam ödemesi kaydedildiğinde, davet eden ve davet edilen
+        hesabın her birine sonraki rezervasyonda kullanılmak üzere birer %10
+        kupon tanımlanır. Aynı arkadaş için ödül yalnız bir kez verilir. Kişi
+        kendi hesabını davet edemez. Ön rezervasyon iptal edilirse kullanılan ve
+        süresi geçmemiş kupon yeniden kullanılabilir; davet ödülü tekrarlanmaz.
+        Kampanya indirimleri tahsilat veya kesin bilet oluşturmaz; güncel tur
+        kapsamı acente tarafından teyit edilir.
       </p>
       <h2>Google yorumları</h2>
       <p>

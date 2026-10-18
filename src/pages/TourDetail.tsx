@@ -1,3 +1,4 @@
+import { InstagramSection } from "../components/InstagramSection";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
@@ -14,6 +15,7 @@ import {
 import { Reviews } from "../components/Reviews";
 import { RequestForm } from "../components/RequestForm";
 import { api } from "../lib/api";
+import { telHref } from "../lib/phone";
 import {
   currency,
   dateLabel,
@@ -43,6 +45,14 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
         </Link>
       </div>
     );
+  const next = departures[0],
+    startingPrice = departures.length
+      ? Math.min(...departures.map((d) => d.price))
+      : t.price,
+    currentVehicle = next?.vehicle || t.vehicle;
+  const mapUrl =
+    "https://www.google.com/maps/search/?api=1&query=" +
+    encodeURIComponent(t.location + " " + t.name);
   return (
     <>
       <div className="container breadcrumb">
@@ -67,7 +77,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
           </span>
           <span>
             <Armchair size={16} />
-            9+1 VIP minibüs
+            {currentVehicle.passengerSeats}+1 {currentVehicle.name}
           </span>
         </div>
       </section>
@@ -141,7 +151,51 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
             <p>{t.note}</p>
           </div>
           <section>
+            <h2>Buluşalım, yola çıkalım.</h2>
+            <div className="tour-meeting">
+              <MapPin size={24} />
+              <div>
+                <strong>
+                  {next?.pickup ||
+                    "Kars merkez · Kesin buluşma noktası acente tarafından paylaşılır"}
+                </strong>
+                <p>
+                  {next
+                    ? `${dateLabel(next.date)} · ${next.start_time}`
+                    : "Tarihinizi acenteyle planlayın."}
+                </p>
+                {next?.guide_name && <p>Rehber: {next.guide_name}</p>}
+                <a
+                  className="text-link"
+                  href={mapUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Tur bölgesini haritada aç <ArrowRight size={15} />
+                </a>
+              </div>
+            </div>
             <h2>Yola çıkmadan önce</h2>
+            <details>
+              <summary>Çocuklar için koltuk ve fiyat nasıl belirlenir?</summary>
+              <p>
+                Koltuklu her yolcu için ayrı koltuk seçilir. Çocuk indirimi veya
+                çocuk koltuğu ihtiyacını rezervasyon öncesinde acenteye
+                bildirin; yaşa göre koşullar teyit edilir. Ekrandaki kişi başı
+                fiyat otomatik çocuk indirimi içermez.
+              </p>
+            </details>
+            <details>
+              <summary>
+                Buluşma saati veya rehber değişirse nasıl öğrenirim?
+              </summary>
+              <p>
+                Seçtiğiniz seferin hareket ve buluşma bilgileri rezervasyon
+                belgenizde görünür. E-posta hizmeti etkin olduğunda
+                güncellemeler ve hareket hatırlatması kayıtlı adresinize
+                iletilir.
+              </p>
+            </details>
             <details>
               <summary>Rezervasyon nasıl kesinleşir?</summary>
               <p>
@@ -154,8 +208,9 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
             <details>
               <summary>Rehber koltuğunu seçebilir miyim?</summary>
               <p>
-                9+1 VIP aracın ön yolcu koltuğu rehbere ayrılmıştır. Şoför ve
-                rehber dışında 8 misafir için koltuk seçilebilir.
+                {currentVehicle.passengerSeats}+1 aracın şoför yanındaki ön
+                koltuğu rehbere ayrılmıştır. Şoför ve rehber dışında{" "}
+                {currentVehicle.sellableSeats} misafir için koltuk seçilebilir.
               </p>
             </details>
             <details>
@@ -171,8 +226,8 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
         </div>
         <aside className="booking-aside">
           <div className="booking-price">
-            <strong>{currency(t.price)}</strong>
-            <span>örnek kişi başı başlangıç fiyatı</span>
+            <strong>{currency(startingPrice)}</strong>
+            <span>kişi başı başlangıç fiyatı</span>
           </div>
           <p>
             Size uyan günü seçin.
@@ -184,14 +239,14 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
               <CalendarDays size={18} />
               <span>
                 {departures.length
-                  ? `İlk örnek hareket: ${dateLabel(departures[0].date)}`
+                  ? `İlk hareket: ${dateLabel(departures[0].date)}`
                   : "Uygun tarih için bize ulaşın."}
               </span>
             </div>
           )}
           {t.inquiryOnly ? (
             <button className="btn block" onClick={() => setRequest(true)}>
-              Program ve fiyat isteyin
+              Bu tur için bilgi alın
             </button>
           ) : (
             <Link className="btn block" to={"/rezervasyon/" + t.id}>
@@ -201,23 +256,45 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
           <div className="aside-benefits">
             <span>
               <Armchair size={15} />
-              Seçebileceğiniz 8 yolcu koltuğu
+              {currentVehicle.sellableSeats} yolcu koltuğu
             </span>
             <span>
               <Check size={15} />
               Acente onaylı ön rezervasyon
             </span>
           </div>
-          <small>
-            Yerel önizlemede fiyat ve sefer tarihleri örnektir. Online ödeme
-            henüz aktif değildir.
-          </small>
-          <a className="text-link" href="tel:+905459353410">
-            Birlikte planlayalım: 0545 935 34 10
+          {catalog.demo ? (
+            <small>
+              Demo sürümünde fiyat ve sefer tarihleri örnektir. Online ödeme
+              henüz aktif değildir.
+            </small>
+          ) : (
+            !catalog.payment.enabled && (
+              <small>Online ödeme henüz aktif değildir.</small>
+            )
+          )}
+          <a className="text-link" href={telHref(catalog.business.mobile)}>
+            Birlikte planlayalım: {catalog.business.mobile}
           </a>
         </aside>
       </div>
+      <InstagramSection profileUrl={catalog.business.instagram} />
       <Reviews tourId={t.id} />
+      <div className="tour-mobile-booking">
+        <div>
+          <strong>{currency(startingPrice)}</strong>
+          <small>kişi başı başlangıç</small>
+        </div>
+        {t.inquiryOnly ? (
+          <button className="btn" onClick={() => setRequest(true)}>
+            Bilgi alın
+          </button>
+        ) : (
+          <Link className="btn" to={"/rezervasyon/" + t.id}>
+            Tarih ve koltuk seç <ArrowRight size={16} />
+          </Link>
+        )}
+      </div>
       {request && (
         <RequestForm kind="private-tour" onClose={() => setRequest(false)} />
       )}

@@ -1,0 +1,14 @@
+node_modules
+dist
+.git
+.claude
+.env
+.env.*
+!.env.example
+data
+work
+tests
+*.log
+*.sqlite
+*.sqlite-*
+tsconfig.tsbuildinfo

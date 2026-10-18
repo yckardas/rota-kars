@@ -1,3 +1,10 @@
+import {
+  DepartureManager,
+  ReservationManager,
+  CampaignManager,
+  DailyReport,
+  NotificationManager,
+} from "../components/OperationsDesk";
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -13,7 +20,11 @@ import {
   Settings2,
   ClipboardList,
   LoaderCircle,
+  Instagram,
+  Bus,
 } from "lucide-react";
+import { TourOperations } from "../components/TourOperations";
+import { InstagramManager } from "../components/InstagramManager";
 import { api, post, ApiError } from "../lib/api";
 import {
   currency,
@@ -43,7 +54,13 @@ type Dashboard = {
   requests: RequestRecord[];
   hotels: Hotel[];
 };
-export function Admin({ catalog }: { catalog: Catalog }) {
+export function Admin({
+  catalog,
+  refreshCatalog,
+}: {
+  catalog: Catalog;
+  refreshCatalog: () => void;
+}) {
   const [data, setData] = useState<Dashboard | null>(null),
     [reviews, setReviews] = useState<ReviewsResponse | null>(null),
     [error, setError] = useState(""),
@@ -149,10 +166,16 @@ export function Admin({ catalog }: { catalog: Catalog }) {
       </div>
     );
   const tabs = [
-    ["reservations", "Ön rezervasyonlar", Ticket],
+    ["reservations", "Rezervasyonlar", Ticket],
+    ["departures", "Sefer planı", Bus],
+    ["daily", "Günlük operasyon", ClipboardList],
+    ["campaigns", "Kampanyalar", Ticket],
+    ["notifications", "Bildirim kuyruğu", MessageSquareText],
+    ["operations", "Tur ve araç planı", Bus],
     ["requests", "Gelen talepler", ClipboardList],
     ["hotels", "Anlaşmalı oteller", BedDouble],
     ["reviews", "Google yorumları", MessageSquareText],
+    ["instagram", "Instagram", Instagram],
     ["integrations", "Bağlantılar", Settings2],
   ] as const;
   return (
@@ -211,89 +234,11 @@ export function Admin({ catalog }: { catalog: Catalog }) {
             {notice}
           </p>
         )}
-        {tab === "reservations" && (
-          <>
-            <div className="admin-metrics">
-              <div>
-                <span>Onay bekleyen talepler</span>
-                <strong>
-                  {
-                    data.reservations.filter(
-                      (r) => r.status === "pending_agency",
-                    ).length
-                  }
-                </strong>
-              </div>
-              <div>
-                <span>Bekleyen yolcular</span>
-                <strong>
-                  {data.reservations
-                    .filter((r) => r.status === "pending_agency")
-                    .reduce((n, r) => n + r.seats.length, 0)}
-                </strong>
-              </div>
-              <div>
-                <span>Tahsil edilen tutar</span>
-                <strong>₺0</strong>
-                <small>POS bağlantısı bekleniyor</small>
-              </div>
-            </div>
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Referans</th>
-                    <th>Tur ve tarih</th>
-                    <th>Yolcular</th>
-                    <th>İletişim</th>
-                    <th>Tutar</th>
-                    <th>Durum</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.reservations.map((r) => (
-                    <tr key={r.reference}>
-                      <td>{r.reference}</td>
-                      <td>
-                        {catalog.tours.find((t) => t.id === r.tourId)?.name}
-                        <small>{dateLabel(r.date)}</small>
-                      </td>
-                      <td>
-                        {r.passengers.join(", ")}
-                        <small>Koltuk: {r.seats.join(", ")}</small>
-                      </td>
-                      <td>
-                        {r.name}
-                        <small>
-                          {r.email}
-                          <br />
-                          {r.phone}
-                        </small>
-                      </td>
-                      <td>
-                        {currency(r.total)}
-                        <small>Tahsilat yok</small>
-                      </td>
-                      <td>
-                        {r.status === "pending_agency"
-                          ? "Acente onayı bekliyor"
-                          : r.status === "expired"
-                            ? "Süresi doldu"
-                            : "İptal edildi"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {!data.reservations.length && (
-                <p className="admin-empty">
-                  Henüz ön rezervasyon yok. Siteden oluşturulan talepler burada
-                  görünür.
-                </p>
-              )}
-            </div>
-          </>
-        )}
+        {tab === "reservations" && <ReservationManager catalog={catalog} />}
+        {tab === "departures" && <DepartureManager catalog={catalog} />}
+        {tab === "campaigns" && <CampaignManager catalog={catalog} />}
+        {tab === "daily" && <DailyReport catalog={catalog} />}
+        {tab === "notifications" && <NotificationManager />}
         {tab === "requests" && (
           <div className="admin-requests">
             {data.requests.length ? (
@@ -407,7 +352,7 @@ export function Admin({ catalog }: { catalog: Catalog }) {
               düzenleyebilirsiniz. Boş seçim yorumu tur sayfalarından çıkarır,
               genel yorumlar alanında korur.
             </p>
-            {reviews?.status !== "connected" ? (
+            {!reviews?.reviews.length ? (
               <div className="info-note">
                 <MessageSquareText size={22} />
                 <div>
@@ -465,6 +410,8 @@ export function Admin({ catalog }: { catalog: Catalog }) {
             )}
           </>
         )}
+        {tab === "operations" && <TourOperations onChange={refreshCatalog} />}
+        {tab === "instagram" && <InstagramManager catalog={catalog} />}
         {tab === "integrations" && (
           <div className="integration-list">
             <article>
@@ -494,8 +441,9 @@ export function Admin({ catalog }: { catalog: Catalog }) {
               <h3>E-posta ve SMS</h3>
               <span className="status-tag">Sağlayıcı bağlı değil</span>
               <p>
-                Talepler yerel veritabanında saklanır. Bu sürüm otomatik mesaj
-                göndermez.
+                E-postalar bildirim kuyruğunda saklanır. SMTP ve site adresi
+                tanımlandığında otomatik gönderim başlar. SMS için sağlayıcı
+                bağlantısı gerekir.
               </p>
             </article>
           </div>

@@ -13,6 +13,9 @@ export function TourCard({ tour }: { tour: Tour }) {
           height="450"
         />
         <span className="tour-category">{tour.category}</span>
+        {!tour.salesOpen && (
+          <span className="tour-sales-closed">Şu an satışa kapalı</span>
+        )}
         <span className="tour-open">
           <MoveUpRight size={21} />
         </span>
@@ -34,7 +37,7 @@ export function TourCard({ tour }: { tour: Tour }) {
           </span>
           <div>
             <strong>{currency(tour.price)}</strong>
-            <small>örnek kişi başı fiyat</small>
+            <small>kişi başı</small>
           </div>
         </div>
       </div>

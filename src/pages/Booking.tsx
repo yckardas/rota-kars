@@ -1,10 +1,16 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  useLocation,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
   Check,
   Clock3,
+  MapPin,
   Info,
   LockKeyhole,
   LoaderCircle,
@@ -23,8 +29,11 @@ import {
   type Hold,
   type Seat,
   type Reservation,
+  type Vehicle,
 } from "../lib/types";
+import { useMember, type Coupon, type MemberDashboard } from "../lib/member";
 import { SeatMap } from "../components/SeatMap";
+import { telHref } from "../lib/phone";
 export function Booking({ catalog }: { catalog: Catalog }) {
   const { tourId } = useParams(),
     [params] = useSearchParams(),
@@ -32,7 +41,10 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     [departures, setDepartures] = useState<Departure[]>([]),
     [departureId, setDepartureId] = useState(""),
     [count, setCount] = useState(
-      Math.min(8, Math.max(1, Number(params.get("guests")) || 1)),
+      Math.min(
+        tour?.vehicle.sellableSeats || 17,
+        Math.max(1, Number(params.get("guests")) || 1),
+      ),
     ),
     [seats, setSeats] = useState<Seat[]>([]),
     [selected, setSelected] = useState<number[]>([]),
@@ -46,24 +58,98 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     [passengers, setPassengers] = useState<string[]>([]),
     [contact, setContact] = useState({ name: "", email: "", phone: "" }),
     [consent, setConsent] = useState(false),
-    [loaded, setLoaded] = useState(false);
+    [loaded, setLoaded] = useState(false),
+    [activeVehicle, setActiveVehicle] = useState<Vehicle | null>(null),
+    [coupons, setCoupons] = useState<Coupon[]>([]),
+    [couponId, setCouponId] = useState(""),
+    [quote, setQuote] = useState<{
+      subtotal: number;
+      discount: number;
+      total: number;
+    } | null>(null),
+    [quoteBusy, setQuoteBusy] = useState(false),
+    [quoteError, setQuoteError] = useState(""),
+    [dateNotice, setDateNotice] = useState(false),
+    location = useLocation(),
+    stepHeading = useRef<HTMLHeadingElement>(null),
+    firstStepRender = useRef(true);
+  const { member } = useMember();
+  const membershipHref =
+    "/uyelik?next=" + encodeURIComponent(location.pathname + location.search);
+  useEffect(() => {
+    if (firstStepRender.current) {
+      firstStepRender.current = false;
+      return;
+    }
+    stepHeading.current?.focus({ preventScroll: true });
+  }, [step]);
+  const vehicle = activeVehicle || tour?.vehicle || catalog.vehicle;
+  useEffect(() => {
+    setCount((current) => Math.min(current, vehicle.sellableSeats));
+    setSelected([]);
+  }, [vehicle.id]);
+  useEffect(() => {
+    setCouponId("");
+    setCoupons([]);
+    if (member) {
+      setContact((current) => ({
+        ...current,
+        name: current.name || member.name,
+        email: member.email,
+        phone: current.phone || member.phone || "",
+      }));
+      api<MemberDashboard>("/member/dashboard")
+        .then((data) =>
+          setCoupons(
+            data.coupons.filter(
+              (c) => !c.used_reservation && c.expires_at > Date.now(),
+            ),
+          ),
+        )
+        .catch(() => {});
+    }
+  }, [member]);
+  useEffect(() => {
+    setQuote(null);
+    setQuoteError("");
+    if (!departureId) return;
+    let active = true;
+    setQuoteBusy(true);
+    post<{ subtotal: number; discount: number; total: number }>(
+      "/reservations/quote",
+      { departureId, count, ...(couponId ? { couponId } : {}) },
+    )
+      .then((data) => {
+        if (active) setQuote(data);
+      })
+      .catch((e) => {
+        if (active) setQuoteError(e.message);
+      })
+      .finally(() => {
+        if (active) setQuoteBusy(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [departureId, count, couponId, member]);
   const holdRef = useRef<Hold | null>(null);
   holdRef.current = hold;
   const departure = departures.find((d) => d.id === departureId),
-    total = (departure?.price || tour?.price || 0) * count;
+    subtotal = (departure?.price || tour?.price || 0) * count,
+    total = quote?.total ?? subtotal;
   useEffect(() => {
     let active = true;
     setLoaded(false);
+    setActiveVehicle(tour?.vehicle || null);
     if (tour && !tour.inquiryOnly)
       api<Departure[]>(`/tours/${tour.id}/departures`)
         .then((ds) => {
           if (!active) return;
           setDepartures(ds);
-          setDepartureId(
-            ds.find((d) => d.date === params.get("date"))?.id ||
-              ds[0]?.id ||
-              "",
-          );
+          const wanted = params.get("date"),
+            match = ds.find((d) => d.date === wanted);
+          setDepartureId(match?.id || ds[0]?.id || "");
+          setDateNotice(Boolean(wanted && !match && ds.length));
           setLoaded(true);
         })
         .catch((e) => {
@@ -80,9 +166,14 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     let active = true;
     if (!departureId || step !== 0) return;
     const refresh = () =>
-      api<{ seats: Seat[] }>(`/departures/${departureId}/seats`)
+      api<{ seats: Seat[]; vehicle: Vehicle }>(
+        `/departures/${departureId}/seats`,
+      )
         .then((d) => {
-          if (active) setSeats(d.seats);
+          if (active) {
+            setSeats(d.seats);
+            setActiveVehicle(d.vehicle);
+          }
         })
         .catch((e) => {
           if (active) setError(e.message);
@@ -170,6 +261,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         passengers: passengers.slice(0, count),
         paymentMode: mode,
         consent,
+        ...(couponId ? { couponId } : {}),
       });
       holdRef.current = null;
       setHold(null);
@@ -213,7 +305,10 @@ export function Booking({ catalog }: { catalog: Catalog }) {
           <button className="btn" onClick={() => window.print()}>
             <Printer size={16} /> Özeti yazdır
           </button>
-          <Link className="btn btn-outline" to="/rezervasyonum">
+          <Link
+            className="btn btn-outline"
+            to={"/rezervasyonum?ref=" + encodeURIComponent(result.reference)}
+          >
             Rezervasyonumu sorgula
           </Link>
         </div>
@@ -246,6 +341,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
             <li
               key={s}
               className={step === i ? "current" : step > i ? "complete" : ""}
+              aria-current={step === i ? "step" : undefined}
             >
               <span>{step > i ? <Check size={14} /> : i + 1}</span>
               {s}
@@ -257,7 +353,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         <div className="booking-main">
           {step === 0 ? (
             <>
-              <h2>Ne zaman, hangi koltukta?</h2>
+              <h2 ref={stepHeading} tabIndex={-1}>
+                Ne zaman, hangi koltukta?
+              </h2>
               <p className="muted">
                 Önce tarihinizi seçin, sonra yol arkadaşlarınızın yerini
                 belirleyin.
@@ -269,6 +367,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                     value={departureId}
                     onChange={(e) => {
                       setDepartureId(e.target.value);
+                      setDateNotice(false);
                       setSelected([]);
                       setError("");
                     }}
@@ -279,7 +378,8 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                     </option>
                     {departures.map((d) => (
                       <option key={d.id} value={d.id}>
-                        {dateLabel(d.date)} · Örnek sefer
+                        {dateLabel(d.date)} · {d.start_time} ·{" "}
+                        {currency(d.price)}
                       </option>
                     ))}
                   </select>
@@ -294,7 +394,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                     }}
                     aria-label="Yolcu sayısı"
                   >
-                    {Array.from({ length: 8 }, (_, i) => (
+                    {Array.from({ length: vehicle.sellableSeats }, (_, i) => (
                       <option key={i} value={i + 1}>
                         {i + 1} kişi
                       </option>
@@ -302,18 +402,28 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   </select>
                 </label>
               </div>
+              {dateNotice && (
+                <div className="info-note" role="status">
+                  <Info size={18} />
+                  <p>
+                    Seçtiğiniz tarihte sefer yok, en yakın sefer gösteriliyor.
+                  </p>
+                </div>
+              )}
               {loaded && !departures.length && (
                 <div className="info-note">
                   <Info size={18} />
                   <p>
                     Bu rota için açık bir tarih bulunmuyor.{" "}
-                    <a href="tel:+905459353410">Acente ile görüşün.</a>
+                    <a href={telHref(catalog.business.mobile)}>
+                      Acente ile görüşün.
+                    </a>
                   </p>
                 </div>
               )}
               <div className="seat-selection">
                 <SeatMap
-                  vehicle={catalog.vehicle}
+                  vehicle={vehicle}
                   seats={seats}
                   selected={selected}
                   onSelect={(n) => {
@@ -335,8 +445,8 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                     iyi bir yerle başlar.
                   </h3>
                   <p className="muted">
-                    Şoförün yanındaki ön koltuk rehberinize ayrıldı. Diğer 8
-                    koltuktan dilediğinizi seçin.
+                    Şoförün yanındaki ön koltuk rehberinize ayrıldı. Diğer{" "}
+                    {vehicle.sellableSeats} koltuktan dilediğinizi seçin.
                   </p>
                   <div className="seat-legend">
                     <span>
@@ -397,7 +507,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                 window.scrollTo({ top: 120, behavior: "smooth" });
               }}
             >
-              <h2>Yol arkadaşlarımızı tanıyalım.</h2>
+              <h2 ref={stepHeading} tabIndex={-1}>
+                Yol arkadaşlarımızı tanıyalım.
+              </h2>
               <p className="muted">
                 Yolcu adlarını ve sizinle iletişime geçebileceğimiz bilgileri
                 paylaşın.
@@ -445,6 +557,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                     required
                     maxLength={254}
                     value={contact.email}
+                    readOnly={Boolean(member)}
                     onChange={(e) =>
                       setContact({ ...contact, email: e.target.value })
                     }
@@ -476,7 +589,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
             </form>
           ) : (
             <form onSubmit={submit}>
-              <h2>Son bir kez göz atalım.</h2>
+              <h2 ref={stepHeading} tabIndex={-1}>
+                Son bir kez göz atalım.
+              </h2>
               <p className="muted">
                 Tercih ettiğiniz ödeme planını belirleyin. Bu adımda tahsilat
                 yapılmaz.
@@ -547,7 +662,10 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                 <button className="text-link" type="button" onClick={back}>
                   <ArrowLeft size={15} /> Bilgileri düzenle
                 </button>
-                <button className="btn" disabled={busy}>
+                <button
+                  className="btn"
+                  disabled={busy || quoteBusy || Boolean(quoteError) || !quote}
+                >
                   {busy ? (
                     <LoaderCircle className="spin" size={17} />
                   ) : (
@@ -570,17 +688,67 @@ export function Booking({ catalog }: { catalog: Catalog }) {
             </p>
             <p>
               <Clock3 size={15} />
-              {tour.departure} hareket
+              {departure?.start_time || tour.departure} hareket
             </p>
             <p>
               <Armchair size={15} />
-              {count} yolcu · VIP minibüs
+              {count} yolcu · {vehicle.passengerSeats}+1 {vehicle.name}
             </p>
+            {departure?.pickup && (
+              <p>
+                <MapPin size={15} />
+                {departure.pickup}
+              </p>
+            )}
+            <div className="booking-coupon">
+              {member ? (
+                <label className="field">
+                  Üyelik kuponunuz
+                  <select
+                    aria-label="İndirim kuponu"
+                    value={couponId}
+                    disabled={busy}
+                    onChange={(e) => setCouponId(e.target.value)}
+                  >
+                    <option value="">Kupon kullanma</option>
+                    {coupons.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        %{c.percent} ·{" "}
+                        {c.source === "wheel" ? "Şans çarkı" : "Arkadaş daveti"}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <p>
+                  <Link to={membershipHref}>Üye olun</Link>, çarkı çevirin ve
+                  tur indirimi kazanın.
+                </p>
+              )}
+              {quoteBusy && <small role="status">Fiyat hesaplanıyor…</small>}
+              {quoteError && (
+                <p className="error" role="alert">
+                  {quoteError}
+                </p>
+              )}
+              {quote && quote.discount > 0 && (
+                <div className="coupon-savings">
+                  <span>Tur bedeli {currency(quote.subtotal)}</span>
+                  <strong>Üyelik indirimi −{currency(quote.discount)}</strong>
+                </div>
+              )}
+            </div>
             <div className="summary-total">
-              <span>Toplam örnek tur bedeli</span>
+              <span>
+                {catalog.demo
+                  ? "İndirim sonrası örnek tur bedeli"
+                  : "İndirim sonrası tur bedeli"}
+              </span>
               <strong>{currency(total)}</strong>
             </div>
-            <small>Fiyatlar ve tarihler yerel geliştirme verisidir.</small>
+            {catalog.demo && (
+              <small>Fiyatlar ve tarihler örnek demo verisidir.</small>
+            )}
             <div className="summary-payment">
               <ShieldCheck size={17} />
               <span>Şimdi ödeme alınmaz.</span>
@@ -616,10 +784,20 @@ export function ReservationTicket({
               ? "İptal edildi"
               : r.status === "expired"
                 ? "Süresi doldu"
-                : r.status}
+                : r.status === "confirmed"
+                  ? "Onaylı rezervasyon"
+                  : r.status === "completed"
+                    ? "Tur tamamlandı"
+                    : r.status}
         </span>
       </div>
       <h2>{t?.name || r.tourId}</h2>
+      {Boolean(r.discount_amount) && (
+        <p className="ticket-discount">
+          Üyelik indirimi: −{currency(r.discount_amount || 0)} · İndirim sonrası{" "}
+          {currency(r.total)}
+        </p>
+      )}
       <div className="ticket-data">
         <div>
           <span>Referans numarası</span>
@@ -643,17 +821,56 @@ export function ReservationTicket({
         </div>
         <div>
           <span>Tercih edilen ilk ödeme</span>
+          <strong>{currency(r.deposit)}</strong>
+        </div>
+      </div>
+      <div className="ticket-data">
+        <div>
+          <span>Net tahsilat</span>
+          <strong>{currency(r.net_paid || 0)}</strong>
+        </div>
+        <div>
+          <span>Kalan ödeme</span>
+          <strong>{currency(r.balance_due ?? r.total)}</strong>
+        </div>
+        <div>
+          <span>Hareket / buluşma</span>
           <strong>
-            {currency(r.deposit)} <small>(tahsil edilmedi)</small>
+            {r.start_time} · {r.pickup}
           </strong>
         </div>
       </div>
+      {r.qrDataUrl && (
+        <div className="ticket-qr">
+          <img
+            src={r.qrDataUrl}
+            alt="Rezervasyon doğrulama QR kodu"
+            width="150"
+            height="150"
+          />
+          <div>
+            <strong>Rezervasyon belgeniz</strong>
+            <p>QR kodu okutarak güncel onay durumunu görebilirsiniz.</p>
+            <a
+              className="text-link"
+              href={r.ticketUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Belgeyi doğrula
+            </a>
+            <button className="text-link" onClick={() => window.print()}>
+              Yazdır / PDF kaydet
+            </button>
+          </div>
+        </div>
+      )}
       <div className="ticket-bottom">
         <Info size={16} />
         <p>
-          Bu kayıt kesin bilet değildir. Onaylanmayan ön rezervasyonda koltuklar
-          24 saat sonra serbest kalır. Referansınızı ve e-posta adresinizi
-          saklayın.
+          {r.status === "confirmed" || r.status === "completed"
+            ? "Rezervasyonunuz acente tarafından onaylanmıştır. Güncel ödeme ve hareket bilgileri yukarıdadır."
+            : "Ön rezervasyon kesin bilet değildir. Tahsilat kaydedilmemiş ve onaylanmamış talepler 24 saat sonra serbest kalır. Referansınızı ve e-posta adresinizi saklayın."}
         </p>
       </div>
     </article>

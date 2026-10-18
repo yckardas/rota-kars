@@ -35,7 +35,7 @@ Türkçe harfleri normalize eden kelime eşleştirme Ani/Çıldır, Sarıkamış
 
 Ana sayfa tüm işletme yorumlarını, tur sayfası yalnızca ilgili eşleşmeleri gösterir. Google'ın seçimi / sıralaması ve tur filtresi ziyaretçiye açıklanır. İşletme ortalaması tur ortalaması diye sunulmaz. Yazar adı, mevcutsa fotoğraf ve profil bağlantısı ile kaynak bağlantısı korunur. Business Profile'da doğrudan yorum URL'si olmadığından işletmenin yorum sayfasına bağlantı verilir.
 
-Yorum içerikleri yalnızca sunucu belleğinde 15 dakika tutulur. Kalıcı veritabanına yalnızca tur eşleme kimlikleri yazılır. Bir hata halinde eski içeriği süresiz servis etmek yerine Google bağlantısı gösterilir. API kuralları ve gösterim şartları yayına geçerken tekrar kontrol edilmelidir.
+Canlı API yanıtı sunucu belleğinde 15 dakika tutulur. Veritabanına tur eşleme kimlikleri yazılır. Bu dalda ayrıca `server/reviews-snapshot.json` içinde tarihli bir Google yorum kaydı bulunur; API ayarsız veya erişilemezse arayüz bunu tarihli kayıt olarak açıklar. Bu kayıt canlı bağlantı kanıtı değildir. API kuralları, kayıt güncelliği ve gösterim şartları yayına geçerken tekrar kontrol edilmelidir.
 
 Kaynaklar:
 
@@ -58,3 +58,23 @@ Firma tarafından doğrulanmış oteller yönetim panelinde taslak veya aktif ol
 ## Eklenti araştırması
 
 Frontend Design, Sites'in yerel önizleme rehberi ve Plugin Management kullanıldı. Google Business Profile erişimi için Windsor.ai gibi üçüncü taraf bağlayıcılar araştırıldı. Sitenin kalıcı entegrasyonunun bu tür sohbet eklentilerine bağlanması gerekmediğinden ek ücretli eklenti kurulmadı. Google'ın resmi API'lerine sunucu tarafında doğrudan bağlantı tercih edildi. Kod bağımlılıkları proje içinde kuruludur.
+
+## Instagram'da biz ve chatbot
+
+Ana sayfadaki bölüm kullanıcı tarafından seçilen beş Reels bağlantısıyla başlar. Başlangıç listesi `server/instagram-posts.json` dosyasındadır; veritabanı açılışında eksik kayıtlar eklenir, yöneticinin değişiklikleri korunur. `/yonetim` içindeki Instagram sekmesinden bağlantı, başlık, yerel kapak, sıra ve yayın durumu yönetilir. Yönetim için `ADMIN_PASSWORD` gerekir.
+
+Kartın üzerine fareyle 180 ms gelince veya mobilde dokununca resmi `https://www.instagram.com/embed.js` yüklenir; oynatıcı doğrudan kartın içinde açılır. Fare ayrılınca önizleme kaldırılır. Aynı anda yalnız bir kart etkinleşir. İlk sayfa yüklemesinde Instagram isteği yapılmaz. Instagram iframe içindeki oynat düğmesini sitemiz otomatik kontrol edemez; mevcut Reels bağlantılarında kullanıcının oynat düğmesine basması gerekebilir. Listeyi elle seçmek için API anahtarı gerekmez. Hesap/gönderi herkese açık ve gömmeye izinli olmalıdır; tarayıcı engeli veya Instagram giriş talebi halinde kaynak bağlantısı kullanılabilir. Kapaklar video kareleri değildir; yerel rota arşivinden temsili görsellerdir.
+
+Hesaptaki tüm yeni içerikleri otomatik listelemek ayrı bir Meta Instagram API entegrasyonudur; hesap yetkilendirmesi, uygun profesyonel hesap ve sunucuda token yönetimi gerekir. Bu sürüm otomatik feed çekmez. Firmanın özgün MP4/WebM dosyası `public/videos` içine eklenip yönetim panelinde `/videos/dosya.mp4` olarak atanabilir. Bu kartlarda yerel HTML video oynatıcısı kullanılır: üzerine gelince sessiz oynar, fare ayrılınca durur; mobilde dokunmayla açılır. Hareket azaltma tercihi açıkken hover ile açılmaz ve otomatik başlatılmaz. Tarayıcı otomatik oynatmayı reddederse video kontrolleri kullanılabilir. Mevcut beş kayıtta özgün video dosyası yoktur; Instagram gömme yöntemi kullanılır. Upload endpointi yoktur, dosyalar proje klasörüne eklenir.
+
+Chatbot önceki mesajlardan rotayı ve kişi sayısını alır; sayfadaki turu bağlam olarak kullanır. Örnek tutar/kapora hesaplar, program/kapsam ve örnek hareket kayıtlarından yer bilgisini gösterir, işlem sayfalarına bağlantı sunar. Rezervasyon, ödeme veya iade işlemi yapmaz. Sohbet aynı sekmede sessionStorage içinde saklanır, yeni sohbet düğmesiyle temizlenir. Rutin sorular yerel kurallarla cevaplanır; `ANTHROPIC_API_KEY` varsa çözümlenemeyen sorular Anthropic'e iletilir. Bu sürümün gerçek API anahtarı olmadan bulut yanıtı doğrulanmamıştır.
+
+Canlı Google kurulumu için adımlar: [GOOGLE-BUSINESS-SETUP.md](./GOOGLE-BUSINESS-SETUP.md).
+
+## Instagram videoları
+
+Kartlar videonun gerçek dosyasıyla, üzerine gelince sessiz oynar (dokunmatik cihazlarda ekranın ortasına gelen kart oynar; ses kartın köşesinden açılır). Video dosyası üç yerden gelebilir:
+
+1. **Instagram API (önerilen):** Instagram hesabı Profesyonel (İşletme/İçerik üreticisi) olmalı. [Meta for Developers](https://developers.facebook.com/) → uygulama oluştur → *Instagram* ürünü → *API setup with Instagram login* → hesabı ekleyip **Generate token**. Token'ı `INSTAGRAM_ACCESS_TOKEN` olarak girin. Sunucu son Reels'leri (`INSTAGRAM_MAX_VIDEOS`, varsayılan 8) `INSTAGRAM_CACHE_MINUTES` (30) dakikalık önbellekle çeker; 60 günlük token'ı günde bir yeniler ve veritabanında saklar. Hata olursa yönetim panelindeki paylaşımlara döner.
+2. **Kendi dosyanız:** MP4/WebM dosyasını `public/videos/` altına koyup yönetim panelinde paylaşımın video alanına `/videos/dosya.mp4` yazın.
+3. **Dosya yoksa:** Kart tıklanınca Instagram'ın kendi oynatıcısı sayfa içinde pencerede açılır (Instagram bu oynatıcıda otomatik oynatmaya izin vermez).

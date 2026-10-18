@@ -9,8 +9,16 @@ import {
   Ticket,
   Mail,
   ExternalLink,
+  MessageCircle,
+  Facebook,
+  UserRound,
 } from "lucide-react";
 import type { Catalog } from "../lib/types";
+import { MembershipInvite } from "./MembershipInvite";
+import { useMember } from "../lib/member";
+import { ChatBot } from "./ChatBot";
+import { whatsappLink } from "../lib/whatsapp";
+import { telHref } from "../lib/phone";
 export function Layout({
   catalog,
   children,
@@ -22,8 +30,35 @@ export function Layout({
     location = useLocation();
   useEffect(() => {
     setOpen(false);
-    window.scrollTo({ top: 0, behavior: "instant" });
   }, [location.pathname]);
+  useEffect(() => {
+    let id = "";
+    try {
+      id = decodeURIComponent(location.hash.slice(1));
+    } catch {
+      id = location.hash.slice(1);
+    }
+    if (!id) {
+      window.scrollTo({ top: 0, behavior: "instant" });
+      return;
+    }
+    // Content (reviews, Instagram, catalog sections) may render async, so retry briefly.
+    const deadline = Date.now() + 1500;
+    let timer = 0;
+    const tryScroll = () => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+      if (Date.now() < deadline) timer = window.setTimeout(tryScroll, 100);
+    };
+    const frame = requestAnimationFrame(tryScroll);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(timer);
+    };
+  }, [location.pathname, location.hash, location.key]);
   useEffect(() => {
     if (!open) return;
     const f = (e: KeyboardEvent) => {
@@ -33,6 +68,7 @@ export function Layout({
     return () => document.removeEventListener("keydown", f);
   }, [open]);
   const b = catalog.business;
+  const { member } = useMember();
   return (
     <>
       <a href="#main" className="skip-link">
@@ -41,10 +77,13 @@ export function Layout({
       <div className="topbar">
         <div className="container">
           <span>
-            <MapPin size={12} /> Kars’tan başlayan güzel hikâyeler
+            <MapPin size={12} />{" "}
+            {catalog.demo
+              ? "Canlı demo · Örnek tarihler ve fiyatlar"
+              : "Kars’tan başlayan güzel hikâyeler"}
           </span>
           <div>
-            <a href="tel:+904742239163">
+            <a href={telHref(b.phone)}>
               <Phone size={12} />
               {b.phone}
             </a>
@@ -73,16 +112,32 @@ export function Layout({
               Ana sayfa
             </NavLink>
             <NavLink to="/turlar">Turlarımız</NavLink>
+            <NavLink to="/hizmetler">Hizmetler</NavLink>
             <NavLink to="/konaklama">Konaklama</NavLink>
             <NavLink to="/hakkimizda">Hakkımızda</NavLink>
             <NavLink to="/iletisim">İletişim</NavLink>
           </nav>
           <div className="header-actions">
+            <Link
+              to={member ? "/hesabim" : "/uyelik"}
+              className="member-header-link"
+            >
+              <UserRound size={18} />
+              <span>{member ? "Hesabım" : "Üye ol / Giriş"}</span>
+            </Link>
             <Link to="/rezervasyonum" className="reservation-link">
               <Ticket size={18} />
               <span>Rezervasyonum</span>
             </Link>
-            <a className="btn btn-small header-cta" href="tel:+905459353410">
+            <a
+              className="btn btn-small header-cta"
+              href={whatsappLink(
+                b.whatsapp,
+                "Merhaba, rotakarsturizm.com sitesinden yazıyorum.",
+              )}
+              target="_blank"
+              rel="noreferrer"
+            >
               Birlikte planlayalım
             </a>
             <button
@@ -97,6 +152,8 @@ export function Layout({
         </div>
       </header>
       <main id="main">{children}</main>
+      <ChatBot whatsapp={b.whatsapp} />
+      <MembershipInvite />
       <footer className="footer">
         <div className="container footer-main">
           <div className="footer-brand">
@@ -122,6 +179,29 @@ export function Layout({
               <Instagram size={18} />
               <span>Yolculuğumuza katılın</span>
             </a>
+            <a
+              href={b.facebook}
+              target="_blank"
+              rel="noreferrer"
+              className="social-link"
+            >
+              <Facebook size={18} />
+              <span>Facebook</span>
+            </a>
+            <a
+              href="https://www.tursab.org.tr/tr/ddsv"
+              target="_blank"
+              rel="noreferrer"
+              className="tursab-badge"
+            >
+              <img
+                src="/images/tursab.png"
+                width="145"
+                height="66"
+                alt={`TÜRSAB üyesi, belge no ${b.tursabNo}`}
+                loading="lazy"
+              />
+            </a>
           </div>
           <div>
             <h3>Bir rota seçin</h3>
@@ -136,7 +216,9 @@ export function Layout({
             <Link to="/konaklama">Konaklama seçenekleri</Link>
             <Link to="/hakkimizda">Rota Kars hakkında</Link>
             <Link to="/rezervasyonum">Ön rezervasyon sorgulama</Link>
+            <Link to="/bilgilendirme#iptal">Tur iptali</Link>
             <Link to="/bilgilendirme">Bilgilendirme ve gizlilik</Link>
+            <Link to="/gorsel-kaynaklari">Fotoğraf kaynakları</Link>
           </div>
           <div className="footer-contact">
             <h3>Kars’tayız, bekleriz.</h3>
@@ -144,9 +226,17 @@ export function Layout({
               <MapPin size={17} />
               <span>{b.address}</span>
             </a>
-            <a href="tel:+904742239163">
+            <a href={telHref(b.phone)}>
               <Phone size={16} />
               {b.phone}
+            </a>
+            <a href={telHref(b.mobile)}>
+              <Phone size={16} />
+              {b.mobile}
+            </a>
+            <a href={whatsappLink(b.whatsapp)} target="_blank" rel="noreferrer">
+              <MessageCircle size={16} />
+              WhatsApp {b.whatsappLabel}
             </a>
             <a href={"mailto:" + b.email}>
               <Mail size={16} />
@@ -159,7 +249,9 @@ export function Layout({
         </div>
         <div className="container footer-bottom">
           <span>© {new Date().getFullYear()} Rota Kars Turizm</span>
-          <span>Yerel önizleme. Fiyatlar ve sefer tarihleri örnektir.</span>
+          <span>
+            TÜRSAB A Grubu · Belge No {b.tursabNo} · {b.founded}’dan beri
+          </span>
         </div>
       </footer>
     </>

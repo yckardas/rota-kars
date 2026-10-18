@@ -1,63 +1,115 @@
-import { DatabaseSync } from "node:sqlite";
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { connectDatabase, fromJson } from "./database.mjs";
+import { readFileSync } from "node:fs";
 import { randomBytes, randomUUID } from "node:crypto";
 import { tours, vehicle } from "./catalog.mjs";
+import { createOperations } from "./operations.mjs";
+import { createMembers } from "./members.mjs";
+import { createCampaigns } from "./campaigns.mjs";
+import { createNotifications } from "./notifications.mjs";
+import { createDepartures, localDate } from "./departures.mjs";
+import { createInstagramSettings } from "./instagram.mjs";
+import { createWorkflow } from "./workflow.mjs";
+import { createAccountSecurity } from "./account-security.mjs";
 export class AppError extends Error {
   constructor(status, message) {
     super(message);
     this.status = status;
   }
 }
-export function openStore(
-  path = "./data/rota-kars.sqlite",
-  { clock = Date.now, seed = true } = {},
+export async function openStore(
+  path = undefined,
+  { clock = Date.now, seed = true, env = process.env } = {},
 ) {
-  if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
-  const db = new DatabaseSync(path);
-  db.exec(
-    "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;",
-  );
-  db.exec(`CREATE TABLE IF NOT EXISTS departures(id TEXT PRIMARY KEY,tour_id TEXT NOT NULL,date TEXT NOT NULL,price INTEGER NOT NULL CHECK(price>0),active INTEGER NOT NULL DEFAULT 1);
- CREATE TABLE IF NOT EXISTS holds(token TEXT PRIMARY KEY,departure_id TEXT NOT NULL REFERENCES departures(id),seats TEXT NOT NULL,expires_at INTEGER NOT NULL);
- CREATE TABLE IF NOT EXISTS seat_locks(departure_id TEXT NOT NULL REFERENCES departures(id),seat INTEGER NOT NULL CHECK(seat BETWEEN 1 AND 8),owner TEXT NOT NULL,expires_at INTEGER NOT NULL,PRIMARY KEY(departure_id,seat));
- CREATE TABLE IF NOT EXISTS reservations(id TEXT PRIMARY KEY,reference TEXT NOT NULL UNIQUE,departure_id TEXT NOT NULL REFERENCES departures(id),email TEXT NOT NULL,name TEXT NOT NULL,phone TEXT NOT NULL,passengers TEXT NOT NULL,seats TEXT NOT NULL,total INTEGER NOT NULL,deposit INTEGER NOT NULL,status TEXT NOT NULL,created_at INTEGER NOT NULL,expires_at INTEGER NOT NULL);
- CREATE TABLE IF NOT EXISTS requests(id TEXT PRIMARY KEY,kind TEXT NOT NULL,body TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'new',created_at INTEGER NOT NULL);
- CREATE TABLE IF NOT EXISTS hotels(id TEXT PRIMARY KEY,name TEXT NOT NULL,location TEXT NOT NULL,description TEXT NOT NULL,amenities TEXT NOT NULL,image TEXT,active INTEGER NOT NULL DEFAULT 0);
- CREATE TABLE IF NOT EXISTS review_assignments(review_id TEXT PRIMARY KEY,tour_ids TEXT NOT NULL);`);
-  const tx = (fn) => {
-    db.exec("BEGIN IMMEDIATE");
-    try {
-      const result = fn();
-      db.exec("COMMIT");
-      return result;
-    } catch (e) {
-      db.exec("ROLLBACK");
-      throw e;
-    }
-  };
-  const cleanup = () => {
-    const now = clock();
-    db.prepare("DELETE FROM seat_locks WHERE expires_at<=?").run(now);
-    db.prepare("DELETE FROM holds WHERE expires_at<=?").run(now);
-    db.prepare(
-      "UPDATE reservations SET status='expired' WHERE status='pending_agency' AND expires_at<=?",
-    ).run(now);
-  };
-  const parse = (r) =>
-    r
-      ? {
-          ...r,
-          seats: JSON.parse(r.seats || "[]"),
-          passengers: JSON.parse(r.passengers || "[]"),
-        }
-      : null;
-  if (seed) {
-    const insert = db.prepare(
-      "INSERT OR IGNORE INTO departures(id,tour_id,date,price) VALUES(?,?,?,?)",
+  const db = await connectDatabase({ path, env });
+  await Promise.all([
+    db.index("departures", { tour_id: 1, date: 1 }),
+    db.index("holds", { expires_at: 1 }),
+    db.index("seat_locks", { owner: 1 }),
+    db.index("seat_locks", { departure_id: 1, expires_at: 1 }),
+    db.index("seat_locks", { expires_at: 1 }),
+    db.index("reservations", { reference: 1 }, { unique: true }),
+    db.index("reservations", { ticket_token: 1 }, { unique: true, sparse: true }),
+    db.index("reservations", { status: 1, expires_at: 1 }),
+    db.index("reservations", { departure_id: 1 }),
+    db.index("reservations", { member_id: 1 }),
+    db.index("reservations", { email: 1 }),
+    db.index("requests", { created_at: -1 }),
+    db.index("instagram_posts", { permalink: 1 }, { unique: true }),
+    db.index("admin_sessions", { expires_at: 1 }),
+  ]);
+  const tx = (fn) => db.transaction(fn);
+  let members;
+  const cleanup = async () =>
+    tx(async () => {
+      const now = clock();
+      await db.remove("seat_locks", { expires_at: { $lte: now } });
+      await db.remove("holds", { expires_at: { $lte: now } });
+      await db.updateMany(
+        "reservations",
+        { status: "pending_agency", expires_at: { $lte: now } },
+        { status: "expired" },
+      );
+      await members?.releaseCoupons();
+    });
+  const campaigns = await createCampaigns(db, { clock });
+  const instagramSettings = await createInstagramSettings(db, { clock });
+  members = await createMembers(db, {
+    campaigns,
+    clock,
+    tx,
+  });
+  const operations = await createOperations(db, {
+    clock,
+    cleanup,
+    tx,
+  });
+  const notifications = await createNotifications(db, { clock, tx, env });
+  const accountSecurity = await createAccountSecurity(db, {
+    clock,
+    tx,
+    members,
+    notifications,
+  });
+  const departures = await createDepartures(db, {
+    clock,
+    tx,
+    operations,
+    cleanup,
+    env,
+  });
+  if (
+    seed &&
+    (env.NODE_ENV !== "production" ||
+      env.DEMO_MODE === "1" ||
+      env.SEED_DEMO === "1")
+  ) {
+    const instagramPosts = JSON.parse(
+      readFileSync(new URL("./instagram-posts.json", import.meta.url), "utf8"),
     );
+    // Örnek veriler toplu ve "yoksa ekle" biçiminde yazılır.
+    const ifAbsent = (doc) => ({
+      updateOne: {
+        filter: { _id: doc.id },
+        update: { $setOnInsert: doc },
+        upsert: true,
+      },
+    });
+    await db.col("instagram_posts").bulkWrite(
+      instagramPosts.map((post) =>
+        ifAbsent({
+          id: post.id,
+          title: post.title,
+          permalink: post.permalink,
+          cover: post.cover,
+          position: post.position,
+          active: post.active ? 1 : 0,
+          videoSrc: null,
+        }),
+      ),
+    );
+    const seedDepartures = [];
     const today = new Date(clock());
-    for (const t of tours.filter((t) => !t.inquiryOnly))
+    for (const t of tours)
       for (let i = 0; i < 6; i++) {
         const d = new Date(today);
         d.setUTCDate(d.getUTCDate() + 3 + i * 7);
@@ -65,127 +117,138 @@ export function openStore(
           d.setUTCMonth(11);
           d.setUTCDate(5 + i * 7);
         }
-        const date = d.toISOString().slice(0, 10);
-        insert.run(`${t.id}-${date}`, t.id, date, t.price);
+        const date = d.toISOString().slice(0, 10),
+          id = `${t.id}-${date}`;
+        seedDepartures.push(
+          ifAbsent({ id, tour_id: t.id, date, price: t.price, active: 1 }),
+        );
       }
+    await db.col("departures").bulkWrite(seedDepartures);
   }
-  function departure(id) {
-    const d = db
-      .prepare("SELECT * FROM departures WHERE id=? AND active=1")
-      .get(id);
-    if (!d || d.date < new Date(clock()).toISOString().slice(0, 10))
-      throw new AppError(
-        404,
-        "Bu sefer artık rezervasyona açık değil. Başka bir tarih seçin.",
-      );
-    return d;
-  }
+  const workflow = await createWorkflow(db, {
+    cleanup,
+    clock,
+    tx,
+    departures,
+    members,
+    notifications,
+    env,
+  });
+  const departure = (id) => departures.get(id);
   return {
+    operations,
+    departures,
+    workflow,
+    campaigns,
+    instagramSettings,
+    notifications,
+    accountSecurity,
+    members,
     db,
     clock,
     cleanup,
-    listDepartures(tourId) {
-      cleanup();
-      return db
-        .prepare(
-          "SELECT * FROM departures WHERE tour_id=? AND active=1 AND date>=? ORDER BY date",
-        )
-        .all(tourId, new Date(clock()).toISOString().slice(0, 10))
-        .map((d) => ({
-          ...d,
-          available:
-            vehicle.sellableSeats -
-            Number(
-              db
-                .prepare(
-                  "SELECT count(*) n FROM seat_locks WHERE departure_id=? AND expires_at>?",
-                )
-                .get(d.id, clock()).n,
-            ),
-        }));
+    async listDepartures(tourId) {
+      return (await departures.list({ tourId })).filter(
+        (d) => d.salesOpen && d.date >= localDate(clock()),
+      );
     },
-    availability(id) {
-      cleanup();
-      const d = departure(id);
+    async availability(id) {
+      await cleanup();
+      const d = await departure(id),
+        vehicle = d.vehicle;
       return {
         departure: d,
         vehicle,
-        seats: Array.from({ length: 8 }, (_, i) => ({
-          number: i + 1,
-          status: db
-            .prepare(
-              "SELECT owner FROM seat_locks WHERE departure_id=? AND seat=? AND expires_at>?",
-            )
-            .get(id, i + 1, clock())
-            ? "occupied"
-            : "available",
-        })),
+        seats: await Promise.all(
+          Array.from(
+            {
+              length: vehicle.sellableSeats,
+            },
+            async (_, i) => ({
+              number: i + 1,
+              status: (await db.one("seat_locks", {
+                _id: `${id}:${i + 1}`,
+                expires_at: { $gt: clock() },
+              }))
+                ? "occupied"
+                : "available",
+            }),
+          ),
+        ),
       };
     },
-    hold(id, seats) {
-      if (
-        !Array.isArray(seats) ||
-        seats.length < 1 ||
-        seats.length > 8 ||
-        new Set(seats).size !== seats.length ||
-        seats.some((s) => !Number.isInteger(s) || s < 1 || s > 8)
-      )
-        throw new AppError(
-          400,
-          "Yalnızca 1–8 numaralı yolcu koltukları seçilebilir.",
-        );
-      return tx(() => {
-        cleanup();
-        departure(id);
-        const token = randomBytes(24).toString("hex"),
-          expires = clock() + 10 * 60 * 1000;
-        for (const s of seats) {
-          if (
-            db
-              .prepare(
-                "SELECT 1 FROM seat_locks WHERE departure_id=? AND seat=?",
-              )
-              .get(id, s)
+    async hold(id, seats) {
+      return tx(async () => {
+        await cleanup();
+        const d = await departure(id),
+          vehicle = d.vehicle;
+        if (
+          !Array.isArray(seats) ||
+          !seats.length ||
+          seats.length > vehicle.sellableSeats ||
+          new Set(seats).size !== seats.length ||
+          seats.some(
+            (s) => !Number.isInteger(s) || s < 1 || s > vehicle.sellableSeats,
           )
+        )
+          throw new AppError(
+            400,
+            `Yalnızca 1–${vehicle.sellableSeats} numaralı yolcu koltukları seçilebilir.`,
+          );
+        const token = randomBytes(24).toString("hex"),
+          expires = clock() + 600000;
+        for (const seat of seats) {
+          // _id departure:seat olduğu için aynı koltuk iki kez kilitlenemez.
+          if (await db.one("seat_locks", { _id: `${id}:${seat}` }))
             throw new AppError(
               409,
-              "Seçtiğiniz koltuklardan biri az önce ayrıldı. Yerleşimi yenileyip tekrar seçin.",
+              "Seçtiğiniz koltuklardan biri az önce ayrıldı.",
             );
-          db.prepare("INSERT INTO seat_locks VALUES(?,?,?,?)").run(
-            id,
-            s,
-            token,
-            expires,
-          );
+          await db.insert("seat_locks", `${id}:${seat}`, {
+            departure_id: id,
+            seat,
+            owner: token,
+            expires_at: expires,
+          });
         }
-        db.prepare("INSERT INTO holds VALUES(?,?,?,?)").run(
+        await db.insert("holds", token, {
           token,
-          id,
-          JSON.stringify(seats),
-          expires,
-        );
+          departure_id: id,
+          seats,
+          expires_at: expires,
+        });
         return { token, seats, expiresAt: expires };
       });
     },
     release(token) {
-      tx(() => {
-        db.prepare("DELETE FROM seat_locks WHERE owner=?").run(token);
-        db.prepare("DELETE FROM holds WHERE token=?").run(token);
+      return tx(async () => {
+        await db.remove("seat_locks", { owner: token });
+        await db.remove("holds", { _id: token });
       });
     },
-    reserve({ holdToken, name, email, phone, passengers, paymentMode }) {
-      return tx(() => {
-        cleanup();
-        const hold = db
-          .prepare("SELECT * FROM holds WHERE token=? AND expires_at>?")
-          .get(holdToken, clock());
+    reserve({
+      holdToken,
+      name,
+      email,
+      phone,
+      passengers,
+      paymentMode,
+      memberId = null,
+      couponId = null,
+    }) {
+      return tx(async () => {
+        await cleanup();
+        const hold = await db.one("holds", {
+          _id: holdToken,
+          expires_at: { $gt: clock() },
+        });
         if (!hold)
           throw new AppError(
             410,
             "Koltuk ayırma süresi doldu. Lütfen koltuklarınızı yeniden seçin.",
           );
-        const seats = JSON.parse(hold.seats),
-          d = departure(hold.departure_id);
+        const seats = fromJson(hold.seats, []),
+          d = await departure(hold.departure_id);
         if (passengers.length !== seats.length)
           throw new AppError(
             400,
@@ -193,125 +256,168 @@ export function openStore(
           );
         const id = randomUUID(),
           reference = "RK-" + randomBytes(5).toString("hex").toUpperCase(),
-          total = d.price * seats.length,
+          subtotal = d.price * seats.length,
+          discounted = await members.priceCoupon(
+            memberId,
+            couponId,
+            subtotal,
+            d.tour_id,
+          ),
+          total = discounted.total,
           deposit = paymentMode === "deposit" ? Math.round(total * 0.3) : total,
-          expires = clock() + 24 * 60 * 60 * 1000;
-        db.prepare(
-          "INSERT INTO reservations VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
-        ).run(
+          // Onay bekleyen kayıt en fazla 24 saat ya da satış kapanışına kadar koltuk tutar.
+          expires = Math.min(
+            clock() + 24 * 60 * 60 * 1000,
+            d.salesClosesAt ?? Infinity,
+          );
+        await db.insert("reservations", id, {
           id,
           reference,
-          d.id,
-          email.toLowerCase(),
+          departure_id: d.id,
+          email: email.toLowerCase(),
           name,
           phone,
-          JSON.stringify(passengers),
-          hold.seats,
+          passengers,
+          seats,
           total,
           deposit,
-          "pending_agency",
-          clock(),
-          expires,
+          status: "pending_agency",
+          created_at: clock(),
+          expires_at: expires,
+          vehicle_json: d.vehicle,
+          member_id: memberId,
+          coupon_id: couponId,
+          subtotal,
+          discount_amount: discounted.discount,
+          ticket_token: randomBytes(24).toString("hex"),
+          discount_percent: discounted.coupon?.percent || 0,
+        });
+        await members.consumeCoupon(couponId, id);
+
+        await db.updateMany(
+          "seat_locks",
+          { owner: holdToken },
+          { owner: reference, expires_at: expires },
         );
-        db.prepare(
-          "UPDATE seat_locks SET owner=?,expires_at=? WHERE owner=?",
-        ).run(reference, expires, holdToken);
-        db.prepare("DELETE FROM holds WHERE token=?").run(holdToken);
-        return {
-          ...parse(db.prepare("SELECT * FROM reservations WHERE id=?").get(id)),
-          date: d.date,
-          tourId: d.tour_id,
-        };
+        await db.remove("holds", { _id: holdToken });
+        return workflow.created(reference);
       });
     },
-    lookup(reference, email) {
-      cleanup();
-      const r = db
-        .prepare(
-          "SELECT r.*,d.date,d.tour_id as tourId FROM reservations r JOIN departures d ON d.id=r.departure_id WHERE r.reference=? AND r.email=?",
-        )
-        .get(reference.toUpperCase(), email.toLowerCase());
-      if (!r)
+    async lookup(reference, email) {
+      await cleanup();
+      const r = await workflow.get(reference);
+      if (r.email !== email.toLowerCase())
         throw new AppError(
           404,
           "Bu referans ve e-posta ile bir ön rezervasyon bulunamadı.",
         );
-      return parse(r);
+      return r;
     },
     cancel(reference, email) {
-      return tx(() => {
-        const r = this.lookup(reference, email);
-        if (r.status === "pending_agency") {
-          db.prepare(
-            "UPDATE reservations SET status='cancelled' WHERE id=?",
-          ).run(r.id);
-          db.prepare("DELETE FROM seat_locks WHERE owner=?").run(r.reference);
-        }
-        return this.lookup(reference, email);
-      });
+      return workflow.requestCancellation(reference, email);
     },
-    request(kind, body) {
+    async request(kind, body) {
       const id = randomUUID();
-      db.prepare(
-        "INSERT INTO requests(id,kind,body,created_at) VALUES(?,?,?,?)",
-      ).run(id, kind, JSON.stringify(body), clock());
+      await db.insert("requests", id, {
+        id,
+        kind,
+        body,
+        status: "new",
+        created_at: clock(),
+      });
+      const reference = "TL-" + id.slice(0, 8).toUpperCase();
+      const label =
+        { hotel: "Konaklama talebi", "private-tour": "Özel tur talebi", vehicle: "Araç kiralama talebi" }[kind] ||
+        "Yeni talep";
+      await notifications.notifyAgency({
+        subject: `${label}: ${reference}`,
+        body:
+          `${label} · ${reference}\n` +
+          Object.entries(body || {})
+            .filter(([, v]) => v !== "" && v != null && typeof v !== "object")
+            .map(([k, v]) => `${k}: ${String(v).slice(0, 500)}`)
+            .join("\n"),
+        actionUrl: (env.PUBLIC_BASE_URL || "") + "/yonetim",
+        kind: "request_" + kind,
+        dedupeKey: "request:" + id,
+      });
       return {
-        reference: "TL-" + id.slice(0, 8).toUpperCase(),
+        reference,
         status: "received",
       };
     },
-    hotels() {
-      return db
-        .prepare("SELECT * FROM hotels WHERE active=1 ORDER BY name")
-        .all()
-        .map((h) => ({ ...h, amenities: JSON.parse(h.amenities) }));
+    async hotels() {
+      return (await db.find("hotels", { active: 1 }, { sort: { name: 1 } })).map(
+        (h) => ({ ...h, amenities: fromJson(h.amenities, []) }),
+      );
     },
-    dashboard() {
-      cleanup();
+    async dashboard() {
+      await cleanup();
       return {
-        reservations: db
-          .prepare(
-            "SELECT r.*,d.date,d.tour_id as tourId FROM reservations r JOIN departures d ON r.departure_id=d.id ORDER BY r.created_at DESC LIMIT 200",
-          )
-          .all()
-          .map(parse),
-        requests: db
-          .prepare("SELECT * FROM requests ORDER BY created_at DESC LIMIT 200")
-          .all()
-          .map((r) => ({ ...r, body: JSON.parse(r.body) })),
-        hotels: db
-          .prepare("SELECT * FROM hotels ORDER BY name")
-          .all()
-          .map((h) => ({ ...h, amenities: JSON.parse(h.amenities) })),
+        reservations: await workflow.list(),
+        requests: (
+          await db.find("requests", {}, { sort: { created_at: -1 }, limit: 200 })
+        ).map((r) => ({ ...r, body: fromJson(r.body, {}) })),
+        hotels: (await db.find("hotels", {}, { sort: { name: 1 } })).map((h) => ({
+          ...h,
+          amenities: fromJson(h.amenities, []),
+        })),
       };
     },
-    upsertHotel(h) {
+    async upsertHotel(h) {
       const id = h.id || randomUUID();
-      db.prepare(
-        "INSERT INTO hotels VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,location=excluded.location,description=excluded.description,amenities=excluded.amenities,image=excluded.image,active=excluded.active",
-      ).run(
+      await db.upsert("hotels", id, {
         id,
-        h.name,
-        h.location,
-        h.description,
-        JSON.stringify(h.amenities),
-        h.image || null,
-        h.active ? 1 : 0,
-      );
-      return { id };
+        name: h.name,
+        location: h.location,
+        description: h.description,
+        amenities: h.amenities,
+        image: h.image || null,
+        active: h.active ? 1 : 0,
+      });
+      return {
+        id,
+      };
     },
-    assignments() {
+    async assignments() {
       return Object.fromEntries(
-        db
-          .prepare("SELECT * FROM review_assignments")
-          .all()
-          .map((r) => [r.review_id, JSON.parse(r.tour_ids)]),
+        (await db.find("review_assignments")).map((r) => [
+          r.review_id,
+          fromJson(r.tour_ids, []),
+        ]),
       );
     },
-    assignReview(reviewId, tourIds) {
-      db.prepare(
-        "INSERT INTO review_assignments VALUES(?,?) ON CONFLICT(review_id) DO UPDATE SET tour_ids=excluded.tour_ids",
-      ).run(reviewId, JSON.stringify(tourIds));
+    async assignReview(reviewId, tourIds) {
+      await db.upsert("review_assignments", reviewId, {
+        review_id: reviewId,
+        tour_ids: tourIds,
+      });
+    },
+    async instagramPosts(includeDrafts = false) {
+      return db.find("instagram_posts", includeDrafts ? {} : { active: 1 }, {
+        sort: { position: 1, id: 1 },
+      });
+    },
+    async upsertInstagramPost(post) {
+      const id = post.id || randomUUID();
+      const duplicate = await db.one("instagram_posts", {
+        permalink: post.permalink,
+        _id: { $ne: id },
+      });
+      if (duplicate)
+        throw new AppError(409, "Bu Instagram videosu zaten eklenmiş.");
+      await db.upsert("instagram_posts", id, {
+        id,
+        title: post.title,
+        permalink: post.permalink,
+        cover: post.cover,
+        position: post.position,
+        active: post.active ? 1 : 0,
+        videoSrc: post.videoSrc || null,
+      });
+      return {
+        id,
+      };
     },
   };
 }

@@ -1,3 +1,4 @@
+import { AccountSecurity, TicketVerification } from "./pages/AccountSecurity";
 import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import {
@@ -19,6 +20,7 @@ import "@fontsource/onest/latin-ext-700.css";
 import "@fontsource/onest/latin-700.css";
 import "./styles.css";
 import { api } from "./lib/api";
+import { usePageMeta } from "./lib/seo";
 import type { Catalog } from "./lib/types";
 import { Layout } from "./components/Layout";
 import { Home } from "./pages/Home";
@@ -32,6 +34,9 @@ import {
   Contact,
   Information,
 } from "./pages/OtherPages";
+import { MemberProvider } from "./lib/member";
+import { Membership, Account } from "./pages/Membership";
+import { Services } from "./pages/Services";
 import { Admin } from "./pages/Admin";
 function App() {
   const [catalog, setCatalog] = useState<Catalog | null>(null),
@@ -46,23 +51,7 @@ function App() {
         ),
       );
   }, []);
-  useEffect(() => {
-    const name =
-      location.pathname === "/turlar"
-        ? "Turlarımız"
-        : location.pathname === "/konaklama"
-          ? "Konaklama"
-          : location.pathname.startsWith("/rezervasyon")
-            ? "Rezervasyon"
-            : location.pathname === "/iletisim"
-              ? "İletişim"
-              : location.pathname === "/hakkimizda"
-                ? "Hakkımızda"
-                : catalog?.tours.find(
-                    (t) => location.pathname === "/turlar/" + t.id,
-                  )?.name;
-    document.title = (name ? name + " | " : "") + "Rota Kars Turizm";
-  }, [location.pathname, catalog]);
+  usePageMeta(location.pathname);
   if (error)
     return (
       <div className="app-loading">
@@ -80,11 +69,62 @@ function App() {
         <p>Rotanız hazırlanıyor…</p>
       </div>
     );
-  if (location.pathname === "/yonetim") return <Admin catalog={catalog} />;
+  if (location.pathname === "/yonetim")
+    return (
+      <Admin
+        catalog={catalog}
+        refreshCatalog={() => api<Catalog>("/catalog").then(setCatalog)}
+      />
+    );
   return (
     <Layout catalog={catalog}>
       <Routes>
         <Route path="/" element={<Home catalog={catalog} />} />
+        <Route
+          path="/gorsel-kaynaklari"
+          element={
+            <section className="container section photo-credits">
+              <h1>Rotanın fotoğrafçıları.</h1>
+              <p>
+                Bu rotaları görünür kılan fotoğrafçılara teşekkürler. Görseller
+                web için boyutlandırılmıştır; kartlarda kırpılarak gösterilir.
+              </p>
+              {catalog.photoCredits.map((photo) => (
+                <article key={photo.id}>
+                  <img src={photo.path} alt={photo.title} loading="lazy" />
+                  <div>
+                    <h2>{photo.title}</h2>
+                    <p>{photo.author}</p>
+                    <a href={photo.source} target="_blank" rel="noreferrer">
+                      Özgün fotoğraf
+                    </a>{" "}
+                    ·{" "}
+                    <a href={photo.licenseUrl} target="_blank" rel="noreferrer">
+                      {photo.license}
+                    </a>
+                  </div>
+                </article>
+              ))}
+            </section>
+          }
+        />
+        <Route path="/hizmetler" element={<Services catalog={catalog} />} />
+        <Route path="/hizmetler/:id" element={<Services catalog={catalog} />} />
+        <Route path="/uyelik" element={<Membership />} />
+        <Route
+          path="/uyelik/eposta-dogrula"
+          element={<AccountSecurity mode="verify" />}
+        />
+        <Route
+          path="/uyelik/parola-yenile"
+          element={<AccountSecurity mode="reset" />}
+        />
+        <Route
+          path="/uyelik/parolami-unuttum"
+          element={<AccountSecurity mode="forgot" />}
+        />
+        <Route path="/bilet/:token" element={<TicketVerification />} />
+        <Route path="/hesabim" element={<Account />} />
         <Route path="/turlar" element={<Tours catalog={catalog} />} />
         <Route path="/turlar/:id" element={<TourDetail catalog={catalog} />} />
         <Route
@@ -95,7 +135,10 @@ function App() {
         <Route path="/konaklama" element={<Hotels />} />
         <Route path="/hakkimizda" element={<About />} />
         <Route path="/iletisim" element={<Contact catalog={catalog} />} />
-        <Route path="/bilgilendirme" element={<Information />} />
+        <Route
+          path="/bilgilendirme"
+          element={<Information catalog={catalog} />}
+        />
         <Route
           path="*"
           element={
@@ -115,7 +158,9 @@ function App() {
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <App />
+      <MemberProvider>
+        <App />
+      </MemberProvider>
     </BrowserRouter>
   </React.StrictMode>,
 );
