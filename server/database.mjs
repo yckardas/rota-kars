@@ -101,12 +101,30 @@ export async function connectDatabase({ path, env = process.env } = {}) {
     throw new Error(
       "MONGODB_URI tanımlı değil. Yerelde `docker compose up -d mongo` çalıştırıp .env içine MONGODB_URI=mongodb://127.0.0.1:27017/ yazın. Railway'de MONGO_URL değişkenini Mongo servisine referansla verin.",
     );
-  const client = new MongoClient(uri, { serverSelectionTimeoutMS: 15000, retryWrites: true });
-  try {
-    await client.connect();
-  } catch (e) {
-    await client.close().catch(() => {});
-    throw new Error("MongoDB'ye bağlanılamadı: " + hideCredentials(e?.message || e));
+  // Mongo servisi uygulamayla aynı anda (re)start olabilir: hazır olana kadar
+  // MONGODB_CONNECT_TIMEOUT_SECONDS (varsayılan 90) boyunca yeniden denenir.
+  const deadline =
+    Date.now() + (memory ? 0 : Number(env.MONGODB_CONNECT_TIMEOUT_SECONDS || 90) * 1000);
+  let client;
+  for (let attempt = 1; ; attempt++) {
+    client = new MongoClient(uri, { serverSelectionTimeoutMS: 15000, retryWrites: true });
+    try {
+      await client.connect();
+      break;
+    } catch (e) {
+      await client.close().catch(() => {});
+      const detail = hideCredentials(e?.message || e);
+      if (Date.now() >= deadline) {
+        const hint = /ECONNREFUSED/.test(detail)
+          ? " Mongo servisinin adresine ulaşıldı ama portta dinleyen yok: Mongo servisi çalışıyor mu, ve tüm adresleri dinliyor mu (mongod --ipv6 --bind_ip ::,0.0.0.0)?"
+          : /Authentication failed/i.test(detail)
+            ? " Kullanıcı adı/parola hatalı: MONGO_URL'i Mongo servisinin değişkenine referansla verin."
+            : "";
+        throw new Error("MongoDB'ye bağlanılamadı: " + detail + hint);
+      }
+      console.error(`MongoDB bekleniyor (deneme ${attempt}): ${detail.slice(0, 120)}`);
+      await new Promise((r) => setTimeout(r, Math.min(10000, 2000 * attempt)));
+    }
   }
   // Replica set (veya sharded) ise gerçek transaction; tek düğümde ise uygulama içi sıra.
   const hello = await client.db("admin").command({ hello: 1 });
