@@ -374,3 +374,19 @@ test("database picks serialized mode on a single Mongo node and transactions on 
   assert.ok(results.filter((r) => r.status === "rejected").every((r) => r.reason.status === 409));
   assert.equal(await s.db.count("seat_locks", { departure_id: d.id }), 2, "no orphan locks");
 });
+
+test("a MONGO_URL that points at the app's own Railway domain is rejected immediately", async () => {
+  const { connectDatabase } = await import("../server/database.mjs");
+  const started = Date.now();
+  await assert.rejects(
+    () =>
+      connectDatabase({
+        env: {
+          RAILWAY_PRIVATE_DOMAIN: "rota-kars.railway.internal",
+          MONGO_URL: "mongodb://mongo:secret@rota-kars.railway.internal:27017",
+        },
+      }),
+    (e) => /kendi adresini/.test(e.message) && !e.message.includes("secret"),
+  );
+  assert.ok(Date.now() - started < 2000, "no 90 s wait");
+});

@@ -110,6 +110,12 @@ export async function connectDatabase({ path, env = process.env } = {}) {
     } catch {}
     const source = env.MONGODB_URI ? "MONGODB_URI" : env.MONGO_URL ? "MONGO_URL" : env.DATABASE_URL ? "DATABASE_URL" : "MONGOHOST";
     console.log(`MongoDB'ye bağlanılıyor: ${target} (veritabanı: ${dbName || "varsayılan"}, kaynak: ${source})`);
+    // Railway: servis adı olmadan yazılan ${{RAILWAY_PRIVATE_DOMAIN}} uygulamanın KENDİ
+    // adresine çözülür; Mongo yerine kendine bağlanmaya çalışır (ECONNREFUSED).
+    if (env.RAILWAY_PRIVATE_DOMAIN && target.split(":")[0] === env.RAILWAY_PRIVATE_DOMAIN)
+      throw new Error(
+        `${source} uygulamanın kendi adresini (${env.RAILWAY_PRIVATE_DOMAIN}) gösteriyor, Mongo servisini değil. Railway'de uygulama servisinin Variables sekmesinde ${source} değişkenini silip "Add Reference" ile Mongo servisinin MONGO_URL değişkenine referans verin (örn. \${{MongoDB.MONGO_URL}}).`,
+      );
   }
   // Mongo servisi uygulamayla aynı anda (re)start olabilir: hazır olana kadar
   // MONGODB_CONNECT_TIMEOUT_SECONDS (varsayılan 90) boyunca yeniden denenir.
