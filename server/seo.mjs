@@ -189,7 +189,9 @@ const PRIVATE = [
 
 // Bir yol için meta bilgisi. status 404 ise sayfa yoktur.
 export function pageMeta(path, base) {
-  const p = path.replace(/\/+$/, "") || "/";
+  let end = Math.min(path.length, 512);
+  while (end > 1 && path[end - 1] === "/") end--;
+  const p = path.slice(0, end) || "/";
   const graph = [agency(base)];
   if (STATIC[p]) {
     const m = STATIC[p];
@@ -232,6 +234,7 @@ export function pageMeta(path, base) {
       title: m.title,
       description: m.description,
       image: DEFAULT_IMAGE,
+      lcp: p === "/" ? "/images/ani.webp" : null,
       graph,
     };
   }
@@ -255,6 +258,7 @@ export function pageMeta(path, base) {
         `${tour.name} (${tour.duration}, ${tour.location}): ${tour.summary} Kişi başı ${tl(tour.price)}'den başlayan fiyatlarla.`,
       ),
       image: tour.image,
+      lcp: tour.image,
       graph,
     };
   }
@@ -308,10 +312,18 @@ export function pageMeta(path, base) {
   };
 }
 
+// Sayfanın en büyük görseli JS beklenmeden indirilmeye başlasın (LCP). İstemcideki
+// srcset ile aynı varyantlar verilir; tarayıcı ikinci kez indirmez.
+const RESPONSIVE = /^\/images\/(tours\/[\w-]+|ani|rota-bus|stay)\.webp$/;
+const preloadTag = (src) =>
+  RESPONSIVE.test(src)
+    ? `<link rel="preload" as="image" fetchpriority="high" href="${attr(src)}" imagesrcset="${attr(src.replace(/\.webp$/, "-800.webp"))} 800w, ${attr(src)} 1400w" imagesizes="100vw">`
+    : `<link rel="preload" as="image" fetchpriority="high" href="${attr(src)}">`;
 export function headTags(meta, base) {
   const url = base + meta.path;
   const image = /^https?:/.test(meta.image) ? meta.image : base + meta.image;
   return [
+    meta.lcp ? preloadTag(meta.lcp) : "",
     `<title>${attr(meta.title)}</title>`,
     `<meta name="description" content="${attr(meta.description)}">`,
     `<meta name="robots" content="${meta.index ? "index, follow, max-image-preview:large" : "noindex, follow"}">`,
@@ -417,6 +429,8 @@ export function attachSeoRoutes(app, env) {
 export function seoHtmlHandler(env, getTemplate) {
   return async (req, res, next) => {
     if (req.method !== "GET" && req.method !== "HEAD") return next();
+    // Aşırı uzun yollar (ör. binlerce "/") işlenmez: düzenli ifade yavaşlatmasını önler.
+    if (req.path.length > 512) return res.status(414).type("text/plain").send("URI too long");
     if (
       req.path.startsWith("/api/") ||
       req.path.startsWith("/@") ||

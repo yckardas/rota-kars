@@ -60,20 +60,28 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx }) {
       },
     );
   // Bir e-posta adresine (ve varsa üyeye) ait tüm kayıtlar.
-  async function collect(email, memberId = null) {
+  // byEmail=false: yalnız üyeye bağlı kayıtlar. Üyenin e-postası doğrulanmamışsa
+  // aynı e-postayla yapılmış misafir kayıtları ona verilmez (başkasının e-postasıyla
+  // üye olup veri indirme/silme engellenir).
+  async function collect(email, memberId = null, { byEmail = true } = {}) {
     const normalized = String(email).trim().toLowerCase();
     const reservations = await db.find("reservations", {
-      $or: [{ email: normalized }, ...(memberId ? [{ member_id: memberId }] : [])],
+      $or: [...(byEmail ? [{ email: normalized }] : []), ...(memberId ? [{ member_id: memberId }] : [])],
     });
-    const requests = (await db.find("requests", {}, { sort: { created_at: -1 }, limit: 5000 })).filter(
-      (r) => String(r.body?.email || "").toLowerCase() === normalized,
-    );
+    const requests = byEmail
+      ? (await db.find("requests", {}, { sort: { created_at: -1 }, limit: 5000 })).filter(
+          (r) => String(r.body?.email || "").toLowerCase() === normalized,
+        )
+      : [];
     return {
       normalized,
+      byEmail,
       reservations,
       requests,
-      notifications: await db.find("notification_outbox", { recipient: normalized }),
-      consents: await db.find("consents", { email_hash: emailHash(normalized) }),
+      notifications: byEmail ? await db.find("notification_outbox", { recipient: normalized }) : [],
+      consents: await db.find("consents", {
+        $or: [{ email_hash: emailHash(normalized) }, ...(memberId ? [{ member_id: memberId }] : [])],
+      }),
     };
   }
   const shapeExport = async (data, member = null) => ({
@@ -149,7 +157,7 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx }) {
     }
     const requestIds = data.requests.map((r) => r.id);
     if (requestIds.length) await db.remove("requests", { _id: { $in: requestIds } });
-    await db.remove("notification_outbox", { recipient: data.normalized });
+    if (data.byEmail) await db.remove("notification_outbox", { recipient: data.normalized });
     return { anonymized, retainedForLegalObligation: retained, requestsDeleted: requestIds.length };
   }
   return {
@@ -172,13 +180,18 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx }) {
     async memberExport(memberId) {
       const member = await db.one("members", { _id: memberId });
       if (!member) throw new AppError(404, "Üyelik bulunamadı.");
-      return shapeExport(await collect(member.email, member.id), member);
+      return shapeExport(
+        await collect(member.email, member.id, { byEmail: Boolean(member.email_verified) }),
+        member,
+      );
     },
     async memberDelete(memberId) {
       return tx(async () => {
         const member = await db.one("members", { _id: memberId });
         if (!member) throw new AppError(404, "Üyelik bulunamadı.");
-        const result = await erase(await collect(member.email, member.id));
+        const result = await erase(
+          await collect(member.email, member.id, { byEmail: Boolean(member.email_verified) }),
+        );
         await db.remove("member_sessions", { member_id: memberId });
         await db.remove("social_accounts", { member_id: memberId });
         await db.remove("account_tokens", { member_id: memberId });

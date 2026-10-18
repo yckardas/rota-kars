@@ -10,6 +10,9 @@ export const paymentStatus = {
   message:
     "Online ödeme henüz aktif değil. Ön rezervasyon talebiniz acente tarafından değerlendirilecektir.",
 };
+// Kapora tutarı tek yerden hesaplanır (kuruş, yuvarlanmış).
+export const depositFor = (total) =>
+  Math.round((total * paymentStatus.depositPercent) / 100);
 export function createPayment() {
   return {
     status: 503,

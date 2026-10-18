@@ -14,6 +14,19 @@ export const cookieValue = (req, name) =>
     .map((x) => x.trim())
     .find((x) => x.startsWith(name + "="))
     ?.slice(name.length + 1);
+// Giriş sonrası dönüş adresi: yalnız "/" ile başlayan site içi yol; "//", "\\",
+// şema veya kontrol karakteri içeremez.
+export function safeNext(value) {
+  if (typeof value !== "string" || value.length > 300) return null;
+  if (!/^\/(?![\/\\])/.test(value) || /[\\\u0000-\u001f\u007f]/.test(value)) return null;
+  try {
+    const url = new URL(value, "https://rotakarsturizm.invalid");
+    if (url.origin !== "https://rotakarsturizm.invalid") return null;
+    return url.pathname + url.search + url.hash;
+  } catch {
+    return null;
+  }
+}
 export function attachSocialAuth(
   app,
   { env, store, route, setSession, fetchImpl = fetch },
@@ -175,6 +188,7 @@ export function attachSocialAuth(
           : null;
       states.set(state, {
         name,
+        next: safeNext(q.query.next),
         nonce,
         verifier,
         binding: hash(binding),
@@ -280,7 +294,8 @@ export function attachSocialAuth(
         linkMemberId: entry.memberId,
       });
       await setSession(r, member.id);
-      r.redirect("/hesabim");
+      // Yalnız sitenin kendi sayfalarına dönülür (açık yönlendirme önlenir).
+      r.redirect(entry.next || "/hesabim");
     } catch (error) {
       r.redirect(
         "/uyelik?error=" +

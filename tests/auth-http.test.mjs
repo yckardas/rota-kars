@@ -310,3 +310,34 @@ for (const provider of ["google", "apple", "facebook"])
       }
     },
   );
+test("social login return path accepts only same-site paths (no open redirect)", async () => {
+  const { safeNext } = await import("../server/social-auth.mjs");
+  assert.equal(safeNext("/rezervasyon/ani-cildir?date=2026-11-01"), "/rezervasyon/ani-cildir?date=2026-11-01");
+  for (const bad of ["//evil.com", "/\\evil.com", "https://evil.com", "javascript:alert(1)", "/a\nb", "/\t/evil.com", "", null, "x".repeat(400)])
+    assert.equal(safeNext(bad), null, String(bad).slice(0, 20));
+});
+test("login throttling is per account and global, so spoofed IPs do not help", async (t) => {
+  const { createApp } = await import("../server/app.mjs");
+  const { openStore } = await import("../server/store.mjs");
+  const { once } = await import("node:events");
+  const store = await openStore(":memory:");
+  const app = createApp(store, { env: { TRUST_PROXY: "1", LOGIN_GLOBAL_LIMIT: "15" } });
+  const server = app.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(async () => {
+    await new Promise((r) => server.close(r));
+    await store.db.close();
+  });
+  const login = (email, ip) =>
+    fetch(`http://127.0.0.1:${server.address().port}/api/auth/login`, {
+      method: "POST",
+      body: JSON.stringify({ email, password: "yanlis-parola-1" }),
+      headers: { "Content-Type": "application/json", "X-Rota-Client": "web", "X-Forwarded-For": ip },
+    }).then((r) => r.status);
+  const perAccount = [];
+  for (let i = 0; i < 10; i++) perAccount.push(await login("hedef@example.com", `10.1.0.${i}`));
+  assert.equal(perAccount.filter((s) => s === 429).length >= 1, true, perAccount.join(","));
+  const global = [];
+  for (let i = 0; i < 12; i++) global.push(await login(`kisi${i}@example.com`, `10.2.0.${i}`));
+  assert.ok(global.includes(429), "global cap stops distributed attempts: " + global.join(","));
+});

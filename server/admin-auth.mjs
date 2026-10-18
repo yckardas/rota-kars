@@ -18,6 +18,8 @@ const SESSION_MS = 8 * 3600 * 1000,
   LOCK_AFTER = 5,
   LOCK_MS = 15 * 60 * 1000;
 const digest = (s) => createHash("sha256").update(s).digest("hex");
+const GENERIC_LOGIN_ERROR =
+  "E-posta veya parola hatalı. Çok sayıda hatalı denemeden sonra giriş 15 dakika kapanır.";
 const sameSecret = (a, b) =>
   timingSafeEqual(createHash("sha256").update(a).digest(), createHash("sha256").update(b).digest());
 
@@ -39,8 +41,12 @@ const OWNER_ONLY = [
 // Kendi hesap güvenliği uçları: 2FA zorunluyken de açık kalır.
 const SELF_SERVICE = /^\/api\/admin\/(session|me|me\/.*|logout)$/;
 
-export function roleAllows(role, method, path) {
+export function roleAllows(role, method, rawPath) {
   if (role === "owner") return true;
+  // Express büyük/küçük harf ve sondaki "/" farkını yok sayar; kontrol de aynı
+  // biçime göre yapılır (aksi halde /api/admin/USERS sahibe özel uçları açardı).
+  const path = String(rawPath || "").toLowerCase().replace(/\/{2,}/g, "/").replace(/\/+$/, "") || "/";
+  method = String(method || "").toUpperCase();
   if (OWNER_ONLY.some(([m, p]) => m.test(method) && p.test(path))) return false;
   if (role === "guide")
     return SELF_SERVICE.test(path) || GUIDE_ALLOWED.some(([m, p]) => m === method && p.test(path));
@@ -132,11 +138,9 @@ export async function createAdminAuth(db, { clock = Date.now, env = process.env 
     },
     async login({ email, password, code }) {
       const user = await db.one("admin_users", { email: String(email).trim().toLowerCase() });
+      // Kilitli hesap için de genel mesaj: hangi e-postanın yönetici olduğu anlaşılmaz.
       if (user?.locked_until > clock())
-        throw new AppError(
-          429,
-          "Çok fazla hatalı deneme. Hesap 15 dakika kilitlendi.",
-        );
+        throw new AppError(401, GENERIC_LOGIN_ERROR);
       const ok = await checkPassword(String(password || ""), user?.password_hash);
       if (!user || !ok || user.disabled) {
         if (user && !user.disabled) {
@@ -151,7 +155,7 @@ export async function createAdminAuth(db, { clock = Date.now, env = process.env 
           );
           if (failed >= LOCK_AFTER) await api.audit(user, "login_locked");
         }
-        throw new AppError(401, "E-posta veya parola hatalı.");
+        throw new AppError(401, GENERIC_LOGIN_ERROR);
       }
       if (user.totp_enabled) {
         if (!code) return { needsCode: true };
@@ -160,11 +164,17 @@ export async function createAdminAuth(db, { clock = Date.now, env = process.env 
           lastStep: user.totp_last_step ?? -1,
         });
         if (step === null) {
+          // Yanlış iki adımlı kodlar da kilide sayılır (parolası ele geçmiş hesapta kod denemesi).
+          const failed = (user.failed_logins || 0) + 1;
           await db.update(
             "admin_users",
             { _id: user.id },
-            { failed_logins: (user.failed_logins || 0) + 1 },
+            {
+              failed_logins: failed >= LOCK_AFTER ? 0 : failed,
+              locked_until: failed >= LOCK_AFTER ? clock() + LOCK_MS : 0,
+            },
           );
+          if (failed >= LOCK_AFTER) await api.audit(user, "login_locked", { reason: "totp" });
           throw new AppError(401, "Doğrulama kodu hatalı veya süresi geçmiş.");
         }
         await db.update("admin_users", { _id: user.id }, { totp_last_step: step });
@@ -204,9 +214,16 @@ export async function createAdminAuth(db, { clock = Date.now, env = process.env 
     async listUsers() {
       return (await db.find("admin_users", {}, { sort: { created_at: 1 } })).map(publicUser);
     },
-    async createUser(actor, { email, name, role, password }) {
+    async createUser(actor, input) {
+      validPassword(input.password);
+      const passwordHash = await hashPassword(input.password);
+      // İlk hesabın sahip olması ve kurulum oturumlarının kapanması tek işlemde yapılır.
+      return db.transaction(() => api._createUser(actor, input, passwordHash));
+    },
+    async _createUser(actor, { email, name, role }, passwordHash) {
       if (!ROLES.includes(role)) throw new AppError(400, "Geçersiz rol.");
-      validPassword(password);
+      if (actor?.id === "bootstrap" && (await hasUsers()))
+        throw new AppError(409, "İlk sahip hesabı zaten oluşturuldu. Kendi hesabınızla giriş yapın.");
       const normalized = String(email).trim().toLowerCase();
       if (await db.one("admin_users", { email: normalized }))
         throw new AppError(409, "Bu e-posta ile bir yönetici hesabı var.");
@@ -218,7 +235,7 @@ export async function createAdminAuth(db, { clock = Date.now, env = process.env 
         email: normalized,
         name: String(name).trim().slice(0, 80),
         role: first ? "owner" : role,
-        password_hash: await hashPassword(password),
+        password_hash: passwordHash,
         totp_enabled: false,
         totp_secret: null,
         disabled: false,

@@ -125,25 +125,43 @@ export function Membership() {
         </div>
       </div>
       <div className="membership-form-panel">
-        <div className="membership-tabs">
-          <button
-            className={mode === "register" ? "active" : ""}
-            onClick={() => {
-              setMode("register");
-              setError("");
-            }}
-          >
-            Üye ol
-          </button>
-          <button
-            className={mode === "login" ? "active" : ""}
-            onClick={() => {
-              setMode("login");
-              setError("");
-            }}
-          >
-            Giriş yap
-          </button>
+        <div
+          className="membership-tabs"
+          role="tablist"
+          aria-label="Üyelik"
+          onKeyDown={(e) => {
+            // Sol/sağ ok tuşlarıyla sekmeler arasında geçiş.
+            if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+            e.preventDefault();
+            const next = mode === "register" ? "login" : "register";
+            setMode(next);
+            setError("");
+            document.getElementById("membership-tab-" + next)?.focus();
+          }}
+        >
+          {(
+            [
+              ["register", "Üye ol"],
+              ["login", "Giriş yap"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              id={"membership-tab-" + id}
+              role="tab"
+              type="button"
+              aria-selected={mode === id}
+              aria-controls="membership-panel"
+              tabIndex={mode === id ? 0 : -1}
+              className={mode === id ? "active" : ""}
+              onClick={() => {
+                setMode(id);
+                setError("");
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
         <h2>
           {mode === "register"
@@ -176,7 +194,13 @@ export function Membership() {
                   window.location.assign(
                     "/api/auth/start/" +
                       id +
-                      (ref ? "?ref=" + encodeURIComponent(ref) : ""),
+                      "?" +
+                      new URLSearchParams({
+                        ...(ref ? { ref } : {}),
+                        ...(destination !== "/hesabim"
+                          ? { next: destination }
+                          : {}),
+                      }).toString(),
                   )
                 }
               >
@@ -200,7 +224,13 @@ export function Membership() {
             Parolamı unuttum
           </Link>
         )}
-        <form key={mode} onSubmit={submit}>
+        <form
+          key={mode}
+          onSubmit={submit}
+          id="membership-panel"
+          role="tabpanel"
+          aria-labelledby={"membership-tab-" + mode}
+        >
           {mode === "register" && (
             <label className="field">
               Adınız soyadınız

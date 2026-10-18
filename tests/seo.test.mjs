@@ -123,3 +123,19 @@ test("tour titles do not repeat 'tur' or the duration", async () => {
   }
   assert.match(tourTitle(tours.find((t) => t.id === "ani-cildir")), /^Ani, Çıldır ve Kars turu · Günübirlik, ₺1\.000/);
 });
+
+test("very long paths are rejected quickly instead of stalling the server", async () => {
+  const handler = seoHtmlHandler({}, async () => TEMPLATE);
+  let status = 0;
+  const started = Date.now();
+  await handler(
+    { method: "GET", path: "/" + "/".repeat(20000) + "x", originalUrl: "/", accepts: () => true, headers: { host: "x" }, protocol: "http" },
+    { status: (s) => ((status = s), { type: () => ({ send: () => {} }) }) },
+    () => {},
+  );
+  assert.equal(status, 414);
+  assert.ok(Date.now() - started < 50);
+  const t0 = Date.now();
+  pageMeta("/" + "/".repeat(20000) + "x", BASE);
+  assert.ok(Date.now() - t0 < 50, "pageMeta is linear");
+});

@@ -119,3 +119,27 @@ test("chat does not send questions abroad without explicit consent", async () =>
   await chat.reply(q, { abroadConsent: true });
   assert.equal(calls, 1);
 });
+
+test("registering with someone else's email does not expose or delete their guest bookings", async (t) => {
+  const { call, book, store } = await fixture(t);
+  const guest = await book("kurban@example.com");
+  await store.workflow.cancel(guest.reference);
+  const attacker = await call("/auth/register", { body: { name: "Saldırgan", email: "kurban@example.com", password: "saldirgan-parola-1", consent: true } });
+  const exp = await call("/member/data-export", { cookie: attacker.cookie });
+  assert.equal(exp.status, 200);
+  assert.equal(exp.json.reservations.length, 0, "unverified member sees no guest bookings");
+  assert.ok(!exp.text.includes(guest.reference));
+  await call("/member/delete", { body: { confirm: "SİL" }, cookie: attacker.cookie });
+  const kept = await store.db.one("reservations", { reference: guest.reference });
+  assert.equal(kept.name, "Ayşe Yılmaz", "victim's booking is untouched");
+});
+
+test("public departure data hides the guide's name and phone", async (t) => {
+  const { call, store } = await fixture(t);
+  const [d] = await store.listDepartures("ani-cildir");
+  await store.db.update("departures", { _id: d.id }, { guide_name: "Rehber Kişi", guide_phone: "05559998877" });
+  const list = await call("/tours/ani-cildir/departures");
+  const seats = await call(`/departures/${d.id}/seats`);
+  assert.ok(!list.text.includes("05559998877") && !list.text.includes("Rehber Kişi"));
+  assert.ok(!seats.text.includes("05559998877"));
+});

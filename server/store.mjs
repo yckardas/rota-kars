@@ -12,6 +12,7 @@ import { createWorkflow } from "./workflow.mjs";
 import { createAccountSecurity } from "./account-security.mjs";
 import { createAdminAuth } from "./admin-auth.mjs";
 import { createPrivacy } from "./privacy.mjs";
+import { depositFor } from "./payments.mjs";
 export class AppError extends Error {
   constructor(status, message) {
     super(message);
@@ -235,8 +236,28 @@ export async function openStore(
           departure_id: id,
           seats,
           expires_at: expires,
+          created_at: clock(),
+          extensions: 0,
         });
         return { token, seats, expiresAt: expires };
+      });
+    },
+    // Koltuk tutma süresi 10 dk; en fazla 2 kez uzatılabilir (toplam en fazla 30 dk).
+    async extendHold(token) {
+      return tx(async () => {
+        await cleanup();
+        const hold = await db.one("holds", { _id: token, expires_at: { $gt: clock() } });
+        if (!hold)
+          throw new AppError(410, "Koltuk ayırma süresi doldu. Lütfen koltuklarınızı yeniden seçin.");
+        if ((hold.extensions || 0) >= 2)
+          throw new AppError(409, "Süre en fazla iki kez uzatılabilir. Lütfen rezervasyonu tamamlayın.");
+        const expires = Math.min(
+          hold.expires_at + 600000,
+          (hold.created_at || hold.expires_at - 600000) + 30 * 60000,
+        );
+        await db.update("holds", { _id: token }, { expires_at: expires, extensions: (hold.extensions || 0) + 1 });
+        await db.updateMany("seat_locks", { owner: token }, { expires_at: expires });
+        return { token, seats: hold.seats, expiresAt: expires, extensionsLeft: 1 - (hold.extensions || 0) };
       });
     },
     release(token) {
@@ -283,11 +304,26 @@ export async function openStore(
             d.tour_id,
           ),
           total = discounted.total,
-          deposit = paymentMode === "deposit" ? Math.round(total * 0.3) : total,
-          // Onay bekleyen kayıt en fazla 24 saat ya da satış kapanışına kadar koltuk tutar.
+          deposit = paymentMode === "deposit" ? depositFor(total) : total,
+          // Onay bekleyen kayıt en fazla PENDING_HOLD_HOURS (varsayılan 24) saat ya da
+          // satış kapanışına kadar koltuk tutar.
           expires = Math.min(
-            clock() + 24 * 60 * 60 * 1000,
+            clock() + Math.max(1, Number(env.PENDING_HOLD_HOURS) || 24) * 3600000,
             d.salesClosesAt ?? Infinity,
+          );
+        // Aynı e-postanın onay bekleyen toplam koltuğu sınırlıdır: sahte e-postayla değil
+        // ama tek kişinin çok sayıda seferi bloke etmesi engellenir.
+        const maxPending = Math.max(1, Number(env.PENDING_SEATS_PER_EMAIL) || 12);
+        const pending = await db.find(
+          "reservations",
+          { email: email.toLowerCase(), status: "pending_agency", expires_at: { $gt: clock() } },
+          { projection: { seats: 1 } },
+        );
+        const pendingSeats = pending.reduce((n, r) => n + (r.seats?.length || 0), 0);
+        if (pendingSeats + seats.length > maxPending)
+          throw new AppError(
+            409,
+            "Bu e-posta ile onay bekleyen çok sayıda koltuk var. Önceki ön rezervasyonlarınızı acenteyle netleştirin veya WhatsApp'tan yazın.",
           );
         // Kupon önce düşülür; kullanılmışsa hiçbir kayıt yazılmadan işlem durur.
         await members.consumeCoupon(couponId, id);

@@ -28,7 +28,7 @@ import { attachSocialAuth, cookieValue } from "./social-auth.mjs";
 import { normalizeInstagramUrl, createInstagramFeed } from "./instagram.mjs";
 import { AppError } from "./store.mjs";
 import { createReviewsService } from "./reviews.mjs";
-import { paymentStatus, createPayment } from "./payments.mjs";
+import { paymentStatus, createPayment, depositFor } from "./payments.mjs";
 const clean = z.string().trim().min(2).max(100),
   email = z.string().trim().email().max(254),
   phone = z
@@ -83,6 +83,16 @@ const bookingSchema = z.object({
 // Sitedeki görseller: paketlenmiş /images dosyaları veya bucket'a yüklenen /media dosyaları.
 const localImage = /^(\/images\/[\w.-]+|\/media\/[a-f0-9-]{36}\.(jpg|png|webp|avif))$/;
 const localVideo = /^(\/videos\/[A-Za-z0-9_-]+\.(mp4|webm)|\/media\/[a-f0-9-]{36}\.(mp4|webm))$/;
+// Limitler için istemci anahtarı: IPv6'da tek kişi genelde bütün bir /64 bloğa
+// sahiptir; adres değiştirerek limit aşılmasın diye /64 öneki kullanılır.
+const clientKey = (req) => {
+  const ip = String(req.ip || "").replace(/^::ffff:/, "");
+  if (!ip.includes(":")) return ip;
+  const parts = ip.split("::")[0].split(":");
+  return parts.slice(0, 4).join(":") + "::/64";
+};
+// Herkese açık sefer bilgisinde rehberin adı/telefonu yer almaz (yalnız yönetim ve bilette).
+const publicDeparture = ({ guide_name, guide_phone, ...d }) => d;
 export function createApp(
   store,
   {
@@ -99,10 +109,43 @@ export function createApp(
     storage = createStorage({ env, db: store.db }),
   } = {},
 ) {
+  // Giriş denemesi sınırları: IP başına limite ek olarak hesap (e-posta) başına ve
+  // IP'den bağımsız toplam sınır; sahte X-Forwarded-For ile dağıtık deneme işe yaramaz.
+  const failures = new Map();
+  const tooManyFailures = (key, max) => {
+    const f = failures.get(key);
+    return f && f.reset > Date.now() && f.n >= max;
+  };
+  const recordFailure = (key) => {
+    const now = Date.now();
+    const f = failures.get(key);
+    if (!f || f.reset < now) failures.set(key, { n: 1, reset: now + 15 * 60 * 1000 });
+    else f.n++;
+    if (failures.size > 20000)
+      for (const [k, v] of failures) if (v.reset < now) failures.delete(k);
+  };
+  const guardLogin = async (scope, account, fn) => {
+    const accountKey = `${scope}:account:${String(account || "").toLowerCase()}`,
+      globalKey = `${scope}:global`;
+    if (tooManyFailures(accountKey, 8) || tooManyFailures(globalKey, Number(env.LOGIN_GLOBAL_LIMIT || 200)))
+      throw new AppError(429, "Çok fazla başarısız giriş denemesi. 15 dakika sonra tekrar deneyin.");
+    try {
+      return await fn();
+    } catch (e) {
+      if (e instanceof AppError && e.status === 401) {
+        recordFailure(accountKey);
+        recordFailure(globalKey);
+      }
+      throw e;
+    }
+  };
   const app = express(),
     limits = new Map(),
     activeHolds = new Map();
   app.disable("x-powered-by");
+  // Yollar birebir eşleşir: /api/admin/USERS veya /api/admin/users/ ayrı yol sayılır (404).
+  app.set("case sensitive routing", true);
+  app.set("strict routing", true);
   // HTML, JS, CSS ve JSON yanıtları gzip ile sıkıştırılır (görseller zaten sıkıştırılmış).
   app.use(compression({ threshold: 1024 }));
   // Tüm yanıtlar (HTML sayfaları dahil) için güvenlik başlıkları.
@@ -186,7 +229,7 @@ export function createApp(
               : req.method === "POST" && req.path === "/reservations"
                 ? "booking"
                 : "api",
-      key = req.ip + ":" + bucket,
+      key = clientKey(req) + ":" + bucket,
       now = Date.now();
     let l = limits.get(key);
     if (!l || l.reset < now) {
@@ -323,7 +366,9 @@ export function createApp(
           password: z.string().min(1).max(128),
         })
         .parse(q.body);
-      const member = await store.members.login(input.email, input.password);
+      const member = await guardLogin("member", input.email, () =>
+        store.members.login(input.email, input.password),
+      );
       await setSession(r, member.id);
       r.json({
         member,
@@ -400,6 +445,8 @@ export function createApp(
         subtotal,
         discount: quote.discount,
         total: quote.total,
+        deposit: depositFor(quote.total),
+        depositPercent: paymentStatus.depositPercent,
       });
     }),
   );
@@ -510,11 +557,14 @@ export function createApp(
   );
   app.get(
     "/api/tours/:id/departures",
-    route(async (q, r) => r.json(await store.listDepartures(q.params.id))),
+    route(async (q, r) => r.json((await store.listDepartures(q.params.id)).map(publicDeparture))),
   );
   app.get(
     "/api/departures/:id/seats",
-    route(async (q, r) => r.json(await store.availability(q.params.id))),
+    route(async (q, r) => {
+      const a = await store.availability(q.params.id);
+      r.json({ ...a, departure: publicDeparture(a.departure) });
+    }),
   );
   app.post(
     "/api/holds",
@@ -533,7 +583,7 @@ export function createApp(
         );
       // Aynı IP'nin eşzamanlı tuttuğu toplam koltuk sınırlıdır.
       const now = Date.now(),
-        mine = (activeHolds.get(q.ip) || []).filter((h) => h.expiresAt > now),
+        mine = (activeHolds.get(clientKey(q)) || []).filter((h) => h.expiresAt > now),
         heldSeats = mine.reduce((n, h) => n + h.seats, 0),
         ipMax = Number(env.IP_MAX_HELD_SEATS || 20);
       if (heldSeats + input.seats.length > ipMax)
@@ -547,11 +597,18 @@ export function createApp(
         seats: input.seats.length,
         expiresAt: hold.expiresAt,
       });
-      activeHolds.set(q.ip, mine);
+      activeHolds.set(clientKey(q), mine);
       if (activeHolds.size > 5000)
         for (const [k, v] of activeHolds)
           if (!v.some((h) => h.expiresAt > now)) activeHolds.delete(k);
       r.status(201).json(hold);
+    }),
+  );
+  app.post(
+    "/api/holds/:token/extend",
+    route(async (q, r) => {
+      const token = z.string().regex(/^[a-f0-9]{48}$/).parse(q.params.token);
+      r.json(await store.extendHold(token));
     }),
   );
   app.delete(
@@ -562,10 +619,10 @@ export function createApp(
         .regex(/^[a-f0-9]{48}$/)
         .parse(q.params.token);
       await store.release(token);
-      const mine = activeHolds.get(q.ip);
+      const mine = activeHolds.get(clientKey(q));
       if (mine)
         activeHolds.set(
-          q.ip,
+          clientKey(q),
           mine.filter((h) => h.token !== token),
         );
       r.status(204).end();
@@ -738,9 +795,11 @@ export function createApp(
           code: z.string().trim().regex(/^\d{6}$/).optional(),
         })
         .parse(q.body);
-      const result = input.email
-        ? await store.adminAuth.login(input)
-        : await store.adminAuth.bootstrapLogin(input.password, env.ADMIN_PASSWORD);
+      const result = await guardLogin("admin", input.email || "bootstrap", () =>
+        input.email
+          ? store.adminAuth.login(input)
+          : store.adminAuth.bootstrapLogin(input.password, env.ADMIN_PASSWORD),
+      );
       if (result.needsCode) return r.json({ ok: false, needsCode: true });
       r.setHeader("Set-Cookie", adminCookie(result.sid));
       r.json({ ok: true, bootstrap: Boolean(result.bootstrap), user: result.user || null });

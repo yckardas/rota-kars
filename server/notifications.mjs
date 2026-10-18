@@ -70,9 +70,9 @@ export async function createNotifications(db, { clock, tx, env = {} }) {
         preview: env.DEMO_MODE === "1" || env.NODE_ENV !== "production",
         items: rows.map((row) => {
           if (
+            // Hesap güvenliği bağlantıları canlıda (demo dahil) yöneticiye hiç gösterilmez.
             row.kind.startsWith("auth_") &&
-            env.NODE_ENV === "production" &&
-            env.DEMO_MODE !== "1"
+            env.NODE_ENV === "production"
           )
             return {
               ...row,

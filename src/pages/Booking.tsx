@@ -69,7 +69,11 @@ export function Booking({ catalog }: { catalog: Catalog }) {
       subtotal: number;
       discount: number;
       total: number;
+      deposit: number;
     } | null>(null),
+    [couponError, setCouponError] = useState(""),
+    [extendBusy, setExtendBusy] = useState(false),
+    [extendError, setExtendError] = useState(""),
     [quoteBusy, setQuoteBusy] = useState(false),
     [quoteError, setQuoteError] = useState(""),
     [dateNotice, setDateNotice] = useState(false),
@@ -109,7 +113,11 @@ export function Booking({ catalog }: { catalog: Catalog }) {
             ),
           ),
         )
-        .catch(() => {});
+        .catch(() =>
+          setCouponError(
+            "Kuponlarınız şu an yüklenemedi. Rezervasyona kuponsuz devam edebilir veya sayfayı yenileyebilirsiniz.",
+          ),
+        );
     }
   }, [member]);
   useEffect(() => {
@@ -118,10 +126,16 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     if (!departureId) return;
     let active = true;
     setQuoteBusy(true);
-    post<{ subtotal: number; discount: number; total: number }>(
-      "/reservations/quote",
-      { departureId, count, ...(couponId ? { couponId } : {}) },
-    )
+    post<{
+      subtotal: number;
+      discount: number;
+      total: number;
+      deposit: number;
+    }>("/reservations/quote", {
+      departureId,
+      count,
+      ...(couponId ? { couponId } : {}),
+    })
       .then((data) => {
         if (active) setQuote(data);
       })
@@ -332,13 +346,46 @@ export function Booking({ catalog }: { catalog: Catalog }) {
           <h1>Yolculuğunuzu planlayın.</h1>
         </div>
         {hold && (
-          <span className="hold-timer" role="timer">
+          <span className="hold-timer" role="timer" aria-live="off">
             <Clock3 size={17} />
             Koltuklarınız {Math.floor(seconds / 60)}:
             {String(seconds % 60).padStart(2, "0")} dakika ayrıldı
           </span>
         )}
       </div>
+      {hold && seconds > 0 && seconds <= 120 && (
+        // Süre bitmeden uyarı: ekran okuyucuya bir kez duyurulur.
+        <div className="hold-warning" role="alert">
+          <Clock3 size={18} />
+          <span>
+            Koltuklarınızın ayrılma süresi 2 dakikadan az. Bilgilerinizi
+            tamamlamak için süreyi uzatabilirsiniz.
+          </span>
+          <button
+            type="button"
+            className="btn btn-small"
+            disabled={extendBusy}
+            onClick={async () => {
+              setExtendBusy(true);
+              setExtendError("");
+              try {
+                const next = await post<Hold>(
+                  `/holds/${hold.token}/extend`,
+                  {},
+                );
+                setHold({ ...hold, expiresAt: next.expiresAt });
+              } catch (e) {
+                setExtendError((e as Error).message);
+              } finally {
+                setExtendBusy(false);
+              }
+            }}
+          >
+            Süreyi 10 dakika uzat
+          </button>
+          {extendError && <small>{extendError}</small>}
+        </div>
+      )}
       <ol className="booking-steps">
         {["Tarih ve koltuk", "Yolcu bilgileri", "Ön rezervasyon"].map(
           (s, i) => (
@@ -610,7 +657,12 @@ export function Booking({ catalog }: { catalog: Catalog }) {
               </div>
               <div className="payment-choices">
                 {[
-                  ["deposit", "%30 kapora", Math.round(total * 0.3)],
+                  // Kapora sunucuda hesaplanır; teklif gelmeden gösterilmez.
+                  [
+                    "deposit",
+                    "%30 kapora",
+                    quote?.deposit ?? Math.round(total * 0.3),
+                  ],
                   ["full", "Tam ödeme", total],
                 ].map(([value, title, amount]) => (
                   <label
@@ -725,6 +777,11 @@ export function Booking({ catalog }: { catalog: Catalog }) {
               </p>
             )}
             <div className="booking-coupon">
+              {couponError && (
+                <small className="form-error" role="alert">
+                  {couponError}
+                </small>
+              )}
               {member ? (
                 <label className="field">
                   Üyelik kuponunuz

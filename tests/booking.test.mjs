@@ -182,3 +182,24 @@ test("same-day departure stops selling before its start time", async () => {
     await s.db.close();
   }
 });
+test("a seat hold can be extended twice, up to 30 minutes in total", async () => {
+  const { openStore } = await import("../server/store.mjs");
+  let now = Date.parse("2026-11-01T06:00:00Z");
+  const s = await openStore(":memory:", { clock: () => now });
+  try {
+    const [d] = await s.listDepartures("ani-cildir");
+    const h = await s.hold(d.id, [3]);
+    now += 9 * 60000;
+    const e1 = await s.extendHold(h.token);
+    assert.equal(e1.expiresAt, h.expiresAt + 600000);
+    now += 9 * 60000;
+    const e2 = await s.extendHold(h.token);
+    assert.equal(e2.expiresAt - h.expiresAt, 1200000, "30 min cap from creation");
+    await assert.rejects(() => s.extendHold(h.token), (e) => e.status === 409);
+    now = e2.expiresAt + 1000;
+    await assert.rejects(() => s.extendHold(h.token), (e) => e.status === 410);
+    assert.equal((await s.availability(d.id)).seats[2].status, "available");
+  } finally {
+    await s.db.close();
+  }
+});

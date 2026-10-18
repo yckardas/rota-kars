@@ -135,11 +135,12 @@ export function createStorage({ env = process.env, db, clock = Date.now, client 
     },
     // /media/<id>.<ext> → kısa ömürlü imzalı adres (video için Range istekleri desteklenir).
     async signedUrl(path) {
-      ready();
+      // Önce yol ve kayıt doğrulanır; geçersiz istekler bucket'a hiç ulaşmaz.
       const match = MEDIA_PATH.exec(path);
       if (!match) throw new AppError(404, "Dosya bulunamadı.");
       const m = await db.one("media", { _id: match[1] });
       if (!m || m.ext !== match[2]) throw new AppError(404, "Dosya bulunamadı.");
+      ready();
       return signer(new GetObjectCommand({ Bucket: config.bucket, Key: m.key }), {
         expiresIn: 3600,
       });

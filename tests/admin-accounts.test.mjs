@@ -63,7 +63,9 @@ test("five wrong passwords lock the account for 15 minutes", async (t) => {
   for (let i = 0; i < 5; i++)
     assert.equal((await call("/admin/login", { body: { email: OWNER.email, password: "yanlis-parola-xx" } })).status, 401);
   const locked = await call("/admin/login", { body: { email: OWNER.email, password: OWNER.password } });
-  assert.equal(locked.status, 429);
+  assert.equal(locked.status, 401, "correct password is refused while locked");
+  const unknown = await call("/admin/login", { body: { email: "yok@rotakars.test", password: "yanlis-parola-xx" } });
+  assert.equal(locked.json.message, unknown.json.message, "locked and unknown accounts look the same");
   advance(16 * 60 * 1000);
   assert.equal((await call("/admin/login", { body: { email: OWNER.email, password: OWNER.password } })).status, 200);
 });
@@ -142,4 +144,27 @@ test("audit log records who changed what and passenger list exports", async (t) 
   assert.ok(log.some((e) => e.action === "user_created" && e.details.target === "x@rotakars.test" && e.admin_email === OWNER.email));
   assert.ok(log.some((e) => e.action === "export" && /passengers\.csv/.test(e.details.path)));
   assert.ok(log.every((e) => !("ip" in e)), "raw IP is not stored");
+});
+test("operations cannot reach owner-only routes with case, trailing-slash or double-slash tricks", async (t) => {
+  const { call, login, createOwner } = await fixture(t);
+  const owner = await createOwner();
+  await call("/admin/users", { body: { email: "ops2@rotakars.test", name: "Ops İki", role: "operations", password: "ops-parolasi-123456" }, cookie: owner });
+  const ops = await login({ email: "ops2@rotakars.test", password: "ops-parolasi-123456" });
+  for (const [path, body] of [
+    ["/admin/USERS", null],
+    ["/admin/Users", null],
+    ["/admin/users/", null],
+    ["/admin/audit/", null],
+    ["/ADMIN/audit", null],
+    ["/admin/kvkk/retention/", null],
+    ["/admin/USERS", { email: "evil@rotakars.test", name: "Evil Owner", role: "owner", password: "evil-parolasi-123456" }],
+    ["/admin/campaigns/", { active: false }],
+  ]) {
+    const r = await call(path, body ? { body, cookie: ops } : { cookie: ops });
+    assert.ok([403, 404].includes(r.status), `${path} → ${r.status}`);
+  }
+  const { roleAllows } = await import("../server/admin-auth.mjs");
+  assert.equal(roleAllows("operations", "post", "/api/ADMIN/USERS/"), false);
+  assert.equal(roleAllows("guide", "GET", "/api/admin/RESERVATIONS"), false);
+  assert.equal(roleAllows("operations", "GET", "/api/admin/reservations"), true);
 });

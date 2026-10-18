@@ -61,8 +61,13 @@ export function Layout({
   }, [location.pathname, location.hash, location.key]);
   useEffect(() => {
     if (!open) return;
+    // Menü açılınca odak ilk bağlantıya gider; Escape menüyü kapatıp odağı düğmeye verir.
+    document.querySelector<HTMLAnchorElement>("#main-nav a")?.focus();
     const f = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        document.querySelector<HTMLButtonElement>(".mobile-menu")?.focus();
+      }
     };
     document.addEventListener("keydown", f);
     return () => document.removeEventListener("keydown", f);
@@ -105,6 +110,7 @@ export function Layout({
             />
           </Link>
           <nav
+            id="main-nav"
             className={"main-nav " + (open ? "is-open" : "")}
             aria-label="Ana menü"
           >
@@ -121,6 +127,7 @@ export function Layout({
             <Link
               to={member ? "/hesabim" : "/uyelik"}
               className="member-header-link"
+              aria-label={member ? "Hesabım" : "Üye ol / Giriş"}
             >
               <UserRound size={18} />
               <span>{member ? "Hesabım" : "Üye ol / Giriş"}</span>
@@ -143,6 +150,7 @@ export function Layout({
             <button
               aria-label={open ? "Menüyü kapat" : "Menüyü aç"}
               aria-expanded={open}
+              aria-controls="main-nav"
               className="icon-btn mobile-menu"
               onClick={() => setOpen(!open)}
             >

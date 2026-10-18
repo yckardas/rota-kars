@@ -2,9 +2,12 @@
   --navy: #183847;
   --ink: #21323b;
   --gold: #a87835;
+  /* Metin için altın: açık zeminde WCAG AA (≥4.5:1), koyu bölümlerde açık ton. */
+  --gold-text: #8a6229;
   --paper: #f8fafa;
   --sky: #eaf1f4;
-  --muted: #6e7a80;
+  /* İkincil metin: tüm açık zeminlerde WCAG AA (≥4.5:1). */
+  --muted: #5a666c;
   --line: #dfe7e9;
   --font: "Onest", Arial, sans-serif;
   --display: "Marcellus", Georgia, serif;
@@ -105,7 +108,7 @@ small {
 .section-note {
   display: block;
   font-size: 12px;
-  color: var(--gold);
+  color: var(--gold-text);
   font-weight: 500;
   margin-bottom: 17px;
   letter-spacing: 0.2px;
@@ -272,7 +275,7 @@ small {
   padding: 36px 0;
 }
 .main-nav a.active {
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .main-nav a.active:after {
   content: "";
@@ -394,7 +397,7 @@ small {
   display: flex;
   align-items: center;
   gap: 14px;
-  color: var(--gold);
+  color: var(--gold-text);
   border-right: 1px solid var(--line);
   padding-right: 20px;
   min-width: 0;
@@ -444,7 +447,7 @@ small {
   gap: 12px;
 }
 .intro-strip svg {
-  color: var(--gold);
+  color: var(--gold-text);
   stroke-width: 1.3;
 }
 .tours-section {
@@ -466,7 +469,7 @@ small {
 }
 .tour-filters button.active {
   color: var(--navy);
-  border-color: var(--gold);
+  border-color: var(--gold-text);
 }
 .tour-grid {
   display: grid;
@@ -778,7 +781,7 @@ small {
   font-size: 12px;
 }
 .stay-detail svg {
-  color: var(--gold);
+  color: var(--gold-text);
   stroke-width: 1.4;
 }
 .stay-detail small {
@@ -950,7 +953,7 @@ small {
   border-bottom: 1px solid var(--line);
 }
 .review-empty > svg {
-  color: var(--gold);
+  color: var(--gold-text);
   flex-shrink: 0;
 }
 .review-empty > div {
@@ -990,7 +993,7 @@ small {
 .footer-main > div > a:not(.social-link) {
   display: block;
   font-size: 11px;
-  color: #667983;
+  color: #5a666c;
   margin-bottom: 13px;
 }
 .footer-brand p {
@@ -1023,7 +1026,7 @@ small {
   border-top: 1px solid #dce5e9;
   padding: 19px 0;
   font-size: 9px;
-  color: #7c8d96;
+  color: #5a666c;
 }
 .page-intro {
   padding-top: 65px;
@@ -1119,7 +1122,7 @@ small {
   gap: 7px;
   align-items: center;
   font-size: 11px;
-  color: #677e88;
+  color: #5a666c;
 }
 .detail-gallery {
   position: relative;
@@ -1144,7 +1147,7 @@ small {
   background: white;
 }
 .gallery-thumbs button.active {
-  border-color: var(--gold);
+  border-color: var(--gold-text);
 }
 .gallery-thumbs img {
   width: 77px;
@@ -1170,7 +1173,7 @@ small {
 }
 .detail-content .lead-copy {
   font-size: 15px;
-  color: #6b7c85;
+  color: #5a666c;
   line-height: 1.9;
 }
 .itinerary > div {
@@ -1193,7 +1196,7 @@ small {
 .itinerary-time {
   font-size: 11px;
   font-weight: 500;
-  color: var(--gold);
+  color: var(--gold-text);
   padding-top: 4px;
   flex: 0 0 69px;
   position: relative;
@@ -1244,7 +1247,7 @@ small {
 .inclusions svg {
   flex-shrink: 0;
   margin-top: 2px;
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .info-note {
   display: flex;
@@ -1260,7 +1263,7 @@ small {
 .info-note > svg {
   flex-shrink: 0;
   margin-top: 2px;
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .info-note p {
   margin: 0;
@@ -1461,7 +1464,7 @@ input[type="radio"] {
 .inline-note > svg {
   flex-shrink: 0;
   margin-top: 2px;
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .form-foot {
   display: flex;
@@ -1577,11 +1580,11 @@ input[type="radio"] {
   justify-content: space-between;
   align-items: center;
   line-height: 1;
-  color: #778990;
+  color: #5a666c;
   font-size: 8px;
 }
 .vehicle-roof > span:first-child {
-  color: #647d88;
+  color: #5a666c;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 2px;
@@ -1634,7 +1637,7 @@ input[type="radio"] {
   gap: 3px;
   min-height: 62px;
   background: none;
-  color: #72838b;
+  color: #5a666c;
   font-size: 9px;
   padding: 0;
 }
@@ -1651,7 +1654,7 @@ input[type="radio"] {
 }
 .vehicle-divider {
   font-size: 7px;
-  color: #8b9da5;
+  color: #5a666c;
   border-top: 1px dashed #d1dde2;
   text-align: center;
   margin: 14px 0 11px;
@@ -1676,7 +1679,7 @@ input[type="radio"] {
   min-height: 50px;
   border: 1px dashed #c8d5dc;
   border-radius: 7px;
-  color: #8da2ad;
+  color: #5a666c;
   font-size: 7px;
 }
 .vehicle-seat {
@@ -1690,7 +1693,7 @@ input[type="radio"] {
   border-bottom: 3px solid #b6cbd4;
   border-radius: 7px;
   background: white;
-  color: #738e9a;
+  color: #5a666c;
   opacity: 1 !important;
   padding: 4px 0;
 }
@@ -1719,7 +1722,7 @@ input[type="radio"] {
   border-color: #d4dde1;
 }
 .vehicle-seat.occupied > span {
-  color: #81939c;
+  color: #5a666c;
 }
 .vehicle-seat .seat-check {
   position: absolute;
@@ -1734,14 +1737,14 @@ input[type="radio"] {
 }
 .seat-caption {
   text-align: center;
-  color: #647e8b;
+  color: #5a666c;
   font-size: 10px;
   margin-top: 13px;
 }
 .seat-caption span {
   display: block;
   font-size: 8px;
-  color: #8da2ad;
+  color: #5a666c;
 }
 .vip-visual .seat-caption {
   color: #e1e9ed;
@@ -1796,7 +1799,7 @@ input[type="radio"] {
   align-items: center;
   gap: 10px;
   font-size: 12px;
-  color: #8a9da6;
+  color: #5a666c;
 }
 .booking-steps li > span {
   width: 24px;
@@ -1903,7 +1906,7 @@ input[type="radio"] {
 }
 .chosen-seats small {
   font-size: 10px;
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .booking-summary {
   border: 1px solid var(--line);
@@ -1965,7 +1968,7 @@ input[type="radio"] {
   gap: 8px;
   align-items: center;
   font-size: 10px;
-  color: #678277;
+  color: #4f6c60;
   margin-top: 18px;
 }
 .contact-heading {
@@ -2178,7 +2181,7 @@ input[type="radio"] {
   border-radius: 7px;
 }
 .hotel-empty > svg {
-  color: var(--gold);
+  color: var(--gold-text);
   flex-shrink: 0;
 }
 .hotel-empty > div {
@@ -2242,7 +2245,7 @@ input[type="radio"] {
 .stay-process > div > span {
   font-family: var(--display);
   font-size: 30px;
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .stay-process h3 {
   font-size: 17px;
@@ -2325,7 +2328,7 @@ input[type="radio"] {
   gap: 25px;
 }
 .about-note svg {
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .about-note h2 {
   font-size: 42px;
@@ -2355,7 +2358,7 @@ input[type="radio"] {
   border: 0;
 }
 .contact-details svg {
-  color: var(--gold);
+  color: var(--gold-text);
   flex-shrink: 0;
 }
 .contact-details span {
@@ -2375,7 +2378,7 @@ input[type="radio"] {
   align-items: center;
   margin-top: 8px;
   font-size: 10px;
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .legal-page {
   max-width: 850px;
@@ -2445,7 +2448,7 @@ input[type="radio"] {
   margin-bottom: 50px;
 }
 .admin-login > svg {
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .admin-login h1 {
   font-size: 37px;
@@ -2619,7 +2622,7 @@ input[type="radio"] {
 }
 .admin-hotel-list small {
   font-size: 10px;
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .notice-success {
   display: flex;
@@ -2665,7 +2668,7 @@ input[type="radio"] {
 }
 .integration-list a {
   font-size: 12px;
-  color: var(--gold);
+  color: var(--gold-text);
 }
 @media (min-width: 1600px) {
   .hero {
@@ -4274,7 +4277,7 @@ input[type="radio"] {
 }
 .feature > svg {
   flex-shrink: 0;
-  color: var(--gold);
+  color: var(--gold-text);
   margin-top: 2px;
 }
 .feature strong {
@@ -4383,7 +4386,7 @@ input[type="radio"] {
   align-items: center;
 }
 .fleet-perks svg {
-  color: var(--gold);
+  color: var(--gold-text);
 }
 @media (max-width: 950px) {
   .feature-strip,
@@ -4850,7 +4853,7 @@ input[type="radio"] {
   border-top: 1px solid var(--line);
 }
 .instagram-empty > svg {
-  color: var(--gold);
+  color: var(--gold-text);
   flex-shrink: 0;
 }
 .instagram-empty > div {
@@ -4892,7 +4895,7 @@ input[type="radio"] {
   gap: 7px;
   align-items: center;
   font-size: 11px;
-  color: var(--gold);
+  color: var(--gold-text);
 }
 .instagram-admin-list small {
   display: block;
@@ -5272,7 +5275,7 @@ input[type="radio"] {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--gold);
+  color: var(--gold-text);
   margin-top: 18px;
   font-size: 12px;
   font-weight: 500;
@@ -5308,7 +5311,7 @@ input[type="radio"] {
   color: var(--muted);
 }
 .service-directory-card span {
-  color: var(--gold);
+  color: var(--gold-text);
   font-size: 12px;
   display: inline-flex;
   align-items: center;
@@ -5369,7 +5372,7 @@ input[type="radio"] {
   font-size: 14px;
 }
 .service-benefits svg {
-  color: var(--gold);
+  color: var(--gold-text);
   flex-shrink: 0;
 }
 .service-detail-body .muted {
@@ -5447,7 +5450,7 @@ input[type="radio"] {
   width: 70px;
   border-radius: 50%;
   background: #edf3f4;
-  color: var(--gold);
+  color: var(--gold-text);
   margin: 0 auto 23px;
 }
 .membership-invite h2 {
@@ -5557,7 +5560,7 @@ input[type="radio"] {
   color: var(--muted);
 }
 .membership-tabs button.active {
-  border-color: var(--gold);
+  border-color: var(--gold-text);
   color: var(--navy);
 }
 .membership-form-panel h2 {
@@ -5752,7 +5755,7 @@ input[type="radio"] {
   display: grid;
   place-items: center;
   background: white;
-  color: var(--gold);
+  color: var(--gold-text);
   border: 5px solid #f2f6f7;
   border-radius: 50%;
 }
@@ -5765,7 +5768,7 @@ input[type="radio"] {
 }
 .referral-panel > svg {
   display: block;
-  color: var(--gold);
+  color: var(--gold-text);
   margin-bottom: 20px;
 }
 .referral-panel h2 {
@@ -6876,4 +6879,38 @@ input[type="radio"] {
     margin-left: 0;
     margin-top: 10px;
   }
+}
+
+/* Koltuk tutma süresi bitmek üzere uyarısı */
+.hold-warning {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: center;
+  margin: 0 0 18px;
+  padding: 12px 16px;
+  border: 1px solid #e3c48a;
+  border-radius: 10px;
+  background: #fbf3e2;
+  color: #5c3f12;
+  font-size: 13px;
+}
+.hold-warning > span {
+  flex: 1 1 260px;
+}
+.hold-warning small {
+  flex-basis: 100%;
+  color: #a3332b;
+}
+
+/* Koyu zeminli bölümlerde altın metin açık tonla okunur kalır (lacivertte ≥6:1). */
+.topbar,
+.vip-section,
+.hero,
+.story-card,
+.instagram-cover,
+.instagram-card-media,
+.membership-story,
+.chat-head {
+  --gold-text: #d9b06b;
 }

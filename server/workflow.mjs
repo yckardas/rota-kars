@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { AppError } from "./store.mjs";
 import { fromJson } from "./database.mjs";
+import { depositFor } from "./payments.mjs";
 import { localDate } from "./departures.mjs";
 import { tours, business } from "./catalog.mjs";
 const longExpiry = (now) => now + 365 * 86400000;
@@ -369,7 +370,7 @@ export async function createWorkflow(
             subtotal,
             discount_amount: subtotal - total,
             total,
-            deposit: r.deposit === r.total ? total : Math.round(total * 0.3),
+            deposit: r.deposit === r.total ? total : depositFor(total),
             expires_at: expires,
           },
         );

@@ -56,6 +56,16 @@ BUCKET="${{buffered-basket.BUCKET}}"
 - **Saklama süreleri (günlük otomatik iş):** Ödemesiz iptal/süresi dolmuş ön rezervasyonlar 1 yıl, tahsilatlı kayıtlar 10 yıl sonra anonimleşir; talepler 2 yıl, gönderilmiş bildirimler 90 gün, denetim kaydı 2 yıl sonra silinir. Süreler `RETENTION_*` değişkenleriyle değiştirilebilir.
 - **Hukuki not:** Aydınlatma metni ve süreler uygulamayı yansıtır; yayından önce bir KVKK danışmanıyla teyit edilmeli, gerekiyorsa VERBİS kaydı ve ticari ileti için İYS kaydı değerlendirilmelidir.
 
+## Güvenlik kontrol listesi (yayın öncesi)
+
+- **`TRUST_PROXY=1` zorunlu.** Railway'in önündeki tek proxy gerçek istemci IP'sini ekler; bu ayar olmadan tüm kullanıcılar tek IP gibi görünür.
+- **Giriş denemeleri:** IP başına (IPv6'da /64 blok), hesap başına (8 hatalı deneme) ve IP'den bağımsız toplam (`LOGIN_GLOBAL_LIMIT`, varsayılan 200 / 15 dk) sınır vardır. Yönetici hesapları yanlış parola veya yanlış 2FA koduyla 5 denemede 15 dk kilitlenir; kilitli ve olmayan hesaplar aynı mesajı alır.
+- **Yetki:** Rol kontrolü yolları normalize ederek yapılır ve Express birebir eşleşir (büyük/küçük harf ve sondaki `/` ile sahibe özel uçlara erişilemez).
+- **KVKK:** Üye, e-postası doğrulanmadıkça yalnız kendi üyeliğine bağlı kayıtları indirip silebilir; aynı e-postayla yapılmış misafir kayıtları ona verilmez.
+- **Koltuk blokajı:** Bir e-postanın onay bekleyen toplam koltuğu `PENDING_SEATS_PER_EMAIL` (12) ile, bekleme süresi `PENDING_HOLD_HOURS` (24) ile sınırlıdır. Kötüye kullanım görülürse bu süreyi kısaltın ve rezervasyona Cloudflare Turnstile gibi bir doğrulama eklemeyi değerlendirin.
+- **Herkese açık veride** rehber adı/telefonu yer almaz; çok uzun adresler (>512 karakter) 414 ile reddedilir.
+- **Bağımlılıklar:** `npm audit` temiz tutulmalı; derleme araçları yalnız geliştirme bağımlılığıdır.
+
 ## Docker ve Railway
 
 - **Yerelde üretim benzeri çalıştırma:** `docker compose up -d --build` → http://localhost:8080. Mongo, Railway'deki gibi tek düğüm olarak `mongo-data` volume'ünde çalışır. Geliştirme sunucusu (`npm run dev`) için `.env` içinde `MONGODB_URI=mongodb://127.0.0.1:27017/` kullanın.
