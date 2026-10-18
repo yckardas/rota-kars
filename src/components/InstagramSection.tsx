@@ -6,9 +6,11 @@ import {
   ChevronLeft,
   ChevronRight,
   LoaderCircle,
-  X,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { api } from "../lib/api";
+import { Modal } from "./Modal";
 export type InstagramPost = {
   id: string;
   title: string;
@@ -108,116 +110,129 @@ function InstagramEmbed({ post }: { post: InstagramPost }) {
     </div>
   );
 }
-function NativePreview({ post }: { post: InstagramPost }) {
-  const video = useRef<HTMLVideoElement>(null);
-  const [failed, setFailed] = useState(false);
-  useEffect(() => {
-    const el = video.current!;
-    el.muted = true;
-    const reduced = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    if (!reduced) el.play().catch(() => {});
-    return () => {
-      el.pause();
-    };
-  }, [post.videoSrc]);
-  return failed ? (
-    <p className="instagram-player-status" role="status">
-      Video yüklenemedi. Instagram bağlantısından izleyebilirsiniz.
-    </p>
-  ) : (
-    <video
-      ref={video}
-      src={post.videoSrc!}
-      poster={post.cover}
-      muted
-      loop
-      playsInline
-      controls
-      preload="none"
-      aria-label={post.title}
-      onError={() => setFailed(true)}
-    />
-  );
-}
-function InstagramCard({
+const canHover = () => window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+const reducedMotion = () =>
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+// Videolu kart: <video> hazır bekler; masaüstünde üzerine gelince, dokunmatik
+// cihazlarda kart ekranın ortasına gelince sessiz oynar. Sayfadan çıkılmaz.
+function VideoCard({
   post,
-  active,
-  activate,
-  deactivate,
+  playing,
+  setPlaying,
 }: {
   post: InstagramPost;
-  active: boolean;
-  activate: () => void;
-  deactivate: () => void;
+  playing: boolean;
+  setPlaying: (on: boolean) => void;
 }) {
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const card = useRef<HTMLElement>(null);
-  const [pinned, setPinned] = useState(false);
-  const clear = () => {
-    if (timer.current) clearTimeout(timer.current);
-  };
-  useEffect(() => () => clear(), []);
+  const card = useRef<HTMLElement>(null),
+    video = useRef<HTMLVideoElement>(null),
+    [muted, setMuted] = useState(true),
+    [failed, setFailed] = useState(false),
+    [ready, setReady] = useState(false);
   useEffect(() => {
-    if (!active) {
-      setPinned(false);
-      return;
-    }
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) {
-        setPinned(false);
-        deactivate();
+    const el = video.current;
+    if (!el) return;
+    if (playing && !reducedMotion()) {
+      el.play().catch(() => setPlaying(false));
+    } else {
+      el.pause();
+      if (!playing) {
+        el.muted = true;
+        setMuted(true);
       }
-    });
+    }
+  }, [playing, setPlaying]);
+  // Dokunmatik cihazlar: görünür alanın ortasındaki kart oynar.
+  useEffect(() => {
+    if (canHover()) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setPlaying(entry.intersectionRatio >= 0.75),
+      { threshold: [0, 0.75, 1] },
+    );
     observer.observe(card.current!);
     return () => observer.disconnect();
-  }, [active, deactivate]);
+  }, [setPlaying]);
   return (
     <article
       ref={card}
-      className={"instagram-post" + (active ? " is-playing" : "")}
-      onPointerEnter={(e) => {
-        if (
-          e.pointerType !== "mouse" ||
-          window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        )
-          return;
-        clear();
-        timer.current = setTimeout(activate, 180);
-      }}
-      onPointerLeave={() => {
-        clear();
-        if (!pinned) deactivate();
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") {
-          clear();
-          setPinned(false);
-          deactivate();
-          card.current
-            ?.querySelector<HTMLButtonElement>(".instagram-cover")
-            ?.focus();
-        }
+      className={"instagram-post has-video" + (playing ? " is-playing" : "")}
+      onPointerEnter={(e) => e.pointerType === "mouse" && setPlaying(true)}
+      onPointerLeave={(e) => e.pointerType === "mouse" && setPlaying(false)}
+      onFocus={() => setPlaying(true)}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) setPlaying(false);
       }}
     >
       <div className="instagram-card-media">
+        {failed ? (
+          <img src={post.cover} alt="" loading="lazy" />
+        ) : (
+          <video
+            ref={video}
+            src={post.videoSrc!}
+            poster={post.cover || undefined}
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            aria-label={post.title}
+            onCanPlay={() => setReady(true)}
+            onError={() => setFailed(true)}
+          />
+        )}
+        <span className="instagram-reel-icon">
+          <Instagram size={18} />
+        </span>
+        {!playing && (
+          <span className="instagram-play" aria-hidden="true">
+            <Play size={22} fill="currentColor" />
+          </span>
+        )}
+        {playing && !ready && !failed && (
+          <span className="instagram-buffering" aria-hidden="true">
+            <LoaderCircle size={22} className="spin" />
+          </span>
+        )}
+        {!failed && (
+          <button
+            className="instagram-sound"
+            aria-label={muted ? "Sesi aç" : "Sesi kapat"}
+            aria-pressed={!muted}
+            onClick={() => {
+              const el = video.current!;
+              el.muted = !el.muted;
+              setMuted(el.muted);
+              if (el.paused) setPlaying(true);
+            }}
+          >
+            {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+          </button>
+        )}
+        <span className="instagram-post-title">
+          {post.title}
+          <small>{failed ? "Video şu an yüklenemedi" : "Üzerine gelin, izleyin"}</small>
+        </span>
+      </div>
+      <div className="instagram-card-caption">
+        <span>{post.title}</span>
+        <a href={post.permalink} target="_blank" rel="noreferrer">
+          Instagram’da aç <ExternalLink size={12} />
+        </a>
+      </div>
+    </article>
+  );
+}
+// Video dosyası olmayan paylaşım: tıklanınca Instagram'ın oynatıcısı pencerede açılır.
+function EmbedCard({ post, open }: { post: InstagramPost; open: () => void }) {
+  return (
+    <article className="instagram-post">
+      <div className="instagram-card-media">
         <button
           className="instagram-cover"
-          aria-expanded={active}
-          aria-controls={`instagram-player-${post.id}`}
-          onClick={() => {
-            clear();
-            setPinned(true);
-            activate();
-          }}
-          aria-label={`${post.title} videosunu kartta aç`}
+          onClick={open}
+          aria-label={`${post.title} videosunu izle`}
         >
-          <img
-            src={post.cover}
-            alt="Rota arşivinden temsili video kapağı"
-            loading="lazy"
-          />
+          <img src={post.cover} alt="" loading="lazy" />
           <span className="instagram-reel-icon">
             <Instagram size={18} />
           </span>
@@ -226,41 +241,14 @@ function InstagramCard({
           </span>
           <span className="instagram-post-title">
             {post.title}
-            <small>
-              {post.videoSrc
-                ? "Üzerine gelin, sessiz izleyin"
-                : "Kartta izlemek için üzerine gelin"}
-            </small>
+            <small>İzlemek için tıklayın</small>
           </span>
         </button>
-        {active && (
-          <div
-            className="instagram-card-player"
-            id={`instagram-player-${post.id}`}
-          >
-            {post.videoSrc ? (
-              <NativePreview post={post} />
-            ) : (
-              <InstagramEmbed post={post} />
-            )}
-            <button
-              className="instagram-player-close"
-              aria-label="Önizlemeyi kapat"
-              onClick={() => {
-                clear();
-                setPinned(false);
-                deactivate();
-              }}
-            >
-              <X size={16} />
-            </button>
-          </div>
-        )}
       </div>
       <div className="instagram-card-caption">
         <span>{post.title}</span>
         <a href={post.permalink} target="_blank" rel="noreferrer">
-          Instagram’da izle <ExternalLink size={12} />
+          Instagram’da aç <ExternalLink size={12} />
         </a>
       </div>
     </article>
@@ -268,7 +256,9 @@ function InstagramCard({
 }
 export function InstagramSection({ profileUrl }: { profileUrl: string }) {
   const [posts, setPosts] = useState<InstagramPost[]>([]),
-    [selected, setSelected] = useState<string | null>(null),
+    // Aynı anda tek video oynar.
+    [playing, setPlaying] = useState<string | null>(null),
+    [embed, setEmbed] = useState<InstagramPost | null>(null),
     rail = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let alive = true;
@@ -306,24 +296,28 @@ export function InstagramSection({ profileUrl }: { profileUrl: string }) {
         {posts.length ? (
           <>
             <div className="instagram-rail" ref={rail}>
-              {posts.map((post) => (
-                <InstagramCard
-                  key={post.id}
-                  post={post}
-                  active={selected === post.id}
-                  activate={() => setSelected(post.id)}
-                  deactivate={() =>
-                    setSelected((current) =>
-                      current === post.id ? null : current,
-                    )
-                  }
-                />
-              ))}
+              {posts.map((post) =>
+                post.videoSrc ? (
+                  <VideoCard
+                    key={post.id}
+                    post={post}
+                    playing={playing === post.id}
+                    setPlaying={(on) =>
+                      setPlaying((current) =>
+                        on ? post.id : current === post.id ? null : current,
+                      )
+                    }
+                  />
+                ) : (
+                  <EmbedCard key={post.id} post={post} open={() => setEmbed(post)} />
+                ),
+              )}
             </div>
             <div className="instagram-rail-footer">
               <small>
-                Önizleme için üzerine gelin veya dokunun. Instagram videolarında
-                ▶ düğmesine basmanız gerekebilir. Kapaklar temsilidir.
+                {posts.some((p) => p.videoSrc)
+                  ? "Videolar üzerine gelince sessiz oynar; sesi kartın köşesinden açabilirsiniz."
+                  : "Videoyu izlemek için karta tıklayın."}
               </small>
               <div>
                 <button
@@ -368,6 +362,11 @@ export function InstagramSection({ profileUrl }: { profileUrl: string }) {
           </div>
         )}
       </div>
+      {embed && (
+        <Modal title={embed.title} onClose={() => setEmbed(null)}>
+          <InstagramEmbed post={embed} />
+        </Modal>
+      )}
     </section>
   );
 }

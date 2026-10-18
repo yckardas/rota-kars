@@ -1,27 +1,47 @@
 # Railway hazırlığı ve acente operasyonları
 
-Bu değişiklik Railway'e dağıtım veya domain taşıma yapmaz. Yerel demo SQLite kullanmayı sürdürür. MySQL uyumluluğu ayrı, geçici bir MySQL 8.4 veritabanında doğrulanır; mevcut müşteri verisi Railway'e aktarılmaz.
+Veritabanı **MongoDB**'dir. Rezervasyon, koltuk kilidi, kupon ve ödeme defteri çok belgeli transaction kullanır; bu yüzden Mongo **replica set** olarak çalışmalıdır. Uygulama açılışta bunu kontrol eder, replica set değilse net bir hatayla durur.
 
-## Uygulama servisi değişkenleri
+## Railway'de MongoDB (replica set) kurulumu
 
-Railway'de Node uygulaması ile MySQL aynı projede olmalıdır. MySQL servisinin adı gerçekten `MySQL` ise uygulama servisinin Variables alanına aşağıdaki referanslar girilir. Servisin adı farklıysa referanstaki ad değiştirilir. Bunlar parola değil, Railway'in dağıtım sırasında çözdüğü ifadelerdir; yerel `.env` dosyasına çözülmemiş olarak kopyalanmaz.
+1. Railway projesine **MongoDB** servisini ekleyin (Railway şablonu `mongo` imajını, kullanıcı adı/parola ve `/data/db` volume'üyle kurar).
+2. Mongo servisinin **Settings → Deploy → Custom Start Command** alanına aşağıdakini yazın. Bu komut kalıcı volume üzerinde bir kez keyFile üretir ve mongod'u replica set olarak başlatır:
 
-```dotenv
-MYSQL_DATABASE="${{MySQL.MYSQL_DATABASE}}"
-MYSQL_ROOT_PASSWORD="${{MySQL.MYSQL_ROOT_PASSWORD}}"
-MYSQL_URL="${{MySQL.MYSQL_URL}}"
-MYSQLDATABASE="${{MySQL.MYSQLDATABASE}}"
-MYSQLHOST="${{MySQL.MYSQLHOST}}"
-MYSQLPASSWORD="${{MySQL.MYSQLPASSWORD}}"
-MYSQLPORT="${{MySQL.MYSQLPORT}}"
-MYSQLUSER="${{MySQL.MYSQLUSER}}"
-```
+   ```sh
+   bash -c 'if [ ! -f /data/db/rs.key ]; then openssl rand -base64 756 > /data/db/rs.key; fi; chmod 400 /data/db/rs.key; chown 999:999 /data/db/rs.key; exec docker-entrypoint.sh mongod --replSet rs0 --bind_ip_all --keyFile /data/db/rs.key'
+   ```
 
-Uygulama önce `MYSQL_URL`, yoksa `MYSQLHOST`, `MYSQLPORT`, `MYSQLUSER`, `MYSQLPASSWORD`, `MYSQLDATABASE` (alternatif `MYSQL_DATABASE`) kullanır. Root kullanıcısında parola alternatifi `MYSQL_ROOT_PASSWORD` olur. MySQL seçilmişken bağlantı hatası SQLite'a sessiz geçiş yapmaz. Çözülmemiş referanslar açık hata verir. Sunucu kimlik bilgilerini loglamayın.
+3. Servis yeniden başladıktan sonra replica set'i **bir kez** başlatın. Mongo servisinin bağlantı bilgileriyle kendi bilgisayarınızdan (Railway TCP proxy adresi) veya Railway'in servis kabuğundan:
 
-Ek değişkenler: güçlü benzersiz `ADMIN_PASSWORD`, `PUBLIC_BASE_URL=https://firmanin-domaini`, `TRUST_PROXY=1` (tek güvenilir reverse proxy), `PAYMENT_PROVIDER=disabled`. `PORT` Railway tarafından verilir, sunucu `0.0.0.0` dinler. `railway.toml` ve Dockerfile Node 24 ile derleme/başlatma ve `/api/health` kontrolünü hazırlar. Gerçek üretimde `DEMO_MODE` ve `SEED_DEMO` kapalı kalmalıdır; örnek seferler otomatik eklenmez.
+   ```sh
+   mongosh "mongodb://KULLANICI:PAROLA@ADRES:PORT/?authSource=admin&directConnection=true" \
+     --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"mongodb.railway.internal:27017"}]})'
+   ```
 
-İleride taşımadan önce mevcut SQLite yedeği alınmalı, mevcut kayıtlar için ayrı veri aktarımı yürütülüp sayımlar/tahsilat/koltuklar karşılaştırılmalıdır. Bu sürüm MySQL şemasını oluşturur; eski SQLite verisini kendiliğinden içeri taşımaz. MySQL yedekleri Railway veritabanı tarafında ayrıca yapılandırılmalıdır. Dağıtım öncesinde tek seferlik şema açılışı çalıştırın; yeni şema sürümünün ilk açılışında eşzamanlı çoklu replika başlatmayın. Normal rezervasyon işlemleri MySQL işlem kilidiyle korunur.
+   `host` değeri, uygulama servisinin Mongo'ya ulaştığı **özel ağ adresi** olmalıdır (servis adınız farklıysa `<servis-adı>.railway.internal`). `rs.status().ok` 1 dönmelidir.
+4. Uygulama servisinin **Variables** alanına Mongo servisinin bağlantı değişkenini referansla verin ve replica set parametresini ekleyin:
+
+   ```dotenv
+   MONGODB_URI="${{MongoDB.MONGO_URL}}/?replicaSet=rs0&authSource=admin"
+   MONGODB_DB=rota-kars
+   ```
+
+   Referanstaki servis adı (`MongoDB`) ve değişken adı (`MONGO_URL`), Railway'deki Mongo servisinizin Variables sekmesindekilerle aynı olmalıdır; şablon sürümüne göre değişebilir, oradan kontrol edin. Çözülmemiş `${{...}}` ifadesi açık hata verir. Bağlantı adresini loglara yazmayın.
+5. **Yedek:** Mongo servisinin volume'ü için Railway'de otomatik yedeklemeyi açın. Ayrıca belirli aralıklarla `mongodump --uri "$MONGODB_URI" --archive=rota-kars-$(date +%F).gz --gzip` ile yedeği Railway dışına alın.
+
+İndeksler (benzersiz e-posta, rezervasyon referansı, ödeme işlem referansı vb.) uygulama açılışında otomatik oluşturulur; ayrıca migration komutu yoktur.
+
+Ek değişkenler: güçlü benzersiz `ADMIN_PASSWORD`, `SITE_URL` ve `PUBLIC_BASE_URL=https://firmanin-domaini`, `TRUST_PROXY=1` (tek güvenilir reverse proxy), `PAYMENT_PROVIDER=disabled`. `PORT` Railway tarafından verilir, sunucu `0.0.0.0` dinler. Gerçek üretimde `DEMO_MODE` ve `SEED_DEMO` kapalı kalmalıdır; örnek seferler otomatik eklenmez.
+
+## Docker ve Railway
+
+- **Yerelde üretim benzeri çalıştırma:** `docker compose up -d --build` → http://localhost:8080. Mongo tek düğümlü replica set olarak `mongo-data` volume'ünde çalışır ve ilk açılışta kendini başlatır. Geliştirme sunucusu (`npm run dev`) için `.env` içinde `MONGODB_URI=mongodb://127.0.0.1:27017/?replicaSet=rs0&directConnection=true` kullanın.
+- **İmaj:** Node 24, `node` kullanıcısı, durumsuz (veri Mongo'da). `HEALTHCHECK` `/api/health` uç noktasını çağırır; bu uç nokta Mongo'ya `ping` gönderir, erişilemezse 503 döner.
+- **Railway:** `railway.toml` Dockerfile ile derler, tek replika çalıştırır (arka plan bildirim işi ve bellek içi limitler tek süreç varsayar). Uygulama servisine volume gerekmez.
+- **Zorunlu değişkenler:** `ADMIN_PASSWORD`, `SITE_URL` ve `PUBLIC_BASE_URL` (ikisi de `https://alan-adi`), `TRUST_PROXY=1`, `AGENCY_EMAIL` (yeni rezervasyon, iptal ve talep bildirimleri), SMTP alanları.
+- **Kötüye kullanım limitleri:** `SALES_CUTOFF_MINUTES` (varsayılan 60; kalkıştan bu kadar önce online satış kapanır), `GUEST_MAX_SEATS` (10), `IP_MAX_HELD_SEATS` (20), `HOLD_LIMIT_PER_15MIN` (20), `BOOKING_LIMIT_PER_15MIN` (6). Limitler süreç belleğindedir; bu yüzden tek replika önerilir.
+- **Güvenlik başlıkları:** Tüm yanıtlarda `X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, `X-Request-Id`; yayında ayrıca `Content-Security-Policy` ve HTTPS üzerinde `Strict-Transport-Security`. Hata kayıtları JSON satırı olarak istek kimliğiyle yazılır; Railway log ekranında `requestId` ile aranabilir.
+- **Kampanya:** Çark kuponu varsayılan olarak doğrulanmış e-posta ister (`requireVerified: true`). Var olan bir veritabanında ayar yönetim panelinden kontrol edilmelidir.
 
 ## Yönetim akışı
 
@@ -46,4 +66,4 @@ Banka anlaşması henüz yoktur. Kart bilgisi alınmaz, checkout 503 döner, mü
 
 ## Doğrulama
 
-`npm test`, `npm run build`. MySQL sözleşme testi yalnız açıkça belirlenmiş geçici test veritabanında `MYSQL_TEST_URL=... node --test tests/mysql-contract.test.mjs` ile çalışır. Üretim URL'si kullanmayın. E-posta testlerinde gerçek gönderim yerine kontrollü sahte taşıyıcı kullanılır.
+`npm test`, `npm run build`. Testler her test için ayrı bir veritabanıyla bellek içi Mongo replica set (`mongodb-memory-server`, ilk çalıştırmada mongod indirir) üzerinde koşar; üretim veritabanına bağlanmaz. E-posta testlerinde gerçek gönderim yerine kontrollü sahte taşıyıcı kullanılır.

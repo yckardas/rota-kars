@@ -74,17 +74,22 @@ export function makeVehicle(modelId, passengerSeats) {
   };
 }
 export async function createOperations(db, { clock, cleanup, tx }) {
-  await db.exec(
-    "CREATE TABLE IF NOT EXISTS tour_operations(tour_id TEXT PRIMARY KEY,sales_open INTEGER NOT NULL,vehicle_model TEXT NOT NULL,passenger_seats INTEGER NOT NULL)",
-  );
   for (const tour of tours)
-    await db
-      .prepare("INSERT OR IGNORE INTO tour_operations VALUES(?,?,?,?)")
-      .run(tour.id, tour.inquiryOnly ? 0 : 1, "vip-midibus", 18);
+    await db.insertIfAbsent("tour_operations", tour.id, {
+      tour_id: tour.id,
+      sales_open: tour.inquiryOnly ? 0 : 1,
+      vehicle_model: "vip-midibus",
+      passenger_seats: 18,
+    });
+  const today = () =>
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Europe/Istanbul",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date(clock()));
   const get = async (id) => {
-    const row = await db
-      .prepare("SELECT * FROM tour_operations WHERE tour_id=?")
-      .get(id);
+    const row = await db.one("tour_operations", { _id: id });
     if (!row) throw new AppError(404, "Tur bulunamadı.");
     return {
       ...row,
@@ -114,22 +119,34 @@ export async function createOperations(db, { clock, cleanup, tx }) {
           current.vehicle_model !== vehicleModel ||
           current.passenger_seats !== passengerSeats
         ) {
-          const occupied = await db
-            .prepare(
-              "SELECT 1 FROM seat_locks s JOIN departures d ON d.id=s.departure_id WHERE d.tour_id=? AND s.expires_at>? AND d.date>=? LIMIT 1",
+          const upcoming = (
+            await db.find(
+              "departures",
+              { tour_id: id, date: { $gte: today() } },
+              { projection: { _id: 1, id: 1 } },
             )
-            .get(id, clock(), new Date(clock()).toISOString().slice(0, 10));
+          ).map((d) => d.id);
+          const occupied =
+            upcoming.length &&
+            (await db.one("seat_locks", {
+              departure_id: { $in: upcoming },
+              expires_at: { $gt: clock() },
+            }));
           if (occupied)
             throw new AppError(
               409,
               "Bu turda ayrılmış koltuklar var. Araç düzenini değiştirmeden önce mevcut ön rezervasyonları çözümleyin. Satışı kapatabilirsiniz.",
             );
         }
-        await db
-          .prepare(
-            "UPDATE tour_operations SET sales_open=?,vehicle_model=?,passenger_seats=? WHERE tour_id=?",
-          )
-          .run(salesOpen ? 1 : 0, vehicleModel, passengerSeats, id);
+        await db.update(
+          "tour_operations",
+          { _id: id },
+          {
+            sales_open: salesOpen ? 1 : 0,
+            vehicle_model: vehicleModel,
+            passenger_seats: passengerSeats,
+          },
+        );
         return {
           ...(await get(id)),
           vehicle,

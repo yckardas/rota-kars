@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import express from "express";
 import { attachAdvancedApi, receipt, siteBase } from "./advanced-api.mjs";
 import { readFileSync } from "node:fs";
@@ -17,9 +18,10 @@ import {
   cancellationPolicy,
 } from "./catalog.mjs";
 import { createChatService } from "./chat.mjs";
+import { attachSeoRoutes } from "./seo.mjs";
 import { vehicleModels } from "./operations.mjs";
 import { attachSocialAuth, cookieValue } from "./social-auth.mjs";
-import { normalizeInstagramUrl } from "./instagram.mjs";
+import { normalizeInstagramUrl, createInstagramFeed } from "./instagram.mjs";
 import { AppError } from "./store.mjs";
 import { createReviewsService } from "./reviews.mjs";
 import { paymentStatus, createPayment } from "./payments.mjs";
@@ -81,11 +83,51 @@ export function createApp(
       store,
     }),
     socialFetch = fetch,
+    instagramFeed = createInstagramFeed({
+      env,
+      settings: store.instagramSettings,
+    }),
   } = {},
 ) {
   const app = express(),
-    limits = new Map();
+    limits = new Map(),
+    activeHolds = new Map();
   app.disable("x-powered-by");
+  // Tüm yanıtlar (HTML sayfaları dahil) için güvenlik başlıkları.
+  const production = env.NODE_ENV === "production";
+  const csp = [
+    "default-src 'self'",
+    // Instagram oynatıcısı yalnız video dosyası olmayan paylaşımlar için açılır.
+    "script-src 'self' https://www.instagram.com",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "media-src 'self' blob: https:",
+    "font-src 'self' data:",
+    "connect-src 'self'",
+    "frame-src https://www.google.com https://maps.google.com https://www.instagram.com",
+    "frame-ancestors 'self'",
+    "base-uri 'self'",
+    "form-action 'self' https://appleid.apple.com",
+    "object-src 'none'",
+  ].join("; ");
+  app.use((req, res, next) => {
+    req.id = randomUUID();
+    res.set({
+      "X-Request-Id": req.id,
+      "X-Content-Type-Options": "nosniff",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "X-Frame-Options": "SAMEORIGIN",
+      "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+      "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
+    });
+    // Vite geliştirme sunucusu satır içi betik kullandığı için CSP yalnızca yayında.
+    if (production) {
+      res.set("Content-Security-Policy", csp);
+      if (req.secure)
+        res.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    }
+    next();
+  });
   if (env.TRUST_PROXY === "1") app.set("trust proxy", 1);
   app.use(
     "/api/auth/callback",
@@ -127,7 +169,11 @@ export function createApp(
           ? "login"
           : req.path === "/chat"
             ? "chat"
-            : "api",
+            : req.method === "POST" && req.path === "/holds"
+              ? "hold"
+              : req.method === "POST" && req.path === "/reservations"
+                ? "booking"
+                : "api",
       key = req.ip + ":" + bucket,
       now = Date.now();
     let l = limits.get(key);
@@ -144,6 +190,10 @@ export function createApp(
       {
         login: 10,
         chat: 60,
+        // Koltuk tutma ve ön rezervasyon, seferleri dolu gösterme amaçlı
+        // kötüye kullanıma karşı ayrıca sınırlanır.
+        hold: Number(env.HOLD_LIMIT_PER_15MIN || 20),
+        booking: Number(env.BOOKING_LIMIT_PER_15MIN || 6),
         api: 300,
       }[bucket]
     )
@@ -169,11 +219,9 @@ export function createApp(
         ?.slice(11),
       session =
         sid && /^[a-f0-9]{64}$/.test(sid)
-          ? await store.db
-              .prepare(
-                "SELECT expires_at FROM admin_sessions WHERE token_hash=?",
-              )
-              .get(createHash("sha256").update(sid).digest("hex"))
+          ? await store.db.one("admin_sessions", {
+              _id: createHash("sha256").update(sid).digest("hex"),
+            })
           : null;
     if (!session || session.expires_at < Date.now())
       return res.status(401).json({
@@ -338,13 +386,22 @@ export function createApp(
     requireMember,
     schemas: { ymd, clean, email, phone },
   });
-  app.get("/api/health", (_q, r) =>
-    r.json({
-      ok: true,
+  // Railway/Docker sağlık kontrolü: veritabanına gerçekten ulaşılabiliyor mu?
+  app.get("/api/health", async (_q, r) => {
+    let database = "ok";
+    try {
+      await store.db.ping();
+    } catch {
+      database = "unavailable";
+    }
+    r.status(database === "ok" ? 200 : 503).json({
+      ok: database === "ok",
       localPreview: env.NODE_ENV !== "production",
-      database: store.db.dialect,
-    }),
-  );
+      dialect: store.db.dialect,
+      database,
+    });
+  });
+  attachSeoRoutes(app, env);
   app.get("/api/catalog", async (_q, r) =>
     r.json({
       business,
@@ -379,7 +436,33 @@ export function createApp(
           seats: z.array(z.number().int()).min(1).max(53),
         })
         .parse(q.body);
-      r.status(201).json(await store.hold(input.departureId, input.seats));
+      const guestMax = Number(env.GUEST_MAX_SEATS || 10);
+      if (!q.member && input.seats.length > guestMax)
+        throw new AppError(
+          400,
+          `Online en fazla ${guestMax} koltuk seçebilirsiniz. Daha büyük gruplar için WhatsApp'tan yazın.`,
+        );
+      // Aynı IP'nin eşzamanlı tuttuğu toplam koltuk sınırlıdır.
+      const now = Date.now(),
+        mine = (activeHolds.get(q.ip) || []).filter((h) => h.expiresAt > now),
+        heldSeats = mine.reduce((n, h) => n + h.seats, 0),
+        ipMax = Number(env.IP_MAX_HELD_SEATS || 20);
+      if (heldSeats + input.seats.length > ipMax)
+        throw new AppError(
+          429,
+          "Aynı anda çok fazla koltuk tutuluyor. Önceki seçimlerinizi tamamlayın ya da birkaç dakika sonra deneyin.",
+        );
+      const hold = await store.hold(input.departureId, input.seats);
+      mine.push({
+        token: hold.token,
+        seats: input.seats.length,
+        expiresAt: hold.expiresAt,
+      });
+      activeHolds.set(q.ip, mine);
+      if (activeHolds.size > 5000)
+        for (const [k, v] of activeHolds)
+          if (!v.some((h) => h.expiresAt > now)) activeHolds.delete(k);
+      r.status(201).json(hold);
     }),
   );
   app.delete(
@@ -390,6 +473,12 @@ export function createApp(
         .regex(/^[a-f0-9]{48}$/)
         .parse(q.params.token);
       await store.release(token);
+      const mine = activeHolds.get(q.ip);
+      if (mine)
+        activeHolds.set(
+          q.ip,
+          mine.filter((h) => h.token !== token),
+        );
       r.status(204).end();
     }),
   );
@@ -492,12 +581,16 @@ export function createApp(
     }),
   );
   app.get("/api/hotels", async (_q, r) => r.json(await store.hotels()));
-  app.get("/api/instagram", async (_q, r) =>
+  app.get("/api/instagram", async (_q, r) => {
+    // Instagram API bağlıysa hesabın son videoları gerçek dosyalarıyla gelir;
+    // değilse yönetim panelinden girilen paylaşımlar kullanılır.
+    const live = await instagramFeed.posts();
     r.json({
-      posts: await store.instagramPosts(),
+      posts: live?.length ? live : await store.instagramPosts(),
+      source: live?.length ? "instagram" : "manual",
       profileUrl: business.instagram,
-    }),
-  );
+    });
+  });
   app.get("/api/admin/instagram", requireAdmin, async (_q, r) =>
     r.json(await store.instagramPosts(true)),
   );
@@ -561,16 +654,15 @@ export function createApp(
         return r.status(401).json({
           message: "Parola doğru değil.",
         });
-      await store.db
-        .prepare("DELETE FROM admin_sessions WHERE expires_at<?")
-        .run(Date.now());
-      const sid = randomBytes(32).toString("hex");
-      await store.db
-        .prepare("INSERT INTO admin_sessions VALUES(?,?)")
-        .run(
-          createHash("sha256").update(sid).digest("hex"),
-          Date.now() + 8 * 3600 * 1000,
-        );
+      await store.db.remove("admin_sessions", {
+        expires_at: { $lt: Date.now() },
+      });
+      const sid = randomBytes(32).toString("hex"),
+        hash = createHash("sha256").update(sid).digest("hex");
+      await store.db.insert("admin_sessions", hash, {
+        token_hash: hash,
+        expires_at: Date.now() + 8 * 3600 * 1000,
+      });
       r.setHeader(
         "Set-Cookie",
         `rota_admin=${sid}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${env.NODE_ENV === "production" ? "; Secure" : ""}`,
@@ -587,9 +679,9 @@ export function createApp(
       .find((x) => x.startsWith("rota_admin="))
       ?.slice(11);
     if (sid)
-      await store.db
-        .prepare("DELETE FROM admin_sessions WHERE token_hash=?")
-        .run(createHash("sha256").update(sid).digest("hex"));
+      await store.db.remove("admin_sessions", {
+        _id: createHash("sha256").update(sid).digest("hex"),
+      });
     r.setHeader(
       "Set-Cookie",
       "rota_admin=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0",
@@ -655,7 +747,7 @@ export function createApp(
       message: "Bu işlem bulunamadı.",
     }),
   );
-  app.use((err, _q, r, _next) => {
+  app.use((err, q, r, _next) => {
     if (err instanceof z.ZodError)
       return r.status(400).json({
         message:
@@ -673,7 +765,21 @@ export function createApp(
       return r.status(400).json({
         message: "Geçersiz istek.",
       });
-    console.error("Request failed:", err.name);
+    // Kişisel veri sızdırmadan teşhis için yeterli bilgi: istek kimliği, yol ve yığın.
+    console.error(
+      JSON.stringify({
+        level: "error",
+        requestId: q.id,
+        method: q.method,
+        path: q.path,
+        error: err.name,
+        message: String(err.message || "").slice(0, 300),
+        stack: String(err.stack || "")
+          .split("\n")
+          .slice(0, 6)
+          .join(" | "),
+      }),
+    );
     r.status(500).json({
       message: "İşlem tamamlanamadı. Lütfen yeniden deneyin.",
     });

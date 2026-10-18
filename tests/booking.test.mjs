@@ -164,3 +164,21 @@ test("hotels are unpublished by default and only active partners appear", async 
     await s.db.close();
   }
 });
+test("same-day departure stops selling before its start time", async () => {
+  const { openStore } = await import("../server/store.mjs");
+  const { salesClosesAt } = await import("../server/departures.mjs");
+  let now = Date.parse("2026-11-10T05:00:00+03:00");
+  const s = await openStore(":memory:", { clock: () => now, env: { SALES_CUTOFF_MINUTES: "60" } });
+  try {
+    const [d] = await s.listDepartures("ani-cildir");
+    now = salesClosesAt(d.date, d.start_time, 60) - 60000;
+    assert.ok((await s.listDepartures("ani-cildir")).some((x) => x.id === d.id));
+    const hold = await s.hold(d.id, [1]);
+    assert.ok(hold.token);
+    now = salesClosesAt(d.date, d.start_time, 60) + 1000;
+    assert.ok(!(await s.listDepartures("ani-cildir")).some((x) => x.id === d.id));
+    await assert.rejects(() => s.hold(d.id, [2]), (e) => e.status === 409);
+  } finally {
+    await s.db.close();
+  }
+});

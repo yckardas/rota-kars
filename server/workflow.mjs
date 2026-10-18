@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { AppError } from "./store.mjs";
+import { fromJson } from "./database.mjs";
 import { localDate } from "./departures.mjs";
 import { tours, business } from "./catalog.mjs";
 const longExpiry = (now) => now + 365 * 86400000;
@@ -7,45 +8,26 @@ export async function createWorkflow(
   db,
   { clock, tx, departures, members, notifications, env, cleanup },
 ) {
-  const columns = (
-    await db.prepare("PRAGMA table_info(reservations)").all()
-  ).map((c) => c.name);
-  for (const [name, type] of Object.entries({
-    ticket_token: "TEXT",
-    confirmed_at: "INTEGER",
-    checked_in_at: "INTEGER",
-    completed_at: "INTEGER",
-    cancellation_requested_at: "INTEGER",
-    discount_percent: "INTEGER NOT NULL DEFAULT 0",
-  }))
-    if (!columns.includes(name))
-      await db.exec(`ALTER TABLE reservations ADD COLUMN ${name} ${type}`);
-  await db.exec(`CREATE TABLE IF NOT EXISTS payment_ledger(id TEXT PRIMARY KEY,reservation_id TEXT NOT NULL REFERENCES reservations(id),kind TEXT NOT NULL,amount INTEGER NOT NULL,method TEXT NOT NULL,external_reference TEXT NOT NULL,created_at INTEGER NOT NULL,UNIQUE(method,external_reference,kind));
- CREATE TABLE IF NOT EXISTS reservation_audit(id TEXT PRIMARY KEY,reservation_id TEXT NOT NULL,event TEXT NOT NULL,details TEXT NOT NULL,created_at INTEGER NOT NULL);`);
-  for (const r of await db
-    .prepare("SELECT id FROM reservations WHERE ticket_token IS NULL")
-    .all())
-    await db
-      .prepare(
-        "UPDATE reservations SET ticket_token=? WHERE id=? AND ticket_token IS NULL",
-      )
-      .run(randomBytes(24).toString("hex"), r.id);
-  await db
-    .prepare(
-      "UPDATE reservations SET discount_percent=COALESCE((SELECT percent FROM member_coupons WHERE id=reservations.coupon_id),ROUND(100.0*discount_amount/subtotal)) WHERE discount_percent=0 AND discount_amount>0 AND subtotal>0",
-    )
-    .run();
+  await Promise.all([
+    db.index(
+      "payment_ledger",
+      { method: 1, external_reference: 1, kind: 1 },
+      { unique: true },
+    ),
+    db.index("payment_ledger", { reservation_id: 1, created_at: 1 }),
+    db.index("reservation_audit", { reservation_id: 1, created_at: 1 }),
+  ]);
   const parse = async (r) => {
     if (!r) throw new AppError(404, "Rezervasyon bulunamadı.");
     const d = await departures.get(r.departure_id, {
         allowClosed: true,
         allowPast: true,
       }),
-      ledger = await db
-        .prepare(
-          "SELECT * FROM payment_ledger WHERE reservation_id=? ORDER BY created_at,id",
-        )
-        .all(r.id),
+      ledger = await db.find(
+        "payment_ledger",
+        { reservation_id: r.id },
+        { sort: { created_at: 1, id: 1 } },
+      ),
       paid = ledger
         .filter((p) => p.kind === "payment")
         .reduce((n, p) => n + Number(p.amount), 0),
@@ -55,9 +37,9 @@ export async function createWorkflow(
       net = paid - refunded;
     return {
       ...r,
-      seats: JSON.parse(r.seats),
-      passengers: JSON.parse(r.passengers),
-      vehicle: r.vehicle_json ? JSON.parse(r.vehicle_json) : d.vehicle,
+      seats: fromJson(r.seats, []),
+      passengers: fromJson(r.passengers, []),
+      vehicle: fromJson(r.vehicle_json, null) || d.vehicle,
       date: d.date,
       tourId: d.tour_id,
       start_time: d.start_time,
@@ -82,38 +64,70 @@ export async function createWorkflow(
     };
   };
   const audit = async (r, event, details) => {
-    await db
-      .prepare("INSERT INTO reservation_audit VALUES(?,?,?,?,?)")
-      .run(randomUUID(), r.id, event, JSON.stringify(details), clock());
+    const id = randomUUID();
+    await db.insert("reservation_audit", id, {
+      id,
+      reservation_id: r.id,
+      event,
+      details,
+      created_at: clock(),
+    });
   };
-  const notify = async (r, event, text) =>
+  const notify = async (r, event, text, dedupeKey = event + ":" + r.reference) =>
     notifications.enqueue({
       email: r.email,
       subject: "Rota Kars · " + text,
       body: `Merhaba ${r.name},\n${r.reference} · ${tours.find((t) => t.id === r.tourId)?.name || r.tourId}\nTarih: ${r.date} · Saat: ${r.start_time}\nBuluşma: ${r.pickup}\n${text}\nKoltuklar: ${r.seats.join(", ")}.`,
       actionUrl: (env.PUBLIC_BASE_URL || "") + "/bilet/" + r.ticket_token,
       kind: event,
-      dedupeKey: event + ":" + r.reference,
+      dedupeKey,
+    });
+  const tourName = (r) => tours.find((t) => t.id === r.tourId)?.name || r.tourId;
+  const waLink = (phone) => {
+    const digits = String(phone || "").replace(/\D/g, "");
+    const intl = digits.startsWith("90") ? digits : digits.replace(/^0/, "90");
+    return intl.length >= 11 ? `https://wa.me/${intl}` : "";
+  };
+  const agencyAlert = (r, kind, title) =>
+    notifications.notifyAgency({
+      subject: `${title}: ${r.reference} · ${tourName(r)} · ${r.date}`,
+      body: [
+        `${title}`,
+        `${r.reference} · ${tourName(r)}`,
+        `Tarih: ${r.date} ${r.start_time} · Koltuk: ${r.seats.join(", ")}`,
+        `Müşteri: ${r.name} · ${r.phone} · ${r.email}`,
+        `Tutar: ${(r.total / 100).toFixed(2)} TL · Durum: ${r.status}`,
+        waLink(r.phone) && `WhatsApp: ${waLink(r.phone)}`,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      actionUrl: (env.PUBLIC_BASE_URL || "") + "/yonetim",
+      kind,
+      dedupeKey: kind + ":" + r.reference,
     });
   const api = {
     async get(reference, { fresh = true } = {}) {
       if (fresh) await cleanup();
       return parse(
-        await db
-          .prepare("SELECT * FROM reservations WHERE reference=?")
-          .get(reference.toUpperCase()),
+        await db.one("reservations", { reference: reference.toUpperCase() }),
       );
     },
     async list({ date, all = false } = {}) {
       await cleanup();
-      const rows = await db
-        .prepare(
-          "SELECT r.reference FROM reservations r JOIN departures d ON r.departure_id=d.id" +
-            (date ? " WHERE d.date=?" : "") +
-            " ORDER BY r.created_at DESC" +
-            (all ? "" : " LIMIT 500"),
-        )
-        .all(...(date ? [date] : []));
+      const filter = date
+        ? {
+            departure_id: {
+              $in: (
+                await db.find("departures", { date }, { projection: { id: 1 } })
+              ).map((d) => d.id),
+            },
+          }
+        : {};
+      const rows = await db.find("reservations", filter, {
+        sort: { created_at: -1 },
+        ...(all ? {} : { limit: 500 }),
+        projection: { reference: 1 },
+      });
       return Promise.all(
         rows.map((r) => api.get(r.reference, { fresh: false })),
       );
@@ -125,6 +139,7 @@ export async function createWorkflow(
         "reservation_created",
         "Ön rezervasyon talebiniz alındı; henüz kesin bilet veya ödeme değildir.",
       );
+      await agencyAlert(r, "reservation_created", "Yeni ön rezervasyon");
       return r;
     },
     async confirm(reference) {
@@ -142,14 +157,20 @@ export async function createWorkflow(
             409,
             "Onay için en az seçilen kapora/tam ödeme tutarının tahsilatı kaydedilmeli.",
           );
-        await db
-          .prepare(
-            "UPDATE reservations SET status='confirmed',confirmed_at=?,expires_at=? WHERE id=?",
-          )
-          .run(clock(), longExpiry(clock()), r.id);
-        await db
-          .prepare("UPDATE seat_locks SET expires_at=? WHERE owner=?")
-          .run(longExpiry(clock()), r.reference);
+        await db.update(
+          "reservations",
+          { _id: r.id },
+          {
+            status: "confirmed",
+            confirmed_at: clock(),
+            expires_at: longExpiry(clock()),
+          },
+        );
+        await db.updateMany(
+          "seat_locks",
+          { owner: r.reference },
+          { expires_at: longExpiry(clock()) },
+        );
         await audit(r, "confirmed", {});
         const updated = await api.get(reference);
         await notify(
@@ -167,11 +188,11 @@ export async function createWorkflow(
       return tx(async () => {
         await cleanup();
         const r = await api.get(reference),
-          previous = await db
-            .prepare(
-              "SELECT * FROM payment_ledger WHERE method=? AND external_reference=? AND kind=?",
-            )
-            .get(method, externalReference, kind);
+          previous = await db.one("payment_ledger", {
+            method,
+            external_reference: externalReference,
+            kind,
+          });
         if (previous) {
           if (
             previous.reservation_id !== r.id ||
@@ -196,24 +217,27 @@ export async function createWorkflow(
           );
         if (kind === "refund" && amount > r.net_paid)
           throw new AppError(409, "İade tutarı net tahsilatı aşamaz.");
-        await db
-          .prepare("INSERT INTO payment_ledger VALUES(?,?,?,?,?,?,?)")
-          .run(
-            randomUUID(),
-            r.id,
-            kind,
-            amount,
-            method,
-            externalReference,
-            clock(),
-          );
+        const ledgerId = randomUUID();
+        await db.insert("payment_ledger", ledgerId, {
+          id: ledgerId,
+          reservation_id: r.id,
+          kind,
+          amount,
+          method,
+          external_reference: externalReference,
+          created_at: clock(),
+        });
         if (kind === "payment") {
-          await db
-            .prepare("UPDATE reservations SET expires_at=? WHERE id=?")
-            .run(longExpiry(clock()), r.id);
-          await db
-            .prepare("UPDATE seat_locks SET expires_at=? WHERE owner=?")
-            .run(longExpiry(clock()), r.reference);
+          await db.update(
+            "reservations",
+            { _id: r.id },
+            { expires_at: longExpiry(clock()) },
+          );
+          await db.updateMany(
+            "seat_locks",
+            { owner: r.reference },
+            { expires_at: longExpiry(clock()) },
+          );
         }
         await audit(r, kind, { amount, method, externalReference });
         const updated = await api.get(reference);
@@ -235,21 +259,25 @@ export async function createWorkflow(
             "Tamamlanan tur için acenteyle iletişime geçin.",
           );
         if (r.status === "pending_agency" && r.net_paid === 0) {
-          await db
-            .prepare("UPDATE reservations SET status='cancelled' WHERE id=?")
-            .run(r.id);
-          await db
-            .prepare("DELETE FROM seat_locks WHERE owner=?")
-            .run(r.reference);
+          await db.update("reservations", { _id: r.id }, { status: "cancelled" });
+          await db.remove("seat_locks", { owner: r.reference });
           await members.releaseCoupons();
         } else
-          await db
-            .prepare(
-              "UPDATE reservations SET cancellation_requested_at=? WHERE id=?",
-            )
-            .run(clock(), r.id);
+          await db.update(
+            "reservations",
+            { _id: r.id },
+            { cancellation_requested_at: clock() },
+          );
         await audit(r, "cancellation_requested", {});
-        return api.get(reference);
+        const updated = await api.get(reference);
+        await agencyAlert(
+          updated,
+          "cancellation_requested",
+          updated.status === "cancelled"
+            ? "Müşteri ön rezervasyonu iptal etti"
+            : "Müşteri iptal talep etti",
+        );
+        return updated;
       });
     },
     async cancel(reference) {
@@ -259,12 +287,8 @@ export async function createWorkflow(
         if (r.status === "completed")
           throw new AppError(409, "Tamamlanmış tur iptal edilemez.");
         if (r.status === "cancelled") return r;
-        await db
-          .prepare("UPDATE reservations SET status='cancelled' WHERE id=?")
-          .run(r.id);
-        await db
-          .prepare("DELETE FROM seat_locks WHERE owner=?")
-          .run(r.reference);
+        await db.update("reservations", { _id: r.id }, { status: "cancelled" });
+        await db.remove("seat_locks", { owner: r.reference });
         await members.releaseCoupons();
         await audit(r, "cancelled", { refundDue: r.net_paid });
         const updated = await api.get(reference);
@@ -305,11 +329,10 @@ export async function createWorkflow(
         )
           return r;
         for (const n of seats) {
-          const lock = await db
-            .prepare(
-              "SELECT owner FROM seat_locks WHERE departure_id=? AND seat=? AND expires_at>?",
-            )
-            .get(d.id, n, clock());
+          const lock = await db.one("seat_locks", {
+            _id: `${d.id}:${n}`,
+            expires_at: { $gt: clock() },
+          });
           if (lock && lock.owner !== r.reference)
             throw new AppError(
               409,
@@ -327,28 +350,29 @@ export async function createWorkflow(
           r.net_paid > 0 || r.status === "confirmed"
             ? longExpiry(clock())
             : clock() + 86400000;
-        await db
-          .prepare("DELETE FROM seat_locks WHERE owner=?")
-          .run(r.reference);
+        await db.remove("seat_locks", { owner: r.reference });
+        // Süresi dolmuş başka bir kilit kalmışsa yerine yazılır.
         for (const seat of seats)
-          await db
-            .prepare("INSERT INTO seat_locks VALUES(?,?,?,?)")
-            .run(d.id, seat, r.reference, expires);
-        await db
-          .prepare(
-            "UPDATE reservations SET departure_id=?,seats=?,vehicle_json=?,subtotal=?,discount_amount=?,total=?,deposit=?,expires_at=? WHERE id=?",
-          )
-          .run(
-            d.id,
-            JSON.stringify(seats),
-            JSON.stringify(d.vehicle),
+          await db.upsert("seat_locks", `${d.id}:${seat}`, {
+            departure_id: d.id,
+            seat,
+            owner: r.reference,
+            expires_at: expires,
+          });
+        await db.update(
+          "reservations",
+          { _id: r.id },
+          {
+            departure_id: d.id,
+            seats,
+            vehicle_json: d.vehicle,
             subtotal,
-            subtotal - total,
+            discount_amount: subtotal - total,
             total,
-            r.deposit === r.total ? total : Math.round(total * 0.3),
-            expires,
-            r.id,
-          );
+            deposit: r.deposit === r.total ? total : Math.round(total * 0.3),
+            expires_at: expires,
+          },
+        );
         const id = randomUUID();
         await audit(r, "moved", { from: r.departure_id, to: d.id, seats });
         const updated = await api.get(reference);
@@ -370,9 +394,7 @@ export async function createWorkflow(
           throw new AppError(400, "Yolcu ve koltuk sayıları eşleşmeli.");
         if (!["pending_agency", "confirmed"].includes(r.status))
           throw new AppError(409, "Bu kaydın yolcuları değiştirilemez.");
-        await db
-          .prepare("UPDATE reservations SET passengers=? WHERE id=?")
-          .run(JSON.stringify(names), r.id);
+        await db.update("reservations", { _id: r.id }, { passengers: names });
         await audit(r, "passengers_updated", {});
         return api.get(reference);
       });
@@ -391,11 +413,11 @@ export async function createWorkflow(
             409,
             "Tamamlama için onaylı kayıt, geçmiş/bugünkü tur tarihi ve tam tahsilat gerekir.",
           );
-        await db
-          .prepare(
-            "UPDATE reservations SET status='completed',completed_at=? WHERE id=?",
-          )
-          .run(clock(), r.id);
+        await db.update(
+          "reservations",
+          { _id: r.id },
+          { status: "completed", completed_at: clock() },
+        );
         await members.rewardReferral(r.member_id, "completed");
         await audit(r, "completed", {});
         await notifications.enqueue({
@@ -413,9 +435,7 @@ export async function createWorkflow(
       await cleanup();
       if (!/^[a-f0-9]{48}$/.test(token))
         throw new AppError(404, "Bilet bulunamadı.");
-      const row = await db
-        .prepare("SELECT reference FROM reservations WHERE ticket_token=?")
-        .get(token);
+      const row = await db.one("reservations", { ticket_token: token });
       if (!row) throw new AppError(404, "Bilet bulunamadı.");
       const r = await api.get(row.reference);
       return {
@@ -445,9 +465,11 @@ export async function createWorkflow(
           );
         const r = await api.get(info.reference);
         if (!r.checked_in_at) {
-          await db
-            .prepare("UPDATE reservations SET checked_in_at=? WHERE id=?")
-            .run(clock(), r.id);
+          await db.update(
+            "reservations",
+            { _id: r.id },
+            { checked_in_at: clock() },
+          );
           await audit(r, "checked_in", {});
         }
         return api.ticket(token);
@@ -456,17 +478,29 @@ export async function createWorkflow(
     async reminders() {
       const now = clock(),
         hours = Math.max(1, Math.min(72, Number(env.REMINDER_HOURS) || 24));
-      for (const r of await api.list({ all: true })) {
+      // Yalnız hatırlatma penceresine giren günlerdeki onaylı kayıtlar okunur.
+      const days = [];
+      for (let t = now - 86400000; t <= now + hours * 3600000 + 86400000; t += 86400000)
+        days.push(localDate(t));
+      const departureIds = (
+        await db.find("departures", { date: { $in: days } }, { projection: { id: 1 } })
+      ).map((d) => d.id);
+      if (!departureIds.length) return;
+      const upcoming = await db.find(
+        "reservations",
+        { status: "confirmed", departure_id: { $in: departureIds } },
+        { projection: { reference: 1 } },
+      );
+      for (const { reference } of upcoming) {
+        const r = await api.get(reference, { fresh: false });
         const start = Date.parse(r.date + "T" + r.start_time + ":00+03:00");
-        if (
-          r.status === "confirmed" &&
-          start > now &&
-          start <= now + hours * 3600000
-        )
+        if (start > now && start <= now + hours * 3600000)
+          // Sefer değişirse (taşıma) yeni sefer için yeniden hatırlatılır.
           await notify(
             r,
             "departure_reminder",
             "Yolculuğunuz yaklaşıyor. Buluşma bilgilerinizi kontrol edin.",
+            `departure_reminder:${r.reference}:${r.departure_id}`,
           );
       }
     },
@@ -540,11 +574,11 @@ export async function createWorkflow(
     },
     async audit(reference) {
       const r = await api.get(reference);
-      return db
-        .prepare(
-          "SELECT * FROM reservation_audit WHERE reservation_id=? ORDER BY created_at,id",
-        )
-        .all(r.id);
+      return db.find(
+        "reservation_audit",
+        { reservation_id: r.id },
+        { sort: { created_at: 1, id: 1 } },
+      );
     },
   };
   return api;

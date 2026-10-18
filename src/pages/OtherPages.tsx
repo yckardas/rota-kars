@@ -17,6 +17,7 @@ import {
 import { RequestForm } from "../components/RequestForm";
 import { ReservationTicket } from "./Booking";
 import { api, post } from "../lib/api";
+import { telHref } from "../lib/phone";
 import type { Catalog, Hotel, Reservation } from "../lib/types";
 export function Hotels() {
   const [hotels, setHotels] = useState<Hotel[]>([]),
@@ -347,9 +348,9 @@ export function Contact({ catalog }: { catalog: Catalog }) {
           <br />
           Kars’taki ekibimizle iletişime geçin.
         </p>
-        <a href="tel:+905459353410" className="btn">
+        <a href={telHref(b.mobile)} className="btn">
           <Phone size={17} />
-          0545 935 34 10
+          {b.mobile}
         </a>
       </div>
       <div className="contact-details">
@@ -363,7 +364,7 @@ export function Contact({ catalog }: { catalog: Catalog }) {
             </small>
           </div>
         </a>
-        <a href="tel:+904742239163">
+        <a href={telHref(b.phone)}>
           <Phone />
           <div>
             <span>Sabit hat</span>
@@ -388,18 +389,23 @@ export function Contact({ catalog }: { catalog: Catalog }) {
     </div>
   );
 }
-export function Information() {
+export function Information({ catalog }: { catalog: Catalog }) {
+  const demo = Boolean(catalog.demo);
   return (
     <article className="container legal-page section">
-      <span className="section-note">Yerel geliştirme sürümü</span>
+      <span className="section-note">
+        {demo ? "Demo sürümü" : "Bilgilendirme"}
+      </span>
       <h1>Ön rezervasyon ve veri bilgilendirmesi</h1>
-      <div className="info-note">
-        <p>
-          Bu sayfa yerel geliştirme sürecine ait açıklamadır. Canlı yayından
-          önce firmanın hukuki ve ticari bilgileriyle onaylı aydınlatma,
-          mesafeli sözleşme ve iptal/iade metinleri tamamlanmalıdır.
-        </p>
-      </div>
+      {demo && (
+        <div className="info-note">
+          <p>
+            Bu sayfa demo sürümüne ait açıklamadır. Canlı yayından önce firmanın
+            hukuki ve ticari bilgileriyle onaylı aydınlatma, mesafeli sözleşme
+            ve iptal/iade metinleri tamamlanmalıdır.
+          </p>
+        </div>
+      )}
       <h2 id="iptal">Tur iptali</h2>
       <p>
         Yurt dışı paket turlarımızda son 5 güne, yurt içi paketlerimizde son 3
@@ -422,13 +428,20 @@ export function Information() {
         Online ödeme aktif değildir ve kart bilgisi alınmaz. Onay bekleyen
         koltuklar 24 saat sonra serbest kalır.
       </p>
-      <h2>Yerel veri kaydı</h2>
-      <p>
-        İletilen ad, e-posta, telefon, yolcu adları ve rezervasyon tercihi bu
-        bilgisayardaki yerel veritabanında saklanır. Bu sürüm otomatik e-posta
-        veya SMS göndermez. Testlerde gerçek kimlik veya kart bilgisi
-        kullanmayın.
-      </p>
+      <h2>Veri kaydı</h2>
+      {demo ? (
+        <p>
+          Demo sürümünde iletilen ad, e-posta, telefon, yolcu adları ve
+          rezervasyon tercihi yerel veritabanında saklanır. Bu sürüm otomatik
+          e-posta veya SMS göndermez. Testlerde gerçek kimlik veya kart bilgisi
+          kullanmayın.
+        </p>
+      ) : (
+        <p>
+          İletilen ad, e-posta, telefon, yolcu adları ve rezervasyon tercihi, ön
+          rezervasyon talebinizin acentemizce işlenmesi için saklanır.
+        </p>
+      )}
       <h2 id="uyelik">Üyelik ve kampanyalar</h2>
       <p>
         Üyelik ücretsizdir. Ad, e-posta ve parola ile oluşturulan hesaplarda

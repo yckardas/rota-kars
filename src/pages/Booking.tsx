@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  useLocation,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -28,6 +33,7 @@ import {
 } from "../lib/types";
 import { useMember, type Coupon, type MemberDashboard } from "../lib/member";
 import { SeatMap } from "../components/SeatMap";
+import { telHref } from "../lib/phone";
 export function Booking({ catalog }: { catalog: Catalog }) {
   const { tourId } = useParams(),
     [params] = useSearchParams(),
@@ -62,8 +68,21 @@ export function Booking({ catalog }: { catalog: Catalog }) {
       total: number;
     } | null>(null),
     [quoteBusy, setQuoteBusy] = useState(false),
-    [quoteError, setQuoteError] = useState("");
+    [quoteError, setQuoteError] = useState(""),
+    [dateNotice, setDateNotice] = useState(false),
+    location = useLocation(),
+    stepHeading = useRef<HTMLHeadingElement>(null),
+    firstStepRender = useRef(true);
   const { member } = useMember();
+  const membershipHref =
+    "/uyelik?next=" + encodeURIComponent(location.pathname + location.search);
+  useEffect(() => {
+    if (firstStepRender.current) {
+      firstStepRender.current = false;
+      return;
+    }
+    stepHeading.current?.focus({ preventScroll: true });
+  }, [step]);
   const vehicle = activeVehicle || tour?.vehicle || catalog.vehicle;
   useEffect(() => {
     setCount((current) => Math.min(current, vehicle.sellableSeats));
@@ -127,11 +146,10 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         .then((ds) => {
           if (!active) return;
           setDepartures(ds);
-          setDepartureId(
-            ds.find((d) => d.date === params.get("date"))?.id ||
-              ds[0]?.id ||
-              "",
-          );
+          const wanted = params.get("date"),
+            match = ds.find((d) => d.date === wanted);
+          setDepartureId(match?.id || ds[0]?.id || "");
+          setDateNotice(Boolean(wanted && !match && ds.length));
           setLoaded(true);
         })
         .catch((e) => {
@@ -287,7 +305,10 @@ export function Booking({ catalog }: { catalog: Catalog }) {
           <button className="btn" onClick={() => window.print()}>
             <Printer size={16} /> Özeti yazdır
           </button>
-          <Link className="btn btn-outline" to="/rezervasyonum">
+          <Link
+            className="btn btn-outline"
+            to={"/rezervasyonum?ref=" + encodeURIComponent(result.reference)}
+          >
             Rezervasyonumu sorgula
           </Link>
         </div>
@@ -320,6 +341,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
             <li
               key={s}
               className={step === i ? "current" : step > i ? "complete" : ""}
+              aria-current={step === i ? "step" : undefined}
             >
               <span>{step > i ? <Check size={14} /> : i + 1}</span>
               {s}
@@ -331,7 +353,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         <div className="booking-main">
           {step === 0 ? (
             <>
-              <h2>Ne zaman, hangi koltukta?</h2>
+              <h2 ref={stepHeading} tabIndex={-1}>
+                Ne zaman, hangi koltukta?
+              </h2>
               <p className="muted">
                 Önce tarihinizi seçin, sonra yol arkadaşlarınızın yerini
                 belirleyin.
@@ -343,6 +367,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                     value={departureId}
                     onChange={(e) => {
                       setDepartureId(e.target.value);
+                      setDateNotice(false);
                       setSelected([]);
                       setError("");
                     }}
@@ -377,12 +402,22 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   </select>
                 </label>
               </div>
+              {dateNotice && (
+                <div className="info-note" role="status">
+                  <Info size={18} />
+                  <p>
+                    Seçtiğiniz tarihte sefer yok, en yakın sefer gösteriliyor.
+                  </p>
+                </div>
+              )}
               {loaded && !departures.length && (
                 <div className="info-note">
                   <Info size={18} />
                   <p>
                     Bu rota için açık bir tarih bulunmuyor.{" "}
-                    <a href="tel:+905459353410">Acente ile görüşün.</a>
+                    <a href={telHref(catalog.business.mobile)}>
+                      Acente ile görüşün.
+                    </a>
                   </p>
                 </div>
               )}
@@ -411,8 +446,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   </h3>
                   <p className="muted">
                     Şoförün yanındaki ön koltuk rehberinize ayrıldı. Diğer{" "}
-                    {vehicle.sellableSeats}
-                    koltuktan dilediğinizi seçin.
+                    {vehicle.sellableSeats} koltuktan dilediğinizi seçin.
                   </p>
                   <div className="seat-legend">
                     <span>
@@ -473,7 +507,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                 window.scrollTo({ top: 120, behavior: "smooth" });
               }}
             >
-              <h2>Yol arkadaşlarımızı tanıyalım.</h2>
+              <h2 ref={stepHeading} tabIndex={-1}>
+                Yol arkadaşlarımızı tanıyalım.
+              </h2>
               <p className="muted">
                 Yolcu adlarını ve sizinle iletişime geçebileceğimiz bilgileri
                 paylaşın.
@@ -553,7 +589,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
             </form>
           ) : (
             <form onSubmit={submit}>
-              <h2>Son bir kez göz atalım.</h2>
+              <h2 ref={stepHeading} tabIndex={-1}>
+                Son bir kez göz atalım.
+              </h2>
               <p className="muted">
                 Tercih ettiğiniz ödeme planını belirleyin. Bu adımda tahsilat
                 yapılmaz.
@@ -683,8 +721,8 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                 </label>
               ) : (
                 <p>
-                  <Link to="/uyelik">Üye olun</Link>, çarkı çevirin ve tur
-                  indirimi kazanın.
+                  <Link to={membershipHref}>Üye olun</Link>, çarkı çevirin ve
+                  tur indirimi kazanın.
                 </p>
               )}
               {quoteBusy && <small role="status">Fiyat hesaplanıyor…</small>}
@@ -701,10 +739,16 @@ export function Booking({ catalog }: { catalog: Catalog }) {
               )}
             </div>
             <div className="summary-total">
-              <span>İndirim sonrası örnek tur bedeli</span>
+              <span>
+                {catalog.demo
+                  ? "İndirim sonrası örnek tur bedeli"
+                  : "İndirim sonrası tur bedeli"}
+              </span>
               <strong>{currency(total)}</strong>
             </div>
-            <small>Fiyatlar ve tarihler yerel geliştirme verisidir.</small>
+            {catalog.demo && (
+              <small>Fiyatlar ve tarihler örnek demo verisidir.</small>
+            )}
             <div className="summary-payment">
               <ShieldCheck size={17} />
               <span>Şimdi ödeme alınmaz.</span>

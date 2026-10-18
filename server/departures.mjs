@@ -9,20 +9,17 @@ export const localDate = (now) =>
     month: "2-digit",
     day: "2-digit",
   }).format(new Date(now));
-export async function createDepartures(db, { clock, tx, operations, cleanup }) {
-  const columns = (await db.prepare("PRAGMA table_info(departures)").all()).map(
-    (c) => c.name,
-  );
-  for (const [key, type] of Object.entries({
-    start_time: "TEXT",
-    pickup: "TEXT",
-    guide_name: "TEXT",
-    guide_phone: "TEXT",
-    vehicle_model: "TEXT",
-    passenger_seats: "INTEGER",
-  }))
-    if (!columns.includes(key))
-      await db.exec(`ALTER TABLE departures ADD COLUMN ${key} ${type}`);
+// Türkiye 2016'dan beri sürekli UTC+3. Satış, kalkıştan SALES_CUTOFF_MINUTES
+// (varsayılan 60) dakika önce kapanır.
+export const salesClosesAt = (date, startTime, cutoffMinutes = 60) => {
+  const time = /^\d{2}:\d{2}$/.test(startTime || "") ? startTime : "00:00";
+  return Date.parse(`${date}T${time}:00+03:00`) - cutoffMinutes * 60 * 1000;
+};
+export async function createDepartures(
+  db,
+  { clock, tx, operations, cleanup, env = process.env },
+) {
+  const cutoff = Math.max(0, Number(env.SALES_CUTOFF_MINUTES ?? 60) || 0);
   const enrich = async (row) => {
     const base = await operations.get(row.tour_id),
       vehicle =
@@ -44,43 +41,48 @@ export async function createDepartures(db, { clock, tx, operations, cleanup }) {
       salesOpen: base.salesOpen && Boolean(row.active),
     };
   };
+  const withCutoff = (d) => {
+    const closesAt = salesClosesAt(d.date, d.start_time, cutoff);
+    return {
+      ...d,
+      salesClosesAt: closesAt,
+      departed: clock() >= closesAt,
+      salesOpen: d.salesOpen && clock() < closesAt,
+    };
+  };
   return {
     enrich,
     async get(id, { allowClosed = false, allowPast = false } = {}) {
-      const row = await db
-        .prepare("SELECT * FROM departures WHERE id=?")
-        .get(id);
+      const row = await db.one("departures", { _id: id });
       if (!row) throw new AppError(404, "Sefer bulunamadı.");
-      const d = await enrich(row);
+      const d = withCutoff(await enrich(row));
       if (!allowPast && d.date < localDate(clock()))
         throw new AppError(404, "Bu seferin tarihi geçti.");
+      if (!allowPast && !allowClosed && d.departed)
+        throw new AppError(
+          409,
+          "Bu seferin online satışı kapandı. Son dakika yer için bizi arayın.",
+        );
       if (!allowClosed && !d.salesOpen)
         throw new AppError(409, "Bu sefer şu anda rezervasyona kapalı.");
       return d;
     },
     async list({ tourId, date } = {}) {
       await cleanup();
-      const rows = await db
-        .prepare("SELECT * FROM departures ORDER BY date,start_time,id")
-        .all();
+      const rows = await db.find(
+        "departures",
+        { ...(tourId ? { tour_id: tourId } : {}), ...(date ? { date } : {}) },
+        { sort: { date: 1, start_time: 1, id: 1 } },
+      );
       return Promise.all(
-        rows
-          .filter(
-            (r) =>
-              (!tourId || r.tour_id === tourId) && (!date || r.date === date),
-          )
-          .map(async (row) => {
-            const d = await enrich(row),
-              used = await db
-                .prepare(
-                  "SELECT count(*) n FROM seat_locks WHERE departure_id=? AND expires_at>?",
-                )
-                .get(d.id, clock());
-            return {
-              ...d,
-              available: d.vehicle.sellableSeats - Number(used.n),
-            };
-          }),
+        rows.map(async (row) => {
+          const d = withCutoff(await enrich(row)),
+            used = await db.count("seat_locks", {
+              departure_id: d.id,
+              expires_at: { $gt: clock() },
+            });
+          return { ...d, available: d.vehicle.sellableSeats - used };
+        }),
       );
     },
     async save(input) {
@@ -102,51 +104,33 @@ export async function createDepartures(db, { clock, tx, operations, cleanup }) {
             old.vehicle.passengerSeats !== input.passengerSeats);
         if (
           changed &&
-          (await db
-            .prepare(
-              "SELECT 1 FROM seat_locks WHERE departure_id=? AND expires_at>? LIMIT 1",
-            )
-            .get(id, clock()))
+          (await db.one("seat_locks", {
+            departure_id: id,
+            expires_at: { $gt: clock() },
+          }))
         )
           throw new AppError(
             409,
             "Ayrılmış koltuklar varken tarih, fiyat veya araç değiştirilemez. Yolcuyu başka sefere taşıyabilirsiniz.",
           );
-        if (old)
-          await db
-            .prepare(
-              "UPDATE departures SET date=?,price=?,active=?,start_time=?,pickup=?,guide_name=?,guide_phone=?,vehicle_model=?,passenger_seats=? WHERE id=?",
-            )
-            .run(
-              input.date,
-              input.price,
-              input.active ? 1 : 0,
-              input.startTime,
-              input.pickup,
-              input.guideName,
-              input.guidePhone,
-              input.vehicleModel,
-              input.passengerSeats,
-              id,
-            );
+        const fields = {
+          date: input.date,
+          price: input.price,
+          active: input.active ? 1 : 0,
+          start_time: input.startTime,
+          pickup: input.pickup,
+          guide_name: input.guideName,
+          guide_phone: input.guidePhone,
+          vehicle_model: input.vehicleModel,
+          passenger_seats: input.passengerSeats,
+        };
+        if (old) await db.update("departures", { _id: id }, fields);
         else
-          await db
-            .prepare(
-              "INSERT INTO departures(id,tour_id,date,price,active,start_time,pickup,guide_name,guide_phone,vehicle_model,passenger_seats) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-            )
-            .run(
-              id,
-              input.tourId,
-              input.date,
-              input.price,
-              input.active ? 1 : 0,
-              input.startTime,
-              input.pickup,
-              input.guideName,
-              input.guidePhone,
-              input.vehicleModel,
-              input.passengerSeats,
-            );
+          await db.insert("departures", id, {
+            id,
+            tour_id: input.tourId,
+            ...fields,
+          });
         return this.get(id, { allowClosed: true, allowPast: true });
       });
     },

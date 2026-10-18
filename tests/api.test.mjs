@@ -364,3 +364,54 @@ test("native preview paths accept local video files and reject external or trave
       400,
     );
 });
+test("guests cannot hold more than the guest seat cap or flood holds", async (t) => {
+  const store = await openStore(":memory:");
+  const app = createApp(store, {
+    env: { GUEST_MAX_SEATS: "3", IP_MAX_HELD_SEATS: "4" },
+    reviewsService: { get: async () => ({ status: "not_configured", reviews: [] }) },
+  });
+  const server = app.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(async () => {
+    await new Promise((r) => server.close(r));
+    await store.db.close();
+  });
+  const base = `http://127.0.0.1:${server.address().port}/api`;
+  const post = (path, body) =>
+    fetch(base + path, {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json", "X-Rota-Client": "web" },
+    });
+  const [d] = await (await fetch(base + "/tours/ani-cildir/departures")).json();
+  assert.equal((await post("/holds", { departureId: d.id, seats: [1, 2, 3, 4] })).status, 400);
+  assert.equal((await post("/holds", { departureId: d.id, seats: [1, 2, 3] })).status, 201);
+  assert.equal((await post("/holds", { departureId: d.id, seats: [4, 5] })).status, 429);
+});
+test("security headers on every response, CSP only in production; health checks the database", async (t) => {
+  const store = await openStore(":memory:");
+  const start = async (env) => {
+    const app = createApp(store, {
+      env,
+      reviewsService: { get: async () => ({ status: "not_configured", reviews: [] }) },
+    });
+    const server = app.listen(0, "127.0.0.1");
+    await once(server, "listening");
+    t.after(() => new Promise((r) => server.close(r)));
+    return `http://127.0.0.1:${server.address().port}`;
+  };
+  t.after(() => store.db.close());
+  const dev = await start({});
+  const r = await fetch(dev + "/api/health");
+  assert.equal(r.status, 200);
+  assert.deepEqual(
+    { ok: (await r.json()).database, frame: r.headers.get("x-frame-options") },
+    { ok: "ok", frame: "SAMEORIGIN" },
+  );
+  assert.ok(r.headers.get("x-request-id"));
+  assert.equal(r.headers.get("content-security-policy"), null);
+  const prod = await start({ NODE_ENV: "production" });
+  const p = await fetch(prod + "/robots.txt");
+  assert.match(p.headers.get("content-security-policy"), /frame-ancestors 'self'/);
+  assert.match(p.headers.get("content-security-policy"), /script-src 'self' https:\/\/www\.instagram\.com;/);
+});

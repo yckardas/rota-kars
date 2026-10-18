@@ -12,7 +12,8 @@ if (!existsSync(settings))
       "NODE_ENV=production",
       "DEMO_MODE=1",
       "PORT=5180",
-      "DATABASE_PATH=./data/live-demo.sqlite",
+      "MONGODB_URI=mongodb://127.0.0.1:27017/?replicaSet=rs0&directConnection=true",
+      "MONGODB_DB=rota-kars-demo",
       "TRUST_PROXY=1",
       "PAYMENT_PROVIDER=disabled",
       "GOOGLE_REVIEWS_PROVIDER=business",
@@ -24,10 +25,7 @@ if (!existsSync(settings))
 const config = parseEnv(readFileSync(settings, "utf8"));
 if (!existsSync(new URL("../dist/index.html", import.meta.url)))
   throw new Error("Önce npm run build çalıştırın.");
-if (
-  config.DATABASE_PATH === "./data/rota-kars-18-plus-1.sqlite" ||
-  config.DATABASE_PATH === "./data/rota-kars.sqlite"
-)
+if (!config.MONGODB_DB || config.MONGODB_DB === "rota-kars")
   throw new Error("Canlı demo için ayrı bir veritabanı kullanın.");
 // Deliberately isolate the demo from the developer's service credentials and .env.
 const child = spawn(process.execPath, ["server/index.mjs"], {

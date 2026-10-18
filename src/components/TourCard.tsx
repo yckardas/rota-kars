@@ -37,7 +37,7 @@ export function TourCard({ tour }: { tour: Tour }) {
           </span>
           <div>
             <strong>{currency(tour.price)}</strong>
-            <small>örnek kişi başı fiyat</small>
+            <small>kişi başı</small>
           </div>
         </div>
       </div>

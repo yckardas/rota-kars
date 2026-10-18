@@ -20,6 +20,7 @@ import "@fontsource/onest/latin-ext-700.css";
 import "@fontsource/onest/latin-700.css";
 import "./styles.css";
 import { api } from "./lib/api";
+import { usePageMeta } from "./lib/seo";
 import type { Catalog } from "./lib/types";
 import { Layout } from "./components/Layout";
 import { Home } from "./pages/Home";
@@ -50,31 +51,7 @@ function App() {
         ),
       );
   }, []);
-  useEffect(() => {
-    const name =
-      location.pathname === "/uyelik"
-        ? "Üyelik"
-        : location.pathname === "/hesabim"
-          ? "Hesabım"
-          : location.pathname.startsWith("/hizmetler")
-            ? catalog?.services.find((s) =>
-                location.pathname.endsWith("/" + s.id),
-              )?.title || "Hizmetler"
-            : location.pathname === "/turlar"
-              ? "Turlarımız"
-              : location.pathname === "/konaklama"
-                ? "Konaklama"
-                : location.pathname.startsWith("/rezervasyon")
-                  ? "Rezervasyon"
-                  : location.pathname === "/iletisim"
-                    ? "İletişim"
-                    : location.pathname === "/hakkimizda"
-                      ? "Hakkımızda"
-                      : catalog?.tours.find(
-                          (t) => location.pathname === "/turlar/" + t.id,
-                        )?.name;
-    document.title = (name ? name + " | " : "") + "Rota Kars Turizm";
-  }, [location.pathname, catalog]);
+  usePageMeta(location.pathname);
   if (error)
     return (
       <div className="app-loading">
@@ -158,7 +135,10 @@ function App() {
         <Route path="/konaklama" element={<Hotels />} />
         <Route path="/hakkimizda" element={<About />} />
         <Route path="/iletisim" element={<Contact catalog={catalog} />} />
-        <Route path="/bilgilendirme" element={<Information />} />
+        <Route
+          path="/bilgilendirme"
+          element={<Information catalog={catalog} />}
+        />
         <Route
           path="*"
           element={

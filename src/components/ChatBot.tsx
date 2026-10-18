@@ -86,34 +86,28 @@ function readSession(): Message[] {
   } catch {}
   return [greeting];
 }
+// Single source for internal links the assistant may render as clickable.
+const LINK_SOURCE =
+  "\\/(?:rezervasyonum|rezervasyon|turlar|konaklama|iletisim|hakkimizda|uyelik|hesabim|hizmetler)(?:\\/[a-z0-9-]+)?(?![a-z0-9/-])|\\/bilgilendirme(?:#iptal)?(?![a-z0-9-])|\\/#(?:yorumlar|instagram|hizmetler)(?![a-z0-9-])";
+const LINK_EXACT = new RegExp("^(?:" + LINK_SOURCE + ")$");
+const LINK_SPLIT = new RegExp("(" + LINK_SOURCE + ")", "g");
 function safeLink(href?: string) {
-  return Boolean(
-    (href &&
-      /^\/(?:turlar|rezervasyon|rezervasyonum|konaklama|iletisim|hakkimizda|uyelik|hesabim|hizmetler)(?:\/[a-z0-9-]+)?$/.test(
-        href,
-      )) ||
-    href === "/#yorumlar" ||
-    href === "/#instagram",
-  );
+  return Boolean(href && LINK_EXACT.test(href));
 }
 function Rich({ text }: { text: string }) {
   return (
     <>
-      {text
-        .split(
-          /(\/(?:turlar|rezervasyon|rezervasyonum|konaklama|iletisim)(?:\/[a-z0-9-]+)?)/g,
-        )
-        .map((part, i) =>
-          i % 2 && safeLink(part) ? (
-            <Link key={i} to={part}>
-              {part.startsWith("/rezervasyon/")
-                ? "Koltuk seç"
-                : "İlgili sayfayı aç"}
-            </Link>
-          ) : (
-            part
-          ),
-        )}
+      {text.split(LINK_SPLIT).map((part, i) =>
+        i % 2 && safeLink(part) ? (
+          <Link key={i} to={part}>
+            {part.startsWith("/rezervasyon/")
+              ? "Koltuk seç"
+              : "İlgili sayfayı aç"}
+          </Link>
+        ) : (
+          part
+        ),
+      )}
     </>
   );
 }
@@ -342,7 +336,7 @@ export function ChatBot({ whatsapp }: { whatsapp: string }) {
                           <small>{c.duration}</small>
                           <b>
                             {currency(c.price)}
-                            <em> örnek kişi başı</em>
+                            <em> kişi başı</em>
                           </b>
                         </span>
                         <ArrowUpRight size={14} />

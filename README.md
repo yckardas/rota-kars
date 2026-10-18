@@ -32,9 +32,11 @@ Adres: http://127.0.0.1:5173/yonetim
 
 Panelde ön rezervasyonlar ve talepler görüntülenir; oteller ve Instagram videoları yönetilir, Google yorumlarının tur eşleşmeleri düzeltilir. **Tur ve araç planı** sekmesinde tur satışını açıp kapatabilir, araç sınıfı ve kapasite seçebilirsiniz. Koltuk haritası ve sunucu kapasite kontrolü bu ayara uyar. Ayrılmış koltuk bulunan turda araç düzeni değiştirilmez. **Sefer planı**, **Rezervasyonlar**, **Günlük operasyon**, **Kampanyalar** ve **Bildirim kuyruğu** sekmeleri tarih bazında planlama, tahsilat/iade defteri, acente onayı, yolcu listesi ve QR katılım yönetimini sunar.
 
-Railway MySQL değişkenleri, dağıtım hazırlığı, hesap güvenliği, kampanyalar ve bildirim kurulumu: [RAILWAY-AND-OPERATIONS.md](docs/RAILWAY-AND-OPERATIONS.md). Henüz Railway taşıması yapılmadı.
+Railway MongoDB (replica set) kurulumu, dağıtım hazırlığı, hesap güvenliği, kampanyalar ve bildirim kurulumu: [RAILWAY-AND-OPERATIONS.md](docs/RAILWAY-AND-OPERATIONS.md). Henüz Railway taşıması yapılmadı.
 
 ## Tamamlanan kapsam
+
+- SEO (`server/seo.mjs`): her sayfa için sunucuda üretilen başlık, açıklama, canonical, Open Graph ve JSON-LD (TravelAgency, TouristTrip + Offer, Service, BreadcrumbList); `robots.txt`, görselli `sitemap.xml`, bilinmeyen adreslere gerçek 404, kişisel sayfalarda `noindex`. Uygulama içi gezintide `/api/meta` ile güncellenir. Yayında `SITE_URL` tanımlanmalıdır.
 
 - Responsive ana sayfa, tur listesi ve detayları, kısa fotoğraflı hikâyeler.
 - Tur bazında değişen araç kapasitesi ve satış durumu. Varsayılan 18+1 midibüs: 1 şoför, 1 rehber ve 17 misafir. Örneğin 9+1 seçilirse 8 misafir koltuğu oluşur.
@@ -67,7 +69,7 @@ Railway MySQL değişkenleri, dağıtım hazırlığı, hesap güvenliği, kampa
 
 ## Veri ve sınırlar
 
-SQLite dosyası varsayılan olarak `data/rota-kars.sqlite` içindedir ve Git tarafından yok sayılır. `.env` ve gerçek veri dosyalarını paylaşmayın. Geliştirme temizliği yapmadan önce veri dosyasını yedekleyin. API fiyatları kuruş cinsinden tutar ve toplamı sunucuda hesaplar.
+Veriler MongoDB'de tutulur (replica set şart). Yerelde `docker compose up -d mongo` ile başlatıp `.env` içine `MONGODB_URI=mongodb://127.0.0.1:27017/?replicaSet=rs0&directConnection=true` yazın. `.env` dosyasını paylaşmayın. API fiyatları kuruş cinsinden tutar ve toplamı sunucuda hesaplar.
 
 Tarih ve fiyatlar yerel örnek veridir. Kaynak web fiyatları canlı teklif sayılmaz. Araç yerleşimleri seçilen sınıfa göre 1+1, 2+1 veya 2+2 kapasite şablonlarıdır; fiziksel aracın onaylı şemasıyla teyit edilmelidir. Yolcu kapasitesi rehberi içerir, şoför ayrıdır.
 
@@ -75,7 +77,7 @@ Müşteri yayını öncesinde gerçek sefer takvimi ve fiyatlar, araç şeması,
 
 ## Teknoloji
 
-React + TypeScript, Vite, Express, Node SQLite. Fontlar yerel `@fontsource` paketlerinden gelir; font için üçüncü tarafa istek yapılmaz. Google sırrı ön yüze gönderilmez. Ödemeler için ayrı adapter sınırı korunur.
+React + TypeScript, Vite, Express, MongoDB (resmî Node sürücüsü). Fontlar yerel `@fontsource` paketlerinden gelir; font için üçüncü tarafa istek yapılmaz. Google sırrı ön yüze gönderilmez. Ödemeler için ayrı adapter sınırı korunur.
 
 ## Doğrulama
 
@@ -85,4 +87,4 @@ Tarayıcıda masaüstü ve 390px mobil genişlikte tur keşfi, koltuk, yolcu bil
 
 ## Paylaşılabilir canlı demo
 
-`npm run build` ardından `npm run demo`, ana `.env` ve müşteri verilerinden ayrı bir production demo başlatır. Yönetici parolası `.env.demo`, veritabanı `data/live-demo.sqlite` içindedir. Geçici HTTPS tüneli ve yeniden başlatma adımları için [LIVE-DEMO.md](docs/LIVE-DEMO.md).
+`npm run build` ardından `npm run demo`, ana `.env` ve müşteri verilerinden ayrı bir production demo başlatır. Yönetici parolası `.env.demo`, veritabanı yerel Mongo'daki ayrı `rota-kars-demo` veritabanıdır. Geçici HTTPS tüneli ve yeniden başlatma adımları için [LIVE-DEMO.md](docs/LIVE-DEMO.md).

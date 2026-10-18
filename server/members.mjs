@@ -7,6 +7,7 @@ import {
 } from "node:crypto";
 import { promisify } from "node:util";
 import { AppError } from "./store.mjs";
+import { fromJson } from "./database.mjs";
 const derive = promisify(scrypt),
   digest = (s) => createHash("sha256").update(s).digest("hex");
 export async function hashPassword(password) {
@@ -27,12 +28,15 @@ export async function checkPassword(password, stored) {
 }
 export const wheelPrizes = [5, 10, 5, 15, 10, 5];
 export async function createMembers(db, { clock, tx, campaigns }) {
-  await db.exec(`CREATE TABLE IF NOT EXISTS members(id TEXT PRIMARY KEY,name TEXT NOT NULL,email TEXT NOT NULL UNIQUE,password_hash TEXT,referral_code TEXT NOT NULL UNIQUE,created_at INTEGER NOT NULL);
- CREATE TABLE IF NOT EXISTS member_sessions(token_hash TEXT PRIMARY KEY,member_id TEXT NOT NULL REFERENCES members(id),expires_at INTEGER NOT NULL);
- CREATE TABLE IF NOT EXISTS social_accounts(provider TEXT NOT NULL,subject TEXT NOT NULL,member_id TEXT NOT NULL REFERENCES members(id),PRIMARY KEY(provider,subject));
- CREATE TABLE IF NOT EXISTS member_coupons(id TEXT PRIMARY KEY,member_id TEXT NOT NULL REFERENCES members(id),percent INTEGER NOT NULL CHECK(percent IN(5,10,15)),source TEXT NOT NULL,created_at INTEGER NOT NULL,expires_at INTEGER NOT NULL,used_reservation TEXT);
- CREATE TABLE IF NOT EXISTS member_spins(member_id TEXT PRIMARY KEY REFERENCES members(id),coupon_id TEXT NOT NULL,prize_index INTEGER NOT NULL);
- CREATE TABLE IF NOT EXISTS referrals(friend_id TEXT PRIMARY KEY REFERENCES members(id),inviter_id TEXT NOT NULL REFERENCES members(id),rewarded_at INTEGER);`);
+  await Promise.all([
+    db.index("members", { email: 1 }, { unique: true }),
+    db.index("members", { referral_code: 1 }, { unique: true }),
+    db.index("member_sessions", { expires_at: 1 }),
+    db.index("social_accounts", { member_id: 1 }),
+    db.index("member_coupons", { member_id: 1, created_at: -1 }),
+    db.index("member_coupons", { used_reservation: 1 }),
+    db.index("referrals", { inviter_id: 1 }),
+  ]);
   const publicMember = (m) =>
     m
       ? {
@@ -44,66 +48,49 @@ export async function createMembers(db, { clock, tx, campaigns }) {
           phone: m.phone || "",
         }
       : null;
-  const couponColumns = (
-    await db.prepare("PRAGMA table_info(member_coupons)").all()
-  ).map((c) => c.name);
-  if (!couponColumns.includes("policy_json"))
-    await db.exec("ALTER TABLE member_coupons ADD COLUMN policy_json TEXT");
-  const spinColumns = (
-    await db.prepare("PRAGMA table_info(member_spins)").all()
-  ).map((c) => c.name);
-  if (!spinColumns.includes("sectors_json"))
-    await db.exec("ALTER TABLE member_spins ADD COLUMN sectors_json TEXT");
   const coupon = async (memberId, percent, source) => {
     const policy = await campaigns.get();
     const id = randomBytes(16).toString("hex");
-    await db
-      .prepare(
-        "INSERT INTO member_coupons(id,member_id,percent,source,created_at,expires_at,policy_json) VALUES(?,?,?,?,?,?,?)",
-      )
-      .run(
-        id,
-        memberId,
-        percent,
-        source,
-        clock(),
-        clock() + policy.validDays * 86400000,
-        JSON.stringify({ minTotal: policy.minTotal, tourIds: policy.tourIds }),
-      );
-    return await db.prepare("SELECT * FROM member_coupons WHERE id=?").get(id);
+    await db.insert("member_coupons", id, {
+      id,
+      member_id: memberId,
+      percent,
+      source,
+      created_at: clock(),
+      expires_at: clock() + policy.validDays * 86400000,
+      used_reservation: null,
+      policy_json: { minTotal: policy.minTotal, tourIds: policy.tourIds },
+    });
+    return db.one("member_coupons", { _id: id });
   };
   const insert = async ({ name, email, passwordHash = null, referralCode }) => {
     const normalized = email.trim().toLowerCase();
-    if (await db.prepare("SELECT 1 FROM members WHERE email=?").get(normalized))
+    if (await db.one("members", { email: normalized }))
       throw new AppError(409, "Bu e-posta ile bir hesap var. Giriş yapın.");
     let inviter = null;
     if (referralCode) {
-      inviter = await db
-        .prepare("SELECT id FROM members WHERE referral_code=?")
-        .get(referralCode.toUpperCase());
+      inviter = await db.one("members", {
+        referral_code: referralCode.toUpperCase(),
+      });
       if (!inviter)
         throw new AppError(400, "Davet kodu bulunamadı. Kodu kontrol edin.");
     }
     const id = randomBytes(16).toString("hex");
-    await db
-      .prepare(
-        "INSERT INTO members(id,name,email,password_hash,referral_code,created_at) VALUES(?,?,?,?,?,?)",
-      )
-      .run(
-        id,
-        name,
-        normalized,
-        passwordHash,
-        randomBytes(5).toString("hex").toUpperCase(),
-        clock(),
-      );
+    await db.insert("members", id, {
+      id,
+      name,
+      email: normalized,
+      password_hash: passwordHash,
+      referral_code: randomBytes(5).toString("hex").toUpperCase(),
+      created_at: clock(),
+    });
     if (inviter)
-      await db
-        .prepare("INSERT INTO referrals VALUES(?,?,NULL)")
-        .run(id, inviter.id);
-    return publicMember(
-      await db.prepare("SELECT * FROM members WHERE id=?").get(id),
-    );
+      await db.insert("referrals", id, {
+        friend_id: id,
+        inviter_id: inviter.id,
+        rewarded_at: null,
+      });
+    return publicMember(await db.one("members", { _id: id }));
   };
   return {
     async register(input) {
@@ -117,20 +104,18 @@ export async function createMembers(db, { clock, tx, campaigns }) {
       );
     },
     async login(email, password) {
-      const row = await db
-        .prepare("SELECT * FROM members WHERE email=?")
-        .get(email.trim().toLowerCase());
+      const row = await db.one("members", { email: email.trim().toLowerCase() });
       if (!(await checkPassword(password, row?.password_hash)))
         throw new AppError(401, "E-posta veya parola hatalı.");
       return publicMember(row);
     },
     social({ provider, subject, email, name, referralCode, linkMemberId }) {
       return tx(async () => {
-        const linked = await db
-          .prepare(
-            "SELECT m.* FROM social_accounts s JOIN members m ON m.id=s.member_id WHERE s.provider=? AND s.subject=?",
-          )
-          .get(provider, subject);
+        const account = await db.one("social_accounts", {
+            _id: `${provider}:${subject}`,
+          }),
+          linked =
+            account && (await db.one("members", { _id: account.member_id }));
         if (linked) {
           if (linkMemberId && linked.id !== linkMemberId)
             throw new AppError(409, "Bu sosyal hesap başka bir üyeye bağlı.");
@@ -138,9 +123,7 @@ export async function createMembers(db, { clock, tx, campaigns }) {
         }
         let member;
         if (linkMemberId) {
-          const existing = await db
-            .prepare("SELECT * FROM members WHERE id=?")
-            .get(linkMemberId);
+          const existing = await db.one("members", { _id: linkMemberId });
           if (!existing || existing.email !== email.toLowerCase())
             throw new AppError(
               409,
@@ -153,74 +136,82 @@ export async function createMembers(db, { clock, tx, campaigns }) {
             email,
             referralCode,
           });
-        await db
-          .prepare("INSERT INTO social_accounts VALUES(?,?,?)")
-          .run(provider, subject, member.id);
-        await db
-          .prepare("UPDATE members SET email_verified=1 WHERE id=?")
-          .run(member.id);
+        await db.insert("social_accounts", `${provider}:${subject}`, {
+          provider,
+          subject,
+          member_id: member.id,
+        });
+        await db.update("members", { _id: member.id }, { email_verified: 1 });
         return { ...member, emailVerified: true };
       });
     },
     async session(memberId) {
       const token = randomBytes(32).toString("hex");
-      await db
-        .prepare("DELETE FROM member_sessions WHERE expires_at<=?")
-        .run(clock());
-      await db
-        .prepare("INSERT INTO member_sessions VALUES(?,?,?)")
-        .run(digest(token), memberId, clock() + 7 * 86400000);
+      await db.remove("member_sessions", { expires_at: { $lte: clock() } });
+      await db.insert("member_sessions", digest(token), {
+        token_hash: digest(token),
+        member_id: memberId,
+        expires_at: clock() + 7 * 86400000,
+      });
       return token;
     },
     async fromSession(token) {
       if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
+      const session = await db.one("member_sessions", {
+        _id: digest(token),
+        expires_at: { $gt: clock() },
+      });
       return publicMember(
-        await db
-          .prepare(
-            "SELECT m.* FROM member_sessions s JOIN members m ON m.id=s.member_id WHERE s.token_hash=? AND s.expires_at>?",
-          )
-          .get(digest(token), clock()),
+        session && (await db.one("members", { _id: session.member_id })),
       );
     },
     async logout(token) {
       if (token)
-        await db
-          .prepare("DELETE FROM member_sessions WHERE token_hash=?")
-          .run(digest(token));
+        await db.remove("member_sessions", { _id: digest(token) });
     },
     async dashboard(memberId) {
-      const row = await db
-        .prepare("SELECT * FROM members WHERE id=?")
-        .get(memberId);
+      const row = await db.one("members", { _id: memberId });
       if (!row) throw new AppError(401, "Üye girişi gerekli.");
+      const reservations = await db.find(
+        "reservations",
+        { member_id: memberId },
+        { sort: { created_at: -1 }, limit: 50 },
+      );
+      const departures = new Map(
+        (
+          await db.find("departures", {
+            _id: { $in: [...new Set(reservations.map((r) => r.departure_id))] },
+          })
+        ).map((d) => [d.id, d]),
+      );
       return {
         member: publicMember(row),
-        coupons: await db
-          .prepare(
-            "SELECT * FROM member_coupons WHERE member_id=? ORDER BY created_at DESC,id",
-          )
-          .all(memberId),
-        spin:
-          (await db
-            .prepare("SELECT * FROM member_spins WHERE member_id=?")
-            .get(memberId)) || null,
-        referrals: await db
-          .prepare(
-            "SELECT count(*) total,COALESCE(sum(rewarded_at IS NOT NULL),0) rewarded FROM referrals WHERE inviter_id=?",
-          )
-          .get(memberId),
-        reservations: await db
-          .prepare(
-            "SELECT r.reference,r.total,r.status,r.created_at,d.date,d.tour_id AS tourId FROM reservations r JOIN departures d ON d.id=r.departure_id WHERE r.member_id=? ORDER BY r.created_at DESC LIMIT 50",
-          )
-          .all(memberId),
+        coupons: await db.find(
+          "member_coupons",
+          { member_id: memberId },
+          { sort: { created_at: -1, id: 1 } },
+        ),
+        spin: (await db.one("member_spins", { _id: memberId })) || null,
+        referrals: {
+          total: await db.count("referrals", { inviter_id: memberId }),
+          rewarded: await db.count("referrals", {
+            inviter_id: memberId,
+            rewarded_at: { $ne: null },
+          }),
+        },
+        reservations: reservations.map((r) => ({
+          reference: r.reference,
+          total: r.total,
+          status: r.status,
+          created_at: r.created_at,
+          date: departures.get(r.departure_id)?.date,
+          tourId: departures.get(r.departure_id)?.tour_id,
+        })),
       };
     },
     spin(memberId) {
       return tx(async () => {
-        const previous = await db
-          .prepare("SELECT * FROM member_spins WHERE member_id=?")
-          .get(memberId);
+        const previous = await db.one("member_spins", { _id: memberId });
         if (previous)
           throw new AppError(
             409,
@@ -231,20 +222,17 @@ export async function createMembers(db, { clock, tx, campaigns }) {
           throw new AppError(409, "Şans çarkı kampanyası şu anda kapalı.");
         if (
           campaign.requireVerified &&
-          !(
-            await db
-              .prepare("SELECT email_verified FROM members WHERE id=?")
-              .get(memberId)
-          )?.email_verified
+          !(await db.one("members", { _id: memberId }))?.email_verified
         )
           throw new AppError(403, "Önce e-posta adresinizi doğrulayın.");
         const index = randomInt(campaign.sectors.length),
           prize = await coupon(memberId, campaign.sectors[index], "wheel");
-        await db
-          .prepare(
-            "INSERT INTO member_spins(member_id,coupon_id,prize_index,sectors_json) VALUES(?,?,?,?)",
-          )
-          .run(memberId, prize.id, index, JSON.stringify(campaign.sectors));
+        await db.insert("member_spins", memberId, {
+          member_id: memberId,
+          coupon_id: prize.id,
+          prize_index: index,
+          sectors_json: campaign.sectors,
+        });
         return {
           coupon: prize,
           index,
@@ -261,27 +249,22 @@ export async function createMembers(db, { clock, tx, campaigns }) {
         };
       if (!memberId)
         throw new AppError(401, "Kupon kullanmak için üye girişi yapın.");
-      const c = await db
-        .prepare(
-          "SELECT * FROM member_coupons WHERE id=? AND member_id=? AND expires_at>? AND used_reservation IS NULL",
-        )
-        .get(couponId, memberId, clock());
+      const c = await db.one("member_coupons", {
+        _id: couponId,
+        member_id: memberId,
+        expires_at: { $gt: clock() },
+        used_reservation: null,
+      });
       if (!c)
         throw new AppError(
           409,
           "Kupon geçersiz, süresi dolmuş veya kullanılmış.",
         );
       const settings = await campaigns.get(),
-        policy = c.policy_json
-          ? JSON.parse(c.policy_json)
-          : { minTotal: 0, tourIds: [] };
+        policy = fromJson(c.policy_json, null) || { minTotal: 0, tourIds: [] };
       if (
         settings.requireVerified &&
-        !(
-          await db
-            .prepare("SELECT email_verified FROM members WHERE id=?")
-            .get(memberId)
-        )?.email_verified
+        !(await db.one("members", { _id: memberId }))?.email_verified
       )
         throw new AppError(403, "Kupon kullanmak için e-postanızı doğrulayın.");
       if (subtotal < policy.minTotal)
@@ -300,37 +283,54 @@ export async function createMembers(db, { clock, tx, campaigns }) {
     },
     async consumeCoupon(couponId, reservationId) {
       if (couponId) {
-        const updated = await db
-          .prepare(
-            "UPDATE member_coupons SET used_reservation=? WHERE id=? AND used_reservation IS NULL",
-          )
-          .run(reservationId, couponId);
-        if (!updated.changes)
+        const updated = await db.update(
+          "member_coupons",
+          { _id: couponId, used_reservation: null },
+          { used_reservation: reservationId },
+        );
+        if (!updated)
           throw new AppError(409, "Kupon az önce kullanıldı.");
       }
     },
     async releaseCoupons() {
-      await db
-        .prepare(
-          "UPDATE member_coupons SET used_reservation=NULL WHERE used_reservation IN (SELECT id FROM reservations WHERE status IN ('cancelled','expired'))",
+      // İptal edilen veya süresi dolan ön rezervasyondaki kupon yeniden kullanılabilir olur.
+      const used = await db.find(
+        "member_coupons",
+        { used_reservation: { $ne: null } },
+        { projection: { used_reservation: 1 } },
+      );
+      if (!used.length) return;
+      const released = (
+        await db.find(
+          "reservations",
+          {
+            _id: { $in: used.map((c) => c.used_reservation) },
+            status: { $in: ["cancelled", "expired"] },
+          },
+          { projection: { id: 1 } },
         )
-        .run();
+      ).map((r) => r.id);
+      if (released.length)
+        await db.updateMany(
+          "member_coupons",
+          { used_reservation: { $in: released } },
+          { used_reservation: null },
+        );
     },
     async rewardReferral(memberId, event) {
       if (!memberId) return;
       const settings = await campaigns.get();
       if (!settings.active || settings.referralTrigger !== event) return;
-      const relation = await db
-        .prepare(
-          "SELECT * FROM referrals WHERE friend_id=? AND rewarded_at IS NULL",
-        )
-        .get(memberId);
+      const relation = await db.one("referrals", {
+        _id: memberId,
+        rewarded_at: null,
+      });
       if (!relation) return;
-      await db
-        .prepare(
-          "UPDATE referrals SET rewarded_at=? WHERE friend_id=? AND rewarded_at IS NULL",
-        )
-        .run(clock(), memberId);
+      await db.update(
+        "referrals",
+        { _id: memberId, rewarded_at: null },
+        { rewarded_at: clock() },
+      );
       await coupon(memberId, 10, "referral-friend");
       await coupon(relation.inviter_id, 10, "referral-inviter");
     },

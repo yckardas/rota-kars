@@ -16,6 +16,7 @@ import {
   Facebook,
 } from "lucide-react";
 import { api, post } from "../lib/api";
+import { safeNextPath } from "../lib/phone";
 import { currency, dateLabel } from "../lib/types";
 import { useMember, type MemberDashboard, type Coupon } from "../lib/member";
 function GoogleMark() {
@@ -52,15 +53,16 @@ export function Membership() {
     [providers, setProviders] = useState<{ id: string; enabled: boolean }[]>(
       [],
     ),
-    [ref, setRef] = useState(params.get("ref") || "");
+    [ref, setRef] = useState(params.get("ref") || ""),
+    destination = safeNextPath(params.get("next")) || "/hesabim";
   useEffect(() => {
     api<{ id: string; enabled: boolean }[]>("/auth/providers")
       .then(setProviders)
       .catch(() => {});
   }, []);
   useEffect(() => {
-    if (member) navigate("/hesabim", { replace: true });
-  }, [member, navigate]);
+    if (member) navigate(destination, { replace: true });
+  }, [member, navigate, destination]);
   useEffect(() => {
     if (params.has("error"))
       setError(
@@ -87,7 +89,7 @@ export function Membership() {
           : {}),
       });
       await refresh();
-      navigate("/hesabim");
+      navigate(destination, { replace: true });
     } catch (e) {
       setError((e as Error).message);
     } finally {

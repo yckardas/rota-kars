@@ -70,3 +70,11 @@ Hesaptaki tüm yeni içerikleri otomatik listelemek ayrı bir Meta Instagram API
 Chatbot önceki mesajlardan rotayı ve kişi sayısını alır; sayfadaki turu bağlam olarak kullanır. Örnek tutar/kapora hesaplar, program/kapsam ve örnek hareket kayıtlarından yer bilgisini gösterir, işlem sayfalarına bağlantı sunar. Rezervasyon, ödeme veya iade işlemi yapmaz. Sohbet aynı sekmede sessionStorage içinde saklanır, yeni sohbet düğmesiyle temizlenir. Rutin sorular yerel kurallarla cevaplanır; `ANTHROPIC_API_KEY` varsa çözümlenemeyen sorular Anthropic'e iletilir. Bu sürümün gerçek API anahtarı olmadan bulut yanıtı doğrulanmamıştır.
 
 Canlı Google kurulumu için adımlar: [GOOGLE-BUSINESS-SETUP.md](./GOOGLE-BUSINESS-SETUP.md).
+
+## Instagram videoları
+
+Kartlar videonun gerçek dosyasıyla, üzerine gelince sessiz oynar (dokunmatik cihazlarda ekranın ortasına gelen kart oynar; ses kartın köşesinden açılır). Video dosyası üç yerden gelebilir:
+
+1. **Instagram API (önerilen):** Instagram hesabı Profesyonel (İşletme/İçerik üreticisi) olmalı. [Meta for Developers](https://developers.facebook.com/) → uygulama oluştur → *Instagram* ürünü → *API setup with Instagram login* → hesabı ekleyip **Generate token**. Token'ı `INSTAGRAM_ACCESS_TOKEN` olarak girin. Sunucu son Reels'leri (`INSTAGRAM_MAX_VIDEOS`, varsayılan 8) `INSTAGRAM_CACHE_MINUTES` (30) dakikalık önbellekle çeker; 60 günlük token'ı günde bir yeniler ve veritabanında saklar. Hata olursa yönetim panelindeki paylaşımlara döner.
+2. **Kendi dosyanız:** MP4/WebM dosyasını `public/videos/` altına koyup yönetim panelinde paylaşımın video alanına `/videos/dosya.mp4` yazın.
+3. **Dosya yoksa:** Kart tıklanınca Instagram'ın kendi oynatıcısı sayfa içinde pencerede açılır (Instagram bu oynatıcıda otomatik oynatmaya izin vermez).

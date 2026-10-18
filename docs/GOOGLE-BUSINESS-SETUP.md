@@ -22,14 +22,22 @@ https://www.googleapis.com/auth/business.manage
 
 Bu izin Google tarafında yönetim yetkileri de kapsar; uygulamamız yalnız yorum okur, yanıt veya işletme değişikliği göndermez.
 
-İlk yerel kurulumda [OAuth Playground](https://developers.google.com/oauthplayground/) kullanılabilir:
+**Önerilen yol: bağlantı sihirbazı.** Google Cloud Console → APIs & Services → Credentials → *Create credentials* → *OAuth client ID* → Application type **Desktop app**. Çıkan Client ID ve Secret'ı `.env` dosyasında `GOOGLE_CLIENT_ID` ve `GOOGLE_CLIENT_SECRET` alanlarına yazın, sonra:
+
+```sh
+npm run google:connect
+```
+
+Tarayıcıda Google onay ekranı açılır; işletmede yönetici olan hesapla izin verin. Sihirbaz refresh token'ı alır, hesap ve işletmeleri listeler, Rota Kars'ı Haritalar kaydından (CID) bulur, yorum API'sine deneme isteği atar ve `GOOGLE_REVIEWS_PROVIDER`, `GOOGLE_REFRESH_TOKEN`, `GOOGLE_ACCOUNT_ID`, `GOOGLE_LOCATION_ID` alanlarını `.env`'e yazar. Gizli değerleri ekrana basmaz. Kota 0 hatası alırsanız 1. adımdaki erişim başvurusu henüz onaylanmamıştır. Railway'de aynı altı değeri servis değişkenlerine girin.
+
+Alternatif olarak [OAuth Playground](https://developers.google.com/oauthplayground/) kullanılabilir:
 
 1. OAuth istemci türünü Web application seçin. Yetkili redirect URI olarak `https://developers.google.com/oauthplayground` ekleyin.
 2. Playground ayarlarında kendi OAuth credentials seçeneğini açıp kendi Client ID / Client Secret bilgilerinizi kullanın; offline erişimi seçin.
 3. Yukarıdaki scope ile, işletmeye yetkili Google hesabında izin verin. İzin ekranı test modundaysa hesabı test kullanıcılarına ekleyin.
 4. Authorization code'u token ile değiştirin; dönen refresh token'ı yalnız yerel `.env` dosyasına kaydedin.
 
-Canlı yayından önce Google'ın OAuth yayınlama/doğrulama gereksinimlerini tamamlayın. Bu sürüm web içinde OAuth bağlama sihirbazı içermez.
+Canlı yayından önce Google'ın OAuth yayınlama/doğrulama gereksinimlerini tamamlayın. İzin ekranı "Testing" modunda kalırsa refresh token 7 gün sonra geçersiz olur; uygulamayı "In production" durumuna alın.
 
 ## 3. Account ID ve Location ID
 
@@ -71,6 +79,7 @@ https://mybusiness.googleapis.com/v4/accounts/ACCOUNT_ID/locations/LOCATION_ID/r
 
 - `/api/reviews` yanıtında `status: connected` görünmeli; `.env` sağlayıcısı `business` olmalı. `snapshot` canlı bağlantı değildir.
 - Yerel sürüm API ayarsız veya erişilemezse tarihli mevcut Google yorum kaydını gösterir. Yorumların görünmesi tek başına bağlantının çalıştığını kanıtlamaz.
+- Tur sayfaları, yorum metninde o rotanın yerleri geçen yorumları gösterir (Ani/Çıldır → Ani turu; Van/Akdamar/Muradiye → Van turları; İshak Paşa/Tuzluca → konaklamalı Van ve Van Havzası; Nemrut/Ahlat/Tatvan → Van Havzası; Batum/Gonio → Batum; Sarıkamış/kayak → Sarıkamış). Eşleşen kelimeler vurgulanır; eşleşme yoksa acentenin genel yorumları gösterilir. Türkçe olmayan yorumlarda Google çevirisi yerine misafirin özgün metni kullanılır.
 - Yönetim panelinin Google yorumları sekmesinden tur eşlemelerini kontrol edin. Google tur kimliği sağlamaz; Ani/Çıldır gibi kelimeler metinden eşleştirilir. Belirsiz eşlemeler panelden düzeltilir.
 - Access token otomatik yenilenir, sayfalı yorumlar okunur ve canlı sonuç 15 dakika sunucu belleğinde tutulur.
 - `invalid_grant`: izin iptal edilmiş/token geçersiz olabilir; yeniden OAuth yetkilendirmesi gerekir. `403`: API erişim onayı, etkin API'ler ve işletme yetkisini kontrol edin. `404`: hesap/işletme kimliklerini kontrol edin.

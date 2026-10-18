@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
 import nodemailer from "nodemailer";
 export async function createNotifications(db, { clock, tx, env = {} }) {
-  await db.exec(
-    `CREATE TABLE IF NOT EXISTS notification_outbox(id TEXT PRIMARY KEY,recipient TEXT NOT NULL,subject TEXT NOT NULL,body TEXT NOT NULL,action_url TEXT,kind TEXT NOT NULL,dedupe_key TEXT NOT NULL UNIQUE,status TEXT NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,next_attempt_at INTEGER NOT NULL,lease_until INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,sent_at INTEGER,last_error TEXT);`,
-  );
+  await Promise.all([
+    db.index("notification_outbox", { id: 1 }, { unique: true }),
+    db.index("notification_outbox", { status: 1, next_attempt_at: 1 }),
+    db.index("notification_outbox", { created_at: -1 }),
+  ]);
   const ready = Boolean(
     env.SMTP_HOST &&
     env.MAIL_FROM &&
@@ -21,42 +23,48 @@ export async function createNotifications(db, { clock, tx, env = {} }) {
         socketTimeout: 20000,
       })
     : null;
-  return {
+  // Acente ekibine gidecek bildirimler: AGENCY_EMAIL virgülle ayrılmış liste.
+  const agencyEmails = String(env.AGENCY_EMAIL || "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+  const api = {
     configured: ready,
-    async enqueue({ email, subject, body, actionUrl = null, kind, dedupeKey }) {
-      const previous = await db
-        .prepare("SELECT id FROM notification_outbox WHERE dedupe_key=?")
-        .get(dedupeKey);
-      if (previous) return previous.id;
-      const id = randomUUID();
-      await db
-        .prepare(
-          "INSERT OR IGNORE INTO notification_outbox(id,recipient,subject,body,action_url,kind,dedupe_key,status,next_attempt_at,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
-        )
-        .run(
-          id,
+    agencyEmails,
+    async notifyAgency({ subject, body, actionUrl = null, kind, dedupeKey }) {
+      for (const email of agencyEmails)
+        await api.enqueue({
           email,
-          subject,
+          subject: "[Acente] " + subject,
           body,
           actionUrl,
-          kind,
-          dedupeKey,
-          "queued",
-          clock(),
-          clock(),
-        );
-      return (
-        await db
-          .prepare("SELECT id FROM notification_outbox WHERE dedupe_key=?")
-          .get(dedupeKey)
-      ).id;
+          kind: "agency_" + kind,
+          dedupeKey: `agency:${email}:${dedupeKey}`,
+        });
+    },
+    async enqueue({ email, subject, body, actionUrl = null, kind, dedupeKey }) {
+      // dedupe_key _id olarak kullanılır: aynı olay için ikinci mesaj kuyruğa girmez.
+      await db.insertIfAbsent("notification_outbox", dedupeKey, {
+        id: randomUUID(),
+        recipient: email,
+        subject,
+        body,
+        action_url: actionUrl,
+        kind,
+        dedupe_key: dedupeKey,
+        status: "queued",
+        attempts: 0,
+        next_attempt_at: clock(),
+        lease_until: 0,
+        created_at: clock(),
+        sent_at: null,
+        last_error: null,
+      });
+      return (await db.one("notification_outbox", { _id: dedupeKey })).id;
     },
     async list() {
       const rows = await db
-        .prepare(
-          "SELECT * FROM notification_outbox ORDER BY created_at DESC LIMIT 200",
-        )
-        .all();
+        .find("notification_outbox", {}, { sort: { created_at: -1 }, limit: 200 });
       return {
         configured: ready,
         preview: env.DEMO_MODE === "1" || env.NODE_ENV !== "production",
@@ -77,10 +85,11 @@ export async function createNotifications(db, { clock, tx, env = {} }) {
     },
     async retry(id) {
       await db
-        .prepare(
-          "UPDATE notification_outbox SET status='queued',attempts=0,next_attempt_at=?,last_error=NULL WHERE id=? AND status='failed'",
-        )
-        .run(clock(), id);
+        .update(
+          "notification_outbox",
+          { id, status: "failed" },
+          { status: "queued", attempts: 0, next_attempt_at: clock(), last_error: null },
+        );
     },
     async processBatch({
       send = transport
@@ -98,43 +107,55 @@ export async function createNotifications(db, { clock, tx, env = {} }) {
       let sent = 0;
       for (let i = 0; i < 10; i++) {
         const item = await tx(async () => {
-          const row = await db
-            .prepare(
-              "SELECT * FROM notification_outbox WHERE ((status='queued' AND next_attempt_at<=?) OR (status='sending' AND lease_until<=?)) ORDER BY created_at LIMIT 1",
-            )
-            .get(clock(), clock());
+          const row = await db.one(
+            "notification_outbox",
+            {
+              $or: [
+                { status: "queued", next_attempt_at: { $lte: clock() } },
+                { status: "sending", lease_until: { $lte: clock() } },
+              ],
+            },
+            { sort: { created_at: 1 } },
+          );
           if (!row) return null;
           await db
-            .prepare(
-              "UPDATE notification_outbox SET status='sending',lease_until=?,attempts=attempts+1 WHERE id=?",
-            )
-            .run(clock() + 60000, row.id);
+            .col("notification_outbox")
+            .updateOne(
+              { id: row.id },
+              { $set: { status: "sending", lease_until: clock() + 60000 }, $inc: { attempts: 1 } },
+              db.opts(),
+            );
           return row;
         });
         if (!item) break;
         try {
           await send(item);
           await db
-            .prepare(
-              "UPDATE notification_outbox SET status='sent',sent_at=?,lease_until=0,last_error=NULL WHERE id=?",
-            )
-            .run(clock(), item.id);
-          sent++;
-        } catch {
-          const attempts = item.attempts + 1;
-          await db
-            .prepare(
-              "UPDATE notification_outbox SET status=?,next_attempt_at=?,lease_until=0,last_error=? WHERE id=?",
-            )
-            .run(
-              attempts >= 5 ? "failed" : "queued",
-              clock() + Math.min(3600000, 60000 * 2 ** attempts),
-              "Gönderim sağlayıcısına ulaşılamadı. Ayarları kontrol edin.",
-              item.id,
+            .update(
+              "notification_outbox",
+              { id: item.id },
+              { status: "sent", sent_at: clock(), lease_until: 0, last_error: null },
             );
+          sent++;
+        } catch (e) {
+          console.error(
+            `Notification send failed (${item.kind}): ${e?.code || e?.responseCode || e?.message || "unknown"}`,
+          );
+          const attempts = item.attempts + 1;
+          await db.update(
+            "notification_outbox",
+            { id: item.id },
+            {
+              status: attempts >= 5 ? "failed" : "queued",
+              next_attempt_at: clock() + Math.min(3600000, 60000 * 2 ** attempts),
+              lease_until: 0,
+              last_error: "Gönderim sağlayıcısına ulaşılamadı. Ayarları kontrol edin.",
+            },
+          );
         }
       }
       return { sent, configured: true };
     },
   };
+  return api;
 }

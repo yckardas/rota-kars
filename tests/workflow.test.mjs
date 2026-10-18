@@ -1,10 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { openStore } from "../server/store.mjs";
-import { mysqlConfiguration } from "../server/database.mjs";
+import { mongoConfiguration } from "../server/database.mjs";
+// Bu testler çark davranışını doğrulanmamış üyelerle sınar; doğrulama kapısı ayrıca test edilir.
+const allowUnverifiedWheel = async (s) =>
+  s.campaigns.save({ ...(await s.campaigns.get()), requireVerified: false });
 async function setup(t, env = {}) {
   let now = Date.parse("2026-10-17T06:00:00Z");
   const s = await openStore(":memory:", { clock: () => now, env });
+  await allowUnverifiedWheel(s);
   t.after(() => s.db.close());
   return { s, advance: (ms) => (now += ms) };
 }
@@ -50,29 +54,38 @@ const pay = (s, r, amount = r.total, ref = "TEST-BANK-001", kind = "payment") =>
     externalReference: ref,
     kind,
   });
-test("Railway URL and variable aliases resolve without echoing invalid credentials", () => {
+test("Mongo connection string is validated without echoing credentials", () => {
   assert.equal(
-    mysqlConfiguration({
-      MYSQL_URL: "mysql://root:secret@mysql.railway.internal:3306/railway",
-    }).database,
-    "railway",
+    mongoConfiguration({
+      MONGODB_URI: "mongodb://app:secret@mongodb.railway.internal:27017/rota?replicaSet=rs0&authSource=admin",
+    }).uri.startsWith("mongodb://"),
+    true,
   );
+  assert.equal(mongoConfiguration({ MONGO_URL: "mongodb+srv://x/y" }).uri, "mongodb+srv://x/y");
+  // Railway şablonunun düz MONGO_URL'ine replica set ve authSource eklenir.
+  const railway = new URL(
+    mongoConfiguration({ MONGO_URL: "mongodb://mongo:p%40ss@mongodb.railway.internal:27017" }).uri,
+  );
+  assert.equal(railway.searchParams.get("replicaSet"), "rs0");
+  assert.equal(railway.searchParams.get("authSource"), "admin");
+  assert.equal(decodeURIComponent(railway.password), "p@ss");
+  const parts = new URL(
+    mongoConfiguration({ MONGOHOST: "mongodb.railway.internal", MONGOPORT: "27017", MONGOUSER: "mongo", MONGOPASSWORD: "a/b" }).uri,
+  );
+  assert.equal(parts.hostname, "mongodb.railway.internal");
+  assert.equal(decodeURIComponent(parts.password), "a/b");
+  // Açıkça verilen parametreler korunur; yerel directConnection adresine replicaSet zorlanmaz.
   assert.equal(
-    mysqlConfiguration({
-      MYSQLHOST: "mysql",
-      MYSQLUSER: "root",
-      MYSQL_ROOT_PASSWORD: "secret",
-      MYSQL_DATABASE: "railway",
-    }).password,
-    "secret",
+    new URL(mongoConfiguration({ MONGODB_URI: "mongodb://127.0.0.1:27017/?directConnection=true" }).uri).searchParams.get("replicaSet"),
+    null,
   );
   assert.throws(
-    () => mysqlConfiguration({ MYSQL_URL: "${{MySQL.MYSQL_URL}}" }),
+    () => mongoConfiguration({ MONGODB_URI: "${{MongoDB.MONGO_URL}}" }),
     /çözülmemiş/,
   );
   assert.throws(
-    () => mysqlConfiguration({ MYSQL_URL: "invalid:secret value" }),
-    (e) => !JSON.stringify(e).includes("secret"),
+    () => mongoConfiguration({ MONGODB_URI: "postgres://user:secret@host/db" }),
+    (e) => !String(e.message).includes("secret"),
   );
 });
 test("per-date VIP capacity overrides tour template, locks protect plan and closure blocks sales", async (t) => {
@@ -228,8 +241,7 @@ test("account verification and reset are purpose-bound, hashed, single-use, expi
     msgs.find((x) => x.kind === "auth_verify").action_url,
   ).searchParams.get("token");
   assert.notEqual(
-    (await s.db.prepare("SELECT token_hash FROM account_tokens").get())
-      .token_hash,
+    (await s.db.one("account_tokens")).token_hash,
     vt,
   );
   await assert.rejects(
@@ -332,4 +344,22 @@ test("expired pre-reservation cannot be revived by recording a late manual payme
   await assert.rejects(pay(s, r), (e) => e.status === 409);
   assert.equal((await s.workflow.get(r.reference)).status, "expired");
   assert.equal((await s.workflow.ticket(r.ticket_token)).valid, false);
+});
+test("agency inbox gets alerts for new bookings, cancellations and leads; wheel needs verified email by default", async (t) => {
+  const { defaultCampaign } = await import("../server/campaigns.mjs");
+  assert.equal(defaultCampaign.requireVerified, true);
+  const { s } = await setup(t, { AGENCY_EMAIL: "ops@rotakars.test, bad-address" });
+  const [d] = await s.listDepartures("ani-cildir");
+  const r = await booking(s, d);
+  await s.cancel(r.reference, "guest@example.com");
+  await s.request("private-tour", { name: "Ayşe", phone: "05551112233", note: "6 kişi" });
+  const agency = (await s.notifications.list()).items.filter((n) => n.kind.startsWith("agency_"));
+  assert.deepEqual(
+    agency.map((n) => n.kind).sort(),
+    ["agency_cancellation_requested", "agency_request_private-tour", "agency_reservation_created"],
+  );
+  assert.ok(agency.every((n) => n.recipient === "ops@rotakars.test"));
+  const created = agency.find((n) => n.kind === "agency_reservation_created");
+  assert.match(created.body, /guest@example\.com/);
+  assert.match(created.body, /wa\.me\/905550000000/);
 });

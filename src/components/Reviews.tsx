@@ -3,11 +3,14 @@ import { ExternalLink, Quote, Star, MessageSquareText } from "lucide-react";
 import { api } from "../lib/api";
 import type { ReviewsResponse } from "../lib/types";
 export function Reviews({ tourId }: { tourId?: string }) {
+  const step = tourId ? 6 : 9;
   const [data, setData] = useState<ReviewsResponse | null>(null),
-    [failed, setFailed] = useState(false);
+    [failed, setFailed] = useState(false),
+    [visible, setVisible] = useState(step);
   useEffect(() => {
     let alive = true;
     setData(null);
+    setVisible(step);
     api<ReviewsResponse>("/reviews" + (tourId ? "?tour=" + tourId : ""))
       .then((d) => {
         if (alive) setData(d);
@@ -88,13 +91,13 @@ export function Reviews({ tourId }: { tourId?: string }) {
             <p className="review-order">
               {data.sort}{" "}
               {data.scope === "tour"
-                ? `Yorumunda ${termLabel(data.terms)} geçen misafirlerimiz.`
+                ? `Yorumunda ${termLabel(data.terms)} geçen ${data.reviews.length} misafirimiz.`
                 : data.scope === "agency"
                   ? "Bu rotaya özel yorum henüz yok; acentemizin diğer turlarına gelen yorumlar gösteriliyor."
                   : ""}
             </p>
             <div className="review-list">
-              {data.reviews.slice(0, tourId ? 6 : 9).map((r) => (
+              {data.reviews.slice(0, visible).map((r) => (
                 <article className="review" key={r.id}>
                   <div className="review-author">
                     {r.avatar ? (
@@ -141,6 +144,14 @@ export function Reviews({ tourId }: { tourId?: string }) {
                 </article>
               ))}
             </div>
+            {data.reviews.length > visible && (
+              <button
+                className="btn btn-outline review-load-more"
+                onClick={() => setVisible((v) => v + step)}
+              >
+                Daha fazla yorum göster ({data.reviews.length - visible})
+              </button>
+            )}
           </>
         ) : (
           <div className="review-empty">

@@ -4,8 +4,13 @@ import { once } from "node:events";
 import { generateKeyPairSync, sign } from "node:crypto";
 import { createApp } from "../server/app.mjs";
 import { openStore } from "../server/store.mjs";
+// Bu testler çark davranışını doğrulanmamış üyelerle sınar; doğrulama kapısı ayrıca test edilir.
+const allowUnverifiedWheel = async (s) =>
+  s.campaigns.save({ ...(await s.campaigns.get()), requireVerified: false });
 async function fixture(t, extra = {}) {
-  const store = await openStore(":memory:"),
+  const store = await openStore(":memory:");
+  await allowUnverifiedWheel(store);
+  const
     app = createApp(store, {
       env: {
         ADMIN_PASSWORD: "test-admin-only-password",
@@ -284,7 +289,7 @@ for (const provider of ["google", "apple", "facebook"])
       assert.equal(result.headers.get("location"), "/hesabim");
       assert.ok(result.headers.get("set-cookie").includes("rota_member="));
       assert.equal(
-        (await store.db.prepare("SELECT count(*) n FROM members").get()).n,
+        await store.db.count("members"),
         1,
       );
       assert.ok(

@@ -60,6 +60,15 @@ function scoped(items, tourId) {
     ? { scope: "tour", terms: tourTerms(tourId), reviews: matched }
     : { scope: "agency", terms: tourTerms(tourId), reviews: items };
 }
+// Business Profile, Türkçe olmayan yorumlarda "(Translated by Google) ... (Original) ..."
+// biçiminde iki metin döndürür; sitede misafirin özgün yazdığı metin gösterilir.
+export function cleanComment(comment = "") {
+  const text = String(comment || "");
+  const original = text.split(/\(Original\)\s*/i);
+  if (original.length > 1) return original.at(-1).trim();
+  return text.replace(/\s*\(Translated by Google\)[\s\S]*$/i, "").trim();
+}
+let lastErrorLog = 0;
 const safeUrl = (u) => {
   try {
     const url = new URL(u);
@@ -93,7 +102,11 @@ export function createReviewsService(
       ...options,
       signal: AbortSignal.timeout(12000),
     });
-    if (!r.ok) throw Error("Google review service unavailable");
+    if (!r.ok) {
+      const e = Error(`Google review service unavailable (${r.status})`);
+      e.status = r.status;
+      throw e;
+    }
     return r.json();
   }
   async function token() {
@@ -171,7 +184,7 @@ export function createReviewsService(
         author: r.reviewer?.displayName || "Google kullanıcısı",
         avatar: safeUrl(r.reviewer?.profilePhotoUrl),
         authorUrl: null,
-        text: r.comment || "",
+        text: cleanComment(r.comment),
         rating: ratings[r.starRating] || 0,
         date: r.updateTime || r.createTime,
         url: mapsUrl,
@@ -234,7 +247,19 @@ export function createReviewsService(
           sort: cache.sort,
           ...scoped(items, tourId),
         };
-      } catch {
+      } catch (e) {
+        // Kota 0 (başvuru onaysız), yetki veya ağ sorunu: teşhis için durum kodu yazılır.
+        if (Date.now() - lastErrorLog > 10 * 60 * 1000) {
+          lastErrorLog = Date.now();
+          console.error(
+            JSON.stringify({
+              level: "warn",
+              service: "google-reviews",
+              status: e?.status || null,
+              message: String(e?.message || "").slice(0, 200),
+            }),
+          );
+        }
         if (snapshot) return fromSnapshot(assignments, tourId);
         return {
           status: "temporarily_unavailable",

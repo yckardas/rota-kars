@@ -2,11 +2,15 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { openStore } from "../server/store.mjs";
 import { makeVehicle, vehicleModels } from "../server/operations.mjs";
+// Bu testler çark davranışını doğrulanmamış üyelerle sınar; doğrulama kapısı ayrıca test edilir.
+const allowUnverifiedWheel = async (s) =>
+  s.campaigns.save({ ...(await s.campaigns.get()), requireVerified: false });
 const fixture = async () => {
   let now = Date.now();
   const store = await openStore(":memory:", {
     clock: () => now,
   });
+  await allowUnverifiedWheel(store);
   return {
     store,
     advance: (ms) => {
@@ -42,14 +46,12 @@ test("membership passwords and session tokens are hashed; login, unique email an
     const token = await s.members.session(m.id);
     assert.equal((await s.members.fromSession(token)).id, m.id);
     assert.notEqual(
-      (await s.db.prepare("SELECT token_hash FROM member_sessions").get())
-        .token_hash,
+      (await s.db.one("member_sessions")).token_hash,
       token,
     );
     assert.ok(!JSON.stringify(m).includes("password"));
     assert.notEqual(
-      (await s.db.prepare("SELECT password_hash FROM members").get())
-        .password_hash,
+      (await s.db.one("members")).password_hash,
       "test-password-1234",
     );
     assert.equal(

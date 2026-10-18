@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -21,7 +21,8 @@ import {
   Star,
   MessageCircle,
 } from "lucide-react";
-import type { Catalog, Story } from "../lib/types";
+import type { Catalog, ReviewsResponse, Story } from "../lib/types";
+import { api } from "../lib/api";
 import { today } from "../lib/types";
 import { TourCard } from "../components/TourCard";
 import { Reviews, GoogleMark } from "../components/Reviews";
@@ -40,7 +41,22 @@ export function Home({ catalog }: { catalog: Catalog }) {
   const [filter, setFilter] = useState("Tüm rotalar"),
     [story, setStory] = useState<Story | null>(null),
     [request, setRequest] = useState(false),
-    [searchTour, setSearchTour] = useState("");
+    [searchTour, setSearchTour] = useState(""),
+    [rating, setRating] = useState<{
+      rating: number | null;
+      total: number | null;
+    } | null>(null);
+  useEffect(() => {
+    let active = true;
+    api<ReviewsResponse>("/reviews")
+      .then((d) => {
+        if (active) setRating({ rating: d.rating, total: d.total });
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
   const previewTour = catalog.tours.find((t) => t.salesOpen),
     previewVehicle = previewTour?.vehicle || catalog.vehicle;
   const guestLimit =
@@ -92,12 +108,23 @@ export function Home({ catalog }: { catalog: Catalog }) {
             <Link className="btn btn-white" to="/turlar">
               Rotaları keşfedin <ArrowRight size={17} />
             </Link>
-            <a className="hero-rating" href="#yorumlar">
-              <GoogleMark size={20} />
-              <strong>4,9</strong>
-              <Star size={15} fill="currentColor" />
-              <span>456 Google yorumu</span>
-            </a>
+            {rating?.rating != null && (
+              <a className="hero-rating" href="#yorumlar">
+                <GoogleMark size={20} />
+                <strong>
+                  {rating.rating.toLocaleString("tr-TR", {
+                    minimumFractionDigits: 1,
+                    maximumFractionDigits: 1,
+                  })}
+                </strong>
+                <Star size={15} fill="currentColor" />
+                <span>
+                  {rating.total != null
+                    ? `${rating.total.toLocaleString("tr-TR")} Google yorumu`
+                    : "Google yorumları"}
+                </span>
+              </a>
+            )}
           </div>
         </div>
         <div className="hero-bottom">

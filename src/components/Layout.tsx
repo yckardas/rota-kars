@@ -18,6 +18,7 @@ import { MembershipInvite } from "./MembershipInvite";
 import { useMember } from "../lib/member";
 import { ChatBot } from "./ChatBot";
 import { whatsappLink } from "../lib/whatsapp";
+import { telHref } from "../lib/phone";
 export function Layout({
   catalog,
   children,
@@ -29,8 +30,35 @@ export function Layout({
     location = useLocation();
   useEffect(() => {
     setOpen(false);
-    window.scrollTo({ top: 0, behavior: "instant" });
   }, [location.pathname]);
+  useEffect(() => {
+    let id = "";
+    try {
+      id = decodeURIComponent(location.hash.slice(1));
+    } catch {
+      id = location.hash.slice(1);
+    }
+    if (!id) {
+      window.scrollTo({ top: 0, behavior: "instant" });
+      return;
+    }
+    // Content (reviews, Instagram, catalog sections) may render async, so retry briefly.
+    const deadline = Date.now() + 1500;
+    let timer = 0;
+    const tryScroll = () => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+      if (Date.now() < deadline) timer = window.setTimeout(tryScroll, 100);
+    };
+    const frame = requestAnimationFrame(tryScroll);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(timer);
+    };
+  }, [location.pathname, location.hash, location.key]);
   useEffect(() => {
     if (!open) return;
     const f = (e: KeyboardEvent) => {
@@ -55,7 +83,7 @@ export function Layout({
               : "Kars’tan başlayan güzel hikâyeler"}
           </span>
           <div>
-            <a href="tel:+904742239163">
+            <a href={telHref(b.phone)}>
               <Phone size={12} />
               {b.phone}
             </a>
@@ -198,11 +226,11 @@ export function Layout({
               <MapPin size={17} />
               <span>{b.address}</span>
             </a>
-            <a href="tel:+904742239163">
+            <a href={telHref(b.phone)}>
               <Phone size={16} />
               {b.phone}
             </a>
-            <a href={"tel:+90" + b.mobile.replace(/\D/g, "").slice(1)}>
+            <a href={telHref(b.mobile)}>
               <Phone size={16} />
               {b.mobile}
             </a>

@@ -6,34 +6,22 @@ export async function createAccountSecurity(
   db,
   { clock, tx, members, notifications },
 ) {
-  const cols = (await db.prepare("PRAGMA table_info(members)").all()).map(
-    (c) => c.name,
-  );
-  for (const [name, type] of Object.entries({
-    email_verified: "INTEGER NOT NULL DEFAULT 0",
-    phone: "TEXT",
-  }))
-    if (!cols.includes(name))
-      await db.exec(`ALTER TABLE members ADD COLUMN ${name} ${type}`);
-  await db.exec(
-    "CREATE TABLE IF NOT EXISTS account_tokens(token_hash TEXT PRIMARY KEY,member_id TEXT NOT NULL REFERENCES members(id),purpose TEXT NOT NULL,expires_at INTEGER NOT NULL,used_at INTEGER)",
-  );
+  await db.index("account_tokens", { member_id: 1, purpose: 1 });
   async function issue(member, purpose, baseUrl) {
     return tx(async () => {
-      await db
-        .prepare(
-          "UPDATE account_tokens SET used_at=? WHERE member_id=? AND purpose=? AND used_at IS NULL",
-        )
-        .run(clock(), member.id, purpose);
+      await db.updateMany(
+        "account_tokens",
+        { member_id: member.id, purpose, used_at: null },
+        { used_at: clock() },
+      );
       const token = randomBytes(32).toString("hex");
-      await db
-        .prepare("INSERT INTO account_tokens VALUES(?,?,?,?,NULL)")
-        .run(
-          digest(token),
-          member.id,
-          purpose,
-          clock() + (purpose === "reset" ? 3600000 : 86400000),
-        );
+      await db.insert("account_tokens", digest(token), {
+        token_hash: digest(token),
+        member_id: member.id,
+        purpose,
+        expires_at: clock() + (purpose === "reset" ? 3600000 : 86400000),
+        used_at: null,
+      });
       const actionUrl =
         baseUrl +
         "/uyelik/" +
@@ -60,11 +48,12 @@ export async function createAccountSecurity(
   async function tokenRow(token, purpose) {
     if (!/^[a-f0-9]{64}$/.test(token || ""))
       throw new AppError(400, "Bağlantı geçersiz. Yeni bir bağlantı isteyin.");
-    const row = await db
-      .prepare(
-        "SELECT * FROM account_tokens WHERE token_hash=? AND purpose=? AND expires_at>? AND used_at IS NULL",
-      )
-      .get(digest(token), purpose, clock());
+    const row = await db.one("account_tokens", {
+      _id: digest(token),
+      purpose,
+      expires_at: { $gt: clock() },
+      used_at: null,
+    });
     if (!row)
       throw new AppError(
         410,
@@ -74,16 +63,12 @@ export async function createAccountSecurity(
   }
   return {
     async requestVerification(member, baseUrl) {
-      const row = await db
-        .prepare("SELECT email_verified FROM members WHERE id=?")
-        .get(member.id);
+      const row = await db.one("members", { _id: member.id });
       if (row?.email_verified) return { verified: true };
       return issue(member, "verify", baseUrl);
     },
     async requestReset(email, baseUrl) {
-      const member = await db
-        .prepare("SELECT id,email FROM members WHERE email=?")
-        .get(email.toLowerCase());
+      const member = await db.one("members", { email: email.toLowerCase() });
       if (member) await issue(member, "reset", baseUrl);
       return {
         ok: true,
@@ -94,12 +79,12 @@ export async function createAccountSecurity(
     async verify(token) {
       return tx(async () => {
         const row = await tokenRow(token, "verify");
-        await db
-          .prepare("UPDATE members SET email_verified=1 WHERE id=?")
-          .run(row.member_id);
-        await db
-          .prepare("UPDATE account_tokens SET used_at=? WHERE token_hash=?")
-          .run(clock(), row.token_hash);
+        await db.update("members", { _id: row.member_id }, { email_verified: 1 });
+        await db.update(
+          "account_tokens",
+          { _id: row.token_hash },
+          { used_at: clock() },
+        );
         return { verified: true };
       });
     },
@@ -107,24 +92,18 @@ export async function createAccountSecurity(
       const hash = await hashPassword(password);
       return tx(async () => {
         const row = await tokenRow(token, "reset");
-        await db
-          .prepare("UPDATE members SET password_hash=? WHERE id=?")
-          .run(hash, row.member_id);
-        await db
-          .prepare(
-            "UPDATE account_tokens SET used_at=? WHERE member_id=? AND used_at IS NULL",
-          )
-          .run(clock(), row.member_id);
-        await db
-          .prepare("DELETE FROM member_sessions WHERE member_id=?")
-          .run(row.member_id);
+        await db.update("members", { _id: row.member_id }, { password_hash: hash });
+        await db.updateMany(
+          "account_tokens",
+          { member_id: row.member_id, used_at: null },
+          { used_at: clock() },
+        );
+        await db.remove("member_sessions", { member_id: row.member_id });
         return { ok: true };
       });
     },
     async profile(memberId, { name, phone }) {
-      await db
-        .prepare("UPDATE members SET name=?,phone=? WHERE id=?")
-        .run(name, phone || null, memberId);
+      await db.update("members", { _id: memberId }, { name, phone: phone || null });
       return (await members.dashboard(memberId)).member;
     },
   };

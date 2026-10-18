@@ -15,6 +15,7 @@ import {
 import { Reviews } from "../components/Reviews";
 import { RequestForm } from "../components/RequestForm";
 import { api } from "../lib/api";
+import { telHref } from "../lib/phone";
 import {
   currency,
   dateLabel,
@@ -262,12 +263,18 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
               Acente onaylı ön rezervasyon
             </span>
           </div>
-          <small>
-            Yerel önizlemede fiyat ve sefer tarihleri örnektir. Online ödeme
-            henüz aktif değildir.
-          </small>
-          <a className="text-link" href="tel:+905459353410">
-            Birlikte planlayalım: 0545 935 34 10
+          {catalog.demo ? (
+            <small>
+              Demo sürümünde fiyat ve sefer tarihleri örnektir. Online ödeme
+              henüz aktif değildir.
+            </small>
+          ) : (
+            !catalog.payment.enabled && (
+              <small>Online ödeme henüz aktif değildir.</small>
+            )
+          )}
+          <a className="text-link" href={telHref(catalog.business.mobile)}>
+            Birlikte planlayalım: {catalog.business.mobile}
           </a>
         </aside>
       </div>

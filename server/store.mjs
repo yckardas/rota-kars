@@ -1,4 +1,4 @@
-import { connectDatabase } from "./database.mjs";
+import { connectDatabase, fromJson } from "./database.mjs";
 import { readFileSync } from "node:fs";
 import { randomBytes, randomUUID } from "node:crypto";
 import { tours, vehicle } from "./catalog.mjs";
@@ -7,6 +7,7 @@ import { createMembers } from "./members.mjs";
 import { createCampaigns } from "./campaigns.mjs";
 import { createNotifications } from "./notifications.mjs";
 import { createDepartures, localDate } from "./departures.mjs";
+import { createInstagramSettings } from "./instagram.mjs";
 import { createWorkflow } from "./workflow.mjs";
 import { createAccountSecurity } from "./account-security.mjs";
 export class AppError extends Error {
@@ -16,66 +17,42 @@ export class AppError extends Error {
   }
 }
 export async function openStore(
-  path = "./data/rota-kars.sqlite",
-  { clock = Date.now, seed = true, env = process.env, driver } = {},
+  path = undefined,
+  { clock = Date.now, seed = true, env = process.env } = {},
 ) {
-  const db = await connectDatabase({ path, env, driver });
-  await db.exec(
-    "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;",
-  );
-  await db.exec(`CREATE TABLE IF NOT EXISTS departures(id TEXT PRIMARY KEY,tour_id TEXT NOT NULL,date TEXT NOT NULL,price INTEGER NOT NULL CHECK(price>0),active INTEGER NOT NULL DEFAULT 1);
- CREATE TABLE IF NOT EXISTS holds(token TEXT PRIMARY KEY,departure_id TEXT NOT NULL REFERENCES departures(id),seats TEXT NOT NULL,expires_at INTEGER NOT NULL);
- CREATE TABLE IF NOT EXISTS seat_locks(departure_id TEXT NOT NULL REFERENCES departures(id),seat INTEGER NOT NULL CHECK(seat >= 1),owner TEXT NOT NULL,expires_at INTEGER NOT NULL,PRIMARY KEY(departure_id,seat));
- CREATE TABLE IF NOT EXISTS reservations(id TEXT PRIMARY KEY,reference TEXT NOT NULL UNIQUE,departure_id TEXT NOT NULL REFERENCES departures(id),email TEXT NOT NULL,name TEXT NOT NULL,phone TEXT NOT NULL,passengers TEXT NOT NULL,seats TEXT NOT NULL,total INTEGER NOT NULL,deposit INTEGER NOT NULL,status TEXT NOT NULL,created_at INTEGER NOT NULL,expires_at INTEGER NOT NULL);
- CREATE TABLE IF NOT EXISTS requests(id TEXT PRIMARY KEY,kind TEXT NOT NULL,body TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'new',created_at INTEGER NOT NULL);
- CREATE TABLE IF NOT EXISTS hotels(id TEXT PRIMARY KEY,name TEXT NOT NULL,location TEXT NOT NULL,description TEXT NOT NULL,amenities TEXT NOT NULL,image TEXT,active INTEGER NOT NULL DEFAULT 0);
- CREATE TABLE IF NOT EXISTS review_assignments(review_id TEXT PRIMARY KEY,tour_ids TEXT NOT NULL);
- CREATE TABLE IF NOT EXISTS instagram_posts(id TEXT PRIMARY KEY,title TEXT NOT NULL,permalink TEXT NOT NULL UNIQUE,cover TEXT NOT NULL,position INTEGER NOT NULL DEFAULT 0,active INTEGER NOT NULL DEFAULT 0);`);
-  if (
-    !(await db.prepare("PRAGMA table_info(instagram_posts)").all()).some(
-      (column) => column.name === "videoSrc",
-    )
-  )
-    await db.exec("ALTER TABLE instagram_posts ADD COLUMN videoSrc TEXT");
-  const reservationColumns = (
-    await db.prepare("PRAGMA table_info(reservations)").all()
-  ).map((c) => c.name);
-  for (const [name, sql] of Object.entries({
-    vehicle_json: "TEXT",
-    member_id: "TEXT",
-    coupon_id: "TEXT",
-    subtotal: "INTEGER NOT NULL DEFAULT 0",
-    discount_amount: "INTEGER NOT NULL DEFAULT 0",
-  }))
-    if (!reservationColumns.includes(name))
-      await db.exec(`ALTER TABLE reservations ADD COLUMN ${name} ${sql}`);
+  const db = await connectDatabase({ path, env });
+  await Promise.all([
+    db.index("departures", { tour_id: 1, date: 1 }),
+    db.index("holds", { expires_at: 1 }),
+    db.index("seat_locks", { owner: 1 }),
+    db.index("seat_locks", { departure_id: 1, expires_at: 1 }),
+    db.index("seat_locks", { expires_at: 1 }),
+    db.index("reservations", { reference: 1 }, { unique: true }),
+    db.index("reservations", { ticket_token: 1 }, { unique: true, sparse: true }),
+    db.index("reservations", { status: 1, expires_at: 1 }),
+    db.index("reservations", { departure_id: 1 }),
+    db.index("reservations", { member_id: 1 }),
+    db.index("reservations", { email: 1 }),
+    db.index("requests", { created_at: -1 }),
+    db.index("instagram_posts", { permalink: 1 }, { unique: true }),
+    db.index("admin_sessions", { expires_at: 1 }),
+  ]);
   const tx = (fn) => db.transaction(fn);
   let members;
-  await db.exec(
-    "CREATE TABLE IF NOT EXISTS admin_sessions(token_hash TEXT PRIMARY KEY,expires_at INTEGER NOT NULL)",
-  );
   const cleanup = async () =>
     tx(async () => {
       const now = clock();
-      await db.prepare("DELETE FROM seat_locks WHERE expires_at<=?").run(now);
-      await db.prepare("DELETE FROM holds WHERE expires_at<=?").run(now);
-      await db
-        .prepare(
-          "UPDATE reservations SET status='expired' WHERE status='pending_agency' AND expires_at<=?",
-        )
-        .run(now);
+      await db.remove("seat_locks", { expires_at: { $lte: now } });
+      await db.remove("holds", { expires_at: { $lte: now } });
+      await db.updateMany(
+        "reservations",
+        { status: "pending_agency", expires_at: { $lte: now } },
+        { status: "expired" },
+      );
       await members?.releaseCoupons();
     });
-  const parse = (r) =>
-    r
-      ? {
-          ...r,
-          vehicle: r.vehicle_json ? JSON.parse(r.vehicle_json) : null,
-          seats: JSON.parse(r.seats || "[]"),
-          passengers: JSON.parse(r.passengers || "[]"),
-        }
-      : null;
   const campaigns = await createCampaigns(db, { clock });
+  const instagramSettings = await createInstagramSettings(db, { clock });
   members = await createMembers(db, {
     campaigns,
     clock,
@@ -98,6 +75,7 @@ export async function openStore(
     tx,
     operations,
     cleanup,
+    env,
   });
   if (
     seed &&
@@ -108,21 +86,28 @@ export async function openStore(
     const instagramPosts = JSON.parse(
       readFileSync(new URL("./instagram-posts.json", import.meta.url), "utf8"),
     );
-    const insertPost = db.prepare(
-      "INSERT OR IGNORE INTO instagram_posts(id,title,permalink,cover,position,active) VALUES(?,?,?,?,?,?)",
+    // Örnek veriler toplu ve "yoksa ekle" biçiminde yazılır.
+    const ifAbsent = (doc) => ({
+      updateOne: {
+        filter: { _id: doc.id },
+        update: { $setOnInsert: doc },
+        upsert: true,
+      },
+    });
+    await db.col("instagram_posts").bulkWrite(
+      instagramPosts.map((post) =>
+        ifAbsent({
+          id: post.id,
+          title: post.title,
+          permalink: post.permalink,
+          cover: post.cover,
+          position: post.position,
+          active: post.active ? 1 : 0,
+          videoSrc: null,
+        }),
+      ),
     );
-    for (const post of instagramPosts)
-      await insertPost.run(
-        post.id,
-        post.title,
-        post.permalink,
-        post.cover,
-        post.position,
-        post.active ? 1 : 0,
-      );
-    const insert = db.prepare(
-      "INSERT OR IGNORE INTO departures(id,tour_id,date,price) VALUES(?,?,?,?)",
-    );
+    const seedDepartures = [];
     const today = new Date(clock());
     for (const t of tours)
       for (let i = 0; i < 6; i++) {
@@ -132,9 +117,13 @@ export async function openStore(
           d.setUTCMonth(11);
           d.setUTCDate(5 + i * 7);
         }
-        const date = d.toISOString().slice(0, 10);
-        await insert.run(`${t.id}-${date}`, t.id, date, t.price);
+        const date = d.toISOString().slice(0, 10),
+          id = `${t.id}-${date}`;
+        seedDepartures.push(
+          ifAbsent({ id, tour_id: t.id, date, price: t.price, active: 1 }),
+        );
       }
+    await db.col("departures").bulkWrite(seedDepartures);
   }
   const workflow = await createWorkflow(db, {
     cleanup,
@@ -151,6 +140,7 @@ export async function openStore(
     departures,
     workflow,
     campaigns,
+    instagramSettings,
     notifications,
     accountSecurity,
     members,
@@ -176,11 +166,10 @@ export async function openStore(
             },
             async (_, i) => ({
               number: i + 1,
-              status: (await db
-                .prepare(
-                  "SELECT owner FROM seat_locks WHERE departure_id=? AND seat=? AND expires_at>?",
-                )
-                .get(id, i + 1, clock()))
+              status: (await db.one("seat_locks", {
+                _id: `${id}:${i + 1}`,
+                expires_at: { $gt: clock() },
+              }))
                 ? "occupied"
                 : "available",
             }),
@@ -209,31 +198,32 @@ export async function openStore(
         const token = randomBytes(24).toString("hex"),
           expires = clock() + 600000;
         for (const seat of seats) {
-          if (
-            await db
-              .prepare(
-                "SELECT 1 FROM seat_locks WHERE departure_id=? AND seat=?",
-              )
-              .get(id, seat)
-          )
+          // _id departure:seat olduğu için aynı koltuk iki kez kilitlenemez.
+          if (await db.one("seat_locks", { _id: `${id}:${seat}` }))
             throw new AppError(
               409,
               "Seçtiğiniz koltuklardan biri az önce ayrıldı.",
             );
-          await db
-            .prepare("INSERT INTO seat_locks VALUES(?,?,?,?)")
-            .run(id, seat, token, expires);
+          await db.insert("seat_locks", `${id}:${seat}`, {
+            departure_id: id,
+            seat,
+            owner: token,
+            expires_at: expires,
+          });
         }
-        await db
-          .prepare("INSERT INTO holds VALUES(?,?,?,?)")
-          .run(token, id, JSON.stringify(seats), expires);
+        await db.insert("holds", token, {
+          token,
+          departure_id: id,
+          seats,
+          expires_at: expires,
+        });
         return { token, seats, expiresAt: expires };
       });
     },
     release(token) {
       return tx(async () => {
-        await db.prepare("DELETE FROM seat_locks WHERE owner=?").run(token);
-        await db.prepare("DELETE FROM holds WHERE token=?").run(token);
+        await db.remove("seat_locks", { owner: token });
+        await db.remove("holds", { _id: token });
       });
     },
     reserve({
@@ -248,15 +238,16 @@ export async function openStore(
     }) {
       return tx(async () => {
         await cleanup();
-        const hold = await db
-          .prepare("SELECT * FROM holds WHERE token=? AND expires_at>?")
-          .get(holdToken, clock());
+        const hold = await db.one("holds", {
+          _id: holdToken,
+          expires_at: { $gt: clock() },
+        });
         if (!hold)
           throw new AppError(
             410,
             "Koltuk ayırma süresi doldu. Lütfen koltuklarınızı yeniden seçin.",
           );
-        const seats = JSON.parse(hold.seats),
+        const seats = fromJson(hold.seats, []),
           d = await departure(hold.departure_id);
         if (passengers.length !== seats.length)
           throw new AppError(
@@ -274,53 +265,41 @@ export async function openStore(
           ),
           total = discounted.total,
           deposit = paymentMode === "deposit" ? Math.round(total * 0.3) : total,
-          expires = clock() + 24 * 60 * 60 * 1000;
-        await db
-          .prepare(
-            "INSERT INTO reservations(id,reference,departure_id,email,name,phone,passengers,seats,total,deposit,status,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
-          )
-          .run(
-            id,
-            reference,
-            d.id,
-            email.toLowerCase(),
-            name,
-            phone,
-            JSON.stringify(passengers),
-            hold.seats,
-            total,
-            deposit,
-            "pending_agency",
-            clock(),
-            expires,
+          // Onay bekleyen kayıt en fazla 24 saat ya da satış kapanışına kadar koltuk tutar.
+          expires = Math.min(
+            clock() + 24 * 60 * 60 * 1000,
+            d.salesClosesAt ?? Infinity,
           );
-        await db
-          .prepare(
-            "UPDATE reservations SET vehicle_json=?,member_id=?,coupon_id=?,subtotal=?,discount_amount=? WHERE id=?",
-          )
-          .run(
-            JSON.stringify(d.vehicle),
-            memberId,
-            couponId,
-            subtotal,
-            discounted.discount,
-            id,
-          );
-        await db
-          .prepare(
-            "UPDATE reservations SET ticket_token=?,discount_percent=? WHERE id=?",
-          )
-          .run(
-            randomBytes(24).toString("hex"),
-            discounted.coupon?.percent || 0,
-            id,
-          );
+        await db.insert("reservations", id, {
+          id,
+          reference,
+          departure_id: d.id,
+          email: email.toLowerCase(),
+          name,
+          phone,
+          passengers,
+          seats,
+          total,
+          deposit,
+          status: "pending_agency",
+          created_at: clock(),
+          expires_at: expires,
+          vehicle_json: d.vehicle,
+          member_id: memberId,
+          coupon_id: couponId,
+          subtotal,
+          discount_amount: discounted.discount,
+          ticket_token: randomBytes(24).toString("hex"),
+          discount_percent: discounted.coupon?.percent || 0,
+        });
         await members.consumeCoupon(couponId, id);
 
-        await db
-          .prepare("UPDATE seat_locks SET owner=?,expires_at=? WHERE owner=?")
-          .run(reference, expires, holdToken);
-        await db.prepare("DELETE FROM holds WHERE token=?").run(holdToken);
+        await db.updateMany(
+          "seat_locks",
+          { owner: holdToken },
+          { owner: reference, expires_at: expires },
+        );
+        await db.remove("holds", { _id: holdToken });
         return workflow.created(reference);
       });
     },
@@ -339,108 +318,103 @@ export async function openStore(
     },
     async request(kind, body) {
       const id = randomUUID();
-      await db
-        .prepare(
-          "INSERT INTO requests(id,kind,body,created_at) VALUES(?,?,?,?)",
-        )
-        .run(id, kind, JSON.stringify(body), clock());
+      await db.insert("requests", id, {
+        id,
+        kind,
+        body,
+        status: "new",
+        created_at: clock(),
+      });
+      const reference = "TL-" + id.slice(0, 8).toUpperCase();
+      const label =
+        { hotel: "Konaklama talebi", "private-tour": "Özel tur talebi", vehicle: "Araç kiralama talebi" }[kind] ||
+        "Yeni talep";
+      await notifications.notifyAgency({
+        subject: `${label}: ${reference}`,
+        body:
+          `${label} · ${reference}\n` +
+          Object.entries(body || {})
+            .filter(([, v]) => v !== "" && v != null && typeof v !== "object")
+            .map(([k, v]) => `${k}: ${String(v).slice(0, 500)}`)
+            .join("\n"),
+        actionUrl: (env.PUBLIC_BASE_URL || "") + "/yonetim",
+        kind: "request_" + kind,
+        dedupeKey: "request:" + id,
+      });
       return {
-        reference: "TL-" + id.slice(0, 8).toUpperCase(),
+        reference,
         status: "received",
       };
     },
     async hotels() {
-      return (
-        await db
-          .prepare("SELECT * FROM hotels WHERE active=1 ORDER BY name")
-          .all()
-      ).map((h) => ({
-        ...h,
-        amenities: JSON.parse(h.amenities),
-      }));
+      return (await db.find("hotels", { active: 1 }, { sort: { name: 1 } })).map(
+        (h) => ({ ...h, amenities: fromJson(h.amenities, []) }),
+      );
     },
     async dashboard() {
       await cleanup();
       return {
         reservations: await workflow.list(),
         requests: (
-          await db
-            .prepare(
-              "SELECT * FROM requests ORDER BY created_at DESC LIMIT 200",
-            )
-            .all()
-        ).map((r) => ({
-          ...r,
-          body: JSON.parse(r.body),
-        })),
-        hotels: (
-          await db.prepare("SELECT * FROM hotels ORDER BY name").all()
-        ).map((h) => ({
+          await db.find("requests", {}, { sort: { created_at: -1 }, limit: 200 })
+        ).map((r) => ({ ...r, body: fromJson(r.body, {}) })),
+        hotels: (await db.find("hotels", {}, { sort: { name: 1 } })).map((h) => ({
           ...h,
-          amenities: JSON.parse(h.amenities),
+          amenities: fromJson(h.amenities, []),
         })),
       };
     },
     async upsertHotel(h) {
       const id = h.id || randomUUID();
-      await db
-        .prepare(
-          "INSERT INTO hotels VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,location=excluded.location,description=excluded.description,amenities=excluded.amenities,image=excluded.image,active=excluded.active",
-        )
-        .run(
-          id,
-          h.name,
-          h.location,
-          h.description,
-          JSON.stringify(h.amenities),
-          h.image || null,
-          h.active ? 1 : 0,
-        );
+      await db.upsert("hotels", id, {
+        id,
+        name: h.name,
+        location: h.location,
+        description: h.description,
+        amenities: h.amenities,
+        image: h.image || null,
+        active: h.active ? 1 : 0,
+      });
       return {
         id,
       };
     },
     async assignments() {
       return Object.fromEntries(
-        (await db.prepare("SELECT * FROM review_assignments").all()).map(
-          (r) => [r.review_id, JSON.parse(r.tour_ids)],
-        ),
+        (await db.find("review_assignments")).map((r) => [
+          r.review_id,
+          fromJson(r.tour_ids, []),
+        ]),
       );
     },
     async assignReview(reviewId, tourIds) {
-      await db
-        .prepare(
-          "INSERT INTO review_assignments VALUES(?,?) ON CONFLICT(review_id) DO UPDATE SET tour_ids=excluded.tour_ids",
-        )
-        .run(reviewId, JSON.stringify(tourIds));
+      await db.upsert("review_assignments", reviewId, {
+        review_id: reviewId,
+        tour_ids: tourIds,
+      });
     },
     async instagramPosts(includeDrafts = false) {
-      return await db
-        .prepare(
-          `SELECT * FROM instagram_posts ${includeDrafts ? "" : "WHERE active=1"} ORDER BY position,id`,
-        )
-        .all();
+      return db.find("instagram_posts", includeDrafts ? {} : { active: 1 }, {
+        sort: { position: 1, id: 1 },
+      });
     },
     async upsertInstagramPost(post) {
       const id = post.id || randomUUID();
-      const duplicate = await db
-        .prepare("SELECT id FROM instagram_posts WHERE permalink=? AND id<>?")
-        .get(post.permalink, id);
+      const duplicate = await db.one("instagram_posts", {
+        permalink: post.permalink,
+        _id: { $ne: id },
+      });
       if (duplicate)
         throw new AppError(409, "Bu Instagram videosu zaten eklenmiş.");
-      await db
-        .prepare(
-          "INSERT INTO instagram_posts(id,title,permalink,cover,position,active,videoSrc) VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,permalink=excluded.permalink,cover=excluded.cover,position=excluded.position,active=excluded.active,videoSrc=excluded.videoSrc",
-        )
-        .run(
-          id,
-          post.title,
-          post.permalink,
-          post.cover,
-          post.position,
-          post.active ? 1 : 0,
-          post.videoSrc || null,
-        );
+      await db.upsert("instagram_posts", id, {
+        id,
+        title: post.title,
+        permalink: post.permalink,
+        cover: post.cover,
+        position: post.position,
+        active: post.active ? 1 : 0,
+        videoSrc: post.videoSrc || null,
+      });
       return {
         id,
       };

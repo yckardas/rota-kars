@@ -1,13 +1,16 @@
 import { resolve } from "node:path";
+import { readFile } from "node:fs/promises";
 import express from "express";
 import { createApp } from "./app.mjs";
 import { openStore } from "./store.mjs";
+import { seoHtmlHandler } from "./seo.mjs";
 const port = Number(process.env.PORT || 5173),
-  store = await openStore(process.env.DATABASE_PATH),
+  store = await openStore(),
   app = createApp(store);
 if (process.env.NODE_ENV === "production") {
-  app.use(express.static(resolve("dist")));
-  app.get("/{*path}", (_q, r) => r.sendFile(resolve("dist/index.html")));
+  const template = await readFile(resolve("dist/index.html"), "utf8");
+  app.use(express.static(resolve("dist"), { index: false }));
+  app.use(seoHtmlHandler(process.env, async () => template));
 } else {
   const { createServer } = await import("vite");
   const vite = await createServer({
@@ -19,6 +22,14 @@ if (process.env.NODE_ENV === "production") {
     },
     appType: "spa",
   });
+  app.use(
+    seoHtmlHandler(process.env, async (url) =>
+      vite.transformIndexHtml(
+        url,
+        await readFile(resolve("index.html"), "utf8"),
+      ),
+    ),
+  );
   app.use(vite.middlewares);
 }
 const host =
@@ -33,8 +44,15 @@ const jobs = setInterval(async () => {
   try {
     await store.workflow.reminders();
     await store.notifications.processBatch();
-  } catch {
-    console.error("Background notification job failed");
+  } catch (e) {
+    console.error(
+      JSON.stringify({
+        level: "error",
+        job: "notifications",
+        error: e?.name,
+        message: String(e?.message || "").slice(0, 300),
+      }),
+    );
   } finally {
     jobsBusy = false;
   }
