@@ -1,4 +1,5 @@
 import { ProfileSettings, MemberPrivacy } from "./AccountSecurity";
+import { useTurnstile } from "../components/Turnstile";
 import type { Campaign } from "../components/OperationsDesk";
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -54,6 +55,7 @@ export function Membership() {
       [],
     ),
     [ref, setRef] = useState(params.get("ref") || ""),
+    human = useTurnstile("register"),
     destination = safeNextPath(params.get("next")) || "/hesabim";
   useEffect(() => {
     api<{ id: string; enabled: boolean }[]>("/auth/providers")
@@ -86,6 +88,7 @@ export function Membership() {
               consent: f.get("consent") === "on",
               marketingConsent: f.get("marketingConsent") === "on",
               ...(ref.trim() ? { referralCode: ref.trim().toUpperCase() } : {}),
+              turnstileToken: human.token,
             }
           : {}),
       });
@@ -93,6 +96,7 @@ export function Membership() {
       navigate(destination, { replace: true });
     } catch (e) {
       setError((e as Error).message);
+      if (mode === "register") human.reset();
     } finally {
       setBusy(false);
     }
@@ -312,7 +316,11 @@ export function Membership() {
               {error}
             </p>
           )}
-          <button className="btn block" disabled={busy}>
+          {mode === "register" && human.widget}
+          <button
+            className="btn block"
+            disabled={busy || (mode === "register" && !human.ready)}
+          >
             {busy ? <LoaderCircle className="spin" size={17} /> : null}
             {mode === "register" ? "Üye ol, ayrıcalıkları keşfet" : "Giriş yap"}
             <ArrowRight size={17} />

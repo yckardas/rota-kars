@@ -50,7 +50,29 @@ export async function openStore(
   }
   const tx = (fn) => db.transaction(fn);
   let members;
-  const cleanup = async () =>
+  // Süresi dolan kilit/ön rezervasyon temizliği. Yazma işlemlerinde (işlem içinde)
+  // her seferinde yapılır; herkese açık okumalarda en fazla 5 sn'de bir çalışır,
+  // böylece yoğun okuma trafiği işlem kuyruğunu tıkamaz. Okumalar ayrıca süre
+  // filtresi uygular; arka plan işi de 30 sn'de bir zorla çalıştırır.
+  let lastCleanup = 0,
+    cleanupRunning = null;
+  const cleanup = async ({ force = false } = {}) => {
+    // İşlem içindeki temizlik o işlemle birlikte geri alınabilir; bu yüzden
+    // kısıtlayıcı yalnız kalıcılaşan (işlem dışı) temizliklerle güncellenir.
+    if (db.inTransaction()) return cleanupNow();
+    if (!force && clock() - lastCleanup < 5000) return;
+    if (cleanupRunning) return cleanupRunning;
+    const run = cleanupNow()
+      .then(() => {
+        lastCleanup = clock();
+      })
+      .finally(() => {
+        cleanupRunning = null;
+      });
+    cleanupRunning = run;
+    return run;
+  };
+  const cleanupNow = async () =>
     tx(async () => {
       const now = clock();
       await db.remove("seat_locks", { expires_at: { $lte: now } });
@@ -172,25 +194,23 @@ export async function openStore(
       await cleanup();
       const d = await departure(id),
         vehicle = d.vehicle;
+      // Tüm koltuk kilitleri tek sorguda okunur.
+      const taken = new Set(
+        (
+          await db.find(
+            "seat_locks",
+            { departure_id: id, expires_at: { $gt: clock() } },
+            { projection: { seat: 1 } },
+          )
+        ).map((l) => l.seat),
+      );
       return {
         departure: d,
         vehicle,
-        seats: await Promise.all(
-          Array.from(
-            {
-              length: vehicle.sellableSeats,
-            },
-            async (_, i) => ({
-              number: i + 1,
-              status: (await db.one("seat_locks", {
-                _id: `${id}:${i + 1}`,
-                expires_at: { $gt: clock() },
-              }))
-                ? "occupied"
-                : "available",
-            }),
-          ),
-        ),
+        seats: Array.from({ length: vehicle.sellableSeats }, (_, i) => ({
+          number: i + 1,
+          status: taken.has(i + 1) ? "occupied" : "available",
+        })),
       };
     },
     async hold(id, seats) {

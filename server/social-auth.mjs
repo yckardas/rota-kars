@@ -1,6 +1,7 @@
 import {
   randomBytes,
   createHash,
+  timingSafeEqual,
   createHmac,
   createPublicKey,
   verify,
@@ -31,9 +32,44 @@ export function attachSocialAuth(
   app,
   { env, store, route, setSession, fetchImpl = fetch },
 ) {
-  const states = new Map(),
-    keys = new Map(),
+  const keys = new Map(),
+    db = store.db,
     base = (env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
+  // OAuth akış durumu sunucu belleğinde değil, HMAC ile imzalı httpOnly çerezde
+  // taşınır: yeniden başlatmada kaybolmaz, bellek doldurulamaz. Anahtar
+  // OAUTH_STATE_SECRET'tan, yoksa sağlayıcı sırlarından türetilir.
+  const stateKey = createHmac("sha256", "rota-oauth-state")
+    .update(
+      env.OAUTH_STATE_SECRET ||
+        [
+          env.GOOGLE_AUTH_CLIENT_SECRET,
+          env.FACEBOOK_APP_SECRET,
+          env.APPLE_PRIVATE_KEY,
+        ].join("|"),
+    )
+    .digest();
+  const sealState = (payload) => {
+    const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
+    return body + "." + createHmac("sha256", stateKey).update(body).digest("base64url");
+  };
+  const openState = (value) => {
+    if (typeof value !== "string" || value.length > 4000) return null;
+    const [body, mac] = value.split(".");
+    if (!body || !mac) return null;
+    const expected = createHmac("sha256", stateKey).update(body).digest();
+    const given = Buffer.from(mac, "base64url");
+    if (given.length !== expected.length || !timingSafeEqual(given, expected)) return null;
+    try {
+      return JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
+    } catch {
+      return null;
+    }
+  };
+  const sameText = (a, b) =>
+    typeof a === "string" &&
+    typeof b === "string" &&
+    a.length === b.length &&
+    timingSafeEqual(Buffer.from(a), Buffer.from(b));
   const configs = {
     google: {
       id: env.GOOGLE_AUTH_CLIENT_ID,
@@ -174,36 +210,31 @@ export function attachSocialAuth(
       const name = q.params.provider;
       if (!enabled(name))
         return r.redirect("/uyelik?setup=" + encodeURIComponent(name));
-      for (const [key, value] of states)
-        if (value.expires < Date.now()) states.delete(key);
-      if (states.size >= 1000)
-        throw new AppError(429, "Biraz sonra tekrar deneyin.");
       const state = randomBytes(32).toString("hex"),
         nonce = randomBytes(24).toString("hex"),
-        verifier = randomBytes(32).toString("base64url"),
-        binding = randomBytes(32).toString("hex");
+        verifier = randomBytes(32).toString("base64url");
       const refer =
         typeof q.query.ref === "string" && /^[A-F0-9]{10}$/i.test(q.query.ref)
           ? q.query.ref.toUpperCase()
           : null;
-      states.set(state, {
+      const sealed = sealState({
         name,
+        state,
         next: safeNext(q.query.next),
         nonce,
         verifier,
-        binding: hash(binding),
         referralCode: refer,
-        memberId: (
-          await store.members.fromSession(cookieValue(q, "rota_member"))
-        )?.id,
+        memberId:
+          (await store.members.fromSession(cookieValue(q, "rota_member")))?.id || null,
         expires: Date.now() + 600000,
       });
-      r.cookie("rota_oauth", binding, {
+      r.cookie("rota_oauth", sealed, {
         httpOnly: true,
         secure: base.startsWith("https:"),
         sameSite: name === "apple" ? "none" : "lax",
         maxAge: 600000,
         path: "/api/auth",
+        encode: String,
       });
       const params = new URLSearchParams({
         client_id: configs[name].id,
@@ -224,8 +255,7 @@ export function attachSocialAuth(
   async function callback(q, r) {
     const name = q.params.provider,
       data = q.method === "POST" ? q.body : q.query,
-      entry = states.get(data.state);
-    states.delete(data.state);
+      entry = openState(cookieValue(q, "rota_oauth"));
     r.clearCookie("rota_oauth", {
       path: "/api/auth",
       httpOnly: true,
@@ -233,19 +263,24 @@ export function attachSocialAuth(
       sameSite: name === "apple" ? "none" : "lax",
     });
     try {
-      const binding = cookieValue(q, "rota_oauth");
       if (
         !enabled(name) ||
         !entry ||
         entry.name !== name ||
-        entry.expires < Date.now() ||
-        !binding ||
-        hash(binding) !== entry.binding ||
+        !(entry.expires >= Date.now()) ||
+        !sameText(data.state, entry.state) ||
         data.error ||
         typeof data.code !== "string" ||
         data.code.length > 4000
       )
         throw new Error("Invalid callback");
+      // Her durum yalnız bir kez kullanılabilir (çerez tekrar oynatılamaz).
+      if (
+        !(await db.insertIfAbsent("oauth_used", hash(entry.state), {
+          expires_at: entry.expires,
+        }))
+      )
+        throw new Error("Replayed callback");
       const config = configs[name],
         params = new URLSearchParams({
           client_id: config.id,

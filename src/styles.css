@@ -4833,17 +4833,15 @@ input[type="radio"] {
   min-height: 90px;
   margin-bottom: 20px;
 }
-.instagram-embed-host blockquote {
-  margin: 0 !important;
-  min-width: 0 !important;
-  width: 100% !important;
-  box-shadow: none !important;
-  border: 0 !important;
-}
 .instagram-embed-host iframe {
-  max-width: 100% !important;
-  min-width: 0 !important;
-  width: 100% !important;
+  display: block;
+  width: 100%;
+  max-width: 540px;
+  height: min(78vh, 760px);
+  margin: 0 auto;
+  border: 0;
+  border-radius: 12px;
+  background: #fff;
 }
 .instagram-empty {
   display: flex;
@@ -6913,4 +6911,28 @@ input[type="radio"] {
 .membership-story,
 .chat-head {
   --gold-text: #d9b06b;
+}
+.turnstile-box {
+  margin: 14px 0 6px;
+  min-height: 65px;
+}
+/* Mobilde koltuk haritası görünürken alt köşedeki düğmeler geri çekilir. */
+@media (max-width: 700px) {
+  .chat-launchers {
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s ease,
+      visibility 0.2s;
+  }
+  body[data-seatmap-visible] .chat-launchers {
+    opacity: 0;
+    transform: translateY(24px);
+    pointer-events: none;
+    visibility: hidden;
+  }
+}
+@media (max-width: 700px) and (prefers-reduced-motion: reduce) {
+  .chat-launchers {
+    transition: none;
+  }
 }

@@ -35,10 +35,15 @@ export function tourTitle(t) {
   const duration = lower(t.name).includes(lower(t.duration)) ? "" : ` · ${t.duration}`;
   return `${name}${duration}, ${tl(t.price)} | ${SITE}`;
 }
+export const DEFAULT_SITE_URL = "https://rotakarsturizm.com";
+// Bağlantılarda kullanılan site adresi. Üretimde Host başlığına asla güvenilmez
+// (e-postadaki parola sıfırlama/bilet bağlantıları saldırgan alan adına
+// yönlendirilemez); adres ayarlı değilse resmi alan adı kullanılır.
 export function siteBase(env, req) {
-  const configured = env.SITE_URL || env.PUBLIC_BASE_URL;
-  if (configured && /^https?:\/\//.test(configured))
-    return configured.replace(/\/$/, "");
+  const configured = env.PUBLIC_BASE_URL || env.SITE_URL;
+  if (configured && /^https?:\/\/[^/\s]+/.test(configured))
+    return configured.replace(/\/+$/, "");
+  if (env.NODE_ENV === "production") return DEFAULT_SITE_URL;
   return `${req.protocol}://${req.headers.host}`;
 }
 
@@ -343,11 +348,23 @@ export function headTags(meta, base) {
 }
 
 // index.html şablonundaki varsayılan başlık/açıklamayı sayfaya özel olanlarla değiştirir.
-export function renderHtml(template, meta, base) {
+// JSON'u <script> içine güvenle gömer: "</script>" kaçışı ve satır ayırıcılar engellenir.
+export const inlineJson = (value) =>
+  JSON.stringify(value)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+
+export function renderHtml(template, meta, base, catalog = null) {
+  const data = catalog
+    ? `<script id="catalog-data" type="application/json">${inlineJson(catalog)}</script>`
+    : "";
   return template
     .replace(/<title>[\s\S]*?<\/title>/i, "")
     .replace(/<meta\s+name="description"[^>]*>/i, "")
-    .replace("</head>", headTags(meta, base) + "</head>");
+    .replace("</head>", headTags(meta, base) + data + "</head>");
 }
 
 export function robotsTxt(base, env) {
@@ -426,7 +443,7 @@ export function attachSeoRoutes(app, env) {
 
 // SPA HTML isteklerini sayfaya özel meta ile yanıtlar. getTemplate, o istek
 // için index.html içeriğini döner (geliştirmede Vite dönüşümüyle).
-export function seoHtmlHandler(env, getTemplate) {
+export function seoHtmlHandler(env, getTemplate, getCatalog = null) {
   return async (req, res, next) => {
     if (req.method !== "GET" && req.method !== "HEAD") return next();
     // Aşırı uzun yollar (ör. binlerce "/") işlenmez: düzenli ifade yavaşlatmasını önler.
@@ -443,7 +460,9 @@ export function seoHtmlHandler(env, getTemplate) {
     try {
       const base = siteBase(env, req);
       const meta = pageMeta(req.path, base);
-      const html = renderHtml(await getTemplate(req.originalUrl), meta, base);
+      // Katalog alınamazsa sayfa yine döner; istemci /api/catalog'a düşer.
+      const catalog = getCatalog ? await getCatalog().catch(() => null) : null;
+      const html = renderHtml(await getTemplate(req.originalUrl), meta, base, catalog);
       res.status(meta.status).type("html").send(html);
     } catch (e) {
       next(e);

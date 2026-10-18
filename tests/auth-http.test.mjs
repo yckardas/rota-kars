@@ -10,8 +10,7 @@ const allowUnverifiedWheel = async (s) =>
 async function fixture(t, extra = {}) {
   const store = await openStore(":memory:");
   await allowUnverifiedWheel(store);
-  const
-    app = createApp(store, {
+  const app = createApp(store, {
       env: {
         ADMIN_PASSWORD: "test-admin-only-password",
       },
@@ -288,10 +287,7 @@ for (const provider of ["google", "apple", "facebook"])
         result = await finish(entry);
       assert.equal(result.headers.get("location"), "/hesabim");
       assert.ok(result.headers.get("set-cookie").includes("rota_member="));
-      assert.equal(
-        await store.db.count("members"),
-        1,
-      );
+      assert.equal(await store.db.count("members"), 1);
       assert.ok(
         (await finish(entry)).headers.get("location").includes("error="),
       );
@@ -301,6 +297,30 @@ for (const provider of ["google", "apple", "facebook"])
           .get("location")
           .includes("error="),
       );
+      // İmzalı çerez: yük değiştirilirse veya başka akışın state'i verilirse reddedilir.
+      // (Yalnız Google akışında; Apple'da giriş hız sınırı 10 isteği aşar.)
+      if (provider === "google") {
+        const tampered = await begin();
+        const [body, mac] = tampered.binding
+          .slice("rota_oauth=".length)
+          .split(".");
+        const payload = JSON.parse(Buffer.from(body, "base64url"));
+        payload.next = "/yonetim";
+        const forgedBody = Buffer.from(JSON.stringify(payload)).toString(
+          "base64url",
+        );
+        assert.ok(
+          (await finish(tampered, `rota_oauth=${forgedBody}.${mac}`)).headers
+            .get("location")
+            .includes("error="),
+        );
+        const other = await begin();
+        assert.ok(
+          (await finish({ ...other, state: tampered.state })).headers
+            .get("location")
+            .includes("error="),
+        );
+      }
       if (provider !== "facebook") {
         wrongAudience = true;
         const bad = await begin();
@@ -312,8 +332,21 @@ for (const provider of ["google", "apple", "facebook"])
   );
 test("social login return path accepts only same-site paths (no open redirect)", async () => {
   const { safeNext } = await import("../server/social-auth.mjs");
-  assert.equal(safeNext("/rezervasyon/ani-cildir?date=2026-11-01"), "/rezervasyon/ani-cildir?date=2026-11-01");
-  for (const bad of ["//evil.com", "/\\evil.com", "https://evil.com", "javascript:alert(1)", "/a\nb", "/\t/evil.com", "", null, "x".repeat(400)])
+  assert.equal(
+    safeNext("/rezervasyon/ani-cildir?date=2026-11-01"),
+    "/rezervasyon/ani-cildir?date=2026-11-01",
+  );
+  for (const bad of [
+    "//evil.com",
+    "/\\evil.com",
+    "https://evil.com",
+    "javascript:alert(1)",
+    "/a\nb",
+    "/\t/evil.com",
+    "",
+    null,
+    "x".repeat(400),
+  ])
     assert.equal(safeNext(bad), null, String(bad).slice(0, 20));
 });
 test("login throttling is per account and global, so spoofed IPs do not help", async (t) => {
@@ -321,7 +354,9 @@ test("login throttling is per account and global, so spoofed IPs do not help", a
   const { openStore } = await import("../server/store.mjs");
   const { once } = await import("node:events");
   const store = await openStore(":memory:");
-  const app = createApp(store, { env: { TRUST_PROXY: "1", LOGIN_GLOBAL_LIMIT: "15" } });
+  const app = createApp(store, {
+    env: { TRUST_PROXY: "1", LOGIN_GLOBAL_LIMIT: "15" },
+  });
   const server = app.listen(0, "127.0.0.1");
   await once(server, "listening");
   t.after(async () => {
@@ -332,12 +367,83 @@ test("login throttling is per account and global, so spoofed IPs do not help", a
     fetch(`http://127.0.0.1:${server.address().port}/api/auth/login`, {
       method: "POST",
       body: JSON.stringify({ email, password: "yanlis-parola-1" }),
-      headers: { "Content-Type": "application/json", "X-Rota-Client": "web", "X-Forwarded-For": ip },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Rota-Client": "web",
+        "X-Forwarded-For": ip,
+      },
     }).then((r) => r.status);
   const perAccount = [];
-  for (let i = 0; i < 10; i++) perAccount.push(await login("hedef@example.com", `10.1.0.${i}`));
-  assert.equal(perAccount.filter((s) => s === 429).length >= 1, true, perAccount.join(","));
+  for (let i = 0; i < 10; i++)
+    perAccount.push(await login("hedef@example.com", `10.1.0.${i}`));
+  assert.equal(
+    perAccount.filter((s) => s === 429).length >= 1,
+    true,
+    perAccount.join(","),
+  );
   const global = [];
-  for (let i = 0; i < 12; i++) global.push(await login(`kisi${i}@example.com`, `10.2.0.${i}`));
-  assert.ok(global.includes(429), "global cap stops distributed attempts: " + global.join(","));
+  for (let i = 0; i < 12; i++)
+    global.push(await login(`kisi${i}@example.com`, `10.2.0.${i}`));
+  assert.ok(
+    global.includes(429),
+    "global cap stops distributed attempts: " + global.join(","),
+  );
+});
+
+test("Turnstile: forms require a server-verified token when keys are configured", async (t) => {
+  const { createTurnstile } = await import("../server/turnstile.mjs");
+  const calls = [];
+  const turnstile = createTurnstile(
+    { TURNSTILE_SITE_KEY: "site-key", TURNSTILE_SECRET_KEY: "secret-key" },
+    async (url, options) => {
+      calls.push({ url, body: Object.fromEntries(options.body) });
+      const token = options.body.get("response");
+      return {
+        json: async () =>
+          token === "good-register"
+            ? { success: true, action: "register" }
+            : token === "wrong-action"
+              ? { success: true, action: "booking" }
+              : { success: false, "error-codes": ["invalid-input-response"] },
+      };
+    },
+  );
+  const { req } = await fixture(t, { turnstile });
+  const catalog = await (await req("/catalog")).json();
+  assert.equal(catalog.turnstileSiteKey, "site-key");
+  const body = (turnstileToken) => ({
+    name: "Test Yolcu",
+    email: `yolcu-${calls.length}@example.com`,
+    password: "uzun-bir-parola-123",
+    consent: true,
+    ...(turnstileToken ? { turnstileToken } : {}),
+  });
+  assert.equal((await req("/auth/register", body())).status, 400);
+  assert.equal(calls.length, 0, "token yoksa Cloudflare'e gidilmez");
+  assert.equal((await req("/auth/register", body("forged"))).status, 400);
+  assert.equal((await req("/auth/register", body("wrong-action"))).status, 400);
+  assert.equal((await req("/auth/register", body("good-register"))).status, 201);
+  assert.equal(calls.at(-1).url, "https://challenges.cloudflare.com/turnstile/v0/siteverify");
+  assert.equal(calls.at(-1).body.secret, "secret-key");
+  const request = await req("/requests", {
+    kind: "private-tour",
+    name: "Test Yolcu",
+    email: "talep@example.com",
+    phone: "05551112233",
+    checkIn: "2030-01-10",
+    guests: 2,
+    consent: true,
+    turnstileToken: "forged",
+  });
+  assert.equal(request.status, 400);
+
+  // Cloudflare'e ulaşılamazsa form "geçti" sayılmaz.
+  const down = createTurnstile({ TURNSTILE_SITE_KEY: "a", TURNSTILE_SECRET_KEY: "b" }, async () => {
+    throw new Error("network");
+  });
+  await assert.rejects(down.verify("tok", "1.2.3.4"), (e) => e.status === 503);
+  // Anahtarlar yoksa doğrulama kapalı; site anahtarı da yayınlanmaz.
+  const off = createTurnstile({});
+  assert.equal(off.siteKey, null);
+  assert.equal(await off.verify(undefined), true);
 });

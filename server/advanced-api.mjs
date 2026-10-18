@@ -3,11 +3,8 @@ import QRCode from "qrcode";
 import { AppError } from "./store.mjs";
 import { vehicleModels } from "./operations.mjs";
 import { tours } from "./catalog.mjs";
-export const siteBase = (q, env) =>
-  (env.PUBLIC_BASE_URL || `${q.protocol}://${q.headers.host}`).replace(
-    /\/$/,
-    "",
-  );
+import { siteBase as configuredBase } from "./seo.mjs";
+export const siteBase = (q, env) => configuredBase(env, q);
 export async function receipt(reservation, q, env) {
   const ticketUrl = siteBase(q, env) + "/bilet/" + reservation.ticket_token;
   return {

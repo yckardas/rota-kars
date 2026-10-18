@@ -413,5 +413,5 @@ test("security headers on every response, CSP only in production; health checks 
   const prod = await start({ NODE_ENV: "production" });
   const p = await fetch(prod + "/robots.txt");
   assert.match(p.headers.get("content-security-policy"), /frame-ancestors 'self'/);
-  assert.match(p.headers.get("content-security-policy"), /script-src 'self' https:\/\/www\.instagram\.com;/);
+  assert.match(p.headers.get("content-security-policy"), /script-src 'self' https:\/\/challenges\.cloudflare\.com;/);
 });

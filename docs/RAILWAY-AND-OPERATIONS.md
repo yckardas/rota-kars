@@ -62,7 +62,12 @@ BUCKET="${{buffered-basket.BUCKET}}"
 - **Giriş denemeleri:** IP başına (IPv6'da /64 blok), hesap başına (8 hatalı deneme) ve IP'den bağımsız toplam (`LOGIN_GLOBAL_LIMIT`, varsayılan 200 / 15 dk) sınır vardır. Yönetici hesapları yanlış parola veya yanlış 2FA koduyla 5 denemede 15 dk kilitlenir; kilitli ve olmayan hesaplar aynı mesajı alır.
 - **Yetki:** Rol kontrolü yolları normalize ederek yapılır ve Express birebir eşleşir (büyük/küçük harf ve sondaki `/` ile sahibe özel uçlara erişilemez).
 - **KVKK:** Üye, e-postası doğrulanmadıkça yalnız kendi üyeliğine bağlı kayıtları indirip silebilir; aynı e-postayla yapılmış misafir kayıtları ona verilmez.
-- **Koltuk blokajı:** Bir e-postanın onay bekleyen toplam koltuğu `PENDING_SEATS_PER_EMAIL` (12) ile, bekleme süresi `PENDING_HOLD_HOURS` (24) ile sınırlıdır. Kötüye kullanım görülürse bu süreyi kısaltın ve rezervasyona Cloudflare Turnstile gibi bir doğrulama eklemeyi değerlendirin.
+- **Koltuk blokajı:** Bir e-postanın onay bekleyen toplam koltuğu `PENDING_SEATS_PER_EMAIL` (12) ile, bekleme süresi `PENDING_HOLD_HOURS` (24) ile sınırlıdır. Kötüye kullanım görülürse bu süreyi kısaltın.
+- **Bot koruması (Cloudflare Turnstile):** Cloudflare panelinde Turnstile → Add widget (alan adı: `rotakarsturizm.com`, mod: Managed) oluşturun; `TURNSTILE_SITE_KEY` ve `TURNSTILE_SECRET_KEY` değişkenlerini Railway'e ekleyin. Ön rezervasyon, üyelik ve talep formları token'ı sunucuda Cloudflare'e doğrulatır; Cloudflare'e ulaşılamazsa form kabul edilmez (503). İki değişken boşsa koruma kapalıdır.
+- **Bağlantı adresleri:** E-postadaki parola sıfırlama, doğrulama ve bilet bağlantıları yalnız `PUBLIC_BASE_URL`/`SITE_URL`'den kurulur; üretimde Host başlığına güvenilmez (ayarlı değilse `https://rotakarsturizm.com`).
+- **Sosyal giriş:** OAuth durumu sunucu belleğinde değil, imzalı ve 10 dk geçerli httpOnly çerezde tutulur; her durum bir kez kullanılabilir (`oauth_used`). İsteğe bağlı `OAUTH_STATE_SECRET` ile imza anahtarı ayrıca verilebilir.
+- **Üyelik e-postası:** Kayıt formu, e-posta zaten kayıtlıysa bunu açıkça söyler (kullanıcının giriş yapmaya yönlendirilmesi için bilinçli tercih). Toplu sorgulamayı giriş hız sınırı (IP başına 10 / 15 dk) ve Turnstile engeller; parola sıfırlama her durumda aynı yanıtı verir.
+- **CSP:** Üçüncü taraf betik yalnız Turnstile (`challenges.cloudflare.com`); Instagram gönderileri betiksiz iframe ile gömülür. Katalog verisi HTML'e `application/json` olarak, `<`/`>`/`&` kaçışlı gömülür.
 - **Herkese açık veride** rehber adı/telefonu yer almaz; çok uzun adresler (>512 karakter) 414 ile reddedilir.
 - **Bağımlılıklar:** `npm audit` temiz tutulmalı; derleme araçları yalnız geliştirme bağımlılığıdır.
 

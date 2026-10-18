@@ -253,6 +253,7 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx }) {
       await db.remove("member_sessions", { expires_at: { $lt: now } });
       await db.remove("admin_sessions", { expires_at: { $lt: now } });
       await db.remove("account_tokens", { expires_at: { $lt: now - 30 * DAY } });
+      await db.remove("oauth_used", { expires_at: { $lt: now } });
       return result;
     },
   };

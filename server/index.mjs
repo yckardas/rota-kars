@@ -8,6 +8,10 @@ const port = Number(process.env.PORT || 5173),
   store = await openStore(),
   app = createApp(store);
 if (process.env.NODE_ENV === "production") {
+  if (!/^https:\/\//.test(process.env.PUBLIC_BASE_URL || ""))
+    console.warn(
+      "PUBLIC_BASE_URL ayarlı değil: e-posta ve bilet bağlantılarında https://rotakarsturizm.com kullanılacak.",
+    );
   const template = await readFile(resolve("dist/index.html"), "utf8");
   // Adında içerik özeti olan derleme dosyaları bir yıl, görseller bir hafta önbellekte kalır.
   app.use(
@@ -16,7 +20,7 @@ if (process.env.NODE_ENV === "production") {
   );
   app.use("/images", express.static(resolve("dist/images"), { maxAge: "7d", index: false }));
   app.use(express.static(resolve("dist"), { index: false }));
-  app.use(seoHtmlHandler(process.env, async () => template));
+  app.use(seoHtmlHandler(process.env, async () => template, app.locals.catalog));
 } else {
   const { createServer } = await import("vite");
   const vite = await createServer({
@@ -34,6 +38,7 @@ if (process.env.NODE_ENV === "production") {
         url,
         await readFile(resolve("index.html"), "utf8"),
       ),
+      app.locals.catalog,
     ),
   );
   app.use(vite.middlewares);
@@ -48,6 +53,7 @@ const jobs = setInterval(async () => {
   if (jobsBusy) return;
   jobsBusy = true;
   try {
+    await store.cleanup({ force: true });
     await store.workflow.reminders();
     await store.notifications.processBatch();
   } catch (e) {

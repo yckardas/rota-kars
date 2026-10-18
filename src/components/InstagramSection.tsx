@@ -21,80 +21,34 @@ export type InstagramPost = {
   active: number;
   videoSrc?: string | null;
 };
-type InstagramWindow = Window & {
-  instgrm?: { Embeds: { process: () => void } };
-};
-let embedPromise: Promise<void> | null = null;
-function loadInstagram() {
-  if ((window as InstagramWindow).instgrm) return Promise.resolve();
-  if (embedPromise) return embedPromise;
-  embedPromise = new Promise<void>((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = "https://www.instagram.com/embed.js";
-    script.async = true;
-    script.dataset.rotaInstagram = "true";
-    script.onload = () => resolve();
-    script.onerror = () => {
-      script.remove();
-      embedPromise = null;
-      reject(new Error("Instagram yüklenemedi."));
-    };
-    document.head.append(script);
-  });
-  return embedPromise;
+// Instagram gönderisi doğrudan iframe ile gömülür: üçüncü taraf betik (embed.js)
+// yüklenmez, CSP'de Instagram yalnız frame-src'de kalır.
+export function instagramEmbedUrl(permalink: string) {
+  try {
+    const url = new URL(permalink);
+    if (!/^(www\.)?instagram\.com$/.test(url.hostname)) return null;
+    const match = url.pathname.match(/^\/(?:[\w.]+\/)?(p|reel|tv)\/([\w-]+)\/?$/);
+    return match
+      ? `https://www.instagram.com/${match[1] === "tv" ? "p" : match[1]}/${match[2]}/embed/`
+      : null;
+  } catch {
+    return null;
+  }
 }
 function InstagramEmbed({ post }: { post: InstagramPost }) {
-  const host = useRef<HTMLDivElement>(null),
+  const src = instagramEmbedUrl(post.permalink),
     [status, setStatus] = useState<"loading" | "ready" | "unavailable">(
-      "loading",
+      src ? "loading" : "unavailable",
     );
   useEffect(() => {
-    let active = true;
-    const el = host.current!,
-      quote = document.createElement("blockquote");
-    quote.className = "instagram-media";
-    quote.dataset.instgrmPermalink = post.permalink;
-    quote.dataset.instgrmVersion = "14";
-    const anchor = document.createElement("a");
-    anchor.href = post.permalink;
-    anchor.textContent = "Instagram’da görüntüle";
-    anchor.target = "_blank";
-    anchor.rel = "noopener noreferrer";
-    quote.append(anchor);
-    el.replaceChildren(quote);
-    let frame: HTMLIFrameElement | null = null;
-    const loaded = () => {
-      if (active) setStatus("ready");
-    };
-    const observer = new MutationObserver(() => {
-      const next = el.querySelector("iframe");
-      if (next && next !== frame) {
-        frame?.removeEventListener("load", loaded);
-        frame = next;
-        frame.addEventListener("load", loaded);
-      }
-    });
-    observer.observe(el, { childList: true, subtree: true });
-    const timer = setTimeout(() => {
-      if (active)
-        setStatus((current) =>
-          current === "loading" ? "unavailable" : current,
-        );
-    }, 10000);
-    loadInstagram()
-      .then(() => {
-        if (active) (window as InstagramWindow).instgrm?.Embeds.process();
-      })
-      .catch(() => {
-        if (active) setStatus("unavailable");
-      });
-    return () => {
-      active = false;
-      observer.disconnect();
-      frame?.removeEventListener("load", loaded);
-      clearTimeout(timer);
-    };
-  }, [post]);
+    if (!src) return;
+    setStatus("loading");
+    const timer = setTimeout(
+      () => setStatus((current) => (current === "loading" ? "unavailable" : current)),
+      10000,
+    );
+    return () => clearTimeout(timer);
+  }, [src]);
   return (
     <div className="instagram-inline-player">
       {status === "loading" && (
@@ -104,10 +58,24 @@ function InstagramEmbed({ post }: { post: InstagramPost }) {
       )}
       {status === "unavailable" && (
         <p className="instagram-player-status" role="status">
-          Oynatıcı yüklenemedi. Alttaki Instagram bağlantısını kullanın.
+          Oynatıcı yüklenemedi.{" "}
+          <a href={post.permalink} target="_blank" rel="noopener noreferrer">
+            Instagram’da görüntüle
+          </a>
         </p>
       )}
-      <div className="instagram-embed-host" ref={host} />
+      {src && (
+        <div className="instagram-embed-host">
+          <iframe
+            src={src}
+            title={post.title || "Instagram gönderisi"}
+            loading="lazy"
+            allow="autoplay; encrypted-media; picture-in-picture; clipboard-write"
+            referrerPolicy="strict-origin-when-cross-origin"
+            onLoad={() => setStatus("ready")}
+          />
+        </div>
+      )}
     </div>
   );
 }

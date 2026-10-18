@@ -25,6 +25,7 @@ import { roleAllows, ROLES } from "./admin-auth.mjs";
 import { createStorage, MEDIA_LIMITS } from "./storage.mjs";
 import { vehicleModels } from "./operations.mjs";
 import { attachSocialAuth, cookieValue } from "./social-auth.mjs";
+import { createTurnstile } from "./turnstile.mjs";
 import { normalizeInstagramUrl, createInstagramFeed } from "./instagram.mjs";
 import { AppError } from "./store.mjs";
 import { createReviewsService } from "./reviews.mjs";
@@ -107,6 +108,7 @@ export function createApp(
       settings: store.instagramSettings,
     }),
     storage = createStorage({ env, db: store.db }),
+    turnstile = createTurnstile(env),
   } = {},
 ) {
   // Giriş denemesi sınırları: IP başına limite ek olarak hesap (e-posta) başına ve
@@ -152,14 +154,14 @@ export function createApp(
   const production = env.NODE_ENV === "production";
   const csp = [
     "default-src 'self'",
-    // Instagram oynatıcısı yalnız video dosyası olmayan paylaşımlar için açılır.
-    "script-src 'self' https://www.instagram.com",
+    // Yalnız Cloudflare Turnstile betiği; Instagram gönderileri iframe (frame-src) ile gömülür.
+    "script-src 'self' https://challenges.cloudflare.com",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "media-src 'self' blob: https:",
     "font-src 'self' data:",
     "connect-src 'self'",
-    "frame-src https://www.google.com https://maps.google.com https://www.instagram.com",
+    "frame-src https://www.google.com https://maps.google.com https://www.instagram.com https://challenges.cloudflare.com",
     "frame-ancestors 'self'",
     "base-uri 'self'",
     "form-action 'self' https://appleid.apple.com",
@@ -259,6 +261,8 @@ export function createApp(
       for (const [k, v] of limits) if (v.reset < now) limits.delete(k);
     next();
   });
+  const human = (q, action) =>
+    turnstile.verify(q.body?.turnstileToken, String(q.ip || "").replace(/^::ffff:/, ""), action);
   const route = (fn) => async (req, res, next) => {
     try {
       await fn(req, res);
@@ -345,6 +349,7 @@ export function createApp(
             .optional(),
         })
         .parse(q.body);
+      await human(q, "register");
       const member = await store.members.register(input);
       await store.privacy.recordConsent({ email: input.email, memberId: member.id, type: "kvkk_notice", source: "register" });
       if (input.marketingConsent)
@@ -538,8 +543,8 @@ export function createApp(
     }),
   );
   attachSeoRoutes(app, env);
-  app.get("/api/catalog", async (_q, r) =>
-    r.json({
+  // Aynı veri HTML'e de gömülür (app.locals.catalog): ilk boyamada ek istek gerekmez.
+  const catalogData = async () => ({
       business,
       tours: await store.operations.list(),
       vehicleModels,
@@ -553,8 +558,10 @@ export function createApp(
       payment: paymentStatus,
       preview: true,
       demo: env.DEMO_MODE === "1",
-    }),
-  );
+      turnstileSiteKey: turnstile.siteKey,
+  });
+  app.locals.catalog = catalogData;
+  app.get("/api/catalog", async (_q, r) => r.json(await catalogData()));
   app.get(
     "/api/tours/:id/departures",
     route(async (q, r) => r.json((await store.listDepartures(q.params.id)).map(publicDeparture))),
@@ -632,6 +639,7 @@ export function createApp(
     "/api/reservations",
     route(async (q, r) => {
       const input = bookingSchema.parse(q.body);
+      await human(q, "booking");
       if (q.member && input.email.toLowerCase() !== q.member.email)
         throw new AppError(
           400,
@@ -774,6 +782,7 @@ export function createApp(
     "/api/requests",
     route(async (q, r) => {
       const input = requestSchema.parse(q.body);
+      await human(q, "request");
       if (
         input.hotelId &&
         !(await store.hotels()).some((h) => h.id === input.hotelId)

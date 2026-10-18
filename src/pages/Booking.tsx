@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useTurnstile } from "../components/Turnstile";
 import { responsive } from "../lib/images";
 import {
   Link,
@@ -61,6 +62,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     [contact, setContact] = useState({ name: "", email: "", phone: "" }),
     [consent, setConsent] = useState(false),
     [marketingConsent, setMarketingConsent] = useState(false),
+    human = useTurnstile("booking"),
     [loaded, setLoaded] = useState(false),
     [activeVehicle, setActiveVehicle] = useState<Vehicle | null>(null),
     [coupons, setCoupons] = useState<Coupon[]>([]),
@@ -280,6 +282,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         consent,
         marketingConsent,
         ...(couponId ? { couponId } : {}),
+        turnstileToken: human.token,
       });
       holdRef.current = null;
       setHold(null);
@@ -287,6 +290,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
       window.scrollTo({ top: 120, behavior: "smooth" });
     } catch (e) {
       setError((e as Error).message);
+      human.reset();
       if (e instanceof ApiError && e.status === 410) {
         setHold(null);
         setStep(0);
@@ -726,6 +730,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   istiyorum (isteğe bağlı).
                 </span>
               </label>
+              {human.widget}
               <div className="flow-error" role="alert">
                 {error}
               </div>
@@ -735,7 +740,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                 </button>
                 <button
                   className="btn"
-                  disabled={busy || quoteBusy || Boolean(quoteError) || !quote}
+                  disabled={
+                    busy || quoteBusy || Boolean(quoteError) || !quote || !human.ready
+                  }
                 >
                   {busy ? (
                     <LoaderCircle className="spin" size={17} />

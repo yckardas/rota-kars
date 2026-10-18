@@ -5,7 +5,16 @@ import {
   Check,
   DoorOpen,
 } from "lucide-react";
+import { useEffect, useRef } from "react";
 import type { Seat, Vehicle } from "../lib/types";
+// Ekranda görünen etkileşimli koltuk haritası sayısı: mobilde sohbet/WhatsApp
+// düğmeleri koltukların üstüne binmesin diye gövdeye işaret konur.
+let visibleMaps = 0;
+const markVisible = (delta: number) => {
+  visibleMaps = Math.max(0, visibleMaps + delta);
+  if (visibleMaps) document.body.dataset.seatmapVisible = "true";
+  else delete document.body.dataset.seatmapVisible;
+};
 export function SeatMap({
   vehicle,
   seats = [],
@@ -19,7 +28,24 @@ export function SeatMap({
   onSelect?: (n: number) => void;
   interactive?: boolean;
 }) {
-  const [cockpit, ...rows] = vehicle.layout;
+  const [cockpit, ...rows] = vehicle.layout,
+    root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = root.current;
+    if (!interactive || !el || typeof IntersectionObserver === "undefined") return;
+    let shown = false;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting !== shown) {
+        shown = entry.isIntersecting;
+        markVisible(shown ? 1 : -1);
+      }
+    });
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      if (shown) markVisible(-1);
+    };
+  }, [interactive]);
   const status = (n: number) =>
     selected.includes(n)
       ? "selected"
@@ -27,7 +53,7 @@ export function SeatMap({
         ? "occupied"
         : "available";
   return (
-    <div className="seat-map">
+    <div className="seat-map" ref={root}>
       <div className="vehicle-roof">
         <span>VIP</span>
         <span>Ön taraf</span>

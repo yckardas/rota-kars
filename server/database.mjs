@@ -160,9 +160,25 @@ export async function connectDatabase({ path, env = process.env } = {}) {
   // Uygulama tek kopya çalıştığı sürece koltuk/kupon/ödeme yarışlarını engeller.
   let tail = Promise.resolve();
   const serialize = (fn) => {
-    const run = tail.then(() => scope.run({ serialized: true }, fn));
+    const store = { serialized: true, after: [] };
+    const run = tail.then(() => scope.run(store, fn));
     tail = run.catch(() => {});
-    return run;
+    return run.then(async (value) => {
+      await runAfter(store.after);
+      return value;
+    });
+  };
+  // İşlem başarıyla bittikten sonra çalışacak işler (ör. bildirim kuyruğu). Hataları
+  // işlemi geri almaz; kayda yazılır.
+  const runAfter = async (hooks) => {
+    for (const hook of hooks)
+      try {
+        await hook();
+      } catch (e) {
+        console.error(
+          JSON.stringify({ level: "error", job: "after-commit", error: e?.name, message: String(e?.message || "").slice(0, 200) }),
+        );
+      }
   };
   const col = (name) => database.collection(name);
   await col("app_mutex").updateOne(
@@ -234,10 +250,17 @@ export async function connectDatabase({ path, env = process.env } = {}) {
     async ping() {
       await database.command({ ping: 1 });
     },
+    inTransaction: () => Boolean(scope.getStore()),
+    async afterCommit(fn) {
+      const store = scope.getStore();
+      if (store) store.after.push(fn);
+      else await fn();
+    },
     async transaction(fn) {
       if (scope.getStore()) return fn();
       if (mode === "serialized") return serialize(fn);
       const s = client.startSession();
+      let after = [];
       try {
         let result;
         await s.withTransaction(
@@ -247,16 +270,22 @@ export async function connectDatabase({ path, env = process.env } = {}) {
               { $inc: { n: 1 } },
               { session: s },
             );
-            result = await scope.run({ session: s }, fn);
+            // Yeniden denemede önceki denemenin bekleyen işleri atılır.
+            const store = { session: s, after: [] };
+            result = await scope.run(store, fn);
+            after = store.after;
           },
           {
             readConcern: { level: "snapshot" },
             writeConcern: { w: "majority" },
           },
         );
-        return result;
-      } finally {
         await s.endSession();
+        await runAfter(after);
+        return result;
+      } catch (e) {
+        await s.endSession().catch(() => {});
+        throw e;
       }
     },
     async close() {

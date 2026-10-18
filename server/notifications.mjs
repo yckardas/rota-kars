@@ -42,7 +42,15 @@ export async function createNotifications(db, { clock, tx, env = {} }) {
           dedupeKey: `agency:${email}:${dedupeKey}`,
         });
     },
-    async enqueue({ email, subject, body, actionUrl = null, kind, dedupeKey }) {
+    // İşlem içindeyse kuyruğa yazma işlem tamamlanınca yapılır (yarım kayıt kalmaz).
+    async enqueue(message) {
+      if (db.inTransaction?.()) {
+        await db.afterCommit(() => api.enqueueNow(message));
+        return null;
+      }
+      return api.enqueueNow(message);
+    },
+    async enqueueNow({ email, subject, body, actionUrl = null, kind, dedupeKey }) {
       // dedupe_key _id olarak kullanılır: aynı olay için ikinci mesaj kuyruğa girmez.
       await db.insertIfAbsent("notification_outbox", dedupeKey, {
         id: randomUUID(),

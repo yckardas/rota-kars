@@ -19,6 +19,7 @@ import "./styles.css";
 import { api } from "./lib/api";
 import { usePageMeta } from "./lib/seo";
 import type { Catalog } from "./lib/types";
+import { configureTurnstile } from "./components/Turnstile";
 import { Layout } from "./components/Layout";
 import { Home } from "./pages/Home";
 import { Tours } from "./pages/Tours";
@@ -60,11 +61,21 @@ const PageLoading = () => (
     <p>Yükleniyor…</p>
   </div>
 );
+// Sunucu, katalog verisini HTML'e gömer; ilk boyama ek istek beklemez.
+const inlineCatalog = (): Catalog | null => {
+  try {
+    const text = document.getElementById("catalog-data")?.textContent;
+    return text ? (JSON.parse(text) as Catalog) : null;
+  } catch {
+    return null;
+  }
+};
 function App() {
-  const [catalog, setCatalog] = useState<Catalog | null>(null),
+  const [catalog, setCatalog] = useState<Catalog | null>(inlineCatalog),
     [error, setError] = useState(""),
     location = useLocation();
   useEffect(() => {
+    if (catalog) return;
     api<Catalog>("/catalog")
       .then(setCatalog)
       .catch(() =>
@@ -74,6 +85,7 @@ function App() {
       );
   }, []);
   usePageMeta(location.pathname);
+  configureTurnstile(catalog?.turnstileSiteKey);
   if (error)
     return (
       <div className="app-loading">

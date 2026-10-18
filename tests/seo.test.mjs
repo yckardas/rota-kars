@@ -139,3 +139,42 @@ test("very long paths are rejected quickly instead of stalling the server", asyn
   pageMeta("/" + "/".repeat(20000) + "x", BASE);
   assert.ok(Date.now() - t0 < 50, "pageMeta is linear");
 });
+
+test("catalog data is inlined into the HTML safely and matches /api/catalog", async (t) => {
+  const { inlineJson } = await import("../server/seo.mjs");
+  const evil = inlineJson({ x: "</script><script>alert(1)</script> &" });
+  assert.ok(!evil.includes("<") && !evil.includes(">") && !evil.includes("&") && !evil.includes(" "));
+  assert.deepEqual(JSON.parse(evil), { x: "</script><script>alert(1)</script> &" });
+
+  const store = await openStore(":memory:");
+  const env = { SITE_URL: BASE };
+  const app = createApp(store, {
+    env,
+    reviewsService: { get: async () => ({ status: "not_configured", reviews: [] }) },
+  });
+  app.use(seoHtmlHandler(env, async () => TEMPLATE, app.locals.catalog));
+  const server = app.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const base = `http://127.0.0.1:${server.address().port}`;
+  t.after(async () => {
+    await new Promise((r) => server.close(r));
+    await store.db.close();
+  });
+  const html = await (await fetch(base + "/", { headers: { Accept: "text/html" } })).text();
+  const inline = JSON.parse(html.match(/<script id="catalog-data" type="application\/json">(.*?)<\/script>/)[1]);
+  const api = await (await fetch(base + "/api/catalog")).json();
+  assert.deepEqual(inline, api);
+  assert.ok(inline.tours.length > 0);
+});
+
+test("production links never trust the Host header", async () => {
+  const { siteBase } = await import("../server/seo.mjs");
+  const evil = { protocol: "https", headers: { host: "evil.example" } };
+  assert.equal(siteBase({ NODE_ENV: "production" }, evil), "https://rotakarsturizm.com");
+  assert.equal(
+    siteBase({ NODE_ENV: "production", PUBLIC_BASE_URL: "https://rotakars.up.railway.app/" }, evil),
+    "https://rotakars.up.railway.app",
+  );
+  assert.equal(siteBase({ NODE_ENV: "production", PUBLIC_BASE_URL: "javascript:alert(1)" }, evil), "https://rotakarsturizm.com");
+  assert.equal(siteBase({}, { protocol: "http", headers: { host: "localhost:5173" } }), "http://localhost:5173");
+});

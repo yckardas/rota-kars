@@ -85,6 +85,7 @@ export type Catalog = {
   payment: { enabled: boolean; message: string };
   preview: boolean;
   demo?: boolean;
+  turnstileSiteKey?: string | null;
 };
 export type Departure = {
   id: string;

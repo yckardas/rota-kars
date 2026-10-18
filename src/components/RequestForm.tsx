@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Check, CalendarDays, ShieldCheck, LoaderCircle } from "lucide-react";
 import { Modal } from "./Modal";
+import { useTurnstile } from "./Turnstile";
 import { post } from "../lib/api";
 import { today, type Hotel } from "../lib/types";
 export function RequestForm({
@@ -18,7 +19,8 @@ export function RequestForm({
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [result, setResult] = useState("");
+    [result, setResult] = useState(""),
+    human = useTurnstile("request");
   const title =
     kind === "hotel"
       ? "Konaklama talebi"
@@ -42,10 +44,12 @@ export function RequestForm({
         notes: f.get("notes"),
         ...(f.get("hotelId") ? { hotelId: f.get("hotelId") } : {}),
         consent: f.get("consent") === "on",
+        turnstileToken: human.token,
       });
       setResult(r.reference);
     } catch (e) {
       setError((e as Error).message);
+      human.reset();
     } finally {
       setBusy(false);
     }
@@ -173,12 +177,13 @@ export function RequestForm({
             <CalendarDays size={17} /> Kesin rezervasyon ve ödeme, müsaitlik
             teyidinden sonra yapılır.
           </div>
+          {human.widget}
           {error && (
             <p className="error" role="alert">
               {error}
             </p>
           )}
-          <button className="btn block" disabled={busy}>
+          <button className="btn block" disabled={busy || !human.ready}>
             {busy ? (
               <>
                 <LoaderCircle className="spin" size={17} /> Kaydediliyor

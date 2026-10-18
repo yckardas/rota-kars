@@ -203,3 +203,27 @@ test("a seat hold can be extended twice, up to 30 minutes in total", async () =>
     await s.db.close();
   }
 });
+test("notifications are queued only after the booking commits; a notification failure does not break the booking", async () => {
+  const { openStore } = await import("../server/store.mjs");
+  const s = await openStore(":memory:");
+  try {
+    const [d] = await s.listDepartures("ani-cildir");
+    const original = s.notifications.enqueueNow;
+    s.notifications.enqueueNow = async () => {
+      throw new Error("smtp kuyruğu kapalı");
+    };
+    const h = await s.hold(d.id, [6]);
+    const r = await s.reserve({ holdToken: h.token, name: "Test Yolcu", email: "t@example.com", phone: "05550000000", passengers: ["Test Yolcu"], paymentMode: "deposit" });
+    assert.ok(r.reference, "booking succeeds");
+    assert.ok(await s.db.one("reservations", { reference: r.reference }));
+    s.notifications.enqueueNow = original;
+    const before = await s.db.count("notification_outbox");
+    const h2 = await s.hold(d.id, [7]);
+    await assert.rejects(() =>
+      s.reserve({ holdToken: h2.token, name: "Test Yolcu", email: "t@example.com", phone: "05550000000", passengers: ["A", "B"], paymentMode: "deposit" }),
+    );
+    assert.equal(await s.db.count("notification_outbox"), before, "failed booking queues nothing");
+  } finally {
+    await s.db.close();
+  }
+});
