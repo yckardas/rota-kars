@@ -101,6 +101,16 @@ export async function connectDatabase({ path, env = process.env } = {}) {
     throw new Error(
       "MONGODB_URI tanımlı değil. Yerelde `docker compose up -d mongo` çalıştırıp .env içine MONGODB_URI=mongodb://127.0.0.1:27017/ yazın. Railway'de MONGO_URL değişkenini Mongo servisine referansla verin.",
     );
+  if (!memory) {
+    // Teşhis: hangi sunucuya bağlanıldığı (kullanıcı adı/parola yazılmaz).
+    let target = "mongodb+srv";
+    try {
+      const u = new URL(uri);
+      target = `${u.hostname}:${u.port || 27017}`;
+    } catch {}
+    const source = env.MONGODB_URI ? "MONGODB_URI" : env.MONGO_URL ? "MONGO_URL" : env.DATABASE_URL ? "DATABASE_URL" : "MONGOHOST";
+    console.log(`MongoDB'ye bağlanılıyor: ${target} (veritabanı: ${dbName || "varsayılan"}, kaynak: ${source})`);
+  }
   // Mongo servisi uygulamayla aynı anda (re)start olabilir: hazır olana kadar
   // MONGODB_CONNECT_TIMEOUT_SECONDS (varsayılan 90) boyunca yeniden denenir.
   const deadline =
