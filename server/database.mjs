@@ -1,10 +1,10 @@
 // MongoDB veri katmanı. Her eski SQL tablosu bir koleksiyondur; `_id` birincil
 // anahtardır, diğer alan adları korunur. Belgeler okunurken `_id` çıkarılır.
 //
-// Tutarlılık: rezervasyon, kupon ve ödeme işlemleri tek bir transaction içinde
-// çalışır. Her transaction önce ortak `app_mutex` belgesine yazar; böylece eşzamanlı
-// transaction'lar sıraya girer (çakışan yazımda sürücü otomatik yeniden dener).
-// Transaction için Mongo'nun replica set olarak çalışması gerekir.
+// Tutarlılık: rezervasyon, kupon ve ödeme işlemleri db.transaction() içinde çalışır.
+// - Tek düğümlü Mongo (Railway varsayılanı): işlemler uygulama içinde sıraya girer.
+// - Replica set: gerçek Mongo transaction'ı; her biri önce `app_mutex` belgesine
+//   yazdığı için eşzamanlı transaction'lar yine sıraya girer.
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomBytes } from "node:crypto";
 import { MongoClient } from "mongodb";
@@ -21,9 +21,9 @@ export const fromJson = (value, fallback = null) => {
 };
 
 // Railway Mongo şablonu MONGO_URL (veya MONGOHOST/MONGOPORT/MONGOUSER/MONGOPASSWORD)
-// verir; adreste replica set ve yetki veritabanı yoksa güvenli varsayılanlar eklenir.
+// verir. Tek düğümlü Mongo ile de çalışır; replicaSet parametresi yalnız açıkça
+// verilirse (adreste veya MONGODB_REPLICA_SET ile) kullanılır.
 export function mongoConfiguration(env = process.env) {
-  let autoReplicaSet = null;
   let uri = env.MONGODB_URI || env.MONGO_URL || env.DATABASE_URL || "";
   if (!uri && env.MONGOHOST) {
     const auth = env.MONGOUSER
@@ -44,95 +44,34 @@ export function mongoConfiguration(env = process.env) {
     } catch {
       throw new Error("MONGODB_URI geçersiz. Bağlantı biçimini kontrol edin.");
     }
-    const replicaSet = env.MONGODB_REPLICA_SET ?? "rs0";
-    if (replicaSet && !parsed.searchParams.has("replicaSet") && !parsed.searchParams.has("directConnection")) {
-      parsed.searchParams.set("replicaSet", replicaSet);
-      autoReplicaSet = replicaSet;
-    }
+    if (env.MONGODB_REPLICA_SET && !parsed.searchParams.has("replicaSet"))
+      parsed.searchParams.set("replicaSet", env.MONGODB_REPLICA_SET);
     if (parsed.username && !parsed.searchParams.has("authSource"))
       parsed.searchParams.set("authSource", "admin");
     if (parsed.pathname === "") parsed.pathname = "/";
     uri = parsed.toString();
   }
-  return { uri, dbName: env.MONGODB_DB || "", autoReplicaSet };
+  return { uri, dbName: env.MONGODB_DB || "" };
 }
 
-// Railway Mongo servisi için "Custom Start Command". Kalıcı volume'de bir kez keyFile
-// üretir (yetki açık replica set için zorunlu) ve Railway iç ağı IPv6 olduğu için
-// IPv6 dahil tüm adresleri dinler.
-export const RAILWAY_MONGO_START_COMMAND =
-  "bash -c 'if [ ! -f /data/db/rs.key ]; then openssl rand -base64 756 > /data/db/rs.key; fi; chmod 400 /data/db/rs.key; chown 999:999 /data/db/rs.key; exec docker-entrypoint.sh mongod --replSet rs0 --ipv6 --bind_ip ::,0.0.0.0 --keyFile /data/db/rs.key'";
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const hideCredentials = (text) =>
   String(text || "").replace(/\/\/[^@/]*@/g, "//***@").slice(0, 300);
-
-// Mongo --replSet ile açılmış ama henüz başlatılmamışsa (rs.initiate yapılmamış)
-// replica set'i, uygulamanın bağlandığı adresle tek üyeli olarak başlatır.
-// Hiç --replSet ile açılmamışsa ne yapılacağını söyleyen hata verir.
-export async function prepareReplicaSet(uri, name) {
-  const direct = new URL(uri);
-  direct.searchParams.delete("replicaSet");
-  direct.searchParams.set("directConnection", "true");
-  const client = new MongoClient(direct.toString(), { serverSelectionTimeoutMS: 15000 });
-  try {
-    await client.connect();
-  } catch (e) {
-    throw new Error(
-      "MongoDB'ye hiç bağlanılamadı (adres, port, kullanıcı/parola veya ağ). Ayrıntı: " +
-        hideCredentials(e?.message),
-    );
-  }
-  try {
-    const admin = client.db("admin");
-    const hello = await admin.command({ hello: 1 });
-    if (hello.setName && hello.setName !== name)
-      throw new Error(
-        `Mongo "${hello.setName}" adlı replica set olarak çalışıyor. Uygulamaya MONGODB_REPLICA_SET=${hello.setName} değişkenini verin.`,
-      );
-    if (hello.setName)
-      throw new Error(
-        `Replica set "${name}" başlatılmış ama üyesine (${(hello.hosts || []).join(", ") || "?"}) uygulamadan ulaşılamıyor. rs.conf() içindeki host, uygulamanın kullandığı adresle (${direct.host}) aynı olmalı.`,
-      );
-    try {
-      await admin.command({ replSetGetStatus: 1 });
-    } catch (e) {
-      if (e?.code === 76 || /not running with --replSet/i.test(e?.message || ""))
-        throw new Error(
-          `MongoDB tek düğümlü çalışıyor; rezervasyon transaction'ları için replica set gerekli. Railway'de Mongo servisinin Settings → Deploy → Custom Start Command alanına şunu yazıp servisi yeniden başlatın, uygulama gerisini kendisi yapar:\n${RAILWAY_MONGO_START_COMMAND}`,
-        );
-      if (e?.code !== 94) throw e; // 94 = NotYetInitialized: başlatılabilir.
-    }
-    const host = `${direct.hostname.replace(/^\[|\]$/g, "")}:${direct.port || 27017}`;
-    await admin.command({
-      replSetInitiate: { _id: name, members: [{ _id: 0, host }] },
-    });
-    for (let i = 0; i < 30; i++) {
-      if ((await admin.command({ hello: 1 })).isWritablePrimary) {
-        console.log(`MongoDB replica set "${name}" başlatıldı (${host}).`);
-        return "initiated";
-      }
-      await sleep(1000);
-    }
-    throw new Error(`Replica set "${name}" başlatıldı ama 30 saniyede birincil (primary) olmadı.`);
-  } finally {
-    await client.close().catch(() => {});
-  }
-}
 
 let memoryServer = null,
   memoryUsers = 0,
   memoryStopTimer = null;
-// Testler ve hızlı denemeler için süreç başına tek, bellek içi replica set.
-// Son bağlantı kapanınca kısa bir süre sonra durdurulur; böylece test süreci kapanabilir.
+// Testler ve hızlı denemeler için süreç başına tek, bellek içi Mongo. Varsayılan
+// olarak replica set (transaction modu); MONGODB_TEST_STANDALONE=1 ile Railway'deki
+// gibi tek düğüm (sıralı işlem modu). Son bağlantı kapanınca kısa süre sonra durur.
 async function memoryUri() {
   clearTimeout(memoryStopTimer);
   memoryUsers++;
   if (!memoryServer) {
-    const { MongoMemoryReplSet } = await import("mongodb-memory-server");
-    memoryServer = MongoMemoryReplSet.create({
-      replSet: { count: 1, storageEngine: "wiredTiger" },
-    });
+    const { MongoMemoryReplSet, MongoMemoryServer } = await import("mongodb-memory-server");
+    memoryServer =
+      process.env.MONGODB_TEST_STANDALONE === "1"
+        ? MongoMemoryServer.create()
+        : MongoMemoryReplSet.create({ replSet: { count: 1, storageEngine: "wiredTiger" } });
   }
   return (await memoryServer).getUri();
 }
@@ -160,49 +99,36 @@ export async function connectDatabase({ path, env = process.env } = {}) {
   }
   if (!uri)
     throw new Error(
-      "MONGODB_URI tanımlı değil. Yerelde `docker compose up -d mongo` çalıştırıp .env içine MONGODB_URI=mongodb://127.0.0.1:27017/rota-kars?replicaSet=rs0&directConnection=true yazın.",
+      "MONGODB_URI tanımlı değil. Yerelde `docker compose up -d mongo` çalıştırıp .env içine MONGODB_URI=mongodb://127.0.0.1:27017/ yazın. Railway'de MONGO_URL değişkenini Mongo servisine referansla verin.",
     );
-  const open = async () => {
-    const c = new MongoClient(uri, { serverSelectionTimeoutMS: 15000, retryWrites: true });
-    try {
-      await c.connect();
-      return c;
-    } catch (e) {
-      await c.close().catch(() => {});
-      throw e;
-    }
-  };
-  let client;
+  const client = new MongoClient(uri, { serverSelectionTimeoutMS: 15000, retryWrites: true });
   try {
-    client = await open();
+    await client.connect();
   } catch (e) {
-    const replicaSet = new URL(uri.replace(/^mongodb\+srv:/, "https:")).searchParams.get("replicaSet");
-    // replicaSet adıyla bağlanılamıyorsa sunucu henüz replica set olmayabilir:
-    // başlatılmamışsa uygulama başlatır, hiç --replSet yoksa yol gösterir.
-    if (replicaSet && e?.name === "MongoServerSelectionError" && env.MONGODB_AUTO_INIT !== "0" && !uri.startsWith("mongodb+srv:")) {
-      await prepareReplicaSet(uri, replicaSet);
-      try {
-        client = await open();
-      } catch (again) {
-        throw new Error("Replica set hazırlandı ama bağlanılamadı: " + hideCredentials(again?.message));
-      }
-    } else throw new Error("MongoDB'ye bağlanılamadı: " + hideCredentials(e?.message || e));
+    await client.close().catch(() => {});
+    throw new Error("MongoDB'ye bağlanılamadı: " + hideCredentials(e?.message || e));
   }
-  // Transaction yalnız replica set (veya sharded) Mongo'da çalışır; tek düğümlü
-  // sunucuda ilk rezervasyonda hata almak yerine açılışta net uyarı verilir.
+  // Replica set (veya sharded) ise gerçek transaction; tek düğümde ise uygulama içi sıra.
   const hello = await client.db("admin").command({ hello: 1 });
-  if (!hello.setName && hello.msg !== "isdbgrid") {
-    await client.close();
-    throw new Error(
-      "MongoDB replica set olarak çalışmıyor. Rezervasyon transaction'ları için mongod --replSet rs0 ile başlatın ve rs.initiate() çalıştırın (docs/RAILWAY-AND-OPERATIONS.md).",
-    );
-  }
+  const mode =
+    env.MONGODB_TRANSACTIONS === "off" || (!hello.setName && hello.msg !== "isdbgrid")
+      ? "serialized"
+      : "transactions";
   const database = client.db(dbName || undefined);
+  // scope: işlem içinde miyiz? Transaction modunda Mongo oturumunu taşır.
   const scope = new AsyncLocalStorage();
-  const session = () => scope.getStore();
+  const session = () => scope.getStore()?.session;
   const opts = (extra = {}) => {
     const s = session();
     return s ? { ...extra, session: s } : extra;
+  };
+  // Tek düğüm modu: işlemler süreç içinde sırayla çalışır (aynı anda tek işlem).
+  // Uygulama tek kopya çalıştığı sürece koltuk/kupon/ödeme yarışlarını engeller.
+  let tail = Promise.resolve();
+  const serialize = (fn) => {
+    const run = tail.then(() => scope.run({ serialized: true }, fn));
+    tail = run.catch(() => {});
+    return run;
   };
   const col = (name) => database.collection(name);
   await col("app_mutex").updateOne(
@@ -213,6 +139,7 @@ export async function connectDatabase({ path, env = process.env } = {}) {
 
   const db = {
     dialect: "mongodb",
+    mode,
     client,
     database,
     col,
@@ -230,7 +157,8 @@ export async function connectDatabase({ path, env = process.env } = {}) {
     async count(name, filter = {}) {
       return col(name).countDocuments(filter, opts());
     },
-    // Aynı _id varsa hata verir (transaction içinde de hata transaction'ı iptal eder).
+    // Aynı _id varsa hata verir. İşlemlerde yazmadan önce kontroller yapılır; böylece
+    // tek düğüm modunda (geri alma olmadığı için) yarım kayıt kalmaz.
     async insert(name, _id, doc) {
       await col(name).insertOne({ _id, ...doc }, opts());
       return _id;
@@ -273,7 +201,8 @@ export async function connectDatabase({ path, env = process.env } = {}) {
       await database.command({ ping: 1 });
     },
     async transaction(fn) {
-      if (session()) return fn();
+      if (scope.getStore()) return fn();
+      if (mode === "serialized") return serialize(fn);
       const s = client.startSession();
       try {
         let result;
@@ -284,7 +213,7 @@ export async function connectDatabase({ path, env = process.env } = {}) {
               { $inc: { n: 1 } },
               { session: s },
             );
-            result = await scope.run(s, fn);
+            result = await scope.run({ session: s }, fn);
           },
           {
             readConcern: { level: "snapshot" },

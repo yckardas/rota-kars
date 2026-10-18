@@ -69,7 +69,7 @@ Railway MongoDB (replica set) kurulumu, dağıtım hazırlığı, hesap güvenli
 
 ## Veri ve sınırlar
 
-Veriler MongoDB'de tutulur (replica set şart). Yerelde `docker compose up -d mongo` ile başlatıp `.env` içine `MONGODB_URI=mongodb://127.0.0.1:27017/?replicaSet=rs0&directConnection=true` yazın. `.env` dosyasını paylaşmayın. API fiyatları kuruş cinsinden tutar ve toplamı sunucuda hesaplar.
+Veriler MongoDB'de tutulur; tek düğümlü Mongo (Railway varsayılanı) yeterlidir. Yerelde `docker compose up -d mongo` ile başlatıp `.env` içine `MONGODB_URI=mongodb://127.0.0.1:27017/` yazın. `.env` dosyasını paylaşmayın. API fiyatları kuruş cinsinden tutar ve toplamı sunucuda hesaplar.
 
 Tarih ve fiyatlar yerel örnek veridir. Kaynak web fiyatları canlı teklif sayılmaz. Araç yerleşimleri seçilen sınıfa göre 1+1, 2+1 veya 2+2 kapasite şablonlarıdır; fiziksel aracın onaylı şemasıyla teyit edilmelidir. Yolcu kapasitesi rehberi içerir, şoför ayrıdır.
 

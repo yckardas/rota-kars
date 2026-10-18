@@ -1,28 +1,24 @@
 # Railway hazırlığı ve acente operasyonları
 
-Veritabanı **MongoDB**'dir. Rezervasyon, koltuk kilidi, kupon ve ödeme defteri çok belgeli transaction kullanır; bu yüzden Mongo **replica set** olarak çalışmalıdır. Uygulama açılışta bunu kontrol eder, replica set değilse net bir hatayla durur.
+Veritabanı **MongoDB**'dir ve Railway'in varsayılan, **tek düğümlü** Mongo servisiyle çalışır; `--replSet` veya ek başlatma komutu gerekmez.
 
-## Railway'de MongoDB (replica set) kurulumu
+- **Tek düğüm (Railway varsayılanı):** Rezervasyon, koltuk kilidi, kupon ve ödeme işlemleri uygulama içinde sıraya alınır; aynı anda tek işlem çalışır. Her işlem yazmadan önce tüm kontrolleri yapar, böylece hata durumunda yarım kayıt kalmaz. Bu güvence **uygulamanın tek kopya çalışmasına** dayanır: `railway.toml` içinde `numReplicas = 1` kalmalı, Railway'de uygulama servisini yatay ölçeklemeyin.
+- **Replica set:** Mongo ileride replica set olarak çalıştırılırsa uygulama bunu kendisi algılar ve gerçek Mongo transaction'ı kullanır.
 
-1. Railway projesine **MongoDB** servisini ekleyin (Railway şablonu `mongo` imajını, kullanıcı adı/parola ve `/data/db` volume'üyle kurar).
-2. Mongo servisinin **Settings → Deploy → Custom Start Command** alanına aşağıdakini yazın ve servisi yeniden başlatın (Redeploy). Komut kalıcı volume'de bir kez keyFile üretir, mongod'u `rs0` replica set'i olarak ve Railway iç ağı için IPv6 dahil tüm adresleri dinleyerek başlatır:
+`/api/health` yanıtındaki `mode` alanı hangi modda çalışıldığını gösterir (`serialized` = tek düğüm, `transactions` = replica set).
 
-   ```sh
-   bash -c 'if [ ! -f /data/db/rs.key ]; then openssl rand -base64 756 > /data/db/rs.key; fi; chmod 400 /data/db/rs.key; chown 999:999 /data/db/rs.key; exec docker-entrypoint.sh mongod --replSet rs0 --ipv6 --bind_ip ::,0.0.0.0 --keyFile /data/db/rs.key'
-   ```
+## Railway'de MongoDB
 
-3. `rs.initiate()` için ayrıca bir şey yapmanız gerekmez: uygulama ilk açılışta replica set'in başlatılmadığını görürse onu, bağlandığı adresle (`<mongo-servisi>.railway.internal:27017`) tek üyeli olarak kendisi başlatır ve logda `MongoDB replica set "rs0" başlatıldı` yazar. (Kapatmak için uygulamaya `MONGODB_AUTO_INIT=0`.) Mongo hiç `--replSet` ile açılmamışsa uygulama yukarıdaki komutu yazan bir hatayla durur.
-4. Uygulama servisinin **Variables** alanına Mongo servisinin bağlantı değişkenini referansla verin ve replica set parametresini ekleyin:
+1. Railway projesine **MongoDB** servisini ekleyin (varsayılan ayarlarla; başlatma komutunu değiştirmeyin).
+2. Uygulama servisinin **Variables** alanına Mongo servisinin bağlantı değişkenini referansla verin:
 
    ```dotenv
    MONGO_URL="${{MongoDB.MONGO_URL}}"
    MONGODB_DB=rota-kars
    ```
 
-   Uygulama adrese `replicaSet=rs0` ve `authSource=admin` parametrelerini kendisi ekler.
-
-   Referanstaki servis adı (`MongoDB`) ve değişken adı (`MONGO_URL`), Railway'deki Mongo servisinizin Variables sekmesindekilerle aynı olmalıdır; şablon sürümüne göre değişebilir, oradan kontrol edin. Çözülmemiş `${{...}}` ifadesi açık hata verir. Bağlantı adresini loglara yazmayın.
-5. **Yedek:** Mongo servisinin volume'ü için Railway'de otomatik yedeklemeyi açın. Ayrıca belirli aralıklarla `mongodump --uri "$MONGODB_URI" --archive=rota-kars-$(date +%F).gz --gzip` ile yedeği Railway dışına alın.
+   Referanstaki servis adı (`MongoDB`) Railway'deki Mongo servisinizin adıyla aynı olmalıdır. Uygulama adrese `authSource=admin` ekler. Çözülmemiş `${{...}}` ifadesi açık hata verir. Bağlantı adresini loglara yazmayın.
+3. **Yedek:** Mongo servisinin volume'ü için Railway'de otomatik yedeklemeyi açın. Ayrıca belirli aralıklarla `mongodump --uri "$MONGO_URL" --archive=rota-kars-$(date +%F).gz --gzip` ile yedeği Railway dışına alın.
 
 İndeksler (benzersiz e-posta, rezervasyon referansı, ödeme işlem referansı vb.) uygulama açılışında otomatik oluşturulur; ayrıca migration komutu yoktur.
 
@@ -46,7 +42,7 @@ BUCKET="${{buffered-basket.BUCKET}}"
 
 ## Docker ve Railway
 
-- **Yerelde üretim benzeri çalıştırma:** `docker compose up -d --build` → http://localhost:8080. Mongo tek düğümlü replica set olarak `mongo-data` volume'ünde çalışır ve ilk açılışta kendini başlatır. Geliştirme sunucusu (`npm run dev`) için `.env` içinde `MONGODB_URI=mongodb://127.0.0.1:27017/?replicaSet=rs0&directConnection=true` kullanın.
+- **Yerelde üretim benzeri çalıştırma:** `docker compose up -d --build` → http://localhost:8080. Mongo, Railway'deki gibi tek düğüm olarak `mongo-data` volume'ünde çalışır. Geliştirme sunucusu (`npm run dev`) için `.env` içinde `MONGODB_URI=mongodb://127.0.0.1:27017/` kullanın.
 - **İmaj:** Node 24, `node` kullanıcısı, durumsuz (veri Mongo'da). `HEALTHCHECK` `/api/health` uç noktasını çağırır; bu uç nokta Mongo'ya `ping` gönderir, erişilemezse 503 döner.
 - **Railway:** `railway.toml` Dockerfile ile derler, tek replika çalıştırır (arka plan bildirim işi ve bellek içi limitler tek süreç varsayar). Uygulama servisine volume gerekmez.
 - **Zorunlu değişkenler:** `ADMIN_PASSWORD`, `SITE_URL` ve `PUBLIC_BASE_URL` (ikisi de `https://alan-adi`), `TRUST_PROXY=1`, `AGENCY_EMAIL` (yeni rezervasyon, iptal ve talep bildirimleri), SMTP alanları.
@@ -77,4 +73,4 @@ Banka anlaşması henüz yoktur. Kart bilgisi alınmaz, checkout 503 döner, mü
 
 ## Doğrulama
 
-`npm test`, `npm run build`. Testler her test için ayrı bir veritabanıyla bellek içi Mongo replica set (`mongodb-memory-server`, ilk çalıştırmada mongod indirir) üzerinde koşar; üretim veritabanına bağlanmaz. E-posta testlerinde gerçek gönderim yerine kontrollü sahte taşıyıcı kullanılır.
+`npm test`, `npm run build`. Testler her test için ayrı bir veritabanıyla bellek içi Mongo üzerinde **iki kez** koşar: tek düğüm (Railway gibi, `npm run test:standalone`) ve replica set (`npm run test:replset`). `mongodb-memory-server` ilk çalıştırmada mongod indirir; testler üretim veritabanına bağlanmaz. E-posta testlerinde gerçek gönderim yerine kontrollü sahte taşıyıcı kullanılır.

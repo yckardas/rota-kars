@@ -62,23 +62,23 @@ test("Mongo connection string is validated without echoing credentials", () => {
     true,
   );
   assert.equal(mongoConfiguration({ MONGO_URL: "mongodb+srv://x/y" }).uri, "mongodb+srv://x/y");
-  // Railway şablonunun düz MONGO_URL'ine replica set ve authSource eklenir.
+  // Railway şablonunun düz MONGO_URL'i tek düğüm olarak kullanılır; yalnız authSource eklenir.
   const railway = new URL(
     mongoConfiguration({ MONGO_URL: "mongodb://mongo:p%40ss@mongodb.railway.internal:27017" }).uri,
   );
-  assert.equal(railway.searchParams.get("replicaSet"), "rs0");
+  assert.equal(railway.searchParams.get("replicaSet"), null);
   assert.equal(railway.searchParams.get("authSource"), "admin");
+  assert.equal(
+    new URL(mongoConfiguration({ MONGO_URL: "mongodb://h:27017", MONGODB_REPLICA_SET: "rs0" }).uri).searchParams.get("replicaSet"),
+    "rs0",
+  );
   assert.equal(decodeURIComponent(railway.password), "p@ss");
   const parts = new URL(
     mongoConfiguration({ MONGOHOST: "mongodb.railway.internal", MONGOPORT: "27017", MONGOUSER: "mongo", MONGOPASSWORD: "a/b" }).uri,
   );
   assert.equal(parts.hostname, "mongodb.railway.internal");
   assert.equal(decodeURIComponent(parts.password), "a/b");
-  // Açıkça verilen parametreler korunur; yerel directConnection adresine replicaSet zorlanmaz.
-  assert.equal(
-    new URL(mongoConfiguration({ MONGODB_URI: "mongodb://127.0.0.1:27017/?directConnection=true" }).uri).searchParams.get("replicaSet"),
-    null,
-  );
+
   assert.throws(
     () => mongoConfiguration({ MONGODB_URI: "${{MongoDB.MONGO_URL}}" }),
     /çözülmemiş/,
@@ -362,4 +362,15 @@ test("agency inbox gets alerts for new bookings, cancellations and leads; wheel 
   const created = agency.find((n) => n.kind === "agency_reservation_created");
   assert.match(created.body, /guest@example\.com/);
   assert.match(created.body, /wa\.me\/905550000000/);
+});
+
+test("database picks serialized mode on a single Mongo node and transactions on a replica set", async (t) => {
+  const { s } = await setup(t);
+  assert.equal(s.db.mode, process.env.MONGODB_TEST_STANDALONE === "1" ? "serialized" : "transactions");
+  // Aynı koltuğa eşzamanlı 10 istek: modu ne olursa olsun yalnız biri kazanır.
+  const [d] = await s.listDepartures("ani-cildir");
+  const results = await Promise.allSettled(Array.from({ length: 10 }, () => s.hold(d.id, [5, 6])));
+  assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+  assert.ok(results.filter((r) => r.status === "rejected").every((r) => r.reason.status === 409));
+  assert.equal(await s.db.count("seat_locks", { departure_id: d.id }), 2, "no orphan locks");
 });

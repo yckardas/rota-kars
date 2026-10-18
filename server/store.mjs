@@ -197,20 +197,24 @@ export async function openStore(
           );
         const token = randomBytes(24).toString("hex"),
           expires = clock() + 600000;
-        for (const seat of seats) {
-          // _id departure:seat olduğu için aynı koltuk iki kez kilitlenemez.
-          if (await db.one("seat_locks", { _id: `${id}:${seat}` }))
-            throw new AppError(
-              409,
-              "Seçtiğiniz koltuklardan biri az önce ayrıldı.",
-            );
-          await db.insert("seat_locks", `${id}:${seat}`, {
+        // Önce tüm koltuklar kontrol edilir, sonra hepsi yazılır: biri doluysa
+        // hiçbir koltuk kilitlenmez. _id departure:seat olduğu için aynı koltuk
+        // veritabanı düzeyinde de iki kez kilitlenemez.
+        if (await db.one("seat_locks", { _id: { $in: seats.map((n) => `${id}:${n}`) } }))
+          throw new AppError(
+            409,
+            "Seçtiğiniz koltuklardan biri az önce ayrıldı.",
+          );
+        await db.col("seat_locks").insertMany(
+          seats.map((seat) => ({
+            _id: `${id}:${seat}`,
             departure_id: id,
             seat,
             owner: token,
             expires_at: expires,
-          });
-        }
+          })),
+          db.opts(),
+        );
         await db.insert("holds", token, {
           token,
           departure_id: id,
@@ -270,6 +274,8 @@ export async function openStore(
             clock() + 24 * 60 * 60 * 1000,
             d.salesClosesAt ?? Infinity,
           );
+        // Kupon önce düşülür; kullanılmışsa hiçbir kayıt yazılmadan işlem durur.
+        await members.consumeCoupon(couponId, id);
         await db.insert("reservations", id, {
           id,
           reference,
@@ -292,7 +298,6 @@ export async function openStore(
           ticket_token: randomBytes(24).toString("hex"),
           discount_percent: discounted.coupon?.percent || 0,
         });
-        await members.consumeCoupon(couponId, id);
 
         await db.updateMany(
           "seat_locks",

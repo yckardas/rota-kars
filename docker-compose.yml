@@ -14,7 +14,7 @@ services:
       HOST: 0.0.0.0
       PUBLIC_BASE_URL: http://localhost:8080
       SITE_URL: http://localhost:8080
-      MONGODB_URI: mongodb://mongo:27017/?replicaSet=rs0
+      MONGODB_URI: mongodb://mongo:27017/
       MONGODB_DB: rota-kars
       # Yerelde örnek seferlerle denemek için. Railway'de 0 bırakın.
       SEED_DEMO: "1"
@@ -22,17 +22,16 @@ services:
       mongo:
         condition: service_healthy
     restart: unless-stopped
-  # MongoDB tek düğümlü replica set (transaction için gerekli). Bilgisayardan
-  # `npm run dev` ile bağlanmak için: mongodb://127.0.0.1:27017/?replicaSet=rs0&directConnection=true
+  # MongoDB: Railway'deki gibi tek düğüm. Bilgisayardan `npm run dev` ile
+  # bağlanmak için MONGODB_URI=mongodb://127.0.0.1:27017/
   mongo:
     image: mongo:8.0
-    command: ["--replSet", "rs0", "--bind_ip_all"]
     ports:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongo:27017'}]}).ok }"]
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
       interval: 10s
       timeout: 10s
       retries: 10

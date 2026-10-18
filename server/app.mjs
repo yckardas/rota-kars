@@ -403,6 +403,7 @@ export function createApp(
       ok: database === "ok",
       localPreview: env.NODE_ENV !== "production",
       dialect: store.db.dialect,
+      mode: store.db.mode,
       database,
     });
   });
