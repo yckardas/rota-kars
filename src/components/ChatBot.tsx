@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { responsive } from "../lib/images";
 import { Link, useLocation } from "react-router-dom";
 import {
   MessageCircle,
@@ -363,7 +364,12 @@ export function ChatBot({ whatsapp }: { whatsapp: string }) {
                         onClick={() => setOpen(false)}
                         className="chat-tour-card"
                       >
-                        <img src={c.image} alt="" loading="lazy" />
+                        <img
+                          {...responsive(c.image, "120px")}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                        />
                         <span>
                           <strong>{c.name}</strong>
                           <small>{c.duration}</small>
@@ -388,7 +394,10 @@ export function ChatBot({ whatsapp }: { whatsapp: string }) {
                       Bu soruyu yapay zekâ asistanımız (Anthropic, ABD)
                       yanıtlayabilir. Bunun için mesajınızın yurt dışına
                       aktarılmasına onay vermeniz gerekir.{" "}
-                      <Link to="/bilgilendirme#kvkk" onClick={() => setOpen(false)}>
+                      <Link
+                        to="/bilgilendirme#kvkk"
+                        onClick={() => setOpen(false)}
+                      >
                         Ayrıntılar
                       </Link>
                     </p>

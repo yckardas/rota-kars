@@ -18,6 +18,12 @@
 * {
   box-sizing: border-box;
 }
+/* Kalın metinler yüklenen en kalın ağırlığı (600) kullanır; 700 font dosyası indirilmez. */
+b,
+strong,
+th {
+  font-weight: 600;
+}
 body {
   margin: 0;
 }
@@ -6284,7 +6290,7 @@ input[type="radio"] {
   background: #eaf0e5;
   border-radius: 7px;
   color: #294c37;
-  font-weight: 700;
+  font-weight: 600;
 }
 .campaign-sectors {
   display: grid;

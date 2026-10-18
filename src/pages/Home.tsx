@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { responsive } from "../lib/images";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -83,7 +84,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
       <section className="hero">
         <img
           className="hero-image"
-          src="/images/ani.jpg"
+          {...responsive("/images/ani.webp", "100vw")}
           alt="Ani Antik Kenti’nin kış manzarası"
           fetchPriority="high"
           width="1280"
@@ -263,7 +264,12 @@ export function Home({ catalog }: { catalog: Catalog }) {
                 key={s.id}
                 onClick={() => setStory(s)}
               >
-                <img src={s.image} alt={s.location} loading="lazy" />
+                <img
+                  {...responsive(s.image, "(max-width: 760px) 80vw, 25vw")}
+                  alt={s.location}
+                  loading="lazy"
+                  decoding="async"
+                />
                 <span className="story-play">
                   <Play size={17} fill="currentColor" />
                 </span>
@@ -351,7 +357,12 @@ export function Home({ catalog }: { catalog: Catalog }) {
         <div className="service-grid">
           {catalog.services.map((s) => (
             <Link className="service-card" key={s.id} to={"/hizmetler/" + s.id}>
-              <img src={s.image} alt="" loading="lazy" />
+              <img
+                {...responsive(s.image)}
+                alt=""
+                loading="lazy"
+                decoding="async"
+              />
               <h3>{s.title}</h3>
               <p>{s.text}</p>
               <span className="service-discover">
@@ -365,9 +376,13 @@ export function Home({ catalog }: { catalog: Catalog }) {
         <div className="container fleet-inner">
           <div className="fleet-photo">
             <img
-              src="/images/rota-bus.jpg"
+              {...responsive(
+                "/images/rota-bus.webp",
+                "(max-width: 950px) 100vw, 55vw",
+              )}
               alt="Rota Kars Tur logolu turizm otobüsü"
               loading="lazy"
+              decoding="async"
             />
           </div>
           <div className="fleet-copy">
@@ -416,9 +431,13 @@ export function Home({ catalog }: { catalog: Catalog }) {
       <section className="container stay-section section">
         <div className="stay-photo">
           <img
-            src="/images/stay.jpg"
+            {...responsive(
+              "/images/stay.webp",
+              "(max-width: 950px) 100vw, 50vw",
+            )}
             alt="Konaklama planlaması için temsili otel odası"
             loading="lazy"
+            decoding="async"
           />
           <span>Temsili konaklama görseli</span>
         </div>

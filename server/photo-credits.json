@@ -1,7 +1,7 @@
 [
   {
     "id": "ani",
-    "path": "/images/tours/ani.jpg",
+    "path": "/images/tours/ani.webp",
     "title": "Landscape with Cathedral of Ani",
     "author": "Martin Lopatka",
     "license": "CC BY-SA 2.0",
@@ -11,7 +11,7 @@
   },
   {
     "id": "sarikamis",
-    "path": "/images/tours/sarikamis.jpg",
+    "path": "/images/tours/sarikamis.webp",
     "title": "Allahuekber mountain",
     "author": "Nurseva",
     "license": "CC BY-SA 4.0",
@@ -21,7 +21,7 @@
   },
   {
     "id": "batum",
-    "path": "/images/tours/batum.jpg",
+    "path": "/images/tours/batum.webp",
     "title": "Batumi Skyline (31)",
     "author": "herr.eichhorn from Berlin, Germany",
     "license": "CC BY-SA 2.0",
@@ -31,7 +31,7 @@
   },
   {
     "id": "van",
-    "path": "/images/tours/van.jpg",
+    "path": "/images/tours/van.webp",
     "title": "AkdamarIslandChurch",
     "author": "Mcdrwal",
     "license": "CC BY-SA 4.0",
@@ -41,7 +41,7 @@
   },
   {
     "id": "van-havza",
-    "path": "/images/tours/van-havza.jpg",
+    "path": "/images/tours/van-havza.webp",
     "title": "Lake Nemrut, blue and green lakes",
     "author": "Gogo2020g",
     "license": "CC BY-SA 4.0",
@@ -51,7 +51,7 @@
   },
   {
     "id": "van-day",
-    "path": "/images/tours/van-day.jpg",
+    "path": "/images/tours/van-day.webp",
     "title": "Akhtamar Island on Lake Van with the Armenian Cathedral of the Holy Cross",
     "author": "gozturk",
     "license": "CC BY 3.0",

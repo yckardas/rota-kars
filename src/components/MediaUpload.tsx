@@ -1,7 +1,12 @@
 import { useRef, useState } from "react";
 import { Upload, LoaderCircle } from "lucide-react";
 
-export type UploadedMedia = { id: string; url: string; kind: "image" | "video"; size: number };
+export type UploadedMedia = {
+  id: string;
+  url: string;
+  kind: "image" | "video";
+  size: number;
+};
 
 // Dosyayı yönetici oturumuyla bucket'a yükler ve /media/... adresini döner.
 export async function uploadMedia(file: File): Promise<UploadedMedia> {
@@ -59,7 +64,11 @@ export function MediaUploadButton({
         disabled={busy}
         onClick={() => input.current?.click()}
       >
-        {busy ? <LoaderCircle size={14} className="spin" /> : <Upload size={14} />}
+        {busy ? (
+          <LoaderCircle size={14} className="spin" />
+        ) : (
+          <Upload size={14} />
+        )}
         {busy ? "Yükleniyor…" : label}
       </button>
       {error && (

@@ -1,4 +1,5 @@
 import { InstagramSection } from "../components/InstagramSection";
+import { responsive } from "../lib/images";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
@@ -84,7 +85,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
       <div className="container detail-gallery">
         <img
           className="detail-main-image"
-          src={t.gallery[activeImage]}
+          {...responsive(t.gallery[activeImage], "100vw")}
           alt={t.name}
           width="1280"
           height="600"
@@ -98,7 +99,12 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
                 aria-label={`${i + 1}. fotoğrafı göster`}
                 className={activeImage === i ? "active" : ""}
               >
-                <img src={img} alt="" />
+                <img
+                  {...responsive(img, "120px")}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                />
               </button>
             ))}
           </div>

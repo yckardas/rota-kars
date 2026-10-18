@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { responsive } from "../lib/images";
 import { Clock3, MoveUpRight, MapPin } from "lucide-react";
 import { currency, type Tour } from "../lib/types";
 export function TourCard({ tour }: { tour: Tour }) {
@@ -6,9 +7,10 @@ export function TourCard({ tour }: { tour: Tour }) {
     <Link className="tour-card" to={"/turlar/" + tour.id}>
       <div className="tour-card-image">
         <img
-          src={tour.image}
+          {...responsive(tour.image)}
           alt={tour.name}
           loading="lazy"
+          decoding="async"
           width="600"
           height="450"
         />

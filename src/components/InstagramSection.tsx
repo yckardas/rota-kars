@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { responsive } from "../lib/images";
 import {
   Instagram,
   Play,
@@ -110,7 +111,8 @@ function InstagramEmbed({ post }: { post: InstagramPost }) {
     </div>
   );
 }
-const canHover = () => window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+const canHover = () =>
+  window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 const reducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 // Videolu kart: <video> hazır bekler; masaüstünde üzerine gelince, dokunmatik
@@ -160,12 +162,18 @@ function VideoCard({
       onPointerLeave={(e) => e.pointerType === "mouse" && setPlaying(false)}
       onFocus={() => setPlaying(true)}
       onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node)) setPlaying(false);
+        if (!e.currentTarget.contains(e.relatedTarget as Node))
+          setPlaying(false);
       }}
     >
       <div className="instagram-card-media">
         {failed ? (
-          <img src={post.cover} alt="" loading="lazy" />
+          <img
+            {...responsive(post.cover, "(max-width: 760px) 80vw, 25vw")}
+            alt=""
+            loading="lazy"
+            decoding="async"
+          />
         ) : (
           <video
             ref={video}
@@ -210,7 +218,9 @@ function VideoCard({
         )}
         <span className="instagram-post-title">
           {post.title}
-          <small>{failed ? "Video şu an yüklenemedi" : "Üzerine gelin, izleyin"}</small>
+          <small>
+            {failed ? "Video şu an yüklenemedi" : "Üzerine gelin, izleyin"}
+          </small>
         </span>
       </div>
       <div className="instagram-card-caption">
@@ -232,7 +242,12 @@ function EmbedCard({ post, open }: { post: InstagramPost; open: () => void }) {
           onClick={open}
           aria-label={`${post.title} videosunu izle`}
         >
-          <img src={post.cover} alt="" loading="lazy" />
+          <img
+            {...responsive(post.cover, "(max-width: 760px) 80vw, 25vw")}
+            alt=""
+            loading="lazy"
+            decoding="async"
+          />
           <span className="instagram-reel-icon">
             <Instagram size={18} />
           </span>
@@ -309,7 +324,11 @@ export function InstagramSection({ profileUrl }: { profileUrl: string }) {
                     }
                   />
                 ) : (
-                  <EmbedCard key={post.id} post={post} open={() => setEmbed(post)} />
+                  <EmbedCard
+                    key={post.id}
+                    post={post}
+                    open={() => setEmbed(post)}
+                  />
                 ),
               )}
             </div>

@@ -9,6 +9,12 @@ const port = Number(process.env.PORT || 5173),
   app = createApp(store);
 if (process.env.NODE_ENV === "production") {
   const template = await readFile(resolve("dist/index.html"), "utf8");
+  // Adında içerik özeti olan derleme dosyaları bir yıl, görseller bir hafta önbellekte kalır.
+  app.use(
+    "/assets",
+    express.static(resolve("dist/assets"), { immutable: true, maxAge: "365d", index: false }),
+  );
+  app.use("/images", express.static(resolve("dist/images"), { maxAge: "7d", index: false }));
   app.use(express.static(resolve("dist"), { index: false }));
   app.use(seoHtmlHandler(process.env, async () => template));
 } else {

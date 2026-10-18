@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import express from "express";
 import QRCode from "qrcode";
+import compression from "compression";
 import { attachAdvancedApi, receipt, siteBase } from "./advanced-api.mjs";
 import { readFileSync } from "node:fs";
 const photoCredits = JSON.parse(
@@ -102,6 +103,8 @@ export function createApp(
     limits = new Map(),
     activeHolds = new Map();
   app.disable("x-powered-by");
+  // HTML, JS, CSS ve JSON yanıtları gzip ile sıkıştırılır (görseller zaten sıkıştırılmış).
+  app.use(compression({ threshold: 1024 }));
   // Tüm yanıtlar (HTML sayfaları dahil) için güvenlik başlıkları.
   const production = env.NODE_ENV === "production";
   const csp = [

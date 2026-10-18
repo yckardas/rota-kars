@@ -141,7 +141,12 @@ export function Services({ catalog }: { catalog: Catalog }) {
               key={s.id}
               to={"/hizmetler/" + s.id}
             >
-              <img src={s.image} alt={s.title} />
+              <img
+                src={s.image}
+                alt={s.title}
+                loading="lazy"
+                decoding="async"
+              />
               <div>
                 <h2>{s.title}</h2>
                 <p>{s.text}</p>
@@ -187,7 +192,7 @@ export function Services({ catalog }: { catalog: Catalog }) {
             </span>
           </div>
         </div>
-        <img src={service.image} alt={service.title} />
+        <img src={service.image} alt={service.title} decoding="async" />
       </section>
       <section className="container service-detail-body">
         <div>

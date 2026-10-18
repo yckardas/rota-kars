@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { responsive } from "../lib/images";
 import { Bus, Check, LoaderCircle } from "lucide-react";
 import { api, post } from "../lib/api";
 import { SeatMap } from "./SeatMap";
@@ -93,7 +94,7 @@ function OperationRow({
   return (
     <form className="tour-operation" onSubmit={(e) => save(e, t.id)}>
       <div className="operation-tour">
-        <img src={t.image} alt="" />
+        <img {...responsive(t.image, "160px")} alt="" loading="lazy" />
         <div>
           <h3>{t.name}</h3>
           <span

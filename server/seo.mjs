@@ -6,7 +6,7 @@ import { business, tours, services } from "./catalog.mjs";
 const SITE = "Rota Kars Turizm";
 const DEFAULT_DESCRIPTION =
   "Kars merkezli TÜRSAB A grubu seyahat acentesi. Ani, Çıldır, Sarıkamış, Batum ve Van turları; 18+1 VIP midibüste online koltuk seçimi, şoförlü araç kiralama ve transfer.";
-const DEFAULT_IMAGE = "/images/ani.jpg";
+const DEFAULT_IMAGE = "/images/ani.webp";
 
 const clip = (s, n = 158) => {
   const t = String(s || "").replace(/\s+/g, " ").trim();
@@ -48,7 +48,7 @@ const agency = (base) => ({
   name: business.name,
   url: base + "/",
   logo: base + "/images/logo.png",
-  image: base + "/images/rota-bus.jpg",
+  image: base + "/images/rota-bus.webp",
   description: DEFAULT_DESCRIPTION,
   telephone: "+90 474 223 91 63",
   email: business.email,

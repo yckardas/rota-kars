@@ -152,12 +152,14 @@ export function InstagramManager({ catalog }: { catalog: Catalog }) {
                     ...new Set([
                       cover,
                       ...catalog.tours.map((t) => t.image),
-                      "/images/cildir.jpg",
-                      "/images/rota-bus.jpg",
+                      "/images/cildir.webp",
+                      "/images/rota-bus.webp",
                     ]),
                   ].map((img) => (
                     <option key={img} value={img}>
-                      {img.startsWith("/media/") ? "Yüklenen görsel" : img.split("/").at(-1)}
+                      {img.startsWith("/media/")
+                        ? "Yüklenen görsel"
+                        : img.split("/").at(-1)}
                     </option>
                   ))}
                 </select>

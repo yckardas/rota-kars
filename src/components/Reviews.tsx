@@ -273,11 +273,7 @@ export function Stars({
   return (
     <span className="stars" aria-label={`${rating} / 5 yıldız`}>
       {Array.from({ length: 5 }, (_, i) => (
-        <Star
-          key={i}
-          size={size}
-          fill={i < rating ? "currentColor" : "none"}
-        />
+        <Star key={i} size={size} fill={i < rating ? "currentColor" : "none"} />
       ))}
     </span>
   );

@@ -39,6 +39,14 @@ export async function openStore(
     db.index("instagram_posts", { permalink: 1 }, { unique: true }),
     db.index("admin_sessions", { expires_at: 1 }),
   ]);
+  // Görseller WebP'ye taşındı: veritabanında eski adresleri tutan kayıtlar güncellenir.
+  const imageMigrations = JSON.parse(
+    readFileSync(new URL("./image-migrations.json", import.meta.url), "utf8"),
+  );
+  for (const [from, to] of Object.entries(imageMigrations)) {
+    await db.updateMany("instagram_posts", { cover: from }, { cover: to });
+    await db.updateMany("hotels", { image: from }, { image: to });
+  }
   const tx = (fn) => db.transaction(fn);
   let members;
   const cleanup = async () =>

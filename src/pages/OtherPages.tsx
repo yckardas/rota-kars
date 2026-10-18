@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { responsive } from "../lib/images";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMember } from "../lib/member";
 import {
@@ -15,7 +16,7 @@ import {
   Compass,
 } from "lucide-react";
 import { RequestForm } from "../components/RequestForm";
-import { ReservationTicket } from "./Booking";
+import { ReservationTicket } from "../components/ReservationTicket";
 import { api, post } from "../lib/api";
 import { telHref } from "../lib/phone";
 import type { Catalog, Hotel, Reservation } from "../lib/types";
@@ -32,7 +33,11 @@ export function Hotels() {
   return (
     <>
       <section className="hotel-hero">
-        <img src="/images/stay.jpg" alt="Temsili konaklama görseli" />
+        <img
+          {...responsive("/images/stay.webp", "(max-width: 950px) 100vw, 50vw")}
+          alt="Temsili konaklama görseli"
+          decoding="async"
+        />
         <div className="container">
           <span className="section-note">
             Yolculuğunuza bir gece daha ekleyin
@@ -311,7 +316,12 @@ export function About() {
             </button>
           </div>
         </div>
-        <img src="/images/kars.webp" alt="Ani’de kış manzarası" />
+        <img
+          src="/images/kars.webp"
+          alt="Ani’de kış manzarası"
+          loading="lazy"
+          decoding="async"
+        />
       </section>
       <section className="about-note">
         <div className="container">
@@ -446,17 +456,16 @@ export function Information({ catalog }: { catalog: Catalog }) {
           tahsilat ve iade kayıtları. Kart bilgisi alınmaz ve saklanmaz.
         </li>
         <li>
-          <strong>Üyelik:</strong> hesap bilgileri, tek yönlü özetlenmiş
-          parola, kuponlar ve davet kayıtları.
+          <strong>Üyelik:</strong> hesap bilgileri, tek yönlü özetlenmiş parola,
+          kuponlar ve davet kayıtları.
         </li>
         <li>
           <strong>Talepler:</strong> konaklama, araç kiralama ve özel tur
           formlarında ilettiğiniz bilgiler.
         </li>
         <li>
-          <strong>Çerezler:</strong> yalnızca oturumunuzu sürdürmek için
-          zorunlu oturum çerezleri kullanılır; reklam veya izleme çerezi
-          kullanılmaz.
+          <strong>Çerezler:</strong> yalnızca oturumunuzu sürdürmek için zorunlu
+          oturum çerezleri kullanılır; reklam veya izleme çerezi kullanılmaz.
         </li>
         <li>
           <strong>Sohbet asistanı:</strong> asistana yazdığınız mesajlar
@@ -475,13 +484,13 @@ export function Information({ catalog }: { catalog: Catalog }) {
           yolcu listesi gibi vergi ve turizm mevzuatından doğan kayıtlar.
         </li>
         <li>
-          <strong>Meşru menfaat (md. 5/2-f):</strong> hizmet güvenliği,
-          kötüye kullanımın önlenmesi ve yönetici işlemlerinin denetim kaydı.
+          <strong>Meşru menfaat (md. 5/2-f):</strong> hizmet güvenliği, kötüye
+          kullanımın önlenmesi ve yönetici işlemlerinin denetim kaydı.
         </li>
         <li>
-          <strong>Açık rıza (md. 5/1):</strong> kampanya ve yeni rotalarla ilgili
-          ticari elektronik ileti gönderimi ile yapay zekâ asistanı için yurt
-          dışına aktarım. Açık rıza isteğe bağlıdır; vermemeniz hizmetten
+          <strong>Açık rıza (md. 5/1):</strong> kampanya ve yeni rotalarla
+          ilgili ticari elektronik ileti gönderimi ile yapay zekâ asistanı için
+          yurt dışına aktarım. Açık rıza isteğe bağlıdır; vermemeniz hizmetten
           yararlanmanızı engellemez ve dilediğiniz zaman geri alabilirsiniz.
         </li>
       </ul>
@@ -526,11 +535,11 @@ export function Information({ catalog }: { catalog: Catalog }) {
         <li>
           İşlenme amacını ve amacına uygun kullanılıp kullanılmadığını öğrenme,
         </li>
-        <li>Yurt içinde veya yurt dışında aktarıldığı üçüncü kişileri bilme,</li>
-        <li>Eksik veya yanlış işlenmişse düzeltilmesini isteme,</li>
         <li>
-          KVKK md. 7 çerçevesinde silinmesini veya yok edilmesini isteme,
+          Yurt içinde veya yurt dışında aktarıldığı üçüncü kişileri bilme,
         </li>
+        <li>Eksik veya yanlış işlenmişse düzeltilmesini isteme,</li>
+        <li>KVKK md. 7 çerçevesinde silinmesini veya yok edilmesini isteme,</li>
         <li>
           Düzeltme ve silme işlemlerinin aktarıldığı üçüncü kişilere
           bildirilmesini isteme,
