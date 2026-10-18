@@ -40,6 +40,22 @@ BUCKET="${{buffered-basket.BUCKET}}"
 
 `RAILWAY_BUCKET_NAME` S3 API'de kullanılmaz; `BUCKET` kullanılır. Bucket'ın Credentials sekmesi path-style URL istiyorsa `S3_FORCE_PATH_STYLE=true` ekleyin. Bucket tanımlı değilse yükleme düğmesi eksik değişkenleri söyleyen bir hata gösterir; site çalışmaya devam eder.
 
+## Yönetici hesapları ve güvenlik
+
+- **İlk kurulum:** `/yonetim` sayfasında "İlk kurulum" bölümünden `ADMIN_PASSWORD` ile girip **ilk sahip hesabını** (ad, e-posta, en az 12 karakter parola) oluşturun. Hesap oluşturulduğu anda paylaşılan parolayla giriş kapanır.
+- **Roller:** *Sahip* (her şey; kullanıcılar, kampanya ayarları, KVKK araçları, denetim kaydı), *Operasyon* (rezervasyon, sefer, tahsilat, talepler, içerik, yolcu listesi), *Rehber* (günlük rapor, sefer listesi, bilet check-in). Son etkin sahip hesabı düşürülemez/kapatılamaz.
+- **İki adımlı doğrulama:** Canlıda (`NODE_ENV=production`) zorunludur; her yönetici ilk girişte Google/Microsoft Authenticator vb. ile QR kodu taratır. Kapatmak için `ADMIN_REQUIRE_2FA=0` (önerilmez). Kodunu kaybeden kullanıcının 2FA'sını sahip sıfırlar.
+- **Kilitleme:** 5 hatalı giriş hesabı 15 dakika kilitler; IP başına giriş limiti ayrıca uygulanır.
+- **Denetim kaydı:** Yönetimdeki her değişiklik ve yolcu listesi (CSV) indirmeleri kim/ne zaman bilgisiyle kaydedilir. IP adresi açık saklanmaz (özet). Kayıtlar 2 yıl tutulur.
+
+## KVKK
+
+- **Rıza kayıtları:** Rezervasyon ve üyelikte aydınlatma onayı; isteğe bağlı ticari ileti izni (varsayılan kapalı) ayrı kaydedilir. Kayıtta e-posta yerine özeti, metin sürümü ve tarih tutulur.
+- **Yurt dışı aktarım:** Chatbot, yerelde yanıtlayamadığı soruyu Anthropic'e (ABD) yalnız ziyaretçi onay verirse gönderir; onay yoksa yerel yanıt ve WhatsApp yönlendirmesi kullanılır. Chatbot mesajları saklanmaz.
+- **İlgili kişi başvuruları (md. 11):** Üyeler `/hesabim` sayfasından verilerini JSON olarak indirip hesaplarını silebilir. Üye olmayanların başvuruları için yönetimdeki **KVKK** sekmesinden (yalnız sahip) e-postaya göre döküm alınır veya silme yapılır. Yaklaşan turu olan kayıt silinmez; tahsilatı olan rezervasyonlar yasal saklama süresince tutulur, diğerleri anonimleştirilir.
+- **Saklama süreleri (günlük otomatik iş):** Ödemesiz iptal/süresi dolmuş ön rezervasyonlar 1 yıl, tahsilatlı kayıtlar 10 yıl sonra anonimleşir; talepler 2 yıl, gönderilmiş bildirimler 90 gün, denetim kaydı 2 yıl sonra silinir. Süreler `RETENTION_*` değişkenleriyle değiştirilebilir.
+- **Hukuki not:** Aydınlatma metni ve süreler uygulamayı yansıtır; yayından önce bir KVKK danışmanıyla teyit edilmeli, gerekiyorsa VERBİS kaydı ve ticari ileti için İYS kaydı değerlendirilmelidir.
+
 ## Docker ve Railway
 
 - **Yerelde üretim benzeri çalıştırma:** `docker compose up -d --build` → http://localhost:8080. Mongo, Railway'deki gibi tek düğüm olarak `mongo-data` volume'ünde çalışır. Geliştirme sunucusu (`npm run dev`) için `.env` içinde `MONGODB_URI=mongodb://127.0.0.1:27017/` kullanın.

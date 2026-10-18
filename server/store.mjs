@@ -10,6 +10,8 @@ import { createDepartures, localDate } from "./departures.mjs";
 import { createInstagramSettings } from "./instagram.mjs";
 import { createWorkflow } from "./workflow.mjs";
 import { createAccountSecurity } from "./account-security.mjs";
+import { createAdminAuth } from "./admin-auth.mjs";
+import { createPrivacy } from "./privacy.mjs";
 export class AppError extends Error {
   constructor(status, message) {
     super(message);
@@ -53,6 +55,9 @@ export async function openStore(
     });
   const campaigns = await createCampaigns(db, { clock });
   const instagramSettings = await createInstagramSettings(db, { clock });
+  const adminAuth = await createAdminAuth(db, { clock, env });
+  await db.index("consents", { email_hash: 1 });
+  const privacy = createPrivacy(db, { clock, env, tx: (fn) => db.transaction(fn) });
   members = await createMembers(db, {
     campaigns,
     clock,
@@ -141,6 +146,8 @@ export async function openStore(
     workflow,
     campaigns,
     instagramSettings,
+    adminAuth,
+    privacy,
     notifications,
     accountSecurity,
     members,

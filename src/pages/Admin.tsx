@@ -8,7 +8,6 @@ import {
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import {
-  LockKeyhole,
   LogOut,
   RefreshCw,
   Check,
@@ -19,12 +18,31 @@ import {
   MessageSquareText,
   Settings2,
   ClipboardList,
-  LoaderCircle,
   Instagram,
   Bus,
+  Users,
+  ScrollText,
+  ShieldCheck,
+  UserRound,
+  TriangleAlert,
 } from "lucide-react";
 import { TourOperations } from "../components/TourOperations";
 import { InstagramManager } from "../components/InstagramManager";
+import {
+  AdminLogin,
+  AdminAccount,
+  FirstOwnerSetup,
+  ForcedTwoFactor,
+  isTwoFactorRequired,
+  ROLE_LABELS,
+  type AdminMe,
+  type AdminRole,
+} from "../components/admin/AdminAuth";
+import {
+  UserManager,
+  AuditLog,
+  KvkkTools,
+} from "../components/admin/AdminOwner";
 import { api, post, ApiError } from "../lib/api";
 import {
   currency,
@@ -54,6 +72,33 @@ type Dashboard = {
   requests: RequestRecord[];
   hotels: Hotel[];
 };
+const ALL_TABS = [
+  ["reservations", "Rezervasyonlar", Ticket],
+  ["departures", "Sefer planı", Bus],
+  ["daily", "Günlük operasyon", ClipboardList],
+  ["campaigns", "Kampanyalar", Ticket],
+  ["notifications", "Bildirim kuyruğu", MessageSquareText],
+  ["operations", "Tur ve araç planı", Bus],
+  ["requests", "Gelen talepler", ClipboardList],
+  ["hotels", "Anlaşmalı oteller", BedDouble],
+  ["reviews", "Google yorumları", MessageSquareText],
+  ["instagram", "Instagram", Instagram],
+  ["integrations", "Bağlantılar", Settings2],
+  ["users", "Kullanıcılar", Users],
+  ["audit", "Denetim kaydı", ScrollText],
+  ["kvkk", "KVKK", ShieldCheck],
+] as const;
+// Rehber yalnız günlük operasyonu görür (sefer düzenleme ve kampanya ayarları sunucuda kapalı).
+const GUIDE_TABS = ["daily"];
+const OWNER_TABS = ["users", "audit", "kvkk", "campaigns"];
+// Rolün kullanamayacağı sekmeler gösterilmez (sunucu da ayrıca 403 döner).
+function tabsFor(role: AdminRole) {
+  if (role === "guide")
+    return ALL_TABS.filter((t) => GUIDE_TABS.includes(t[0]));
+  if (role === "operations")
+    return ALL_TABS.filter((t) => !OWNER_TABS.includes(t[0]));
+  return [...ALL_TABS];
+}
 export function Admin({
   catalog,
   refreshCatalog,
@@ -61,47 +106,69 @@ export function Admin({
   catalog: Catalog;
   refreshCatalog: () => void;
 }) {
-  const [data, setData] = useState<Dashboard | null>(null),
+  const [me, setMe] = useState<AdminMe | null | undefined>(undefined),
+    [data, setData] = useState<Dashboard | null>(null),
     [reviews, setReviews] = useState<ReviewsResponse | null>(null),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
+    [loginNotice, setLoginNotice] = useState(""),
     [busy, setBusy] = useState(false),
     [tab, setTab] = useState("reservations"),
     [hotelForm, setHotelForm] = useState(false);
+  // 401 → giriş ekranı, 2FA_REQUIRED → iki adımlı doğrulama kurulumu.
+  function handle(e: unknown) {
+    if (e instanceof ApiError && e.status === 401) {
+      setMe(null);
+      setData(null);
+    } else if (isTwoFactorRequired(e))
+      setMe((m) => (m ? { ...m, needs2faSetup: true } : m));
+    else setError((e as Error).message);
+  }
+  async function loadMe() {
+    try {
+      const next = await api<AdminMe>("/admin/me");
+      setMe(next);
+      setError("");
+      const allowed = tabsFor(next.user.role);
+      setTab((t) =>
+        t === "account" || allowed.some((x) => x[0] === t)
+          ? t
+          : allowed[0][0],
+      );
+      if (!next.needs2faSetup && next.user.role !== "guide") await load();
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) setMe(null);
+      else handle(e);
+    }
+  }
   async function load() {
     setBusy(true);
     try {
       setData(await api<Dashboard>("/admin/dashboard"));
       setError("");
     } catch (e) {
-      if (e instanceof ApiError && e.status === 401) setData(null);
-      else setError((e as Error).message);
+      handle(e);
     } finally {
       setBusy(false);
     }
   }
   useEffect(() => {
-    load();
+    loadMe();
   }, []);
-  async function login(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const f = new FormData(e.currentTarget);
-    setBusy(true);
+  async function logout() {
     try {
-      await post("/admin/login", { password: f.get("password") });
-      await load();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
+      await post("/admin/logout", {});
+    } catch {}
+    setMe(null);
+    setData(null);
+    setLoginNotice("");
   }
   async function loadReviews() {
     setBusy(true);
     try {
       setReviews(await api<ReviewsResponse>("/admin/reviews"));
     } catch (e) {
-      setError((e as Error).message);
+      handle(e);
     } finally {
       setBusy(false);
     }
@@ -125,59 +192,41 @@ export function Admin({
       setNotice("Otel kaydedildi.");
       await load();
     } catch (e) {
-      setError((e as Error).message);
+      handle(e);
     } finally {
       setBusy(false);
     }
   }
-  if (!data)
+  if (me === undefined)
     return (
-      <div className="admin-login">
-        <Link to="/">
-          <img src="/images/logo.png" alt="Rota Kars" />
-        </Link>
-        <LockKeyhole size={27} />
-        <h1>Acente yönetimi</h1>
-        <p>
-          Rezervasyonlar, konaklama talepleri ve Google yorum eşleştirmeleri.
-        </p>
-        <form onSubmit={login}>
-          <label className="field">
-            Yönetici parolası
-            <input
-              type="password"
-              name="password"
-              autoComplete="current-password"
-              required
-            />
-          </label>
-          {error && (
-            <p className="error" role="alert">
-              {error}
-            </p>
-          )}
-          <button className="btn block" disabled={busy}>
-            {busy ? <LoaderCircle size={17} className="spin" /> : null}Giriş yap
-          </button>
-        </form>
-        <small>
-          Yerel kurulum: .env dosyasındaki ADMIN_PASSWORD alanıyla etkinleşir.
-        </small>
+      <div className="app-loading">
+        <img src="/images/logo.png" alt="Rota Kars" />
+        <p>Yönetim paneli hazırlanıyor…</p>
       </div>
     );
-  const tabs = [
-    ["reservations", "Rezervasyonlar", Ticket],
-    ["departures", "Sefer planı", Bus],
-    ["daily", "Günlük operasyon", ClipboardList],
-    ["campaigns", "Kampanyalar", Ticket],
-    ["notifications", "Bildirim kuyruğu", MessageSquareText],
-    ["operations", "Tur ve araç planı", Bus],
-    ["requests", "Gelen talepler", ClipboardList],
-    ["hotels", "Anlaşmalı oteller", BedDouble],
-    ["reviews", "Google yorumları", MessageSquareText],
-    ["instagram", "Instagram", Instagram],
-    ["integrations", "Bağlantılar", Settings2],
-  ] as const;
+  if (me === null)
+    return (
+      <AdminLogin
+        key={loginNotice}
+        initialNotice={loginNotice}
+        onLoggedIn={loadMe}
+      />
+    );
+  if (me.needs2faSetup)
+    return (
+      <ForcedTwoFactor me={me} onEnabled={loadMe} onLogout={logout} />
+    );
+  const tabs = tabsFor(me.user.role),
+    title =
+      tab === "account"
+        ? "Hesabım"
+        : tabs.find((x) => x[0] === tab)?.[1] || "",
+    pick = (id: string) => {
+      setTab(id);
+      setNotice("");
+      setError("");
+      if (id === "reviews") loadReviews();
+    };
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
@@ -189,25 +238,31 @@ export function Admin({
           {tabs.map(([id, label, Icon]) => (
             <button
               className={tab === id ? "active" : ""}
+              aria-current={tab === id ? "page" : undefined}
               key={id}
-              onClick={() => {
-                setTab(id);
-                setNotice("");
-                if (id === "reviews") loadReviews();
-              }}
+              onClick={() => pick(id)}
             >
               <Icon size={17} />
               {label}
             </button>
           ))}
         </nav>
+        <div className="admin-user-chip">
+          <UserRound size={17} />
+          <div>
+            <strong>{me.user.name}</strong>
+            <small>{me.user.roleLabel || ROLE_LABELS[me.user.role]}</small>
+          </div>
+        </div>
         <button
-          className="text-link"
-          onClick={async () => {
-            await post("/admin/logout", {});
-            setData(null);
-          }}
+          className={"text-link" + (tab === "account" ? " active" : "")}
+          aria-current={tab === "account" ? "page" : undefined}
+          onClick={() => pick("account")}
         >
+          <ShieldCheck size={17} />
+          Hesabım
+        </button>
+        <button className="text-link" onClick={logout}>
           <LogOut size={17} />
           Çıkış yap
         </button>
@@ -216,9 +271,13 @@ export function Admin({
         <div className="section-heading">
           <div>
             <span className="section-note">Rota Kars</span>
-            <h1>{tabs.find((x) => x[0] === tab)?.[1]}</h1>
+            <h1>{title}</h1>
           </div>
-          <button className="btn btn-outline btn-small" onClick={load}>
+          <button
+            className="btn btn-outline btn-small"
+            onClick={loadMe}
+            disabled={busy}
+          >
             <RefreshCw size={15} />
             Yenile
           </button>
@@ -234,12 +293,41 @@ export function Admin({
             {notice}
           </p>
         )}
+        {me.bootstrap && (
+          <>
+            <div className="admin-banner" role="note">
+              <TriangleAlert size={18} />
+              Paylaşılan parola ile giriş yaptınız. Kendi hesabınızı
+              oluşturunca bu parola kapanır.
+            </div>
+            <FirstOwnerSetup onCreated={loadMe} />
+          </>
+        )}
+        {tab === "account" && (
+          <AdminAccount
+            me={me}
+            onChanged={loadMe}
+            onPasswordChanged={(m) => {
+              setMe(null);
+              setData(null);
+              setLoginNotice(m);
+            }}
+          />
+        )}
+        {tab === "users" && <UserManager currentId={me.user.id} />}
+        {tab === "audit" && <AuditLog />}
+        {tab === "kvkk" && <KvkkTools />}
+        {(tab === "requests" || tab === "hotels") && !data && (
+          <p className="admin-empty">
+            {busy ? "Yükleniyor…" : "Kayıtlar yüklenemedi."}
+          </p>
+        )}
         {tab === "reservations" && <ReservationManager catalog={catalog} />}
         {tab === "departures" && <DepartureManager catalog={catalog} />}
         {tab === "campaigns" && <CampaignManager catalog={catalog} />}
         {tab === "daily" && <DailyReport catalog={catalog} />}
         {tab === "notifications" && <NotificationManager />}
-        {tab === "requests" && (
+        {tab === "requests" && data && (
           <div className="admin-requests">
             {data.requests.length ? (
               data.requests.map((r) => (
@@ -276,7 +364,7 @@ export function Admin({
             )}
           </div>
         )}
-        {tab === "hotels" && (
+        {tab === "hotels" && data && (
           <>
             <p className="muted">
               Yalnızca acentenin anlaşmasını doğruladığı otelleri yayımlayın.

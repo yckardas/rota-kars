@@ -58,6 +58,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     [passengers, setPassengers] = useState<string[]>([]),
     [contact, setContact] = useState({ name: "", email: "", phone: "" }),
     [consent, setConsent] = useState(false),
+    [marketingConsent, setMarketingConsent] = useState(false),
     [loaded, setLoaded] = useState(false),
     [activeVehicle, setActiveVehicle] = useState<Vehicle | null>(null),
     [coupons, setCoupons] = useState<Coupon[]>([]),
@@ -261,6 +262,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         passengers: passengers.slice(0, count),
         paymentMode: mode,
         consent,
+        marketingConsent,
         ...(couponId ? { couponId } : {}),
       });
       holdRef.current = null;
@@ -648,11 +650,26 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   required
                 />
                 <span>
-                  <Link to="/bilgilendirme" target="_blank">
-                    Ön rezervasyon ve aydınlatma metnini
+                  <Link to="/bilgilendirme#iptal" target="_blank">
+                    Ön rezervasyon koşullarını
+                  </Link>{" "}
+                  ve{" "}
+                  <Link to="/bilgilendirme#kvkk" target="_blank">
+                    aydınlatma metnini
                   </Link>{" "}
                   okudum. Bu talebin kesin bilet olmadığını ve ödeme
                   alınmayacağını biliyorum.
+                </span>
+              </label>
+              <label className="checkbox-label optional-consent">
+                <input
+                  type="checkbox"
+                  checked={marketingConsent}
+                  onChange={(e) => setMarketingConsent(e.target.checked)}
+                />
+                <span>
+                  Kampanya ve yeni rotalardan e-posta/SMS ile haberdar olmak
+                  istiyorum (isteğe bağlı).
                 </span>
               </label>
               <div className="flow-error" role="alert">

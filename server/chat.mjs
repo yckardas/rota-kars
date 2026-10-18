@@ -526,9 +526,11 @@ export function createChatService(
   }
   return {
     provider: enabled ? "claude" : "local",
-    async reply(messages, { tourId } = {}) {
+    async reply(messages, { tourId, abroadConsent = false } = {}) {
       const local = await answer(messages, tourId);
       if (!anthropic || !local.unknown) return local;
+      // Yurt dışı aktarım rızası yoksa mesaj buluta gönderilmez.
+      if (!abroadConsent) return { ...local, consentNeeded: true };
       try {
         const response = await anthropic.messages.create({
           model: env.CHAT_MODEL || "claude-opus-5-5",

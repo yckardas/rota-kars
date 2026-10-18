@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import express from "express";
+import QRCode from "qrcode";
 import { attachAdvancedApi, receipt, siteBase } from "./advanced-api.mjs";
 import { readFileSync } from "node:fs";
 const photoCredits = JSON.parse(
@@ -19,6 +20,7 @@ import {
 } from "./catalog.mjs";
 import { createChatService } from "./chat.mjs";
 import { attachSeoRoutes } from "./seo.mjs";
+import { roleAllows, ROLES } from "./admin-auth.mjs";
 import { createStorage, MEDIA_LIMITS } from "./storage.mjs";
 import { vehicleModels } from "./operations.mjs";
 import { attachSocialAuth, cookieValue } from "./social-auth.mjs";
@@ -70,6 +72,8 @@ const bookingSchema = z.object({
   passengers: z.array(clean).min(1).max(53),
   paymentMode: z.enum(["deposit", "full"]),
   consent: z.literal(true),
+  // İsteğe bağlı ticari elektronik ileti izni (varsayılan kapalı).
+  marketingConsent: z.boolean().optional(),
   couponId: z
     .string()
     .regex(/^[a-f0-9]{32}$/)
@@ -216,24 +220,42 @@ export function createApp(
       next(e);
     }
   };
+  // Yönetici oturumu + rol + (gerekiyorsa) iki adımlı doğrulama kontrolü.
   const requireAdmin = async (req, res, next) => {
-    const sid = (req.headers.cookie || "")
-        .split(";")
-        .map((x) => x.trim())
-        .find((x) => x.startsWith("rota_admin="))
-        ?.slice(11),
-      session =
-        sid && /^[a-f0-9]{64}$/.test(sid)
-          ? await store.db.one("admin_sessions", {
-              _id: createHash("sha256").update(sid).digest("hex"),
-            })
-          : null;
-    if (!session || session.expires_at < Date.now())
-      return res.status(401).json({
-        message: "Yönetici oturumu gerekli.",
-      });
-    next();
+    try {
+      const ctx = await store.adminAuth.fromSession(cookieValue(req, "rota_admin"));
+      if (!ctx)
+        return res.status(401).json({ message: "Yönetici oturumu gerekli." });
+      req.admin = ctx.user;
+      req.adminCtx = ctx;
+      const path = req.baseUrl + req.path;
+      if (ctx.needs2faSetup && !/^\/api\/admin\/(session|me|me\/.*|logout)$/.test(path))
+        return res.status(403).json({
+          code: "2FA_REQUIRED",
+          message: "Devam etmek için hesabınızda iki adımlı doğrulamayı açın.",
+        });
+      if (!roleAllows(ctx.user.role, req.method, path))
+        return res.status(403).json({ message: "Bu işlem için yetkiniz yok." });
+      next();
+    } catch (e) {
+      next(e);
+    }
   };
+  // Değişiklik yapan her yönetici isteği ve kişisel veri içeren dışa aktarımlar
+  // denetim kaydına yazılır (kim, ne zaman, hangi işlem).
+  app.use("/api/admin", (q, r, next) => {
+    r.on("finish", () => {
+      if (!q.admin || r.statusCode >= 400) return;
+      const path = q.baseUrl + q.path;
+      const exported = /manifest|export|\.csv/.test(path);
+      if (q.method === "GET" && !exported) return;
+      if (/\/api\/admin\/(login|logout)$/.test(path)) return;
+      store.adminAuth
+        .audit(q.admin, exported ? "export" : q.method.toLowerCase(), { path }, q.ip)
+        .catch(() => {});
+    });
+    next();
+  });
   app.use("/api", async (q, _r, next) => {
     q.member = await store.members.fromSession(cookieValue(q, "rota_member"));
     next();
@@ -270,6 +292,7 @@ export function createApp(
             .min(10, "Parola en az 10 karakter olmalı.")
             .max(128),
           consent: z.literal(true),
+          marketingConsent: z.boolean().optional(),
           referralCode: z
             .string()
             .regex(/^[a-f0-9]{10}$/i)
@@ -277,6 +300,9 @@ export function createApp(
         })
         .parse(q.body);
       const member = await store.members.register(input);
+      await store.privacy.recordConsent({ email: input.email, memberId: member.id, type: "kvkk_notice", source: "register" });
+      if (input.marketingConsent)
+        await store.privacy.recordConsent({ email: input.email, memberId: member.id, type: "marketing", source: "register" });
       await setSession(r, member.id);
       const verification = await store.accountSecurity.requestVerification(
         member,
@@ -309,6 +335,28 @@ export function createApp(
     });
     r.status(204).end();
   });
+  // KVKK md. 11: üyenin kendi verilerini indirmesi ve hesabını silmesi.
+  app.get(
+    "/api/member/data-export",
+    requireMember,
+    route(async (q, r) => {
+      const data = await store.privacy.memberExport(q.member.id);
+      r.set({
+        "Content-Type": "application/json; charset=utf-8",
+        "Content-Disposition": 'attachment; filename="rota-kars-kisisel-verilerim.json"',
+      }).send(JSON.stringify(data, null, 2));
+    }),
+  );
+  app.post(
+    "/api/member/delete",
+    requireMember,
+    route(async (q, r) => {
+      z.object({ confirm: z.literal("SİL") }).parse(q.body);
+      const result = await store.privacy.memberDelete(q.member.id);
+      r.clearCookie("rota_member", { path: "/" });
+      r.json({ ok: true, ...result });
+    }),
+  );
   app.get(
     "/api/member/dashboard",
     requireMember,
@@ -529,16 +577,14 @@ export function createApp(
           400,
           "Üye rezervasyonunda hesabınızın e-posta adresini kullanın.",
         );
-      r.status(201).json(
-        await receipt(
-          await store.reserve({
-            ...input,
-            memberId: q.member?.id,
-          }),
-          q,
-          env,
-        ),
-      );
+      const reservation = await store.reserve({
+        ...input,
+        memberId: q.member?.id,
+      });
+      await store.privacy.recordConsent({ email: input.email, memberId: q.member?.id, type: "kvkk_notice", source: "booking" });
+      if (input.marketingConsent)
+        await store.privacy.recordConsent({ email: input.email, memberId: q.member?.id, type: "marketing", source: "booking" });
+      r.status(201).json(await receipt(reservation, q, env));
     }),
   );
   app.post(
@@ -572,7 +618,7 @@ export function createApp(
   app.post(
     "/api/chat",
     route(async (q, r) => {
-      const { messages, context } = z
+      const { messages, context, abroadConsent } = z
         .object({
           messages: z
             .array(
@@ -599,9 +645,12 @@ export function createApp(
               tourId: z.enum(tours.map((t) => t.id)).optional(),
             })
             .optional(),
+          abroadConsent: z.boolean().optional(),
         })
         .parse(q.body);
-      r.json(await chatService.reply(messages, context));
+      // Yanıtlanamayan sorular yalnız ziyaretçi yurt dışı aktarıma onay verdiyse
+      // (Anthropic, ABD) bulut modeline gider; aksi halde yerel yanıt kullanılır.
+      r.json(await chatService.reply(messages, { ...context, abroadConsent }));
     }),
   );
   app.get("/api/payment/status", (_q, r) => r.json(paymentStatus));
@@ -673,61 +722,157 @@ export function createApp(
       r.status(201).json(await store.request(input.kind, input));
     }),
   );
+  const adminCookie = (sid) =>
+    `rota_admin=${sid}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${env.NODE_ENV === "production" ? "; Secure" : ""}`;
+  // E-posta + parola (+ iki adımlı kod). E-posta verilmezse ilk kurulum parolası.
   app.post(
     "/api/admin/login",
     route(async (q, r) => {
-      if (!env.ADMIN_PASSWORD)
-        return r.status(503).json({
-          message:
-            "Yönetim panelini açmak için yerel .env dosyasında ADMIN_PASSWORD belirleyin.",
-        });
       const input = z
         .object({
+          email: z.string().trim().email().max(254).optional(),
           password: z.string().min(1).max(300),
+          code: z.string().trim().regex(/^\d{6}$/).optional(),
         })
         .parse(q.body);
-      const a = createHash("sha256").update(input.password).digest(),
-        b = createHash("sha256").update(env.ADMIN_PASSWORD).digest();
-      if (!timingSafeEqual(a, b))
-        return r.status(401).json({
-          message: "Parola doğru değil.",
-        });
-      await store.db.remove("admin_sessions", {
-        expires_at: { $lt: Date.now() },
-      });
-      const sid = randomBytes(32).toString("hex"),
-        hash = createHash("sha256").update(sid).digest("hex");
-      await store.db.insert("admin_sessions", hash, {
-        token_hash: hash,
-        expires_at: Date.now() + 8 * 3600 * 1000,
-      });
-      r.setHeader(
-        "Set-Cookie",
-        `rota_admin=${sid}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${env.NODE_ENV === "production" ? "; Secure" : ""}`,
-      );
-      r.json({
-        ok: true,
-      });
+      const result = input.email
+        ? await store.adminAuth.login(input)
+        : await store.adminAuth.bootstrapLogin(input.password, env.ADMIN_PASSWORD);
+      if (result.needsCode) return r.json({ ok: false, needsCode: true });
+      r.setHeader("Set-Cookie", adminCookie(result.sid));
+      r.json({ ok: true, bootstrap: Boolean(result.bootstrap), user: result.user || null });
     }),
   );
-  app.post("/api/admin/logout", requireAdmin, async (q, r) => {
-    const sid = (q.headers.cookie || "")
-      .split(";")
-      .map((x) => x.trim())
-      .find((x) => x.startsWith("rota_admin="))
-      ?.slice(11);
-    if (sid)
-      await store.db.remove("admin_sessions", {
-        _id: createHash("sha256").update(sid).digest("hex"),
-      });
-    r.setHeader(
-      "Set-Cookie",
-      "rota_admin=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0",
-    );
-    r.json({
-      ok: true,
-    });
+  app.post("/api/admin/logout", async (q, r) => {
+    await store.adminAuth.logout(cookieValue(q, "rota_admin"));
+    r.setHeader("Set-Cookie", "rota_admin=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0");
+    r.json({ ok: true });
   });
+  app.get("/api/admin/me", requireAdmin, (q, r) =>
+    r.json({
+      user: q.admin,
+      bootstrap: q.adminCtx.bootstrap,
+      needs2faSetup: q.adminCtx.needs2faSetup,
+      require2fa: store.adminAuth.require2fa,
+    }),
+  );
+  const adminPassword = z.string().min(12, "Yönetici parolası en az 12 karakter olmalı.").max(200);
+  app.post(
+    "/api/admin/me/password",
+    requireAdmin,
+    route(async (q, r) => {
+      const input = z.object({ current: z.string().max(300), next: adminPassword }).parse(q.body);
+      await store.adminAuth.changePassword(q.admin, input);
+      r.setHeader("Set-Cookie", "rota_admin=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0");
+      r.json({ ok: true, message: "Parola değişti. Yeni parolanızla tekrar giriş yapın." });
+    }),
+  );
+  app.post(
+    "/api/admin/me/2fa/setup",
+    requireAdmin,
+    route(async (q, r) => {
+      if (q.adminCtx.bootstrap)
+        throw new AppError(409, "Önce kendi yönetici hesabınızı oluşturun.");
+      const setup = await store.adminAuth.beginTotp(q.admin);
+      r.json({ ...setup, qrDataUrl: await QRCode.toDataURL(setup.otpauthUrl, { width: 220, margin: 1 }) });
+    }),
+  );
+  app.post(
+    "/api/admin/me/2fa/enable",
+    requireAdmin,
+    route(async (q, r) => {
+      const { code } = z.object({ code: z.string().regex(/^\d{6}$/) }).parse(q.body);
+      await store.adminAuth.enableTotp(q.admin, code);
+      r.json({ ok: true });
+    }),
+  );
+  app.post(
+    "/api/admin/me/2fa/disable",
+    requireAdmin,
+    route(async (q, r) => {
+      const input = z.object({ password: z.string().max(300), code: z.string().regex(/^\d{6}$/) }).parse(q.body);
+      await store.adminAuth.disableTotp(q.admin, input);
+      r.json({ ok: true });
+    }),
+  );
+  app.get(
+    "/api/admin/users",
+    requireAdmin,
+    route(async (_q, r) => r.json(await store.adminAuth.listUsers())),
+  );
+  app.post(
+    "/api/admin/users",
+    requireAdmin,
+    route(async (q, r) => {
+      const input = z
+        .object({ email: z.string().trim().email().max(254), name: clean, role: z.enum(ROLES), password: adminPassword })
+        .parse(q.body);
+      const user = await store.adminAuth.createUser(q.admin, input);
+      // İlk kurulumda oluşturulan sahip hesabıyla doğrudan oturum açılır.
+      if (q.adminCtx.bootstrap) {
+        const login = await store.adminAuth.login({ email: input.email, password: input.password });
+        if (login.sid) r.setHeader("Set-Cookie", adminCookie(login.sid));
+      }
+      r.status(201).json(user);
+    }),
+  );
+  app.patch(
+    "/api/admin/users/:id",
+    requireAdmin,
+    route(async (q, r) => {
+      const input = z
+        .object({ role: z.enum(ROLES).optional(), disabled: z.boolean().optional(), name: clean.optional() })
+        .parse(q.body);
+      if (q.params.id === q.admin.id && (input.disabled || (input.role && input.role !== "owner")))
+        throw new AppError(409, "Kendi hesabınızın rolünü düşüremez veya kapatamazsınız.");
+      r.json(await store.adminAuth.updateUser(q.admin, z.string().uuid().parse(q.params.id), input));
+    }),
+  );
+  app.post(
+    "/api/admin/users/:id/reset",
+    requireAdmin,
+    route(async (q, r) => {
+      const input = z
+        .object({ password: adminPassword.optional(), resetTotp: z.boolean().optional() })
+        .parse(q.body);
+      r.json(await store.adminAuth.resetUser(q.admin, z.string().uuid().parse(q.params.id), input));
+    }),
+  );
+  // KVKK başvuruları (yalnız sahip): e-postaya göre veri dökümü ve silme.
+  app.post(
+    "/api/admin/kvkk/export",
+    requireAdmin,
+    route(async (q, r) => {
+      const { email: target } = z.object({ email }).parse(q.body);
+      r.json(await store.privacy.exportByEmail(target));
+    }),
+  );
+  app.post(
+    "/api/admin/kvkk/erase",
+    requireAdmin,
+    route(async (q, r) => {
+      const { email: target } = z.object({ email, confirm: z.literal("SİL") }).parse(q.body);
+      const result = await store.privacy.eraseByEmail(target);
+      // Silinen kişinin e-postası denetim kaydına açık yazılmaz.
+      await store.adminAuth.audit(
+        q.admin,
+        "kvkk_erase",
+        { target: createHash("sha256").update(target.toLowerCase()).digest("hex").slice(0, 12), ...result },
+        q.ip,
+      );
+      r.json(result);
+    }),
+  );
+  app.get(
+    "/api/admin/kvkk/retention",
+    requireAdmin,
+    (_q, r) => r.json(store.privacy.retention),
+  );
+  app.get(
+    "/api/admin/audit",
+    requireAdmin,
+    route(async (_q, r) => r.json(await store.adminAuth.listAudit())),
+  );
   app.get(
     "/api/admin/dashboard",
     requireAdmin,

@@ -28,7 +28,7 @@ npm start
 
 Adres: http://127.0.0.1:5173/yonetim
 
-`.env` içindeki `ADMIN_PASSWORD` alanına güçlü bir parola koyup sunucuyu yeniden başlatın. Parola boşsa yönetim girişi kapalıdır. Parolayı depoya eklemeyin. Oturumlar HttpOnly / SameSite=Strict çerez kullanır ve sekiz saat sonra sona erer.
+İlk girişte `ADMIN_PASSWORD` ile **ilk sahip hesabını** oluşturun; sonrasında herkes kendi e-posta/parolasıyla girer, paylaşılan parola kapanır. Roller (Sahip, Operasyon, Rehber), canlıda zorunlu iki adımlı doğrulama, hesap kilitleme ve denetim kaydı vardır. KVKK araçları (veri indirme/silme, rıza kayıtları, saklama süreleri) ve ayrıntılar: [RAILWAY-AND-OPERATIONS.md](docs/RAILWAY-AND-OPERATIONS.md). Oturumlar HttpOnly / SameSite=Strict çerez kullanır ve sekiz saat sonra sona erer.
 
 Panelde ön rezervasyonlar ve talepler görüntülenir; oteller ve Instagram videoları yönetilir, Google yorumlarının tur eşleşmeleri düzeltilir. **Tur ve araç planı** sekmesinde tur satışını açıp kapatabilir, araç sınıfı ve kapasite seçebilirsiniz. Koltuk haritası ve sunucu kapasite kontrolü bu ayara uyar. Ayrılmış koltuk bulunan turda araç düzeni değiştirilmez. **Sefer planı**, **Rezervasyonlar**, **Günlük operasyon**, **Kampanyalar** ve **Bildirim kuyruğu** sekmeleri tarih bazında planlama, tahsilat/iade defteri, acente onayı, yolcu listesi ve QR katılım yönetimini sunar.
 

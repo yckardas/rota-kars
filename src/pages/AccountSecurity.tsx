@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
-import { ShieldCheck, Ticket, LoaderCircle } from "lucide-react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { ShieldCheck, Ticket, LoaderCircle, Download, Trash2 } from "lucide-react";
 import { api, post } from "../lib/api";
 import { useMember } from "../lib/member";
 import { useEffect } from "react";
@@ -349,4 +349,115 @@ export function ProfileSettings() {
       )}
     </section>
   ) : null;
+}
+
+export function MemberPrivacy() {
+  const { member, refresh } = useMember(),
+    navigate = useNavigate(),
+    [confirming, setConfirming] = useState(false),
+    [confirm, setConfirm] = useState(""),
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState(false);
+  async function erase(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (confirm !== "SİL") {
+      setError("Onay için kutuya büyük harflerle SİL yazın.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      await post("/member/delete", { confirm: "SİL" });
+      await refresh().catch(() => {});
+      navigate("/", { replace: true });
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  if (!member) return null;
+  return (
+    <section className="profile-settings member-privacy">
+      <div>
+        <span className="section-note">KVKK md. 11</span>
+        <h2>Kişisel verilerim (KVKK)</h2>
+        <p>
+          Hakkınızda tuttuğumuz verilerin bir kopyasını indirebilir veya
+          hesabınızın silinmesini isteyebilirsiniz.{" "}
+          <Link to="/bilgilendirme#haklar">Haklarınız</Link>
+        </p>
+      </div>
+      <div>
+        <a
+          className="btn btn-outline btn-small"
+          href="/api/member/data-export"
+          download="rota-kars-verilerim.json"
+        >
+          <Download size={15} />
+          Verilerimi indir (JSON)
+        </a>
+        {!confirming ? (
+          <button
+            type="button"
+            className="text-link danger-link"
+            onClick={() => {
+              setConfirming(true);
+              setError("");
+            }}
+          >
+            <Trash2 size={15} />
+            Hesabımı sil
+          </button>
+        ) : (
+          <form className="danger-zone" onSubmit={erase}>
+            <p>
+              Üyeliğiniz, kuponlarınız ve iletişim tercihleriniz silinir;
+              oturumunuz kapanır. Ödemesiz rezervasyonlarınızdaki kişisel
+              bilgiler anonimleştirilir. Ödemesi yapılmış rezervasyonlarınız
+              vergi ve ticari mevzuat gereği 10 yıl saklanır ve bu sürenin
+              sonunda anonimleştirilir.
+              Yaklaşan bir yolculuğunuz varsa önce rezervasyonunuzu
+              sonuçlandırmanız gerekir.
+            </p>
+            <label className="field">
+              Onaylamak için SİL yazın
+              <input
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                autoComplete="off"
+                autoFocus
+                required
+              />
+            </label>
+            <div className="danger-actions">
+              <button
+                className="btn btn-danger btn-small"
+                disabled={busy || confirm !== "SİL"}
+              >
+                {busy ? <LoaderCircle size={15} className="spin" /> : null}
+                Hesabımı kalıcı olarak sil
+              </button>
+              <button
+                type="button"
+                className="text-link"
+                onClick={() => {
+                  setConfirming(false);
+                  setConfirm("");
+                  setError("");
+                }}
+              >
+                Vazgeç
+              </button>
+            </div>
+          </form>
+        )}
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
+      </div>
+    </section>
+  );
 }

@@ -123,7 +123,7 @@ test("cloud is used only for unresolved questions and supports current messages 
   );
   await chat.reply([user("Ani turu ne kadar?")]);
   assert.equal(called, 0);
-  const r = await chat.reply([user("Katalog dışında bir ayrıntı soruyorum")]);
+  const r = await chat.reply([user("Katalog dışında bir ayrıntı soruyorum")], { abroadConsent: true });
   assert.equal(called, 1);
   assert.equal(r.provider, "claude");
 });

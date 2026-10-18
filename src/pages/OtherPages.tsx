@@ -390,22 +390,168 @@ export function Contact({ catalog }: { catalog: Catalog }) {
   );
 }
 export function Information({ catalog }: { catalog: Catalog }) {
-  const demo = Boolean(catalog.demo);
+  const demo = Boolean(catalog.demo),
+    b = catalog.business;
   return (
     <article className="container legal-page section">
       <span className="section-note">
         {demo ? "Demo sürümü" : "Bilgilendirme"}
       </span>
-      <h1>Ön rezervasyon ve veri bilgilendirmesi</h1>
+      <h1>Kişisel Verilerin Korunması Aydınlatma Metni</h1>
       {demo && (
-        <div className="info-note">
+        <div className="info-note legal-review-note" role="note">
           <p>
-            Bu sayfa demo sürümüne ait açıklamadır. Canlı yayından önce firmanın
-            hukuki ve ticari bilgileriyle onaylı aydınlatma, mesafeli sözleşme
-            ve iptal/iade metinleri tamamlanmalıdır.
+            <strong>Bu metin hukuki danışman onayından geçirilmelidir.</strong>{" "}
+            Demo sürümünde iletilen bilgiler yerel veritabanında saklanır;
+            testlerde gerçek kimlik veya kart bilgisi kullanmayın.
           </p>
         </div>
       )}
+      <nav className="legal-toc" aria-label="Sayfa içeriği">
+        <a href="#kvkk">Veri sorumlusu</a>
+        <a href="#veriler">İşlenen veriler</a>
+        <a href="#amaclar">Amaçlar ve hukuki sebepler</a>
+        <a href="#aktarim">Aktarım</a>
+        <a href="#saklama">Saklama süreleri</a>
+        <a href="#haklar">Haklarınız</a>
+        <a href="#basvuru">Başvuru</a>
+        <a href="#iptal">Tur iptali</a>
+      </nav>
+      <h2 id="kvkk">Veri sorumlusu</h2>
+      <p>
+        6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) uyarınca veri
+        sorumlusu <strong>Rota Kars Turizm</strong>’dir.
+      </p>
+      <ul className="legal-list">
+        <li>Adres: {b.address}</li>
+        <li>
+          Telefon: <a href={telHref(b.phone)}>{b.phone}</a>
+        </li>
+        <li>
+          E-posta: <a href={"mailto:" + b.email}>{b.email}</a>
+        </li>
+        {b.tursabNo && <li>TÜRSAB belge no: {b.tursabNo}</li>}
+      </ul>
+      <h2 id="veriler">Hangi verileri işliyoruz</h2>
+      <ul className="legal-list">
+        <li>
+          <strong>Kimlik ve iletişim:</strong> ad soyad, e-posta, telefon.
+        </li>
+        <li>
+          <strong>Yolcu bilgileri:</strong> rezervasyondaki yolcu adları ve
+          koltuk tercihleri.
+        </li>
+        <li>
+          <strong>Rezervasyon ve ödeme kayıtları:</strong> tur, tarih, tutar,
+          tahsilat ve iade kayıtları. Kart bilgisi alınmaz ve saklanmaz.
+        </li>
+        <li>
+          <strong>Üyelik:</strong> hesap bilgileri, tek yönlü özetlenmiş
+          parola, kuponlar ve davet kayıtları.
+        </li>
+        <li>
+          <strong>Talepler:</strong> konaklama, araç kiralama ve özel tur
+          formlarında ilettiğiniz bilgiler.
+        </li>
+        <li>
+          <strong>Çerezler:</strong> yalnızca oturumunuzu sürdürmek için
+          zorunlu oturum çerezleri kullanılır; reklam veya izleme çerezi
+          kullanılmaz.
+        </li>
+        <li>
+          <strong>Sohbet asistanı:</strong> asistana yazdığınız mesajlar
+          yalnızca yanıt üretmek için kullanılır, sunucuda kaydedilmez.
+        </li>
+      </ul>
+      <h2 id="amaclar">İşleme amaçları ve hukuki sebepler</h2>
+      <ul className="legal-list">
+        <li>
+          <strong>Sözleşmenin kurulması ve ifası (md. 5/2-c):</strong> ön
+          rezervasyonun alınması, tur ve konaklama hizmetinin sunulması, bilet
+          ve yolcu listelerinin hazırlanması, üyelik hesabının yönetilmesi.
+        </li>
+        <li>
+          <strong>Hukuki yükümlülük (md. 5/2-ç):</strong> fatura, muhasebe ve
+          yolcu listesi gibi vergi ve turizm mevzuatından doğan kayıtlar.
+        </li>
+        <li>
+          <strong>Meşru menfaat (md. 5/2-f):</strong> hizmet güvenliği,
+          kötüye kullanımın önlenmesi ve yönetici işlemlerinin denetim kaydı.
+        </li>
+        <li>
+          <strong>Açık rıza (md. 5/1):</strong> kampanya ve yeni rotalarla ilgili
+          ticari elektronik ileti gönderimi ile yapay zekâ asistanı için yurt
+          dışına aktarım. Açık rıza isteğe bağlıdır; vermemeniz hizmetten
+          yararlanmanızı engellemez ve dilediğiniz zaman geri alabilirsiniz.
+        </li>
+      </ul>
+      <h2 id="aktarim">Aktarım</h2>
+      <ul className="legal-list">
+        <li>
+          <strong>Barındırma:</strong> site ve veritabanı Railway altyapısında
+          barındırılır.
+        </li>
+        <li>
+          <strong>Dosya depolama:</strong> görseller ve belgeler Railway dosya
+          deposunda (bucket) saklanır.
+        </li>
+        <li>
+          <strong>E-posta sağlayıcı:</strong> doğrulama, rezervasyon ve bildirim
+          e-postalarının iletilmesi için.
+        </li>
+        <li>
+          <strong>Yapay zekâ asistanı:</strong> yerel asistanın yanıtlayamadığı
+          sorular yalnız onayınızla Anthropic’e (ABD) iletilir.
+        </li>
+        <li>
+          <strong>Yetkili kamu kurum ve kuruluşları:</strong> mevzuatın
+          gerektirdiği hâllerde ve ölçüde.
+        </li>
+      </ul>
+      <h2 id="saklama">Saklama süreleri</h2>
+      <ul className="legal-list">
+        <li>Ödemesiz ön rezervasyonlar: 1 yıl</li>
+        <li>Ödemeli rezervasyon ve tahsilat kayıtları: 10 yıl (VUK/TTK)</li>
+        <li>Konaklama ve özel tur talepleri: 2 yıl</li>
+        <li>Gönderilmiş bildirimler: 90 gün</li>
+      </ul>
+      <p>
+        Süresi dolan kayıtlar silinir veya kimliğinizle ilişkisi kaldırılarak
+        anonimleştirilir.
+      </p>
+      <h2 id="haklar">Haklarınız (md. 11)</h2>
+      <ul className="legal-list">
+        <li>Kişisel verilerinizin işlenip işlenmediğini öğrenme,</li>
+        <li>İşlenmişse buna ilişkin bilgi talep etme,</li>
+        <li>
+          İşlenme amacını ve amacına uygun kullanılıp kullanılmadığını öğrenme,
+        </li>
+        <li>Yurt içinde veya yurt dışında aktarıldığı üçüncü kişileri bilme,</li>
+        <li>Eksik veya yanlış işlenmişse düzeltilmesini isteme,</li>
+        <li>
+          KVKK md. 7 çerçevesinde silinmesini veya yok edilmesini isteme,
+        </li>
+        <li>
+          Düzeltme ve silme işlemlerinin aktarıldığı üçüncü kişilere
+          bildirilmesini isteme,
+        </li>
+        <li>
+          Münhasıran otomatik sistemlerle analiz edilmesi sonucu aleyhinize bir
+          sonuç çıkmasına itiraz etme,
+        </li>
+        <li>
+          Kanuna aykırı işleme nedeniyle zarara uğramanız hâlinde zararın
+          giderilmesini talep etme.
+        </li>
+      </ul>
+      <h2 id="basvuru">Başvuru</h2>
+      <p>
+        Haklarınızla ilgili başvurularınızı{" "}
+        <a href={"mailto:" + b.email}>{b.email}</a> adresine iletebilirsiniz.
+        Başvurular en geç 30 gün içinde ücretsiz yanıtlanır. Üyelerimiz{" "}
+        <Link to="/hesabim">Hesabım</Link> sayfasından verilerinin bir kopyasını
+        indirebilir veya hesaplarını silebilir.
+      </p>
       <h2 id="iptal">Tur iptali</h2>
       <p>
         Yurt dışı paket turlarımızda son 5 güne, yurt içi paketlerimizde son 3
@@ -414,12 +560,16 @@ export function Information({ catalog }: { catalog: Catalog }) {
         bulunur (uçaklı paketlerde geçerli değildir). Ödediğiniz ücreti
         kesintisiz geri alırsınız.
       </p>
-      <h2>Yapay zekâ asistanı</h2>
+      <h2 id="asistan">Yapay zekâ asistanı</h2>
       <p>
         Sağ alttaki asistana yazdığınız mesajlar yalnızca yanıt üretmek için
-        kullanılır ve sunucuda saklanmaz. API anahtarı tanımlıysa yanıtlar
-        Anthropic Claude ile üretilir. Kişisel veya ödeme bilgisi paylaşmayın;
-        rezervasyon için WhatsApp hattımıza yönlendirilirsiniz.
+        kullanılır ve sunucuda saklanmaz. Sorularınız önce sitemizdeki yerel
+        asistanla yanıtlanır. Yerel asistanın yanıtlayamadığı bir soru, yalnız
+        sohbet penceresinde açıkça onay vermeniz hâlinde Anthropic (ABD)
+        tarafından sunulan Claude yapay zekâ hizmetine iletilir. Onayınızı
+        sohbet penceresindeki “Onayı geri al” bağlantısıyla dilediğiniz zaman
+        geri alabilirsiniz. Kişisel veya ödeme bilgisi paylaşmayın; rezervasyon
+        için WhatsApp hattımıza yönlendirilirsiniz.
       </p>
       <h2>Ön rezervasyon</h2>
       <p>
@@ -428,27 +578,15 @@ export function Information({ catalog }: { catalog: Catalog }) {
         Online ödeme aktif değildir ve kart bilgisi alınmaz. Onay bekleyen
         koltuklar 24 saat sonra serbest kalır.
       </p>
-      <h2>Veri kaydı</h2>
-      {demo ? (
-        <p>
-          Demo sürümünde iletilen ad, e-posta, telefon, yolcu adları ve
-          rezervasyon tercihi yerel veritabanında saklanır. Bu sürüm otomatik
-          e-posta veya SMS göndermez. Testlerde gerçek kimlik veya kart bilgisi
-          kullanmayın.
-        </p>
-      ) : (
-        <p>
-          İletilen ad, e-posta, telefon, yolcu adları ve rezervasyon tercihi, ön
-          rezervasyon talebinizin acentemizce işlenmesi için saklanır.
-        </p>
-      )}
       <h2 id="uyelik">Üyelik ve kampanyalar</h2>
       <p>
         Üyelik ücretsizdir. Ad, e-posta ve parola ile oluşturulan hesaplarda
         parola tek yönlü güvenli özet olarak saklanır. Oturum için zorunlu bir
         çerez kullanılır. E-posta doğrulama ve parola yenileme bağlantıları
         gönderim hizmeti tanımlandığında e-postayla iletilir. Sosyal girişler
-        yalnız firma tarafından yapılandırılan sağlayıcılarla açılır.
+        yalnız firma tarafından yapılandırılan sağlayıcılarla açılır. Kampanya
+        e-postası ve SMS’i yalnız isteğe bağlı onay kutusunu işaretlediyseniz
+        gönderilir.
       </p>
       <p>
         Şans çarkı hesap başına bir kez çevrilebilir. %5, %10 veya %15 sonuçları

@@ -34,6 +34,7 @@ type Message = {
   suggestions?: Action[];
   cards?: Card[];
   failed?: boolean;
+  consentNeeded?: boolean;
 };
 type Reply = {
   text: string;
@@ -42,7 +43,22 @@ type Reply = {
   actions: Action[];
   suggestions: Action[];
   cards: Card[];
+  consentNeeded?: boolean;
 };
+const CONSENT_KEY = "rota-chat-abroad-consent";
+function readConsent() {
+  try {
+    return localStorage.getItem(CONSENT_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+function writeConsent(value: boolean) {
+  try {
+    if (value) localStorage.setItem(CONSENT_KEY, "1");
+    else localStorage.removeItem(CONSENT_KEY);
+  } catch {}
+}
 const STORAGE = "rota-chat-session-v2";
 const greeting: Message = {
   role: "assistant",
@@ -88,7 +104,7 @@ function readSession(): Message[] {
 }
 // Single source for internal links the assistant may render as clickable.
 const LINK_SOURCE =
-  "\\/(?:rezervasyonum|rezervasyon|turlar|konaklama|iletisim|hakkimizda|uyelik|hesabim|hizmetler)(?:\\/[a-z0-9-]+)?(?![a-z0-9/-])|\\/bilgilendirme(?:#iptal)?(?![a-z0-9-])|\\/#(?:yorumlar|instagram|hizmetler)(?![a-z0-9-])";
+  "\\/(?:rezervasyonum|rezervasyon|turlar|konaklama|iletisim|hakkimizda|uyelik|hesabim|hizmetler)(?:\\/[a-z0-9-]+)?(?![a-z0-9/-])|\\/bilgilendirme(?:#iptal|#kvkk|#haklar)?(?![a-z0-9-])|\\/#(?:yorumlar|instagram|hizmetler)(?![a-z0-9-])";
 const LINK_EXACT = new RegExp("^(?:" + LINK_SOURCE + ")$");
 const LINK_SPLIT = new RegExp("(" + LINK_SOURCE + ")", "g");
 function safeLink(href?: string) {
@@ -116,6 +132,7 @@ export function ChatBot({ whatsapp }: { whatsapp: string }) {
     [messages, setMessages] = useState<Message[]>(readSession),
     [input, setInput] = useState(""),
     [busy, setBusy] = useState(false),
+    [abroadConsent, setAbroadConsent] = useState(readConsent),
     listRef = useRef<HTMLDivElement>(null),
     inputRef = useRef<HTMLInputElement>(null),
     launcher = useRef<HTMLButtonElement>(null),
@@ -164,8 +181,22 @@ export function ChatBot({ whatsapp }: { whatsapp: string }) {
     const content = text.trim().slice(0, 1200);
     if (!content || busy) return;
     const next: Message[] = [...messages, { role: "user", content }];
-    setMessages(next);
     setInput("");
+    await ask(next, abroadConsent);
+  }
+  // Yurt dışı aktarım onayı verildiğinde son soru, onay bilgisiyle yeniden sorulur.
+  function approveAbroad() {
+    if (busy) return;
+    writeConsent(true);
+    setAbroadConsent(true);
+    let last = messages.length - 1;
+    while (last >= 0 && messages[last].role !== "user") last--;
+    if (last < 0) return;
+    ask(messages.slice(0, last + 1), true);
+  }
+  async function ask(next: Message[], consent: boolean) {
+    const content = next.at(-1)!.content;
+    setMessages(next);
     setBusy(true);
     const id = ++version.current;
     controller.current?.abort();
@@ -190,6 +221,7 @@ export function ChatBot({ whatsapp }: { whatsapp: string }) {
         signal: abort.signal,
         body: JSON.stringify({
           messages: history,
+          ...(consent ? { abroadConsent: true } : {}),
           ...(pageTourId ? { context: { tourId: pageTourId } } : {}),
         }),
       });
@@ -203,6 +235,7 @@ export function ChatBot({ whatsapp }: { whatsapp: string }) {
           actions: r.actions,
           suggestions: r.suggestions,
           cards: r.cards,
+          consentNeeded: r.consentNeeded,
         },
       ]);
     } catch (e) {
@@ -349,6 +382,35 @@ export function ChatBot({ whatsapp }: { whatsapp: string }) {
                     {m.actions!.map(renderAction)}
                   </div>
                 )}
+                {m.consentNeeded && !abroadConsent && (
+                  <div className="chat-consent" role="note">
+                    <p>
+                      Bu soruyu yapay zekâ asistanımız (Anthropic, ABD)
+                      yanıtlayabilir. Bunun için mesajınızın yurt dışına
+                      aktarılmasına onay vermeniz gerekir.{" "}
+                      <Link to="/bilgilendirme#kvkk" onClick={() => setOpen(false)}>
+                        Ayrıntılar
+                      </Link>
+                    </p>
+                    <div>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={approveAbroad}
+                      >
+                        Onaylıyorum
+                      </button>
+                      <a
+                        href={whatsappLink(whatsapp, waText)}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <WhatsAppIcon size={14} />
+                        WhatsApp’tan sorayım
+                      </a>
+                    </div>
+                  </div>
+                )}
                 {m.handoff && (
                   <a
                     className="chat-wa"
@@ -414,6 +476,21 @@ export function ChatBot({ whatsapp }: { whatsapp: string }) {
           <small className="chat-privacy">
             Kimlik ve kart bilgisi paylaşmayın. Fiyatlar acente teyidine
             tabidir.
+            {abroadConsent && (
+              <>
+                {" "}
+                <button
+                  type="button"
+                  className="chat-consent-revoke"
+                  onClick={() => {
+                    writeConsent(false);
+                    setAbroadConsent(false);
+                  }}
+                >
+                  Onayı geri al
+                </button>
+              </>
+            )}
           </small>
           <a
             className="chat-wa-bar"

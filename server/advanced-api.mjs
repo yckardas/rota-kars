@@ -261,7 +261,9 @@ export function attachAdvancedApi(
     requireAdmin,
     route(async (q, r) => r.json(await store.workflow.checkIn(q.params.token))),
   );
-  app.get("/api/admin/session", requireAdmin, (_q, r) => r.json({ ok: true }));
+  app.get("/api/admin/session", requireAdmin, (q, r) =>
+    r.json({ ok: true, user: q.admin, bootstrap: q.adminCtx?.bootstrap || false }),
+  );
   app.get(
     "/api/admin/reports",
     requireAdmin,

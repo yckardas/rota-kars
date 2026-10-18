@@ -58,6 +58,17 @@ const jobs = setInterval(async () => {
   }
 }, 30000);
 jobs.unref();
+// KVKK saklama süreleri: açılışta ve günde bir kez eski kişisel veriler temizlenir.
+const retention = async () => {
+  try {
+    const r = await store.privacy.runRetention();
+    console.log(JSON.stringify({ level: "info", job: "retention", ...r }));
+  } catch (e) {
+    console.error(JSON.stringify({ level: "error", job: "retention", error: e?.name, message: String(e?.message || "").slice(0, 200) }));
+  }
+};
+setTimeout(retention, 60000).unref();
+setInterval(retention, 24 * 3600 * 1000).unref();
 const server = app.listen(port, host, () =>
   console.log(`Rota Kars local: http://127.0.0.1:${port}`),
 );

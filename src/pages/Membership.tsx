@@ -1,4 +1,4 @@
-import { ProfileSettings } from "./AccountSecurity";
+import { ProfileSettings, MemberPrivacy } from "./AccountSecurity";
 import type { Campaign } from "../components/OperationsDesk";
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -84,6 +84,7 @@ export function Membership() {
           ? {
               name: f.get("name"),
               consent: f.get("consent") === "on",
+              marketingConsent: f.get("marketingConsent") === "on",
               ...(ref.trim() ? { referralCode: ref.trim().toUpperCase() } : {}),
             }
           : {}),
@@ -260,7 +261,18 @@ export function Membership() {
                   <Link to="/bilgilendirme#uyelik" target="_blank">
                     Üyelik ve kampanya koşullarını
                   </Link>{" "}
-                  ve veri bilgilendirmesini okudum, kabul ediyorum.
+                  ve{" "}
+                  <Link to="/bilgilendirme#kvkk" target="_blank">
+                    kişisel veri aydınlatma metnini
+                  </Link>{" "}
+                  okudum, kabul ediyorum.
+                </span>
+              </label>
+              <label className="checkbox-label optional-consent">
+                <input type="checkbox" name="marketingConsent" />
+                <span>
+                  Kampanya ve yeni rotalardan e-posta/SMS ile haberdar olmak
+                  istiyorum (isteğe bağlı).
                 </span>
               </label>
             </>
@@ -399,6 +411,7 @@ export function Account() {
         </p>
       )}
       <ProfileSettings />
+      <MemberPrivacy />
       <div className="member-perks-grid">
         <section className="wheel-panel">
           <span className="section-note">İlk yolculuğa bir sürpriz</span>
