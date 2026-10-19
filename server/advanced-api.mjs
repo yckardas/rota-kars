@@ -270,6 +270,11 @@ export function attachAdvancedApi(
     }),
   );
   app.get(
+    "/api/admin/departures/:id/passengers",
+    requireAdmin,
+    route(async (q, r) => r.json(await store.workflow.passengerList(q.params.id))),
+  );
+  app.get(
     "/api/admin/departures/:id/passengers.csv",
     requireAdmin,
     route(async (q, r) => {

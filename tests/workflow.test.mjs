@@ -390,3 +390,22 @@ test("a MONGO_URL that points at the app's own Railway domain is rejected immedi
   );
   assert.ok(Date.now() - started < 2000, "no 90 s wait");
 });
+test("phone passenger list shows bookings by seat with WhatsApp and boarding state", async (t) => {
+  const { s } = await setup(t),
+    d = await departure(s),
+    friend = await member(s, "liste@example.com"),
+    r = await booking(s, d, friend);
+  let list = await s.workflow.passengerList(d.id);
+  assert.equal(list.departure.pickup, "Kars Garı");
+  assert.equal(list.bookings.length, 1);
+  assert.equal(list.bookings[0].reference, r.reference);
+  assert.match(list.bookings[0].whatsapp, /^https:\/\/wa\.me\/90\d{10}$/);
+  assert.equal(list.bookings[0].ticketToken, null, "onaysız rezervasyonda biniş işaretlenmez");
+  await pay(s, r);
+  await s.workflow.confirm(r.reference);
+  list = await s.workflow.passengerList(d.id);
+  assert.equal(list.bookings[0].checkedIn, false);
+  await s.workflow.checkIn(list.bookings[0].ticketToken);
+  assert.equal((await s.workflow.passengerList(d.id)).bookings[0].checkedIn, true);
+  await s.workflow.cancel(r.reference).catch(() => {});
+});

@@ -5,8 +5,8 @@ import {
   DailyReport,
   NotificationManager,
 } from "../components/OperationsDesk";
-import { useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   LogOut,
   RefreshCw,
@@ -25,7 +25,14 @@ import {
   ShieldCheck,
   UserRound,
   TriangleAlert,
+  Menu,
+  X,
 } from "lucide-react";
+import {
+  AppUpdateBanner,
+  PushSettings,
+} from "../components/admin/MobileApp";
+import { disablePush, enablePush, isNativeApp } from "../lib/native";
 import { TourOperations } from "../components/TourOperations";
 import { InstagramManager } from "../components/InstagramManager";
 import {
@@ -88,6 +95,34 @@ const ALL_TABS = [
   ["audit", "Denetim kaydı", ScrollText],
   ["kvkk", "KVKK", ShieldCheck],
 ] as const;
+// Telefonda alt çubukta duran sekmeler; diğerleri "Diğer" menüsünde.
+const MOBILE_PRIMARY = ["reservations", "departures", "daily", "operations"];
+const SHORT_LABELS: Record<string, string> = {
+  reservations: "Rezervasyon",
+  departures: "Seferler",
+  daily: "Günlük",
+  operations: "Turlar",
+};
+// Telefonda tablo satırları kart olur: her hücreye sütun başlığı etiket olarak yazılır.
+function useTableLabels(root: React.RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    const apply = () =>
+      el.querySelectorAll("table").forEach((table) => {
+        const heads = [...table.querySelectorAll("thead th")].map((th) => th.textContent?.trim() || "");
+        table.querySelectorAll("tbody tr").forEach((tr) =>
+          [...tr.children].forEach((td, i) => {
+            if (heads[i] && td.getAttribute("data-label") !== heads[i]) td.setAttribute("data-label", heads[i]);
+          }),
+        );
+      });
+    apply();
+    const observer = new MutationObserver(apply);
+    observer.observe(el, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  });
+}
 // Rehber yalnız günlük operasyonu görür (sefer düzenleme ve kampanya ayarları sunucuda kapalı).
 const GUIDE_TABS = ["daily"];
 const OWNER_TABS = ["users", "audit", "kvkk", "campaigns"];
@@ -114,7 +149,23 @@ export function Admin({
     [loginNotice, setLoginNotice] = useState(""),
     [busy, setBusy] = useState(false),
     [tab, setTab] = useState("reservations"),
-    [hotelForm, setHotelForm] = useState(false);
+    [hotelForm, setHotelForm] = useState(false),
+    [moreOpen, setMoreOpen] = useState(false),
+    mainRef = useRef<HTMLElement>(null),
+    navigate = useNavigate();
+  useTableLabels(mainRef);
+  const canReceivePush = Boolean(
+    me && !me.bootstrap && !me.needs2faSetup && me.user.role !== "guide",
+  );
+  const openFromNotification = (path: string) => {
+    setTab("reservations");
+    navigate(path);
+  };
+  // Android uygulamasında giriş yapınca telefon bildirimlere otomatik kaydolur.
+  useEffect(() => {
+    if (canReceivePush && isNativeApp())
+      enablePush(openFromNotification).catch(() => {});
+  }, [canReceivePush]);
   // 401 → giriş ekranı, 2FA_REQUIRED → iki adımlı doğrulama kurulumu.
   function handle(e: unknown) {
     if (e instanceof ApiError && e.status === 401) {
@@ -157,6 +208,7 @@ export function Admin({
   }, []);
   async function logout() {
     try {
+      await disablePush();
       await post("/admin/logout", {});
     } catch {}
     setMe(null);
@@ -223,13 +275,15 @@ export function Admin({
         : tabs.find((x) => x[0] === tab)?.[1] || "",
     pick = (id: string) => {
       setTab(id);
+      setMoreOpen(false);
+      window.scrollTo({ top: 0 });
       setNotice("");
       setError("");
       if (id === "reviews") loadReviews();
     };
   return (
-    <div className="admin-shell">
-      <aside className="admin-sidebar">
+    <div className={"admin-shell" + (moreOpen ? " more-open" : "")}>
+      <aside className="admin-sidebar" id="admin-more-menu">
         <Link to="/">
           <img src="/images/logo.png" alt="Rota Kars" />
         </Link>
@@ -267,7 +321,8 @@ export function Admin({
           Çıkış yap
         </button>
       </aside>
-      <main className="admin-main">
+      <main className="admin-main" ref={mainRef}>
+        <AppUpdateBanner />
         <div className="section-heading">
           <div>
             <span className="section-note">Rota Kars</span>
@@ -313,6 +368,9 @@ export function Admin({
               setLoginNotice(m);
             }}
           />
+        )}
+        {tab === "account" && (
+          <PushSettings canReceive={canReceivePush} onOpen={openFromNotification} />
         )}
         {tab === "users" && <UserManager currentId={me.user.id} />}
         {tab === "audit" && <AuditLog />}
@@ -537,6 +595,30 @@ export function Admin({
           </div>
         )}
       </main>
+      <nav className="admin-tabbar" aria-label="Yönetim menüsü">
+        {tabs
+          .filter(([id]) => MOBILE_PRIMARY.includes(id))
+          .map(([id, label, Icon]) => (
+            <button
+              key={id}
+              className={tab === id && !moreOpen ? "active" : ""}
+              aria-current={tab === id ? "page" : undefined}
+              onClick={() => pick(id)}
+            >
+              <Icon size={20} />
+              <span>{SHORT_LABELS[id] || label}</span>
+            </button>
+          ))}
+        <button
+          className={moreOpen || !MOBILE_PRIMARY.includes(tab) ? "active" : ""}
+          aria-expanded={moreOpen}
+          aria-controls="admin-more-menu"
+          onClick={() => setMoreOpen((v) => !v)}
+        >
+          {moreOpen ? <X size={20} /> : <Menu size={20} />}
+          <span>Diğer</span>
+        </button>
+      </nav>
     </div>
   );
 }

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Bağlantı yok · Rota Kars Yönetim</title>
+    <style>
+      :root { color-scheme: light; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #f6f4ee;
+        color: #14313d;
+        font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+        padding: 24px;
+        box-sizing: border-box;
+        text-align: center;
+      }
+      main { max-width: 340px; }
+      h1 { font-size: 22px; margin: 18px 0 8px; }
+      p { color: #5a666c; margin: 0 0 24px; }
+      button {
+        font: inherit;
+        font-weight: 600;
+        border: 0;
+        border-radius: 999px;
+        padding: 14px 28px;
+        min-height: 48px;
+        background: #14313d;
+        color: white;
+      }
+      svg { width: 56px; height: 56px; color: #8a6229; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+        <path d="M2 8.8a15 15 0 0 1 20 0M5 12.6a10 10 0 0 1 14 0M8.5 16.4a5 5 0 0 1 7 0M12 20h.01" stroke-linecap="round" />
+        <path d="M3 3l18 18" stroke-linecap="round" />
+      </svg>
+      <h1>İnternet bağlantısı yok</h1>
+      <p>Yönetim paneli canlı sunucudan açılır. Bağlantınız gelince yeniden deneyin.</p>
+      <button type="button" id="retry">Yeniden dene</button>
+    </main>
+    <script src="config.js"></script>
+    <script>
+      document.getElementById("retry").addEventListener("click", function () {
+        location.replace((window.ROTA_APP_URL || "https://rotakarsturizm.com") + "/yonetim");
+      });
+    </script>
+  </body>
+</html>

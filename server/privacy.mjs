@@ -254,6 +254,9 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx }) {
       await db.remove("admin_sessions", { expires_at: { $lt: now } });
       await db.remove("account_tokens", { expires_at: { $lt: now - 30 * DAY } });
       await db.remove("oauth_used", { expires_at: { $lt: now } });
+      await db.remove("push_log", { created_at: { $lt: now - 30 * DAY } });
+      // Uzun süredir görülmeyen (uygulaması silinmiş/açılmayan) cihazlar.
+      await db.remove("push_devices", { last_seen: { $lt: now - 120 * DAY } });
       return result;
     },
   };

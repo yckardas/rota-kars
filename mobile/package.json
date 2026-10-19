@@ -1,0 +1,20 @@
+{
+  "name": "rota-kars-yonetim",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Rota Kars yönetim paneli için Android uygulaması (Capacitor).",
+  "scripts": {
+    "sync": "cap sync android",
+    "apk:debug": "node scripts/build-apk.mjs debug",
+    "apk:release": "node scripts/build-apk.mjs release"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/app": "8.1.1",
+    "@capacitor/core": "8.5.2",
+    "@capacitor/push-notifications": "8.1.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.2"
+  }
+}

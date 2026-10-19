@@ -8,6 +8,7 @@ import {
   CalendarDays,
   Ticket,
   Mail,
+  Users,
 } from "lucide-react";
 import { api, post } from "../lib/api";
 import {
@@ -19,6 +20,8 @@ import {
   type Reservation,
 } from "../lib/types";
 import { SeatMap } from "./SeatMap";
+import { PassengerList } from "./admin/MobileApp";
+import { isNativeApp } from "../lib/native";
 export type Campaign = {
   active: boolean;
   sectors: number[];
@@ -34,7 +37,8 @@ export function DepartureManager({ catalog }: { catalog: Catalog }) {
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
-    [tourFilter, setTourFilter] = useState("");
+    [tourFilter, setTourFilter] = useState(""),
+    [passengers, setPassengers] = useState("");
   async function load() {
     setItems(
       await api<Departure[]>(
@@ -120,6 +124,9 @@ export function DepartureManager({ catalog }: { catalog: Catalog }) {
           cancel={() => setEditing(false)}
         />
       )}
+      {passengers && (
+        <PassengerList departureId={passengers} onClose={() => setPassengers("")} />
+      )}
       <div className="desk-table-wrap">
         <table className="desk-table">
           <thead>
@@ -173,13 +180,19 @@ export function DepartureManager({ catalog }: { catalog: Catalog }) {
                   >
                     Düzenle
                   </button>
-                  <a
-                    className="text-link"
-                    href={"/api/admin/departures/" + d.id + "/passengers.csv"}
-                  >
-                    <Download size={14} />
+                  <button className="text-link" onClick={() => setPassengers(d.id)}>
+                    <Users size={14} />
                     Yolcu listesi
-                  </a>
+                  </button>
+                  {!isNativeApp() && (
+                    <a
+                      className="text-link"
+                      href={"/api/admin/departures/" + d.id + "/passengers.csv"}
+                    >
+                      <Download size={14} />
+                      CSV
+                    </a>
+                  )}
                 </td>
               </tr>
             ))}
@@ -883,7 +896,8 @@ export function DailyReport({ catalog }: { catalog: Catalog }) {
       netCollected: number;
       refunded: number;
     } | null>(null),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [passengers, setPassengers] = useState("");
   useEffect(() => {
     api<NonNullable<typeof data>>("/admin/reports?date=" + date)
       .then(setData)
@@ -901,6 +915,9 @@ export function DailyReport({ catalog }: { catalog: Catalog }) {
         />
       </label>
       {error && <p className="error">{error}</p>}
+      {passengers && (
+        <PassengerList departureId={passengers} onClose={() => setPassengers("")} />
+      )}
       {data && (
         <>
           <div className="admin-metrics">
@@ -949,15 +966,21 @@ export function DailyReport({ catalog }: { catalog: Catalog }) {
                       <small>{d.available} boş koltuk</small>
                     </td>
                     <td>
-                      <a
-                        className="text-link"
-                        href={
-                          "/api/admin/departures/" + d.id + "/passengers.csv"
-                        }
-                      >
-                        <Download size={15} />
-                        CSV indir
-                      </a>
+                      <button className="text-link" onClick={() => setPassengers(d.id)}>
+                        <Users size={15} />
+                        Yolcu listesi
+                      </button>
+                      {!isNativeApp() && (
+                        <a
+                          className="text-link"
+                          href={
+                            "/api/admin/departures/" + d.id + "/passengers.csv"
+                          }
+                        >
+                          <Download size={15} />
+                          CSV indir
+                        </a>
+                      )}
                     </td>
                   </tr>
                 ))}

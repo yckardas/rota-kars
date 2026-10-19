@@ -562,6 +562,16 @@ export function createApp(
   });
   app.locals.catalog = catalogData;
   app.get("/api/catalog", async (_q, r) => r.json(await catalogData()));
+  // Android yönetici uygulaması güncelleme bilgisi (uygulama açılışta sorar).
+  app.get("/api/app/android", (_q, r) => {
+    const apkUrl = /^https:\/\//.test(env.ANDROID_APK_URL || "") ? env.ANDROID_APK_URL : null;
+    r.json({
+      latestVersion: env.ANDROID_APP_VERSION || null,
+      minVersion: env.ANDROID_APP_MIN_VERSION || null,
+      apkUrl,
+      notes: String(env.ANDROID_APP_NOTES || "").slice(0, 500),
+    });
+  });
   app.get(
     "/api/tours/:id/departures",
     route(async (q, r) => r.json((await store.listDepartures(q.params.id)).map(publicDeparture))),
@@ -825,6 +835,53 @@ export function createApp(
       bootstrap: q.adminCtx.bootstrap,
       needs2faSetup: q.adminCtx.needs2faSetup,
       require2fa: store.adminAuth.require2fa,
+      pushEnabled: store.push.enabled,
+    }),
+  );
+  // Yönetici uygulaması: bu telefona bildirim gönderilsin diye cihaz kaydı.
+  // Rehber rolü bu uçlara erişemez (müşteri bilgisi içeren bildirimler).
+  const pushToken = z.string().min(20).max(4096).regex(/^[\w:.\-]+$/);
+  const realAdmin = (q) => {
+    if (q.adminCtx.bootstrap)
+      throw new AppError(403, "Bildirim için kendi yönetici hesabınızla giriş yapın.");
+  };
+  app.get(
+    "/api/admin/devices",
+    requireAdmin,
+    route(async (q, r) => r.json({ enabled: store.push.enabled, devices: await store.push.devices(q.admin.id) })),
+  );
+  app.post(
+    "/api/admin/devices",
+    requireAdmin,
+    route(async (q, r) => {
+      realAdmin(q);
+      const input = z
+        .object({ token: pushToken, platform: z.enum(["android"]).default("android"), label: z.string().max(60).optional() })
+        .parse(q.body);
+      r.status(201).json(await store.push.register(q.admin.id, input));
+    }),
+  );
+  app.post(
+    "/api/admin/devices/remove",
+    requireAdmin,
+    route(async (q, r) => {
+      const input = z.object({ token: pushToken }).parse(q.body);
+      r.json({ removed: await store.push.unregister(q.admin.id, input.token) });
+    }),
+  );
+  app.post(
+    "/api/admin/devices/test",
+    requireAdmin,
+    route(async (q, r) => {
+      realAdmin(q);
+      if (!store.push.enabled)
+        throw new AppError(503, "Bildirim servisi (FIREBASE_SERVICE_ACCOUNT) ayarlı değil.");
+      r.json(
+        await store.push.notifyAdmins(
+          { title: "Rota Kars Yönetim", body: "Test bildirimi: bu telefon bildirim alıyor.", url: "/yonetim", kind: "test" },
+          { adminIds: [q.admin.id] },
+        ),
+      );
     }),
   );
   const adminPassword = z.string().min(12, "Yönetici parolası en az 12 karakter olmalı.").max(200);

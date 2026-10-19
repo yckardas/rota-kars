@@ -41,6 +41,26 @@ export function TourOperations({ onChange }: { onChange: () => void }) {
       setBusy("");
     }
   }
+  // Tek dokunuşla satışı aç/kapat (araç düzeni aynen kalır).
+  async function toggle(t: Tour) {
+    setBusy(t.id);
+    setError("");
+    setNotice("");
+    try {
+      await post("/admin/operations/" + t.id, {
+        salesOpen: !t.salesOpen,
+        vehicleModel: t.vehicle.modelId || "vip-midibus",
+        passengerSeats: t.vehicle.passengerSeats,
+      });
+      await load();
+      onChange();
+      setNotice(`${t.name} ${t.salesOpen ? "satışa kapatıldı" : "satışa açıldı"}.`);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy("");
+    }
+  }
   return (
     <>
       <div className="operations-intro">
@@ -71,6 +91,7 @@ export function TourOperations({ onChange }: { onChange: () => void }) {
             models={models}
             busy={busy === t.id}
             save={save}
+            toggle={() => toggle(t)}
           />
         ))}
       </div>
@@ -82,11 +103,13 @@ function OperationRow({
   models,
   busy,
   save,
+  toggle,
 }: {
   tour: Tour;
   models: VehicleModel[];
   busy: boolean;
   save: (e: FormEvent<HTMLFormElement>, id: string) => void;
+  toggle: () => void;
 }) {
   const [modelId, setModelId] = useState(t.vehicle.modelId || "vip-midibus"),
     [capacity, setCapacity] = useState(t.vehicle.passengerSeats),
@@ -102,6 +125,18 @@ function OperationRow({
           >
             {t.salesOpen ? "Satışa açık" : "Satışa kapalı"}
           </span>
+          <button
+            type="button"
+            className={"sales-switch" + (t.salesOpen ? " on" : "")}
+            role="switch"
+            aria-checked={t.salesOpen}
+            aria-label={t.name + " satış durumu"}
+            onClick={toggle}
+            disabled={busy}
+          >
+            <span />
+            Satış
+          </button>
         </div>
       </div>
       <div className="operation-fields">

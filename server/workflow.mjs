@@ -529,6 +529,35 @@ export async function createWorkflow(
         refunded: rs.reduce((n, r) => n + r.refunded_total, 0),
       };
     },
+    // Telefondaki yolcu listesi: arama/WhatsApp ve biniş işaretleme için.
+    async passengerList(departureId) {
+      const d = await departures.get(departureId, { allowClosed: true, allowPast: true }),
+        bookings = (await api.list({ date: d.date, all: true }))
+          .filter((r) => r.departure_id === d.id && !["cancelled", "expired"].includes(r.status))
+          .sort((a, b) => Math.min(...a.seats) - Math.min(...b.seats));
+      return {
+        departure: {
+          id: d.id,
+          tourName: tours.find((t) => t.id === d.tour_id)?.name || d.tour_id,
+          date: d.date,
+          startTime: d.start_time,
+          pickup: d.pickup,
+          guideName: d.guide_name || null,
+        },
+        bookings: bookings.map((r) => ({
+          reference: r.reference,
+          status: r.status,
+          name: r.name,
+          phone: r.phone,
+          whatsapp: waLink(r.phone) || null,
+          seats: r.seats,
+          passengers: r.passengers,
+          notes: r.notes || "",
+          checkedIn: Boolean(r.checked_in_at),
+          ticketToken: r.status === "confirmed" ? r.ticket_token : null,
+        })),
+      };
+    },
     async manifest(departureId) {
       const d = await departures.get(departureId, {
           allowClosed: true,

@@ -13,6 +13,7 @@ import { createAccountSecurity } from "./account-security.mjs";
 import { createAdminAuth } from "./admin-auth.mjs";
 import { createPrivacy } from "./privacy.mjs";
 import { depositFor } from "./payments.mjs";
+import { createPush } from "./push.mjs";
 export class AppError extends Error {
   constructor(status, message) {
     super(message);
@@ -21,7 +22,7 @@ export class AppError extends Error {
 }
 export async function openStore(
   path = undefined,
-  { clock = Date.now, seed = true, env = process.env } = {},
+  { clock = Date.now, seed = true, env = process.env, pushFetch = fetch } = {},
 ) {
   const db = await connectDatabase({ path, env });
   await Promise.all([
@@ -99,7 +100,12 @@ export async function openStore(
     cleanup,
     tx,
   });
-  const notifications = await createNotifications(db, { clock, tx, env });
+  await Promise.all([
+    db.index("push_devices", { admin_id: 1 }),
+    db.index("push_log", { created_at: 1 }),
+  ]);
+  const push = createPush(db, { env, clock, fetchImpl: pushFetch });
+  const notifications = await createNotifications(db, { clock, tx, env, push });
   const accountSecurity = await createAccountSecurity(db, {
     clock,
     tx,
@@ -180,6 +186,7 @@ export async function openStore(
     adminAuth,
     privacy,
     notifications,
+    push,
     accountSecurity,
     members,
     db,

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Rota Kars Yönetim</string>
+    <string name="title_activity_main">Rota Kars Yönetim</string>
+    <string name="package_name">com.rotakars.yonetim</string>
+    <string name="custom_url_scheme">com.rotakars.yonetim</string>
+</resources>

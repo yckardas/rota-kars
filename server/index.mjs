@@ -4,6 +4,7 @@ import express from "express";
 import { createApp } from "./app.mjs";
 import { openStore } from "./store.mjs";
 import { seoHtmlHandler } from "./seo.mjs";
+import { createReviewWatch, reviewWatchInterval } from "./review-watch.mjs";
 const port = Number(process.env.PORT || 5173),
   store = await openStore(),
   app = createApp(store);
@@ -81,6 +82,25 @@ const retention = async () => {
 };
 setTimeout(retention, 60000).unref();
 setInterval(retention, 24 * 3600 * 1000).unref();
+// Google'a yeni yorum gelince yöneticilere bildirim.
+const reviewWatch = createReviewWatch({ db: store.db, notifications: store.notifications });
+if (reviewWatch.configured) {
+  let watching = false;
+  const watchReviews = async () => {
+    if (watching) return;
+    watching = true;
+    try {
+      const r = await reviewWatch.check();
+      if (r.added || r.initialized) console.log(JSON.stringify({ level: "info", job: "google-reviews", ...r }));
+    } catch (e) {
+      console.error(JSON.stringify({ level: "error", job: "google-reviews", message: String(e?.message || "").slice(0, 200) }));
+    } finally {
+      watching = false;
+    }
+  };
+  setTimeout(watchReviews, 90000).unref();
+  setInterval(watchReviews, reviewWatchInterval()).unref();
+}
 const server = app.listen(port, host, () =>
   console.log(`Rota Kars local: http://127.0.0.1:${port}`),
 );

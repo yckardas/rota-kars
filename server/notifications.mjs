@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import nodemailer from "nodemailer";
-export async function createNotifications(db, { clock, tx, env = {} }) {
+export async function createNotifications(db, { clock, tx, env = {}, push = null }) {
   await Promise.all([
     db.index("notification_outbox", { id: 1 }, { unique: true }),
     db.index("notification_outbox", { status: 1, next_attempt_at: 1 }),
@@ -31,7 +31,22 @@ export async function createNotifications(db, { clock, tx, env = {} }) {
   const api = {
     configured: ready,
     agencyEmails,
-    async notifyAgency({ subject, body, actionUrl = null, kind, dedupeKey }) {
+    async notifyAgency({ subject, body, actionUrl = null, kind, dedupeKey, pushUrl = "/yonetim" }) {
+      // Yönetici uygulamasına anlık bildirim: işlem tamamlandıktan sonra, olay başına bir kez.
+      if (push?.enabled) {
+        const send = async () => {
+          if (!(await db.insertIfAbsent("push_log", "agency:" + dedupeKey, { kind, created_at: clock() }))) return;
+          const lines = String(body || "").split("\n").filter(Boolean);
+          await push.notifyAdmins({
+            title: subject.slice(0, 110),
+            body: lines.slice(1, 4).join(" · ").slice(0, 240) || subject,
+            url: pushUrl,
+            kind,
+          });
+        };
+        if (db.inTransaction?.()) await db.afterCommit(send);
+        else await send();
+      }
       for (const email of agencyEmails)
         await api.enqueue({
           email,

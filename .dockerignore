@@ -12,3 +12,4 @@ tests
 *.sqlite
 *.sqlite-*
 tsconfig.tsbuildinfo
+mobile

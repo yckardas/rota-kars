@@ -6936,3 +6936,322 @@ input[type="radio"] {
     transition: none;
   }
 }
+
+/* ---------- Yönetim paneli: telefon ve Android uygulaması ---------- */
+.admin-tabbar {
+  display: none;
+}
+.app-update {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 18px;
+  border-radius: 8px;
+  background: var(--sky);
+  color: var(--navy);
+  font-size: 13px;
+}
+.app-update.required {
+  background: #fdecc8;
+}
+.app-update span {
+  flex: 1;
+}
+.app-update small {
+  display: block;
+  color: var(--muted);
+}
+.push-settings h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 20px;
+}
+.push-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 16px 0;
+}
+.device-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: grid;
+  gap: 8px;
+}
+.device-list li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  font-size: 13px;
+}
+.device-list small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+}
+.sales-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 6px 12px 6px 6px;
+  min-height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: white;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy);
+}
+.sales-switch > span {
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: #c9cfc4;
+  position: relative;
+  transition: background 0.2s;
+}
+.sales-switch > span::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s;
+}
+.sales-switch.on > span {
+  background: #3f8a52;
+}
+.sales-switch.on > span::after {
+  transform: translateX(16px);
+}
+.passenger-list header h2 {
+  font-size: 22px;
+  margin: 0 0 4px;
+}
+.passenger-list header p {
+  margin: 2px 0;
+  font-size: 13px;
+}
+.passenger-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+  display: grid;
+  gap: 10px;
+}
+.passenger-list li {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: white;
+}
+.passenger-list li.boarded {
+  background: #eef7ef;
+  border-color: #b9dcc0;
+}
+.passenger-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 14px;
+}
+.passenger-names,
+.passenger-notes {
+  margin: 6px 0 0;
+  font-size: 13px;
+}
+.passenger-notes {
+  color: #8a5a12;
+}
+.passenger-list li > small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 4px;
+}
+.passenger-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.passenger-actions .btn-small {
+  min-height: 40px;
+}
+.boarded-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2f6b3d;
+}
+@media (max-width: 760px) {
+  .admin-shell {
+    display: block;
+    padding-bottom: calc(70px + env(safe-area-inset-bottom));
+  }
+  /* Kenar menü telefonda "Diğer" ile açılan tam ekran menü olur. */
+  .admin-sidebar {
+    display: none;
+  }
+  .admin-shell.more-open .admin-sidebar {
+    display: block;
+    position: fixed;
+    inset: 0 0 calc(64px + env(safe-area-inset-bottom)) 0;
+    z-index: 40;
+    overflow: auto;
+    padding: 20px 18px;
+    border: 0;
+    background: white;
+  }
+  .admin-shell.more-open .admin-sidebar nav {
+    flex-direction: column;
+    overflow: visible;
+    max-height: none;
+  }
+  .admin-shell.more-open .admin-sidebar nav > button,
+  .admin-shell.more-open .admin-sidebar > .text-link {
+    font-size: 15px;
+    padding: 13px 10px;
+    min-height: 48px;
+  }
+  .admin-tabbar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 41;
+    background: white;
+    border-top: 1px solid var(--line);
+    padding-bottom: env(safe-area-inset-bottom);
+    box-shadow: 0 -6px 20px #0b1d2612;
+  }
+  .admin-tabbar button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-height: 62px;
+    background: none;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .admin-tabbar button.active {
+    color: var(--navy);
+    font-weight: 600;
+  }
+  .admin-tabbar button.active svg {
+    color: var(--gold-text);
+  }
+  .admin-main {
+    padding: 18px 14px 24px;
+  }
+  .admin-main h1 {
+    font-size: 26px;
+  }
+  .admin-main .section-note {
+    display: none;
+  }
+  .admin-metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .admin-metrics span {
+    font-size: 11px;
+  }
+  .admin-metrics small {
+    font-size: 10px;
+  }
+  .admin-metrics strong {
+    font-size: 22px;
+  }
+  /* Tablolar kart listesi olur; etiketler sütun başlıklarından gelir. */
+  .admin-main table,
+  .desk-table {
+    min-width: 0;
+    font-size: 14px;
+  }
+  .desk-table-wrap,
+  .table-scroll {
+    border: 0;
+    background: none;
+    overflow: visible;
+  }
+  .admin-main thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .admin-main table,
+  .admin-main tbody,
+  .admin-main tr,
+  .admin-main td {
+    display: block;
+    width: 100%;
+  }
+  .admin-main tbody tr {
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 6px 14px;
+    margin-bottom: 10px;
+  }
+  .admin-main td {
+    padding: 9px 0;
+    border-bottom: 1px solid #eef0ea;
+  }
+  .admin-main td:last-child {
+    border-bottom: 0;
+  }
+  .admin-main td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+    margin-bottom: 3px;
+  }
+  .admin-main td small {
+    font-size: 12px;
+  }
+  .admin-main td .text-link,
+  .admin-main td > button,
+  .desk-table td > .text-link {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    margin-right: 14px;
+    font-size: 14px;
+  }
+  .admin-main input,
+  .admin-main select,
+  .admin-main textarea {
+    font-size: 16px;
+  }
+  .admin-main .btn {
+    min-height: 44px;
+  }
+  .admin-main .btn-small {
+    font-size: 13px;
+    min-height: 40px;
+  }
+}
