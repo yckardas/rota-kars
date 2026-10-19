@@ -74,7 +74,9 @@ export async function createWorkflow(
       created_at: clock(),
     });
   };
+  // Telefonla alınan kayıtlarda e-posta olmayabilir: o zaman müşteriye e-posta gitmez.
   const notify = async (r, event, text, dedupeKey = event + ":" + r.reference) =>
+    r.email &&
     notifications.enqueue({
       email: r.email,
       subject: "Rota Kars · " + text,
@@ -113,7 +115,8 @@ export async function createWorkflow(
         await db.one("reservations", { reference: reference.toUpperCase() }),
       );
     },
-    async list({ date, all = false } = {}) {
+    // Panel listesi: tur günü, durum ve serbest arama (referans, ad, telefon, e-posta).
+    async list({ date, all = false, status, q } = {}) {
       await cleanup();
       const filter = date
         ? {
@@ -124,6 +127,22 @@ export async function createWorkflow(
             },
           }
         : {};
+      if (status) filter.status = status;
+      const text = String(q || "").trim().slice(0, 80);
+      if (text) {
+        const escaped = text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const digits = text.replace(/\D/g, "");
+        const or = [
+          { reference: { $regex: escaped, $options: "i" } },
+          { name: { $regex: escaped, $options: "i" } },
+          { email: { $regex: escaped, $options: "i" } },
+          { passengers: { $regex: escaped, $options: "i" } },
+        ];
+        // Telefon farklı yazılmış olabilir (0555 111 22 33 / 5551112233): son hanelerle eşleşir.
+        if (digits.length >= 4)
+          or.push({ phone: { $regex: digits.slice(-10).split("").join("\\D*"), $options: "i" } });
+        filter.$or = or;
+      }
       const rows = await db.find("reservations", filter, {
         sort: { created_at: -1 },
         ...(all ? {} : { limit: 500 }),
@@ -133,14 +152,15 @@ export async function createWorkflow(
         rows.map((r) => api.get(r.reference, { fresh: false })),
       );
     },
-    async created(reference) {
+    async created(reference, { byAgency = false } = {}) {
       const r = await api.get(reference);
       await notify(
         r,
         "reservation_created",
         "Ön rezervasyon talebiniz alındı; henüz kesin bilet veya ödeme değildir.",
       );
-      await agencyAlert(r, "reservation_created", "Yeni ön rezervasyon");
+      // Acentenin kendi eklediği kayıt için ekibe "yeni rezervasyon" bildirimi gitmez.
+      if (!byAgency) await agencyAlert(r, "reservation_created", "Yeni ön rezervasyon");
       return r;
     },
     async confirm(reference) {

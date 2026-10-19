@@ -197,9 +197,9 @@ export async function openStore(
         (d) => d.salesOpen && d.date >= localDate(clock()),
       );
     },
-    async availability(id) {
+    async availability(id, { agent = false } = {}) {
       await cleanup();
-      const d = await departure(id),
+      const d = agent ? await departures.get(id, { allowClosed: true }) : await departure(id),
         vehicle = d.vehicle;
       // Tüm koltuk kilitleri tek sorguda okunur.
       const taken = new Set(
@@ -220,10 +220,11 @@ export async function openStore(
         })),
       };
     },
-    async hold(id, seats) {
+    async hold(id, seats, { agent = false } = {}) {
       return tx(async () => {
         await cleanup();
-        const d = await departure(id),
+        // Acente panelden ekliyorsa satışı kapanmış (ama tarihi geçmemiş) sefere de yazabilir.
+        const d = agent ? await departures.get(id, { allowClosed: true }) : await departure(id),
           vehicle = d.vehicle;
         if (
           !Array.isArray(seats) ||
@@ -302,6 +303,8 @@ export async function openStore(
       paymentMode,
       memberId = null,
       couponId = null,
+      agent = null,
+      notes = "",
     }) {
       return tx(async () => {
         await cleanup();
@@ -315,7 +318,9 @@ export async function openStore(
             "Koltuk ayırma süresi doldu. Lütfen koltuklarınızı yeniden seçin.",
           );
         const seats = fromJson(hold.seats, []),
-          d = await departure(hold.departure_id);
+          d = agent
+            ? await departures.get(hold.departure_id, { allowClosed: true })
+            : await departure(hold.departure_id);
         if (passengers.length !== seats.length)
           throw new AppError(
             400,
@@ -331,7 +336,13 @@ export async function openStore(
             d.tour_id,
           ),
           total = discounted.total,
-          deposit = paymentMode === "deposit" ? depositFor(total) : total,
+          // "Turda ödenecek" yalnız acentenin panelden eklediği kayıtlarda seçilebilir.
+          deposit =
+            agent && paymentMode === "on_tour"
+              ? 0
+              : paymentMode === "deposit"
+                ? depositFor(total)
+                : total,
           // Onay bekleyen kayıt en fazla PENDING_HOLD_HOURS (varsayılan 24) saat ya da
           // satış kapanışına kadar koltuk tutar.
           expires = Math.min(
@@ -347,7 +358,7 @@ export async function openStore(
           { projection: { seats: 1 } },
         );
         const pendingSeats = pending.reduce((n, r) => n + (r.seats?.length || 0), 0);
-        if (pendingSeats + seats.length > maxPending)
+        if (!agent && pendingSeats + seats.length > maxPending)
           throw new AppError(
             409,
             "Bu e-posta ile onay bekleyen çok sayıda koltuk var. Önceki ön rezervasyonlarınızı acenteyle netleştirin veya WhatsApp'tan yazın.",
@@ -375,6 +386,10 @@ export async function openStore(
           discount_amount: discounted.discount,
           ticket_token: randomBytes(24).toString("hex"),
           discount_percent: discounted.coupon?.percent || 0,
+          source: agent ? "agency" : "web",
+          created_by: agent?.id || null,
+          payment_mode: agent && paymentMode === "on_tour" ? "on_tour" : paymentMode,
+          notes: String(notes || "").slice(0, 500),
         });
 
         await db.updateMany(
@@ -383,7 +398,33 @@ export async function openStore(
           { owner: reference, expires_at: expires },
         );
         await db.remove("holds", { _id: holdToken });
-        return workflow.created(reference);
+        return workflow.created(reference, { byAgency: Boolean(agent) });
+      });
+    },
+    // Telefon/WhatsApp ile gelen müşteriyi acente panelden kaydeder: koltuk, kayıt,
+    // isteğe bağlı tahsilat ve onay tek işlemde (biri olmazsa hiçbiri yazılmaz).
+    adminReserve(input, agent) {
+      return tx(async () => {
+        const h = await this.hold(input.departureId, input.seats, { agent: true });
+        const r = await this.reserve({
+          holdToken: h.token,
+          name: input.name,
+          email: input.email || "",
+          phone: input.phone,
+          passengers: input.passengers,
+          paymentMode: input.paymentMode,
+          agent,
+          notes: input.notes,
+        });
+        if (input.payment)
+          await workflow.payment(r.reference, {
+            amount: input.payment.amount,
+            method: input.payment.method,
+            externalReference: input.payment.externalReference || "PANEL-" + r.reference,
+            kind: "payment",
+          });
+        if (input.confirm) await workflow.confirm(r.reference);
+        return workflow.get(r.reference);
       });
     },
     async lookup(reference, email) {
@@ -433,6 +474,56 @@ export async function openStore(
       return (await db.find("hotels", { active: 1 }, { sort: { name: 1 } })).map(
         (h) => ({ ...h, amenities: fromJson(h.amenities, []) }),
       );
+    },
+    // Panel ana ekranı: bugün kalkan seferler, onay bekleyenler (süresi yaklaşan
+    // önce), iptal talepleri, yeni talepler ve önümüzdeki 7 günün doluluğu.
+    async overview() {
+      await cleanup();
+      const now = clock(),
+        today = localDate(now),
+        week = localDate(now + 7 * 86400000);
+      const tourName = (id) => tours.find((t) => t.id === id)?.name || id;
+      const upcoming = (await departures.list()).filter((d) => d.date >= today && d.date <= week);
+      const seatsOf = (d) => d.vehicle.sellableSeats;
+      const pending = (await workflow.list({ status: "pending_agency", all: true }))
+        .sort((a, b) => a.expires_at - b.expires_at)
+        .map((r) => ({
+          reference: r.reference,
+          name: r.name,
+          phone: r.phone,
+          tourName: tourName(r.tourId),
+          date: r.date,
+          seats: r.seats.length,
+          total: r.total,
+          expiresAt: r.expires_at,
+        }));
+      const cancellationRequests = await db.count("reservations", {
+        cancellation_requested_at: { $exists: true, $ne: null },
+        status: { $in: ["pending_agency", "confirmed"] },
+      });
+      return {
+        today,
+        todayDepartures: upcoming
+          .filter((d) => d.date === today)
+          .map((d) => ({
+            id: d.id,
+            tourName: tourName(d.tour_id),
+            startTime: d.start_time,
+            pickup: d.pickup,
+            guideName: d.guide_name || null,
+            booked: seatsOf(d) - d.available,
+            capacity: seatsOf(d),
+            active: Boolean(d.active),
+          })),
+        pending: { count: pending.length, items: pending.slice(0, 8) },
+        cancellationRequests,
+        newRequests: await db.count("requests", { status: "new" }),
+        week: {
+          departures: upcoming.length,
+          booked: upcoming.reduce((n, d) => n + seatsOf(d) - d.available, 0),
+          capacity: upcoming.reduce((n, d) => n + seatsOf(d), 0),
+        },
+      };
     },
     async dashboard() {
       await cleanup();

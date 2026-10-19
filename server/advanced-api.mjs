@@ -3,6 +3,7 @@ import QRCode from "qrcode";
 import { AppError } from "./store.mjs";
 import { vehicleModels } from "./operations.mjs";
 import { tours } from "./catalog.mjs";
+import { localDate } from "./departures.mjs";
 import { siteBase as configuredBase } from "./seo.mjs";
 export const siteBase = (q, env) => configuredBase(env, q);
 export async function receipt(reservation, q, env) {
@@ -112,6 +113,54 @@ export function attachAdvancedApi(
       r.json(await store.departures.list(filters));
     }),
   );
+  // Toplu sefer: tarih aralığında seçilen hafta günlerine aynı plan. Aynı tur, gün ve
+  // saatte zaten sefer varsa atlanır. En fazla 186 gün ve 200 sefer.
+  app.post(
+    "/api/admin/departures/bulk",
+    requireAdmin,
+    route(async (q, r) => {
+      const input = z
+        .object({
+          tourId,
+          from: ymd,
+          to: ymd,
+          weekdays: z.array(z.number().int().min(0).max(6)).min(1).max(7),
+          startTime: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/),
+          price: z.number().int().min(1).max(100000000),
+          pickup: clean,
+          guideName: z.string().trim().max(100).default(""),
+          guidePhone: z.union([phone, z.literal("")]).default(""),
+          vehicleModel: z.enum(vehicleModels.map((m) => m.id)),
+          passengerSeats: z.number().int().min(4).max(54),
+          active: z.boolean(),
+        })
+        .parse(q.body);
+      const day = (s) => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10));
+      const start = day(input.from),
+        end = day(input.to);
+      if (end < start) throw new AppError(400, "Bitiş tarihi başlangıçtan önce olamaz.");
+      if (end - start > 186 * 86400000) throw new AppError(400, "En fazla 6 aylık aralık seçin.");
+      if (input.from < localDate(store.clock())) throw new AppError(400, "Geçmiş tarihe sefer açılamaz.");
+      const dates = [];
+      for (let t = start; t <= end; t += 86400000)
+        if (input.weekdays.includes(new Date(t).getUTCDay())) dates.push(new Date(t).toISOString().slice(0, 10));
+      if (!dates.length) throw new AppError(400, "Seçilen aralıkta bu günlere denk gelen tarih yok.");
+      if (dates.length > 200) throw new AppError(400, "Tek seferde en fazla 200 sefer açılabilir.");
+      const { from, to, weekdays, ...plan } = input;
+      const result = await store.db.transaction(async () => {
+        const existing = new Set(
+          (await store.departures.list({ tourId: input.tourId }))
+            .filter((d) => d.start_time === input.startTime)
+            .map((d) => d.date),
+        );
+        const created = [];
+        for (const date of dates)
+          if (!existing.has(date)) created.push((await store.departures.save({ ...plan, date })).date);
+        return { created: created.length, skipped: dates.length - created.length, dates: created };
+      });
+      r.status(201).json(result);
+    }),
+  );
   app.post(
     "/api/admin/departures",
     requireAdmin,
@@ -173,9 +222,51 @@ export function attachAdvancedApi(
     "/api/admin/reservations",
     requireAdmin,
     route(async (q, r) => {
-      const input = z.object({ date: ymd.optional() }).parse(q.query);
+      const input = z
+        .object({
+          date: ymd.optional(),
+          status: z.enum(["pending_agency", "confirmed", "cancelled", "expired", "completed", "no_show"]).optional(),
+          q: z.string().max(80).optional(),
+        })
+        .parse(q.query);
       await store.cleanup();
       r.json(await store.workflow.list(input));
+    }),
+  );
+  app.get(
+    "/api/admin/departures/:id/seats",
+    requireAdmin,
+    route(async (q, r) => r.json(await store.availability(q.params.id, { agent: true }))),
+  );
+  // Telefon/WhatsApp ile gelen müşteri için panelden rezervasyon.
+  app.post(
+    "/api/admin/reservations",
+    requireAdmin,
+    route(async (q, r) => {
+      const input = z
+        .object({
+          departureId: z.string().min(1).max(100),
+          seats: z.array(z.number().int().min(1).max(60)).min(1).max(53),
+          name: clean,
+          phone,
+          email: z.union([z.literal(""), email]).optional(),
+          passengers: z.array(clean).min(1).max(53),
+          paymentMode: z.enum(["deposit", "full", "on_tour"]),
+          notes: z.string().trim().max(500).optional(),
+          payment: z
+            .object({
+              amount: z.number().int().min(1).max(100000000),
+              method: z.enum(["cash", "bank_transfer"]),
+              externalReference: z.string().trim().min(3).max(100).optional(),
+            })
+            .optional(),
+          confirm: z.boolean().default(false),
+        })
+        .parse(q.body);
+      if (q.adminCtx?.bootstrap)
+        throw new AppError(403, "Rezervasyon eklemek için kendi yönetici hesabınızla giriş yapın.");
+      const created = await store.adminReserve(input, q.admin);
+      r.status(201).json(await receipt(created, q, env));
     }),
   );
   for (const action of ["confirm", "cancel", "complete"])

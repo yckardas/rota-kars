@@ -1,0 +1,208 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { openStore } from "../server/store.mjs";
+
+const AGENT = { id: "ops-1", role: "operations", name: "Operasyon" };
+async function setup(t) {
+  let now = Date.parse("2026-10-17T06:00:00Z");
+  const s = await openStore(":memory:", { clock: () => now });
+  t.after(() => s.db.close());
+  const d = await s.departures.save({
+    tourId: "ani-cildir",
+    date: "2026-10-20",
+    startTime: "09:00",
+    pickup: "Kars Garı",
+    guideName: "Rehber",
+    guidePhone: "05550000000",
+    price: 150000,
+    vehicleModel: "vip-midibus",
+    passengerSeats: 18,
+    active: true,
+  });
+  return { s, d, advance: (ms) => (now += ms) };
+}
+const base = (d, extra = {}) => ({
+  departureId: d.id,
+  seats: [3, 4],
+  name: "Telefon Müşteri",
+  phone: "0555 111 22 33",
+  email: "",
+  passengers: ["Ayşe Yılmaz", "Mehmet Yılmaz"],
+  paymentMode: "on_tour",
+  notes: "Otelden alınacak",
+  confirm: false,
+  ...extra,
+});
+
+test("agency phone booking: pay on tour can be confirmed directly, no customer e-mail without address", async (t) => {
+  const { s, d } = await setup(t);
+  const r = await s.adminReserve(base(d, { confirm: true }), AGENT);
+  assert.equal(r.status, "confirmed");
+  assert.equal(r.deposit, 0);
+  assert.equal(r.total, 300000);
+  assert.equal(r.source, "agency");
+  assert.equal(r.created_by, "ops-1");
+  assert.equal(r.notes, "Otelden alınacak");
+  assert.deepEqual(r.seats, [3, 4]);
+  const mails = await s.db.find("notification_outbox", {});
+  assert.equal(mails.filter((m) => !m.recipient).length, 0, "e-postasız müşteriye kayıt yazılmaz");
+  assert.equal(mails.filter((m) => m.kind === "agency_reservation_created").length, 0, "acente kendine bildirim almaz");
+  // Aynı koltuk ikinci kez satılamaz.
+  await assert.rejects(s.adminReserve(base(d, { seats: [4, 5] }), AGENT), (e) => e.status === 409);
+  assert.equal(await s.db.count("reservations", {}), 1, "başarısız deneme yarım kayıt bırakmaz");
+});
+
+test("agency booking with payment: full payment recorded then confirmed; deposit rule still enforced", async (t) => {
+  const { s, d } = await setup(t);
+  const paid = await s.adminReserve(
+    base(d, { paymentMode: "full", seats: [1], passengers: ["Tek Yolcu"], email: "musteri@example.com", payment: { amount: 150000, method: "cash" }, confirm: true }),
+    AGENT,
+  );
+  assert.equal(paid.status, "confirmed");
+  assert.equal(paid.net_paid, 150000);
+  // Kapora seçilip tahsilat girilmeden onay istenirse işlem tümden geri alınır.
+  await assert.rejects(
+    s.adminReserve(base(d, { paymentMode: "deposit", seats: [2], passengers: ["X Yolcu"], confirm: true }), AGENT),
+    (e) => e.status === 409,
+  );
+  assert.equal((await s.availability(d.id)).seats.find((x) => x.number === 2).status, "available");
+});
+
+test("agency can still book a departure whose online sales are closed; web cannot", async (t) => {
+  const { s, d } = await setup(t);
+  await s.departures.save({
+    id: d.id,
+    tourId: d.tour_id,
+    date: d.date,
+    startTime: d.start_time,
+    pickup: d.pickup,
+    guideName: d.guide_name,
+    guidePhone: d.guide_phone,
+    price: d.price,
+    vehicleModel: "vip-midibus",
+    passengerSeats: 18,
+    active: false,
+  });
+  await assert.rejects(s.hold(d.id, [7]), (e) => e.status === 409);
+  const r = await s.adminReserve(base(d, { seats: [7], passengers: ["Son Dakika"] }), AGENT);
+  assert.equal(r.status, "pending_agency");
+});
+
+test("reservation search: reference, name, passenger, phone written differently, status filter", async (t) => {
+  const { s, d } = await setup(t);
+  const a = await s.adminReserve(base(d), AGENT);
+  await s.adminReserve(base(d, { seats: [9], name: "Başka Kişi", phone: "05329998877", passengers: ["Zeynep Kaya"], confirm: true }), AGENT);
+  const find = async (q, extra = {}) => (await s.workflow.list({ q, ...extra })).map((r) => r.name);
+  assert.deepEqual(await find(a.reference.toLowerCase()), ["Telefon Müşteri"]);
+  assert.deepEqual(await find("telefon"), ["Telefon Müşteri"]);
+  assert.deepEqual(await find("Zeynep"), ["Başka Kişi"]);
+  assert.deepEqual(await find("5551112233"), ["Telefon Müşteri"]);
+  assert.deepEqual(await find("+90 532 999 88 77"), ["Başka Kişi"]);
+  assert.deepEqual(await find("", { status: "confirmed" }), ["Başka Kişi"]);
+  assert.deepEqual(await find(".*"), [], "düzenli ifade karakterleri kaçışlanır");
+});
+
+test("overview: today's departures, pending sorted by expiry, new requests and week load", async (t) => {
+  const { s, d } = await setup(t);
+  const todayDep = await s.departures.save({
+    tourId: "sarikamis",
+    date: "2026-10-17",
+    startTime: "18:00",
+    pickup: "Kars merkez",
+    guideName: "",
+    guidePhone: "",
+    price: 100000,
+    vehicleModel: "vip-midibus",
+    passengerSeats: 18,
+    active: true,
+  });
+  await s.adminReserve(base(todayDep, { seats: [1, 2], confirm: true }), AGENT);
+  await s.adminReserve(base(d, { paymentMode: "deposit", seats: [5], passengers: ["Bekleyen Bir"] }), AGENT);
+  await s.request("private-tour", { name: "Talep Sahibi", email: "t@example.com", phone: "05551112233", guests: 2 });
+  const o = await s.overview();
+  assert.equal(o.today, "2026-10-17");
+  assert.equal(o.todayDepartures.length, 1);
+  assert.equal(o.todayDepartures[0].booked, 2);
+  assert.equal(o.pending.count, 1);
+  assert.equal(o.pending.items[0].name, "Telefon Müşteri");
+  assert.equal(o.newRequests, 1);
+  assert.equal(o.week.departures >= 2, true);
+  assert.equal(o.week.booked, 3);
+});
+
+test("HTTP: bulk departures by weekday, duplicates skipped; guides cannot create bookings", async (t) => {
+  const { once } = await import("node:events");
+  const { createApp } = await import("../server/app.mjs");
+  let now = Date.parse("2026-10-17T06:00:00Z");
+  const s = await openStore(":memory:", { clock: () => now, seed: false });
+  const app = createApp(s, {
+    env: { ADMIN_PASSWORD: "ilk-kurulum-parolasi" },
+    reviewsService: { get: async () => ({ status: "not_configured", reviews: [] }) },
+  });
+  const server = app.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(async () => {
+    await new Promise((r) => server.close(r));
+    await s.db.close();
+  });
+  const base = `http://127.0.0.1:${server.address().port}/api`;
+  const call = async (path, { body, cookie } = {}) => {
+    const r = await fetch(base + path, {
+      method: body ? "POST" : "GET",
+      body: body ? JSON.stringify(body) : undefined,
+      headers: { "Content-Type": "application/json", "X-Rota-Client": "web", ...(cookie ? { Cookie: cookie } : {}) },
+    });
+    return { status: r.status, json: await r.json().catch(() => null), cookie: r.headers.get("set-cookie")?.split(";")[0] };
+  };
+  const boot = (await call("/admin/login", { body: { password: "ilk-kurulum-parolasi" } })).cookie;
+  const owner = (
+    await call("/admin/users", {
+      body: { email: "sahip@rotakars.test", name: "Sahip", password: "sahip-parolasi-2026", role: "owner" },
+      cookie: boot,
+    })
+  ).cookie;
+  const plan = {
+    tourId: "ani-cildir",
+    from: "2026-10-19",
+    to: "2026-11-01",
+    weekdays: [6, 0],
+    startTime: "08:30",
+    price: 150000,
+    pickup: "Kars merkez",
+    vehicleModel: "vip-midibus",
+    passengerSeats: 18,
+    active: true,
+  };
+  const first = await call("/admin/departures/bulk", { body: plan, cookie: owner });
+  assert.equal(first.status, 201);
+  assert.equal(first.json.created, 4, "2 hafta × Cumartesi + Pazar");
+  const again = await call("/admin/departures/bulk", { body: { ...plan, weekdays: [6, 0, 1] }, cookie: owner });
+  assert.equal(again.json.created, 2, "yalnız Pazartesiler eklenir");
+  assert.equal(again.json.skipped, 4);
+  assert.equal((await call("/admin/departures/bulk", { body: { ...plan, from: "2026-10-01" }, cookie: owner })).status, 400);
+  assert.equal((await call("/admin/departures/bulk", { body: { ...plan, to: "2027-12-01" }, cookie: owner })).status, 400);
+
+  const dep = (await call("/admin/departures?tourId=ani-cildir", { cookie: owner })).json[0];
+  const booking = {
+    departureId: dep.id,
+    seats: [2],
+    name: "Telefon Müşteri",
+    phone: "05551112233",
+    passengers: ["Telefon Müşteri"],
+    paymentMode: "on_tour",
+    confirm: true,
+  };
+  const created = await call("/admin/reservations", { body: booking, cookie: owner });
+  assert.equal(created.status, 201);
+  assert.match(created.json.ticketUrl, /\/bilet\//);
+  assert.equal((await call(`/admin/departures/${dep.id}/seats`, { cookie: owner })).json.seats[1].status, "occupied");
+
+  await call("/admin/users", {
+    body: { email: "rehber@rotakars.test", name: "Rehber", password: "rehber-parolasi-2026", role: "guide" },
+    cookie: owner,
+  });
+  const guide = (await call("/admin/login", { body: { email: "rehber@rotakars.test", password: "rehber-parolasi-2026" } })).cookie;
+  assert.equal((await call("/admin/reservations", { body: { ...booking, seats: [3] }, cookie: guide })).status, 403);
+  assert.equal((await call("/admin/departures/bulk", { body: plan, cookie: guide })).status, 403);
+  assert.equal((await call("/admin/overview", { cookie: guide })).status, 403);
+});

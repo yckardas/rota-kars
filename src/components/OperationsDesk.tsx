@@ -21,6 +21,7 @@ import {
 } from "../lib/types";
 import { SeatMap } from "./SeatMap";
 import { PassengerList } from "./admin/MobileApp";
+import { NewReservation } from "./admin/NewReservation";
 import { isNativeApp } from "../lib/native";
 export type Campaign = {
   active: boolean;
@@ -31,9 +32,24 @@ export type Campaign = {
   referralTrigger: "paid" | "completed";
   requireVerified: boolean;
 };
-export function DepartureManager({ catalog }: { catalog: Catalog }) {
+const WEEKDAYS = [
+  [1, "Pzt"],
+  [2, "Sal"],
+  [3, "Çar"],
+  [4, "Per"],
+  [5, "Cum"],
+  [6, "Cmt"],
+  [0, "Paz"],
+] as const;
+export function DepartureManager({
+  catalog,
+  startCreating = false,
+}: {
+  catalog: Catalog;
+  startCreating?: boolean;
+}) {
   const [items, setItems] = useState<Departure[]>([]),
-    [editing, setEditing] = useState<Departure | null | false>(false),
+    [editing, setEditing] = useState<Departure | null | false>(startCreating ? null : false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
@@ -55,6 +71,29 @@ export function DepartureManager({ catalog }: { catalog: Catalog }) {
     setBusy(true);
     setError("");
     try {
+      // Yeni seferde "tekrarlayan" seçildiyse tarih aralığına toplu sefer açılır.
+      if (!editing && f.get("repeat") === "on") {
+        const r = await post<{ created: number; skipped: number }>("/admin/departures/bulk", {
+          tourId: f.get("tourId"),
+          from: f.get("from"),
+          to: f.get("to"),
+          weekdays: f.getAll("weekdays").map(Number),
+          startTime: f.get("startTime"),
+          price: Math.round(Number(f.get("price")) * 100),
+          pickup: f.get("pickup"),
+          guideName: f.get("guideName"),
+          guidePhone: f.get("guidePhone"),
+          vehicleModel: f.get("vehicleModel"),
+          passengerSeats: Number(f.get("passengerSeats")),
+          active: f.get("active") === "on",
+        });
+        setEditing(false);
+        setNotice(
+          `${r.created} sefer açıldı` + (r.skipped ? `; ${r.skipped} tarihte aynı saatte sefer zaten vardı, atlandı.` : "."),
+        );
+        await load();
+        return;
+      }
       await post("/admin/departures", {
         ...(editing ? { id: editing.id } : {}),
         tourId: f.get("tourId"),
@@ -221,7 +260,8 @@ function DepartureEditor({
     [capacity, setCapacity] = useState(
       d?.vehicle?.passengerSeats || catalog.vehicleModels[0].seats,
     ),
-    m = catalog.vehicleModels.find((v) => v.id === model)!;
+    m = catalog.vehicleModels.find((v) => v.id === model)!,
+    [repeat, setRepeat] = useState(false);
   return (
     <form className="admin-editor departure-editor" onSubmit={save}>
       <h2>{d ? "Seferi düzenle" : "Yeni sefer"}</h2>
@@ -243,15 +283,43 @@ function DepartureEditor({
             ))}
           </select>
         </label>
-        <label className="field">
-          Sefer tarihi
-          <input
-            name="date"
-            type="date"
-            defaultValue={d?.date || today()}
-            required
-          />
-        </label>
+        {!d && (
+          <label className="checkbox-label departure-repeat">
+            <input type="checkbox" name="repeat" checked={repeat} onChange={(e) => setRepeat(e.target.checked)} />
+            <span>Tekrarlayan sefer (tarih aralığına toplu aç)</span>
+          </label>
+        )}
+        {repeat && !d ? (
+          <>
+            <label className="field">
+              Başlangıç
+              <input name="from" type="date" defaultValue={today()} min={today()} required />
+            </label>
+            <label className="field">
+              Bitiş
+              <input name="to" type="date" required min={today()} />
+            </label>
+            <fieldset className="choice-row weekday-picker">
+              <legend>Günler</legend>
+              {WEEKDAYS.map(([n, label]) => (
+                <label key={n} className="checkbox-label">
+                  <input type="checkbox" name="weekdays" value={n} defaultChecked />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </fieldset>
+          </>
+        ) : (
+          <label className="field">
+            Sefer tarihi
+            <input
+              name="date"
+              type="date"
+              defaultValue={d?.date || today()}
+              required
+            />
+          </label>
+        )}
         <label className="field">
           Hareket saati
           <input
@@ -362,23 +430,50 @@ const statusLabels: Record<string, string> = {
   completed: "Tamamlandı",
   cancelled: "İptal",
   expired: "Süresi doldu",
+  no_show: "Gelmedi",
 };
-export function ReservationManager({ catalog }: { catalog: Catalog }) {
+const STATUS_FILTERS = [
+  ["", "Tümü"],
+  ["pending_agency", "Onay bekleyen"],
+  ["confirmed", "Onaylı"],
+  ["completed", "Tamamlandı"],
+  ["cancelled", "İptal"],
+] as const;
+export function ReservationManager({
+  catalog,
+  initialStatus = "",
+  canCreate = true,
+  startCreating = false,
+}: {
+  catalog: Catalog;
+  initialStatus?: string;
+  canCreate?: boolean;
+  startCreating?: boolean;
+}) {
   const [rows, setRows] = useState<Reservation[]>([]),
     [selected, setSelected] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
-    [date, setDate] = useState("");
+    [date, setDate] = useState(""),
+    [status, setStatus] = useState(initialStatus),
+    [search, setSearch] = useState(""),
+    [query, setQuery] = useState(""),
+    [creating, setCreating] = useState(startCreating);
+  // Arama yazarken her tuşta değil, kısa bir duraksamadan sonra sorgulanır.
+  useEffect(() => {
+    const t = setTimeout(() => setQuery(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
   async function load() {
-    setRows(
-      await api<Reservation[]>(
-        "/admin/reservations" + (date ? "?date=" + date : ""),
-      ),
-    );
+    const params = new URLSearchParams();
+    if (date) params.set("date", date);
+    if (status) params.set("status", status);
+    if (query) params.set("q", query);
+    setRows(await api<Reservation[]>("/admin/reservations" + (params.size ? "?" + params : "")));
   }
   useEffect(() => {
     load().catch((e) => setError(e.message));
-  }, [date]);
+  }, [date, status, query]);
   async function action(ref: string, path: string, body: unknown = {}) {
     setBusy(true);
     setError("");
@@ -399,6 +494,35 @@ export function ReservationManager({ catalog }: { catalog: Catalog }) {
           Tahsilat kaydı, acente onayı, tarih/koltuk değişikliği ve katılım
           durumunu yönetin. Kart tahsilatı banka bağlantısı bekliyor.
         </p>
+        {canCreate && (
+          <button className="btn" onClick={() => setCreating(true)}>
+            <Plus size={16} />
+            Yeni rezervasyon
+          </button>
+        )}
+        <label className="field reservation-search">
+          Ara
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Referans, ad, telefon veya e-posta"
+            maxLength={80}
+          />
+        </label>
+        <div className="status-filters" role="group" aria-label="Duruma göre filtre">
+          {STATUS_FILTERS.map(([id, label]) => (
+            <button
+              key={id || "all"}
+              type="button"
+              className={"chip" + (status === id ? " active" : "")}
+              aria-pressed={status === id}
+              onClick={() => setStatus(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <label className="field">
           Tur gününe göre filtre
           <input
@@ -437,7 +561,8 @@ export function ReservationManager({ catalog }: { catalog: Catalog }) {
                 <td>
                   <strong>{r.reference}</strong>
                   <small>
-                    {r.name} · {r.phone}
+                    {r.name} ·{" "}
+                    <a href={"tel:" + r.phone.replace(/[^\d+]/g, "")}>{r.phone}</a>
                   </small>
                   <small>{r.passengers.join(", ")}</small>
                 </td>
@@ -478,6 +603,13 @@ export function ReservationManager({ catalog }: { catalog: Catalog }) {
       </div>
       {!rows.length && (
         <p className="admin-empty">Bu filtrede rezervasyon yok.</p>
+      )}
+      {creating && (
+        <NewReservation
+          catalog={catalog}
+          onClose={() => setCreating(false)}
+          onCreated={() => load().catch(() => {})}
+        />
       )}
       {booking && (
         <BookingControls

@@ -72,6 +72,7 @@ export function SeatMap({
               </div>
             ) : cell === "guide" ? (
               <button
+                type="button"
                 key={i}
                 className="crew-seat guide"
                 disabled
@@ -108,6 +109,7 @@ export function SeatMap({
               const st = status(cell);
               return (
                 <button
+                  type="button"
                   key={"s" + cell}
                   disabled={!interactive || st === "occupied"}
                   onClick={() => onSelect?.(cell)}

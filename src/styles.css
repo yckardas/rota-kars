@@ -7255,3 +7255,194 @@ input[type="radio"] {
     min-height: 40px;
   }
 }
+
+/* Yönetim: özet ekranı, arama/filtre, panelden rezervasyon */
+.overview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.overview-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.overview-card {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+  text-align: left;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+  color: var(--navy);
+  min-height: 110px;
+}
+.overview-card strong {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+.overview-card span {
+  font-size: 13px;
+  color: var(--muted);
+}
+.overview-card small {
+  font-size: 12px;
+  color: #9a5b0b;
+  font-weight: 600;
+}
+.overview-card.attention {
+  border-color: #e7c27c;
+  background: #fff8ea;
+}
+.overview-card svg {
+  color: var(--gold-text);
+}
+.overview-section {
+  margin-bottom: 26px;
+}
+.overview-section h2 {
+  font-size: 17px;
+  margin: 0 0 10px;
+}
+.overview-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+.overview-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.overview-list li > span {
+  flex: 1;
+  min-width: 0;
+}
+.overview-list strong {
+  display: block;
+  font-size: 14px;
+}
+.overview-list small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+.overview-list svg {
+  flex: none;
+  color: var(--gold-text);
+}
+.status-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip {
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--navy);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 13px;
+  min-height: 36px;
+}
+.chip.active {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: white;
+}
+.reservation-search input {
+  min-width: 240px;
+}
+.new-reservation {
+  display: grid;
+  gap: 14px;
+}
+.new-reservation .form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+.new-reservation-seats .seat-map {
+  max-width: 360px;
+  margin: 0 auto;
+}
+.passenger-fields,
+.choice-row {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 14px 14px;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+.choice-row {
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+}
+.passenger-fields legend,
+.choice-row legend {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 6px;
+}
+@media (max-width: 760px) {
+  .overview-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .overview-card {
+    min-height: 96px;
+    padding: 12px;
+  }
+  .overview-card strong {
+    font-size: 24px;
+  }
+  .overview-actions .btn {
+    flex: 1;
+  }
+  .reservation-search,
+  .reservation-search input {
+    width: 100%;
+    min-width: 0;
+  }
+  .admin-tabbar button {
+    font-size: 10.5px;
+  }
+}
+.request-success > img {
+  display: block;
+  margin: 8px auto 16px;
+}
+.request-success .push-actions {
+  justify-content: center;
+}
+.departure-repeat,
+.weekday-picker {
+  grid-column: 1 / -1;
+}
+.weekday-picker {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.weekday-picker .checkbox-label {
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .departure-editor .form-grid {
+    grid-template-columns: 1fr;
+  }
+}

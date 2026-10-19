@@ -1006,6 +1006,11 @@ export function createApp(
     requireAdmin,
     route(async (_q, r) => r.json(await store.dashboard())),
   );
+  app.get(
+    "/api/admin/overview",
+    requireAdmin,
+    route(async (_q, r) => r.json(await store.overview())),
+  );
   app.post(
     "/api/admin/hotels",
     requireAdmin,

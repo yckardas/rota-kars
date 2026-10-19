@@ -27,7 +27,9 @@ import {
   TriangleAlert,
   Menu,
   X,
+  LayoutDashboard,
 } from "lucide-react";
+import { Overview } from "../components/admin/Overview";
 import {
   AppUpdateBanner,
   PushSettings,
@@ -80,6 +82,7 @@ type Dashboard = {
   hotels: Hotel[];
 };
 const ALL_TABS = [
+  ["overview", "Özet", LayoutDashboard],
   ["reservations", "Rezervasyonlar", Ticket],
   ["departures", "Sefer planı", Bus],
   ["daily", "Günlük operasyon", ClipboardList],
@@ -96,8 +99,9 @@ const ALL_TABS = [
   ["kvkk", "KVKK", ShieldCheck],
 ] as const;
 // Telefonda alt çubukta duran sekmeler; diğerleri "Diğer" menüsünde.
-const MOBILE_PRIMARY = ["reservations", "departures", "daily", "operations"];
+const MOBILE_PRIMARY = ["overview", "reservations", "departures", "daily", "operations"];
 const SHORT_LABELS: Record<string, string> = {
+  overview: "Özet",
   reservations: "Rezervasyon",
   departures: "Seferler",
   daily: "Günlük",
@@ -148,7 +152,9 @@ export function Admin({
     [notice, setNotice] = useState(""),
     [loginNotice, setLoginNotice] = useState(""),
     [busy, setBusy] = useState(false),
-    [tab, setTab] = useState("reservations"),
+    [tab, setTab] = useState("overview"),
+    // Özet ekranından gelen yönlendirme (ör. "Onay bekleyenler" filtresi, yeni kayıt formu).
+    [nav, setNav] = useState<{ n: number; status?: string; create?: boolean }>({ n: 0 }),
     [hotelForm, setHotelForm] = useState(false),
     [moreOpen, setMoreOpen] = useState(false),
     mainRef = useRef<HTMLElement>(null),
@@ -273,7 +279,8 @@ export function Admin({
       tab === "account"
         ? "Hesabım"
         : tabs.find((x) => x[0] === tab)?.[1] || "",
-    pick = (id: string) => {
+    pick = (id: string, keepNav = false) => {
+      if (!keepNav) setNav((cur) => ({ n: cur.n + 1 }));
       setTab(id);
       setMoreOpen(false);
       window.scrollTo({ top: 0 });
@@ -380,8 +387,25 @@ export function Admin({
             {busy ? "Yükleniyor…" : "Kayıtlar yüklenemedi."}
           </p>
         )}
-        {tab === "reservations" && <ReservationManager catalog={catalog} />}
-        {tab === "departures" && <DepartureManager catalog={catalog} />}
+        {tab === "overview" && (
+          <Overview
+            go={(id, options = {}) => {
+              setNav((cur) => ({ n: cur.n + 1, ...options }));
+              pick(id, true);
+            }}
+          />
+        )}
+        {tab === "reservations" && (
+          <ReservationManager
+            key={"res-" + nav.n}
+            catalog={catalog}
+            initialStatus={nav.status || ""}
+            startCreating={Boolean(nav.create)}
+          />
+        )}
+        {tab === "departures" && (
+          <DepartureManager key={"dep-" + nav.n} catalog={catalog} startCreating={Boolean(nav.create)} />
+        )}
         {tab === "campaigns" && <CampaignManager catalog={catalog} />}
         {tab === "daily" && <DailyReport catalog={catalog} />}
         {tab === "notifications" && <NotificationManager />}
