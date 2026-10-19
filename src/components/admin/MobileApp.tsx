@@ -295,3 +295,75 @@ export function PassengerList({ departureId, onClose }: { departureId: string; o
     </Modal>
   );
 }
+
+type SessionRow = { current: boolean; createdAt: number; expiresAt: number; remember: boolean; device: string };
+// Hesabım: açık oturumlar; telefon kaybolursa diğer tüm oturumlar tek dokunuşla kapatılır.
+export function SessionList() {
+  const [rows, setRows] = useState<SessionRow[] | null>(null),
+    [busy, setBusy] = useState(false),
+    [message, setMessage] = useState(""),
+    [error, setError] = useState("");
+  const load = () =>
+    api<SessionRow[]>("/admin/me/sessions")
+      .then(setRows)
+      .catch((e) => setError(e.message));
+  useEffect(() => {
+    load();
+  }, []);
+  const when = (t: number) => new Date(t).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" });
+  return (
+    <section className="admin-section push-settings">
+      <h2>
+        <Smartphone size={19} /> Açık oturumlar
+      </h2>
+      <p className="muted">Bu hesapla giriş yapılmış cihazlar. Tanımadığınız bir oturum varsa hepsini kapatıp parolanızı değiştirin.</p>
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      <ul className="device-list">
+        {rows?.map((s, i) => (
+          <li key={i}>
+            <Smartphone size={16} />
+            <span>
+              <strong>
+                {s.device || "Cihaz"}
+                {s.current ? " · bu cihaz" : ""}
+              </strong>
+              <small>
+                Giriş {when(s.createdAt)} · {s.remember ? "hatırlanıyor, " : ""}bitiş {when(s.expiresAt)}
+              </small>
+            </span>
+          </li>
+        ))}
+      </ul>
+      {rows && rows.length > 1 && (
+        <button
+          className="btn btn-outline"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            setError("");
+            try {
+              const r = await post<{ removed: number }>("/admin/me/sessions/revoke-others", {});
+              setMessage(`${r.removed} oturum kapatıldı.`);
+              await load();
+            } catch (e) {
+              setError((e as Error).message);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          Diğer tüm oturumları kapat
+        </button>
+      )}
+      {message && (
+        <p className="notice-success" role="status">
+          <Check size={16} /> {message}
+        </p>
+      )}
+    </section>
+  );
+}

@@ -81,17 +81,23 @@ export async function createAdminAuth(db, { clock = Date.now, env = process.env 
     if (typeof password !== "string" || password.length < 12)
       throw new AppError(400, "Yönetici parolası en az 12 karakter olmalı.");
   };
-  const newSession = async (user) => {
-    const sid = randomBytes(32).toString("hex");
+  // "Bu cihazı hatırla": yalnız iki adımlı doğrulaması açık hesaplara, en fazla 30 gün.
+  const REMEMBER_MS = Math.min(30, Math.max(1, Number(env.ADMIN_REMEMBER_DAYS) || 14)) * 86400000;
+  const newSession = async (user, { remember = false, device = "" } = {}) => {
+    const sid = randomBytes(32).toString("hex"),
+      long = Boolean(remember && user.totp_enabled),
+      ttl = long ? REMEMBER_MS : SESSION_MS;
     await db.remove("admin_sessions", { expires_at: { $lt: clock() } });
     await db.insert("admin_sessions", digest(sid), {
       token_hash: digest(sid),
       admin_id: user.id,
       role: user.role,
       created_at: clock(),
-      expires_at: clock() + SESSION_MS,
+      expires_at: clock() + ttl,
+      remember: long,
+      device: String(device || "").slice(0, 80),
     });
-    return sid;
+    return { sid, maxAge: Math.floor(ttl / 1000), remembered: long };
   };
   const api = {
     require2fa,
@@ -138,7 +144,7 @@ export async function createAdminAuth(db, { clock = Date.now, env = process.env 
       });
       return { sid, bootstrap: true };
     },
-    async login({ email, password, code }) {
+    async login({ email, password, code, remember = false, device = "" }) {
       const user = await db.one("admin_users", { email: String(email).trim().toLowerCase() });
       // Kilitli hesap için de genel mesaj: hangi e-postanın yönetici olduğu anlaşılmaz.
       if (user?.locked_until > clock())
@@ -186,8 +192,9 @@ export async function createAdminAuth(db, { clock = Date.now, env = process.env 
         { _id: user.id },
         { failed_logins: 0, locked_until: 0, last_login_at: clock() },
       );
-      await api.audit(user, "login");
-      return { sid: await newSession(user), user: publicUser(user) };
+      const session = await newSession(user, { remember, device });
+      await api.audit(user, "login", { remembered: session.remembered });
+      return { ...session, user: publicUser(user) };
     },
     // Oturumdan yönetici: { user, session, bootstrap, needs2faSetup }
     async fromSession(sid) {
@@ -212,6 +219,27 @@ export async function createAdminAuth(db, { clock = Date.now, env = process.env 
     },
     async logout(sid) {
       if (sid) await db.remove("admin_sessions", { _id: digest(sid) });
+    },
+    // Hesabın açık oturumları (telefon kaybolursa diğerleri tek tıkla kapatılır).
+    async sessions(adminId, currentSid) {
+      const current = currentSid ? digest(currentSid) : "";
+      return (
+        await db.find("admin_sessions", { admin_id: adminId, expires_at: { $gt: clock() } }, { sort: { created_at: -1 } })
+      ).map((s) => ({
+        current: s.token_hash === current,
+        createdAt: s.created_at,
+        expiresAt: s.expires_at,
+        remember: Boolean(s.remember),
+        device: s.device || "",
+      }));
+    },
+    async revokeOtherSessions(admin, currentSid) {
+      const removed = await db.remove("admin_sessions", {
+        admin_id: admin.id,
+        _id: { $ne: digest(String(currentSid || "")) },
+      });
+      await api.audit(admin, "sessions_revoked", { count: removed });
+      return removed;
     },
     async listUsers() {
       return (await db.find("admin_users", {}, { sort: { created_at: 1 } })).map(publicUser);

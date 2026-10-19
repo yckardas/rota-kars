@@ -174,7 +174,8 @@ export function createApp(
       "X-Content-Type-Options": "nosniff",
       "Referrer-Policy": "strict-origin-when-cross-origin",
       "X-Frame-Options": "SAMEORIGIN",
-      "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+      // Kamera yalnız yönetim panelinde (bilet QR okuyucu) açılır.
+      "Permissions-Policy": `camera=${req.path === "/yonetim" || req.path.startsWith("/yonetim/") ? "(self)" : "()"}, microphone=(), geolocation=(), payment=()`,
       "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
     });
     // Vite geliştirme sunucusu satır içi betik kullandığı için CSP yalnızca yayında.
@@ -801,8 +802,17 @@ export function createApp(
       r.status(201).json(await store.request(input.kind, input));
     }),
   );
-  const adminCookie = (sid) =>
-    `rota_admin=${sid}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${env.NODE_ENV === "production" ? "; Secure" : ""}`;
+  const adminCookie = (sid, maxAge = 28800) =>
+    `rota_admin=${sid}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${env.NODE_ENV === "production" ? "; Secure" : ""}`;
+  // Oturum listesinde görünecek kısa cihaz adı (ör. "Android · Pixel 7", "Mac · Chrome").
+  const deviceLabel = (ua = "") => {
+    const android = ua.match(/Android [\d.]+; ([^;)]+)/)?.[1]?.replace(/\s*Build\/.*$/, "").trim();
+    const app = /RotaKarsYonetim|; wv\)/.test(ua) ? " · uygulama" : "";
+    if (android) return ("Android · " + android + app).slice(0, 80);
+    const os = /iPhone|iPad/.test(ua) ? "iOS" : /Mac OS X/.test(ua) ? "Mac" : /Windows/.test(ua) ? "Windows" : "Cihaz";
+    const browser = /Edg\//.test(ua) ? "Edge" : /Chrome\//.test(ua) ? "Chrome" : /Firefox\//.test(ua) ? "Firefox" : /Safari\//.test(ua) ? "Safari" : "";
+    return [os, browser].filter(Boolean).join(" · ");
+  };
   // E-posta + parola (+ iki adımlı kod). E-posta verilmezse ilk kurulum parolası.
   app.post(
     "/api/admin/login",
@@ -812,17 +822,35 @@ export function createApp(
           email: z.string().trim().email().max(254).optional(),
           password: z.string().min(1).max(300),
           code: z.string().trim().regex(/^\d{6}$/).optional(),
+          remember: z.boolean().optional(),
         })
         .parse(q.body);
       const result = await guardLogin("admin", input.email || "bootstrap", () =>
         input.email
-          ? store.adminAuth.login(input)
+          ? store.adminAuth.login({ ...input, device: deviceLabel(String(q.headers["user-agent"] || "")) })
           : store.adminAuth.bootstrapLogin(input.password, env.ADMIN_PASSWORD),
       );
       if (result.needsCode) return r.json({ ok: false, needsCode: true });
-      r.setHeader("Set-Cookie", adminCookie(result.sid));
-      r.json({ ok: true, bootstrap: Boolean(result.bootstrap), user: result.user || null });
+      r.setHeader("Set-Cookie", adminCookie(result.sid, result.maxAge));
+      r.json({
+        ok: true,
+        bootstrap: Boolean(result.bootstrap),
+        user: result.user || null,
+        remembered: Boolean(result.remembered),
+      });
     }),
+  );
+  app.get(
+    "/api/admin/me/sessions",
+    requireAdmin,
+    route(async (q, r) => r.json(await store.adminAuth.sessions(q.admin.id, cookieValue(q, "rota_admin")))),
+  );
+  app.post(
+    "/api/admin/me/sessions/revoke-others",
+    requireAdmin,
+    route(async (q, r) =>
+      r.json({ removed: await store.adminAuth.revokeOtherSessions(q.admin, cookieValue(q, "rota_admin")) }),
+    ),
   );
   app.post("/api/admin/logout", async (q, r) => {
     await store.adminAuth.logout(cookieValue(q, "rota_admin"));

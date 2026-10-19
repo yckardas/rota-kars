@@ -9,7 +9,9 @@ import {
   Ticket,
   Mail,
   Users,
+  QrCode,
 } from "lucide-react";
+import { TicketScanner } from "./admin/TicketScanner";
 import { api, post } from "../lib/api";
 import {
   currency,
@@ -22,6 +24,7 @@ import {
 import { SeatMap } from "./SeatMap";
 import { PassengerList } from "./admin/MobileApp";
 import { NewReservation } from "./admin/NewReservation";
+import { DepartureCalendar } from "./admin/DepartureCalendar";
 import { isNativeApp } from "../lib/native";
 export type Campaign = {
   active: boolean;
@@ -54,7 +57,8 @@ export function DepartureManager({
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
     [tourFilter, setTourFilter] = useState(""),
-    [passengers, setPassengers] = useState("");
+    [passengers, setPassengers] = useState(""),
+    [view, setView] = useState<"calendar" | "list">("calendar");
   async function load() {
     setItems(
       await api<Departure[]>(
@@ -142,6 +146,18 @@ export function DepartureManager({
             ))}
           </select>
         </label>
+        <div className="status-filters" role="group" aria-label="Görünüm">
+          {(
+            [
+              ["calendar", "Takvim"],
+              ["list", "Liste"],
+            ] as const
+          ).map(([id, label]) => (
+            <button key={id} type="button" className={"chip" + (view === id ? " active" : "")} aria-pressed={view === id} onClick={() => setView(id)}>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
       {error && (
         <p className="error" role="alert">
@@ -166,7 +182,18 @@ export function DepartureManager({
       {passengers && (
         <PassengerList departureId={passengers} onClose={() => setPassengers("")} />
       )}
-      <div className="desk-table-wrap">
+      {view === "calendar" && (
+        <DepartureCalendar
+          items={items}
+          catalog={catalog}
+          onPick={(d) => {
+            setEditing(d);
+            setError("");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        />
+      )}
+      <div className="desk-table-wrap" hidden={view !== "list"}>
         <table className="desk-table">
           <thead>
             <tr>
@@ -1029,7 +1056,8 @@ export function DailyReport({ catalog }: { catalog: Catalog }) {
       refunded: number;
     } | null>(null),
     [error, setError] = useState(""),
-    [passengers, setPassengers] = useState("");
+    [passengers, setPassengers] = useState(""),
+    [scanning, setScanning] = useState(false);
   useEffect(() => {
     api<NonNullable<typeof data>>("/admin/reports?date=" + date)
       .then(setData)
@@ -1037,6 +1065,10 @@ export function DailyReport({ catalog }: { catalog: Catalog }) {
   }, [date]);
   return (
     <>
+      <button className="btn scan-button" onClick={() => setScanning(true)}>
+        <QrCode size={17} /> Bilet okut
+      </button>
+      {scanning && <TicketScanner onClose={() => setScanning(false)} />}
       <label className="field report-date">
         Operasyon günü
         <input

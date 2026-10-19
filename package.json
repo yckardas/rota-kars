@@ -27,6 +27,7 @@
     "@fontsource/onest": "^5.3.1",
     "compression": "^1.8.2",
     "express": "^5.1.0",
+    "jsqr": "1.4.0",
     "lucide-react": "^0.468.0",
     "mongodb": "^7.7.0",
     "nodemailer": "^10.1.2",

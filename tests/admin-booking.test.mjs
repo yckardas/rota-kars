@@ -66,6 +66,14 @@ test("agency booking with payment: full payment recorded then confirmed; deposit
     (e) => e.status === 409,
   );
   assert.equal((await s.availability(d.id)).seats.find((x) => x.number === 2).status, "available");
+  // Toplamı aşan tahsilat da hiçbir şey yazılmadan reddedilir.
+  await assert.rejects(
+    s.adminReserve(base(d, { paymentMode: "full", seats: [6], passengers: ["Y Yolcu"], payment: { amount: 999999, method: "cash" } }), AGENT),
+    (e) => e.status === 400,
+  );
+  assert.equal((await s.availability(d.id)).seats.find((x) => x.number === 6).status, "available");
+  assert.equal(await s.db.count("reservations", {}), 1, "yalnız başarılı kayıt kaldı");
+  assert.equal(await s.db.count("payment_ledger", {}), 1);
 });
 
 test("agency can still book a departure whose online sales are closed; web cannot", async (t) => {
@@ -221,4 +229,35 @@ test("request tracking: status changes and notes are kept with author and time",
   assert.equal(r.body.name, "Otel Müşteri");
   assert.equal((await s.overview()).newRequests, 0, "arandı durumundaki talep 'yeni' sayılmaz");
   await assert.rejects(s.updateRequest("00000000-0000-4000-8000-000000000000", { status: "lost" }, {}), (e) => e.status === 404);
+});
+
+test("monthly report: occupancy and revenue by tour date, cash by payment date, CSV-safe", async (t) => {
+  const { s, d } = await setup(t);
+  await s.adminReserve(base(d, { paymentMode: "full", seats: [1, 2], passengers: ["A Yolcu", "B Yolcu"], payment: { amount: 300000, method: "cash" }, confirm: true }), AGENT);
+  await s.adminReserve(base(d, { paymentMode: "on_tour", seats: [3], passengers: ["=HYPERLINK(1)"], name: "=CMD()", confirm: true }), AGENT);
+  const cancelled = await s.adminReserve(base(d, { seats: [4], passengers: ["İptal Eden"] }), AGENT);
+  await s.workflow.cancel(cancelled.reference);
+  const rep = await s.workflow.monthReport("2026-10");
+  const ani = rep.byTour.find((x) => x.tourId === "ani-cildir");
+  assert.equal(ani.departures >= 1, true);
+  assert.equal(ani.guests, 3, "iptal edilen sayılmaz");
+  assert.equal(ani.revenue, 450000);
+  assert.equal(ani.collected, 300000);
+  assert.equal(rep.cash.cash, 300000);
+  assert.equal(rep.cash.bankTransfer, 0);
+  assert.equal(rep.totals.cancelled, 1);
+  assert.equal(rep.totals.outstanding, 150000);
+  assert.equal((await s.workflow.monthReport("2026-11")).totals.reservations, 0);
+});
+
+test("agency booking: a late failure (reused bank reference) leaves no half-written booking in either Mongo mode", async (t) => {
+  const { s, d } = await setup(t);
+  const pay = (seat) =>
+    base(d, { paymentMode: "full", seats: [seat], passengers: ["Yolcu " + seat], payment: { amount: 150000, method: "bank_transfer", externalReference: "EFT-2026-001" }, confirm: true });
+  await s.adminReserve(pay(10), AGENT);
+  await assert.rejects(s.adminReserve(pay(11), AGENT), (e) => e.status === 409);
+  assert.equal((await s.availability(d.id)).seats.find((x) => x.number === 11).status, "available");
+  assert.equal(await s.db.count("reservations", {}), 1);
+  assert.equal(await s.db.count("payment_ledger", {}), 1);
+  assert.equal(await s.db.count("holds", {}), 0);
 });

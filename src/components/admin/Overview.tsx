@@ -6,12 +6,14 @@ import {
   ClipboardList,
   LoaderCircle,
   Plus,
+  QrCode,
   TriangleAlert,
   Users,
 } from "lucide-react";
 import { api } from "../../lib/api";
 import { currency, dateLabel } from "../../lib/types";
 import { PassengerList } from "./MobileApp";
+import { TicketScanner } from "./TicketScanner";
 
 type OverviewData = {
   today: string;
@@ -59,7 +61,8 @@ export function Overview({
 }) {
   const [data, setData] = useState<OverviewData | null>(null),
     [error, setError] = useState(""),
-    [passengers, setPassengers] = useState("");
+    [passengers, setPassengers] = useState(""),
+    [scanning, setScanning] = useState(false);
   useEffect(() => {
     const load = () =>
       api<OverviewData>("/admin/overview")
@@ -91,6 +94,9 @@ export function Overview({
         </button>
         <button className="btn btn-outline" onClick={() => go("departures", { create: true })}>
           <CalendarDays size={16} /> Sefer aç
+        </button>
+        <button className="btn btn-outline" onClick={() => setScanning(true)}>
+          <QrCode size={16} /> Bilet okut
         </button>
       </div>
       <div className="overview-cards">
@@ -170,6 +176,7 @@ export function Overview({
         )}
       </section>
       {passengers && <PassengerList departureId={passengers} onClose={() => setPassengers("")} />}
+      {scanning && <TicketScanner onClose={() => setScanning(false)} />}
     </div>
   );
 }

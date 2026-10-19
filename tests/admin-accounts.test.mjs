@@ -41,7 +41,7 @@ async function fixture(t, env = {}) {
     assert.equal(r.status, 201);
     return r.cookie;
   };
-  return { store, call, login, createOwner, advance: (ms) => (now += ms), now: () => now };
+  return { store, call, base, login, createOwner, advance: (ms) => (now += ms), now: () => now };
 }
 
 test("shared password only bootstraps the first owner, then stops working", async (t) => {
@@ -167,4 +167,37 @@ test("operations cannot reach owner-only routes with case, trailing-slash or dou
   assert.equal(roleAllows("operations", "post", "/api/ADMIN/USERS/"), false);
   assert.equal(roleAllows("guide", "GET", "/api/admin/RESERVATIONS"), false);
   assert.equal(roleAllows("operations", "GET", "/api/admin/reservations"), true);
+});
+
+test("remember this device: long session only with 2FA; sessions listed and others revocable", async (t) => {
+  const { call, base, createOwner, now } = await fixture(t);
+  await createOwner();
+  const ua = "Mozilla/5.0 (Linux; Android 14; Pixel 7 Build/AP1A; wv) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36 RotaKarsYonetim";
+  const loginRaw = (body) =>
+    fetch(base + "/admin/login", {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json", "X-Rota-Client": "web", "User-Agent": ua },
+    });
+  // 2FA kapalıyken "hatırla" istense de oturum 8 saat.
+  let res = await loginRaw({ email: OWNER.email, password: OWNER.password, remember: true });
+  assert.match(res.headers.get("set-cookie"), /Max-Age=28800/);
+  assert.equal((await res.json()).remembered, false);
+  const short = res.headers.get("set-cookie").split(";")[0];
+  // 2FA açılınca 14 gün.
+  const setup = await call("/admin/me/2fa/setup", { body: {}, cookie: short });
+  await call("/admin/me/2fa/enable", { body: { code: hotp(setup.json.secret, totpStep(now())) }, cookie: short });
+  res = await loginRaw({ email: OWNER.email, password: OWNER.password, code: hotp(setup.json.secret, totpStep(now()) + 1), remember: true });
+  assert.equal(res.status, 200, await res.clone().text());
+  assert.match(res.headers.get("set-cookie"), new RegExp("Max-Age=" + 14 * 86400));
+  const long = res.headers.get("set-cookie").split(";")[0];
+  const sessions = (await call("/admin/me/sessions", { cookie: long })).json;
+  const mine = sessions.find((s) => s.current);
+  assert.equal(mine.remember, true);
+  assert.equal(mine.device, "Android · Pixel 7 · uygulama");
+  assert.ok(sessions.length >= 2);
+  const revoked = await call("/admin/me/sessions/revoke-others", { body: {}, cookie: long });
+  assert.ok(revoked.json.removed >= 1);
+  assert.equal((await call("/admin/me", { cookie: short })).status, 401, "diğer oturum kapandı");
+  assert.equal((await call("/admin/me", { cookie: long })).status, 200, "bu oturum açık kaldı");
 });

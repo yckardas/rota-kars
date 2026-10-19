@@ -413,28 +413,54 @@ export async function openStore(
     },
     // Telefon/WhatsApp ile gelen müşteriyi acente panelden kaydeder: koltuk, kayıt,
     // isteğe bağlı tahsilat ve onay tek işlemde (biri olmazsa hiçbiri yazılmaz).
+    // Tek düğümlü Mongo'da işlem geri alınamaz: önce her şey doğrulanır, beklenmedik
+    // bir hata olursa yazılanlar telafi edilerek silinir.
     adminReserve(input, agent) {
       return tx(async () => {
+        const d = await departures.get(input.departureId, { allowClosed: true });
+        if (input.passengers.length !== input.seats.length)
+          throw new AppError(400, "Her seçili koltuk için bir yolcu adı girin.");
+        const total = d.price * input.seats.length,
+          deposit = input.paymentMode === "on_tour" ? 0 : input.paymentMode === "deposit" ? depositFor(total) : total,
+          paid = input.payment?.amount || 0;
+        if (paid > total) throw new AppError(400, "Tahsilat tutarı rezervasyon toplamını aşamaz.");
+        if (input.confirm && paid < deposit)
+          throw new AppError(
+            409,
+            "Onay için en az seçilen kapora/tam ödeme tutarının tahsilatı kaydedilmeli.",
+          );
         const h = await this.hold(input.departureId, input.seats, { agent: true });
-        const r = await this.reserve({
-          holdToken: h.token,
-          name: input.name,
-          email: input.email || "",
-          phone: input.phone,
-          passengers: input.passengers,
-          paymentMode: input.paymentMode,
-          agent,
-          notes: input.notes,
-        });
-        if (input.payment)
-          await workflow.payment(r.reference, {
-            amount: input.payment.amount,
-            method: input.payment.method,
-            externalReference: input.payment.externalReference || "PANEL-" + r.reference,
-            kind: "payment",
+        let r = null;
+        try {
+          r = await this.reserve({
+            holdToken: h.token,
+            name: input.name,
+            email: input.email || "",
+            phone: input.phone,
+            passengers: input.passengers,
+            paymentMode: input.paymentMode,
+            agent,
+            notes: input.notes,
           });
-        if (input.confirm) await workflow.confirm(r.reference);
-        return workflow.get(r.reference);
+          if (input.payment)
+            await workflow.payment(r.reference, {
+              amount: input.payment.amount,
+              method: input.payment.method,
+              externalReference: input.payment.externalReference || "PANEL-" + r.reference,
+              kind: "payment",
+            });
+          if (input.confirm) await workflow.confirm(r.reference);
+          return workflow.get(r.reference);
+        } catch (error) {
+          if (r) {
+            await db.remove("payment_ledger", { reservation_id: r.id });
+            await db.remove("reservation_audit", { reservation_id: r.id });
+            await db.remove("seat_locks", { owner: r.reference });
+            await db.remove("reservations", { _id: r.id });
+          }
+          await this.release(h.token);
+          throw error;
+        }
       });
     },
     async lookup(reference, email) {

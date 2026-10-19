@@ -44,6 +44,7 @@ export function AdminLogin({
     [password, setPassword] = useState(""),
     [code, setCode] = useState(""),
     [needsCode, setNeedsCode] = useState(false),
+    [remember, setRemember] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(initialNotice),
     [busy, setBusy] = useState(false),
@@ -62,6 +63,7 @@ export function AdminLogin({
         {
           email: email.trim(),
           password,
+          remember,
           ...(needsCode && code ? { code: code.trim() } : {}),
         },
       );
@@ -149,6 +151,13 @@ export function AdminLogin({
             <small>Doğrulama uygulamanızdaki 6 haneli kodu girin.</small>
           </label>
         )}
+        <label className="checkbox-label">
+          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+          <span>
+            Bu cihazı 14 gün hatırla
+            <small> · yalnız iki adımlı doğrulama açık hesaplarda; ortak cihazda seçmeyin</small>
+          </span>
+        </label>
         {error && (
           <p className="error" role="alert">
             {error}

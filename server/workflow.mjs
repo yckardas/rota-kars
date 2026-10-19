@@ -549,6 +549,76 @@ export async function createWorkflow(
         refunded: rs.reduce((n, r) => n + r.refunded_total, 0),
       };
     },
+    // Aylık rapor. Tur bazında: o ay yapılan seferlerin doluluğu ve cirosu (tur
+    // tarihine göre). Tahsilat: o ay kasaya giren/çıkan para (işlem tarihine göre).
+    async monthReport(month) {
+      const prefix = month + "-";
+      const ds = (await departures.list()).filter((d) => d.date.startsWith(prefix));
+      const rs = (await api.list({ all: true })).filter((r) => r.date?.startsWith(prefix));
+      const live = (r) => !["cancelled", "expired"].includes(r.status);
+      const byTour = tours
+        .map((t) => {
+          const tds = ds.filter((d) => d.tour_id === t.id),
+            trs = rs.filter((r) => r.tourId === t.id && live(r)),
+            capacity = tds.reduce((n, d) => n + d.vehicle.sellableSeats, 0),
+            guests = trs.reduce((n, r) => n + r.seats.length, 0);
+          return {
+            tourId: t.id,
+            tourName: t.name,
+            departures: tds.length,
+            capacity,
+            guests,
+            occupancy: capacity ? Math.round((guests / capacity) * 100) : 0,
+            reservations: trs.length,
+            revenue: trs.reduce((n, r) => n + r.total, 0),
+            collected: trs.reduce((n, r) => n + r.net_paid, 0),
+          };
+        })
+        .filter((x) => x.departures || x.reservations);
+      const start = Date.parse(month + "-01T00:00:00+03:00"),
+        [y, m] = month.split("-").map(Number),
+        end = Date.parse(`${m === 12 ? y + 1 : y}-${String(m === 12 ? 1 : m + 1).padStart(2, "0")}-01T00:00:00+03:00`);
+      const ledger = await db.find("payment_ledger", { created_at: { $gte: start, $lt: end } });
+      const sum = (kind, method) =>
+        ledger.filter((p) => p.kind === kind && (!method || p.method === method)).reduce((n, p) => n + Number(p.amount), 0);
+      const cancelled = rs.filter((r) => r.status === "cancelled");
+      return {
+        month,
+        totals: {
+          departures: ds.length,
+          capacity: byTour.reduce((n, x) => n + x.capacity, 0),
+          guests: byTour.reduce((n, x) => n + x.guests, 0),
+          reservations: byTour.reduce((n, x) => n + x.reservations, 0),
+          revenue: byTour.reduce((n, x) => n + x.revenue, 0),
+          outstanding: rs.filter(live).reduce((n, r) => n + Math.max(0, r.total - r.net_paid), 0),
+          cancelled: cancelled.length,
+          noShow: rs.filter((r) => r.status === "no_show").length,
+        },
+        cash: {
+          payments: sum("payment"),
+          refunds: sum("refund"),
+          net: sum("payment") - sum("refund"),
+          cash: sum("payment", "cash") - sum("refund", "cash"),
+          bankTransfer: sum("payment", "bank_transfer") - sum("refund", "bank_transfer"),
+        },
+        byTour,
+        reservations: rs
+          .sort((a, b) => (a.date + a.start_time).localeCompare(b.date + b.start_time))
+          .map((r) => ({
+            reference: r.reference,
+            date: r.date,
+            time: r.start_time,
+            tourName: tours.find((t) => t.id === r.tourId)?.name || r.tourId,
+            name: r.name,
+            phone: r.phone,
+            seats: r.seats.length,
+            status: r.status,
+            source: r.source || "web",
+            total: r.total,
+            paid: r.net_paid,
+          })),
+      };
+    },
     // Telefondaki yolcu listesi: arama/WhatsApp ve biniş işaretleme için.
     async passengerList(departureId) {
       const d = await departures.get(departureId, { allowClosed: true, allowPast: true }),

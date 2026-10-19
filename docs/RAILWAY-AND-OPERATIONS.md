@@ -56,6 +56,18 @@ BUCKET="${{buffered-basket.BUCKET}}"
 - **Saklama süreleri (günlük otomatik iş):** Ödemesiz iptal/süresi dolmuş ön rezervasyonlar 1 yıl, tahsilatlı kayıtlar 10 yıl sonra anonimleşir; talepler 2 yıl, gönderilmiş bildirimler 90 gün, denetim kaydı 2 yıl sonra silinir. Süreler `RETENTION_*` değişkenleriyle değiştirilebilir.
 - **Hukuki not:** Aydınlatma metni ve süreler uygulamayı yansıtır; yayından önce bir KVKK danışmanıyla teyit edilmeli, gerekiyorsa VERBİS kaydı ve ticari ileti için İYS kaydı değerlendirilmelidir.
 
+## Yönetim paneli özellikleri
+
+- **Özet:** Bugün kalkan seferler, onay bekleyenler (süresi yaklaşan önce), iptal talepleri, yeni talepler, 7 günlük doluluk. "Yeni rezervasyon", "Sefer aç", "Bilet okut" kısayolları.
+- **Panelden rezervasyon:** Telefon/WhatsApp müşterisi için sefer + koltuk seçimi; ödeme "turda / kapora / tam"; isteğe bağlı tahsilat kaydı ve anında onay. Satışı kapanmış (tarihi geçmemiş) sefere de eklenebilir. Bilet WhatsApp'tan tek tıkla gönderilir. Tek düğümlü Mongo'da işlem geri alınamadığı için önce doğrulanır, hata olursa yazılanlar telafi edilerek silinir.
+- **Arama/filtre:** Referans, ad, yolcu adı, e-posta, telefon (farklı yazımlar dahil) ve durum.
+- **Toplu sefer:** Tarih aralığı + hafta günleri (en fazla 6 ay / 200 sefer); aynı tur, gün ve saatte sefer varsa atlanır. Sefer planında takvim görünümü.
+- **Talepler:** Durum (Yeni / Arandı / Teklif verildi / Rezervasyona döndü / Kapandı) ve kim-ne zaman bilgili not geçmişi.
+- **Site içerikleri:** Tur adı, özet, program, dahil/hariç, fotoğraflar, başlayan fiyat (sahip + operasyon); iletişim bilgileri ve WhatsApp numarası (yalnız sahip). Düzenlemeler `site_content` koleksiyonunda tutulur; "Varsayılana dön" ile geri alınır.
+- **Aylık rapor:** Tur tarihine göre doluluk/ciro, işlem tarihine göre net tahsilat (nakit/havale); Excel'e aktarma (noktalı virgüllü UTF-8 CSV, formül enjeksiyonu engelli).
+- **Bilet okut:** Kamerayla bilet QR'ı okunur, bugünkü onaylı turda "Bindi" işaretlenir (rehber de kullanabilir). Kamera izni yalnız `/yonetim` sayfalarında açıktır.
+- **Bu cihazı hatırla:** İki adımlı doğrulaması açık hesaplarda oturum `ADMIN_REMEMBER_DAYS` (varsayılan 14, en fazla 30) gün sürer; aksi halde 8 saat. Hesabım → "Açık oturumlar" ile cihazlar görülür, "Diğer tüm oturumları kapat" ile kaybolan telefonun oturumu kesilir.
+
 ## Güvenlik kontrol listesi (yayın öncesi)
 
 - **`TRUST_PROXY=1` zorunlu.** Railway'in önündeki tek proxy gerçek istemci IP'sini ekler; bu ayar olmadan tüm kullanıcılar tek IP gibi görünür.

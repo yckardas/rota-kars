@@ -16,6 +16,8 @@ Kod: `mobile/` · Paket adı: `com.rotakars.yonetim`
 - **Bildirimler** (yalnız sahip ve operasyon rolü): yeni ön rezervasyon, iptal, gelen talep,
   yeni Google yorumu. Bildirime dokununca panel açılır. Hesabım → "Telefon bildirimleri"
   kartında test bildirimi gönderilebilir ve kayıtlı telefonlar görülür.
+- **Bilet okut:** Özet veya Günlük ekranından kamerayla bilet QR'ı okutulur; ilk kullanımda kamera izni istenir.
+- **Bu cihazı hatırla:** Girişte seçilirse (2FA açık hesaplarda) 14 gün yeniden giriş gerekmez.
 - Çıkış yapınca telefon bildirim listesinden çıkar. Bağlantı yoksa "İnternet bağlantısı yok"
   ekranı açılır.
 

@@ -95,3 +95,32 @@ test("business contact info: owner only, validated, survives a restart", async (
   assert.equal(business.whatsapp, "905551112233");
   await call("/admin/content/business", { body: current, cookie: owner });
 });
+
+test("monthly CSV opens in Excel (BOM, semicolons) and neutralises formulas", async (t) => {
+  const { store, owner, root } = await fixture(t);
+  const d = await store.departures.save({
+    tourId: "ani-cildir",
+    date: "2030-05-10",
+    startTime: "08:30",
+    pickup: "Kars",
+    guideName: "",
+    guidePhone: "",
+    price: 100000,
+    vehicleModel: "vip-midibus",
+    passengerSeats: 18,
+    active: true,
+  });
+  await store.adminReserve(
+    { departureId: d.id, seats: [1], name: "=HYPERLINK(\"http://x\")", phone: "05551112233", passengers: ["@SUM(1)"], paymentMode: "on_tour", confirm: true },
+    { id: "x", name: "Test" },
+  );
+  const res = await fetch(root + "/api/admin/reports/month.csv?month=2030-05", { headers: { Cookie: owner } });
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-disposition"), /rota-kars-rapor-2030-05\.csv/);
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  assert.deepEqual([...bytes.slice(0, 3)], [0xef, 0xbb, 0xbf], "UTF-8 BOM");
+  const text = new TextDecoder().decode(bytes);
+  assert.ok(text.includes('"\'=HYPERLINK(""http://x"")"'), "formül metne çevrilir");
+  assert.ok(!/;"=/.test(text));
+  assert.equal((await fetch(root + "/api/admin/reports/month.csv?month=2030-13", { headers: { Cookie: owner } })).status, 400);
+});

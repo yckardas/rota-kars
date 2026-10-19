@@ -360,6 +360,49 @@ export function attachAdvancedApi(
       r.json(await store.workflow.report(date));
     }),
   );
+  const month = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Ay YYYY-AA biçiminde olmalı.");
+  app.get(
+    "/api/admin/reports/month",
+    requireAdmin,
+    route(async (q, r) => r.json(await store.workflow.monthReport(month.parse(q.query.month)))),
+  );
+  // Excel'in doğrudan açtığı CSV: noktalı virgül ayraç, UTF-8 BOM, formül enjeksiyonu engelli.
+  app.get(
+    "/api/admin/reports/month.csv",
+    requireAdmin,
+    route(async (q, r) => {
+      const m = month.parse(q.query.month),
+        rep = await store.workflow.monthReport(m);
+      const cell = (v) => {
+        let s = String(v ?? "");
+        if (/^[\s]*[=+\-@\t\r]/.test(s)) s = "'" + s;
+        return '"' + s.replaceAll('"', '""') + '"';
+      };
+      const tl = (k) => (k / 100).toFixed(2).replace(".", ",");
+      const STATUS = { pending_agency: "Onay bekliyor", confirmed: "Onaylı", completed: "Tamamlandı", cancelled: "İptal", expired: "Süresi doldu", no_show: "Gelmedi" };
+      const rows = [
+        ["Rota Kars aylık rapor", m],
+        [],
+        ["Tur", "Sefer", "Kapasite", "Yolcu", "Doluluk %", "Rezervasyon", "Ciro (TL)", "Tahsil edilen (TL)"],
+        ...rep.byTour.map((x) => [x.tourName, x.departures, x.capacity, x.guests, x.occupancy, x.reservations, tl(x.revenue), tl(x.collected)]),
+        ["TOPLAM", rep.totals.departures, rep.totals.capacity, rep.totals.guests, rep.totals.capacity ? Math.round((rep.totals.guests / rep.totals.capacity) * 100) : 0, rep.totals.reservations, tl(rep.totals.revenue), ""],
+        [],
+        ["Ay içi tahsilat (işlem tarihine göre)"],
+        ["Tahsilat", tl(rep.cash.payments)],
+        ["İade", tl(rep.cash.refunds)],
+        ["Net", tl(rep.cash.net)],
+        ["Nakit (net)", tl(rep.cash.cash)],
+        ["Havale/EFT (net)", tl(rep.cash.bankTransfer)],
+        [],
+        ["Referans", "Tarih", "Saat", "Tur", "Müşteri", "Telefon", "Kişi", "Durum", "Kaynak", "Tutar (TL)", "Ödenen (TL)"],
+        ...rep.reservations.map((x) => [x.reference, x.date, x.time, x.tourName, x.name, x.phone, x.seats, STATUS[x.status] || x.status, x.source === "agency" ? "Panel" : "Site", tl(x.total), tl(x.paid)]),
+      ];
+      r.set({
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="rota-kars-rapor-${m}.csv"`,
+      }).send("\ufeff" + rows.map((row) => row.map(cell).join(";")).join("\r\n"));
+    }),
+  );
   app.get(
     "/api/admin/departures/:id/passengers",
     requireAdmin,

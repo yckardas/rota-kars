@@ -29,13 +29,16 @@ import {
   X,
   LayoutDashboard,
   FileText,
+  BarChart3,
 } from "lucide-react";
+import { MonthReport } from "../components/admin/MonthReport";
 import { ContentManager } from "../components/admin/ContentManager";
 import { Overview } from "../components/admin/Overview";
 import { RequestManager, type RequestRecord } from "../components/admin/RequestManager";
 import {
   AppUpdateBanner,
   PushSettings,
+  SessionList,
 } from "../components/admin/MobileApp";
 import { disablePush, enablePush, isNativeApp } from "../lib/native";
 import { TourOperations } from "../components/TourOperations";
@@ -74,6 +77,7 @@ const ALL_TABS = [
   ["reservations", "Rezervasyonlar", Ticket],
   ["departures", "Sefer planı", Bus],
   ["daily", "Günlük operasyon", ClipboardList],
+  ["reports", "Aylık rapor", BarChart3],
   ["campaigns", "Kampanyalar", Ticket],
   ["notifications", "Bildirim kuyruğu", MessageSquareText],
   ["operations", "Tur ve araç planı", Bus],
@@ -368,6 +372,7 @@ export function Admin({
         {tab === "account" && (
           <PushSettings canReceive={canReceivePush} onOpen={openFromNotification} />
         )}
+        {tab === "account" && !me.bootstrap && <SessionList />}
         {tab === "users" && <UserManager currentId={me.user.id} />}
         {tab === "audit" && <AuditLog />}
         {tab === "kvkk" && <KvkkTools />}
@@ -397,6 +402,7 @@ export function Admin({
         )}
         {tab === "campaigns" && <CampaignManager catalog={catalog} />}
         {tab === "daily" && <DailyReport catalog={catalog} />}
+        {tab === "reports" && <MonthReport />}
         {tab === "notifications" && <NotificationManager />}
         {tab === "requests" && data && (
           <RequestManager key={data.requests.length + ":" + nav.n} initial={data.requests} />
