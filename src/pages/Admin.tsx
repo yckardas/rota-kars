@@ -28,8 +28,11 @@ import {
   Menu,
   X,
   LayoutDashboard,
+  FileText,
 } from "lucide-react";
+import { ContentManager } from "../components/admin/ContentManager";
 import { Overview } from "../components/admin/Overview";
+import { RequestManager, type RequestRecord } from "../components/admin/RequestManager";
 import {
   AppUpdateBanner,
   PushSettings,
@@ -61,21 +64,6 @@ import {
   type Reservation,
   type ReviewsResponse,
 } from "../lib/types";
-type RequestRecord = {
-  id: string;
-  kind: string;
-  status: string;
-  created_at: number;
-  body: {
-    name: string;
-    email: string;
-    phone: string;
-    checkIn: string;
-    checkOut?: string;
-    guests: number;
-    notes: string;
-  };
-};
 type Dashboard = {
   reservations: Reservation[];
   requests: RequestRecord[];
@@ -89,6 +77,7 @@ const ALL_TABS = [
   ["campaigns", "Kampanyalar", Ticket],
   ["notifications", "Bildirim kuyruğu", MessageSquareText],
   ["operations", "Tur ve araç planı", Bus],
+  ["content", "Site içerikleri", FileText],
   ["requests", "Gelen talepler", ClipboardList],
   ["hotels", "Anlaşmalı oteller", BedDouble],
   ["reviews", "Google yorumları", MessageSquareText],
@@ -410,41 +399,7 @@ export function Admin({
         {tab === "daily" && <DailyReport catalog={catalog} />}
         {tab === "notifications" && <NotificationManager />}
         {tab === "requests" && data && (
-          <div className="admin-requests">
-            {data.requests.length ? (
-              data.requests.map((r) => (
-                <article key={r.id}>
-                  <div className="section-heading">
-                    <h3>
-                      {r.kind === "hotel"
-                        ? "Konaklama"
-                        : r.kind === "vehicle"
-                          ? "Araç kiralama"
-                          : "Özel tur"}{" "}
-                      talebi
-                    </h3>
-                    <small>
-                      {new Date(r.created_at).toLocaleDateString("tr-TR")}
-                    </small>
-                  </div>
-                  <strong>{r.body.name}</strong>
-                  <p>
-                    {r.body.email} · {r.body.phone}
-                  </p>
-                  <p>
-                    {dateLabel(r.body.checkIn)}
-                    {r.body.checkOut
-                      ? " — " + dateLabel(r.body.checkOut)
-                      : ""}{" "}
-                    · {r.body.guests} kişi
-                  </p>
-                  <p className="muted">{r.body.notes || "Ek not yok."}</p>
-                </article>
-              ))
-            ) : (
-              <p className="admin-empty">Henüz talep bulunmuyor.</p>
-            )}
-          </div>
+          <RequestManager key={data.requests.length + ":" + nav.n} initial={data.requests} />
         )}
         {tab === "hotels" && data && (
           <>
@@ -582,6 +537,9 @@ export function Admin({
         )}
         {tab === "operations" && <TourOperations onChange={refreshCatalog} />}
         {tab === "instagram" && <InstagramManager catalog={catalog} />}
+        {tab === "content" && (
+          <ContentManager catalog={catalog} isOwner={me.user.role === "owner"} onSaved={refreshCatalog} />
+        )}
         {tab === "integrations" && (
           <div className="integration-list">
             <article>

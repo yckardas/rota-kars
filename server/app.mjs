@@ -27,7 +27,7 @@ import { vehicleModels } from "./operations.mjs";
 import { attachSocialAuth, cookieValue } from "./social-auth.mjs";
 import { createTurnstile } from "./turnstile.mjs";
 import { normalizeInstagramUrl, createInstagramFeed } from "./instagram.mjs";
-import { AppError } from "./store.mjs";
+import { AppError, REQUEST_STATUS } from "./store.mjs";
 import { createReviewsService } from "./reviews.mjs";
 import { paymentStatus, createPayment, depositFor } from "./payments.mjs";
 const clean = z.string().trim().min(2).max(100),
@@ -1005,6 +1005,105 @@ export function createApp(
     "/api/admin/dashboard",
     requireAdmin,
     route(async (_q, r) => r.json(await store.dashboard())),
+  );
+  // Site içerikleri: tur metinleri/fotoğrafları (sahip + operasyon), iletişim bilgileri (sahip).
+  const line = (max) => z.string().trim().max(max);
+  const imagePath = z
+    .string()
+    .trim()
+    .max(200)
+    .regex(
+      /^\/(images\/[\w-]+(?:\/[\w-]+)*\.(?:webp|jpe?g|png)|media\/[0-9a-f-]{36}\.(?:jpg|png|webp|avif))$/,
+      "Geçersiz görsel yolu.",
+    );
+  const tourContent = z.object({
+    name: line(80).min(3),
+    subtitle: line(140),
+    category: line(30),
+    duration: line(40),
+    location: line(80),
+    season: line(40),
+    departure: line(20),
+    end: line(20),
+    price: z.number().int().min(0).max(100000000),
+    summary: line(1500).min(10),
+    image: imagePath,
+    gallery: z.array(imagePath).max(12),
+    included: z.array(line(160).min(1)).max(20),
+    excluded: z.array(line(160).min(1)).max(20),
+    itinerary: z
+      .array(z.object({ time: line(20), title: line(80).min(1), text: line(600) }))
+      .max(15),
+    note: line(600),
+  });
+  const tourParam = (q) => z.enum(tours.map((t) => t.id)).parse(q.params.id);
+  app.get(
+    "/api/admin/content/tours/:id",
+    requireAdmin,
+    route(async (q, r) => r.json(await store.content.tour(tourParam(q)))),
+  );
+  app.post(
+    "/api/admin/content/tours/:id",
+    requireAdmin,
+    route(async (q, r) => r.json(await store.content.saveTour(tourParam(q), tourContent.parse(q.body), q.admin))),
+  );
+  app.post(
+    "/api/admin/content/tours/:id/reset",
+    requireAdmin,
+    route(async (q, r) => r.json(await store.content.resetTour(tourParam(q)))),
+  );
+  const https = (host) =>
+    z.union([
+      z.literal(""),
+      z
+        .string()
+        .trim()
+        .max(300)
+        .url()
+        .refine((u) => {
+          try {
+            const url = new URL(u);
+            return url.protocol === "https:" && host.test(url.hostname);
+          } catch {
+            return false;
+          }
+        }, "Geçersiz bağlantı."),
+    ]);
+  const businessContent = z.object({
+    phone: line(30).min(7),
+    mobile: line(30),
+    email: z.string().trim().email().max(200),
+    address: line(200).min(5),
+    hours: line(120),
+    whatsapp: z.string().trim().regex(/^\d{10,15}$/, "WhatsApp numarasını ülke koduyla, yalnız rakam girin (ör. 905464802136)."),
+    whatsappLabel: line(40),
+    instagram: https(/(^|\.)instagram\.com$/),
+    facebook: https(/(^|\.)facebook\.com$/),
+    mapsUrl: https(/(^|\.)(google\.[a-z.]+|goo\.gl|maps\.app\.goo\.gl)$/),
+  });
+  app.get(
+    "/api/admin/content/business",
+    requireAdmin,
+    route(async (_q, r) => r.json(await store.content.business())),
+  );
+  app.post(
+    "/api/admin/content/business",
+    requireAdmin,
+    route(async (q, r) => r.json(await store.content.saveBusiness(businessContent.parse(q.body), q.admin))),
+  );
+  app.post(
+    "/api/admin/requests/:id",
+    requireAdmin,
+    route(async (q, r) => {
+      const input = z
+        .object({
+          status: z.enum(Object.keys(REQUEST_STATUS)).optional(),
+          note: z.string().trim().min(1).max(1000).optional(),
+        })
+        .refine((v) => v.status || v.note, "Durum veya not girin.")
+        .parse(q.body);
+      r.json(await store.updateRequest(z.string().uuid().parse(q.params.id), input, q.admin));
+    }),
   );
   app.get(
     "/api/admin/overview",

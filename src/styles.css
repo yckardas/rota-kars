@@ -7446,3 +7446,147 @@ input[type="radio"] {
     grid-template-columns: 1fr;
   }
 }
+.request-card.status-won,
+.request-card.status-lost {
+  opacity: 0.72;
+}
+.request-card.status-new {
+  border-color: #e7c27c;
+}
+.request-notes {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+.request-notes li {
+  padding: 8px 10px;
+  border-left: 3px solid var(--line);
+  background: #f7f6f1;
+}
+.request-notes small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+}
+.request-note-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.request-note-form input {
+  flex: 1;
+  min-width: 0;
+}
+.admin-requests + .status-filters,
+.status-filters + .admin-requests {
+  margin-top: 14px;
+}
+.content-picker select {
+  max-width: 420px;
+}
+.content-editor {
+  display: grid;
+  gap: 14px;
+}
+.content-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.content-head h2 {
+  margin: 0;
+  font-size: 22px;
+}
+.content-images,
+.content-itinerary {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px 14px;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+.content-images legend,
+.content-itinerary legend {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 6px;
+}
+.content-cover {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.content-cover img {
+  width: 180px;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.content-cover span {
+  display: grid;
+  gap: 8px;
+}
+.content-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
+}
+.content-gallery figure {
+  margin: 0;
+  position: relative;
+}
+.content-gallery img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+.content-gallery figure > div {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  display: flex;
+  gap: 4px;
+}
+.content-gallery .icon-btn,
+.itinerary-tools .icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: white;
+  border: 1px solid var(--line);
+  display: inline-grid;
+  place-items: center;
+}
+.itinerary-row {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eef0ea;
+}
+.itinerary-row textarea {
+  grid-column: 1 / -1;
+}
+.itinerary-tools {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+@media (max-width: 760px) {
+  .content-editor .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .content-cover img {
+    width: 100%;
+  }
+}

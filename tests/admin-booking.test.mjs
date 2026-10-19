@@ -206,3 +206,19 @@ test("HTTP: bulk departures by weekday, duplicates skipped; guides cannot create
   assert.equal((await call("/admin/departures/bulk", { body: plan, cookie: guide })).status, 403);
   assert.equal((await call("/admin/overview", { cookie: guide })).status, 403);
 });
+
+test("request tracking: status changes and notes are kept with author and time", async (t) => {
+  const { s, advance } = await setup(t);
+  const { reference } = await s.request("hotel", { name: "Otel Müşteri", email: "o@example.com", phone: "05551112233", guests: 2 });
+  const row = (await s.db.find("requests", {}))[0];
+  assert.ok(reference);
+  let r = await s.updateRequest(row.id, { status: "contacted" }, { name: "Ayşe" });
+  advance(60000);
+  r = await s.updateRequest(row.id, { note: "Fiyat WhatsApp'tan gönderildi" }, { name: "Ayşe" });
+  assert.equal(r.status, "contacted");
+  assert.deepEqual(r.notes.map((n) => n.text), ["Durum: Arandı", "Fiyat WhatsApp'tan gönderildi"]);
+  assert.equal(r.notes[1].by, "Ayşe");
+  assert.equal(r.body.name, "Otel Müşteri");
+  assert.equal((await s.overview()).newRequests, 0, "arandı durumundaki talep 'yeni' sayılmaz");
+  await assert.rejects(s.updateRequest("00000000-0000-4000-8000-000000000000", { status: "lost" }, {}), (e) => e.status === 404);
+});

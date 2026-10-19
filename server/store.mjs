@@ -14,12 +14,20 @@ import { createAdminAuth } from "./admin-auth.mjs";
 import { createPrivacy } from "./privacy.mjs";
 import { depositFor } from "./payments.mjs";
 import { createPush } from "./push.mjs";
+import { createContent } from "./content.mjs";
 export class AppError extends Error {
   constructor(status, message) {
     super(message);
     this.status = status;
   }
 }
+export const REQUEST_STATUS = {
+  new: "Yeni",
+  contacted: "Arandı",
+  offered: "Teklif verildi",
+  won: "Rezervasyona döndü",
+  lost: "Kapandı",
+};
 export async function openStore(
   path = undefined,
   { clock = Date.now, seed = true, env = process.env, pushFetch = fetch } = {},
@@ -106,6 +114,7 @@ export async function openStore(
   ]);
   const push = createPush(db, { env, clock, fetchImpl: pushFetch });
   const notifications = await createNotifications(db, { clock, tx, env, push });
+  const content = await createContent(db, { clock });
   const accountSecurity = await createAccountSecurity(db, {
     clock,
     tx,
@@ -187,6 +196,7 @@ export async function openStore(
     privacy,
     notifications,
     push,
+    content,
     accountSecurity,
     members,
     db,
@@ -524,6 +534,24 @@ export async function openStore(
           capacity: upcoming.reduce((n, d) => n + seatsOf(d), 0),
         },
       };
+    },
+    // Talep takibi: durum ve not geçmişi (kim, ne zaman).
+    async updateRequest(id, { status, note }, actor) {
+      return tx(async () => {
+        const row = await db.one("requests", { _id: id });
+        if (!row) throw new AppError(404, "Talep bulunamadı.");
+        const notes = Array.isArray(row.notes) ? row.notes : [];
+        const set = { updated_at: clock() };
+        if (status && status !== row.status) {
+          set.status = status;
+          notes.push({ at: clock(), by: actor?.name || "Yönetici", text: "Durum: " + REQUEST_STATUS[status] });
+        }
+        if (note) notes.push({ at: clock(), by: actor?.name || "Yönetici", text: String(note).slice(0, 1000) });
+        set.notes = notes.slice(-50);
+        await db.update("requests", { _id: id }, set);
+        const updated = await db.one("requests", { _id: id });
+        return { ...updated, body: fromJson(updated.body, {}) };
+      });
     },
     async dashboard() {
       await cleanup();
