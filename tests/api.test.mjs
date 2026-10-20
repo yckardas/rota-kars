@@ -415,3 +415,33 @@ test("security headers on every response, CSP only in production; health checks 
   assert.match(p.headers.get("content-security-policy"), /frame-ancestors 'self'/);
   assert.match(p.headers.get("content-security-policy"), /script-src 'self' https:\/\/challenges\.cloudflare\.com;/);
 });
+
+test("CSRF origin: configured https site works behind a proxy even without TRUST_PROXY; other sites are refused", async (t) => {
+  const { createApp } = await import("../server/app.mjs");
+  const { openStore } = await import("../server/store.mjs");
+  const { once } = await import("node:events");
+  const store = await openStore(":memory:", { seed: false });
+  const app = createApp(store, {
+    env: { ADMIN_PASSWORD: "ilk-kurulum-parolasi", PUBLIC_BASE_URL: "https://rotakarsturizm.com", SITE_URL: "https://rotakarsturizm.com/" },
+    reviewsService: { get: async () => ({ status: "not_configured", reviews: [] }) },
+  });
+  const server = app.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(async () => {
+    await new Promise((r) => server.close(r));
+    await store.db.close();
+  });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  // Railway: tarayıcı https ile gelir, proxy sunucuya http ile iletir.
+  // Sunucu kendini http://127.0.0.1:… sanıyor; tarayıcı ise https://rotakarsturizm.com diyor.
+  const login = (origin) =>
+    fetch(base + "/api/admin/login", {
+      method: "POST",
+      body: JSON.stringify({ password: "ilk-kurulum-parolasi" }),
+      headers: { "Content-Type": "application/json", "X-Rota-Client": "web", Origin: origin },
+    });
+  assert.equal((await login("https://rotakarsturizm.com")).status, 200);
+  assert.equal((await login("https://evil.example")).status, 403);
+  assert.equal((await login("https://rotakarsturizm.com.evil.example")).status, 403);
+  assert.equal((await login(base)).status, 200, "sunucunun kendi adresi yine kabul");
+});

@@ -187,6 +187,20 @@ export function createApp(
     next();
   });
   if (env.TRUST_PROXY === "1") app.set("trust proxy", 1);
+  // CSRF: istek yalnız sitenin kendi adresinden gelebilir. Ayarlı site adresleri her
+  // zaman kabul edilir (TRUST_PROXY eksik olsa da https girişi kırılmaz).
+  const configuredOrigins = [env.PUBLIC_BASE_URL, env.SITE_URL]
+    .map((u) => {
+      try {
+        return /^https?:\/\//.test(u || "") ? new URL(u).origin : null;
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+  const sameSite = (req) =>
+    req.headers.origin === `${req.protocol}://${req.headers.host}` ||
+    configuredOrigins.includes(req.headers.origin);
   app.use(
     "/api/auth/callback",
     express.urlencoded({
@@ -208,10 +222,7 @@ export function createApp(
     const appleCallback =
       req.path === "/auth/callback/apple" && req.method === "POST";
     if (req.method !== "GET" && req.method !== "HEAD" && !appleCallback) {
-      if (
-        req.headers.origin &&
-        req.headers.origin !== `${req.protocol}://${req.headers.host}`
-      )
+      if (req.headers.origin && !sameSite(req))
         return res.status(403).json({
           message: "Bu kaynaktan işlem yapılamaz.",
         });

@@ -9,6 +9,10 @@ const port = Number(process.env.PORT || 5173),
   store = await openStore(),
   app = createApp(store);
 if (process.env.NODE_ENV === "production") {
+  if (process.env.TRUST_PROXY !== "1")
+    console.warn(
+      "TRUST_PROXY=1 ayarlı değil: Railway gibi bir proxy arkasında istemci IP'si ve https doğru algılanmaz (giriş sınırları, güvenli çerezler).",
+    );
   if (!/^https:\/\//.test(process.env.PUBLIC_BASE_URL || ""))
     console.warn(
       "PUBLIC_BASE_URL ayarlı değil: e-posta ve bilet bağlantılarında https://rotakarsturizm.com kullanılacak.",
