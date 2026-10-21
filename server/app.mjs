@@ -26,6 +26,7 @@ import { createStorage, MEDIA_LIMITS } from "./storage.mjs";
 import { vehicleModels } from "./operations.mjs";
 import { attachSocialAuth, cookieValue } from "./social-auth.mjs";
 import { createTurnstile } from "./turnstile.mjs";
+import { fcmHint } from "./push.mjs";
 import { normalizeInstagramUrl, createInstagramFeed } from "./instagram.mjs";
 import { AppError, REQUEST_STATUS } from "./store.mjs";
 import { createReviewsService } from "./reviews.mjs";
@@ -887,7 +888,14 @@ export function createApp(
   app.get(
     "/api/admin/devices",
     requireAdmin,
-    route(async (q, r) => r.json({ enabled: store.push.enabled, devices: await store.push.devices(q.admin.id) })),
+    route(async (q, r) =>
+      r.json({
+        enabled: store.push.enabled,
+        status: store.push.status,
+        statusReason: store.push.statusReason,
+        devices: await store.push.devices(q.admin.id),
+      }),
+    ),
   );
   app.post(
     "/api/admin/devices",
@@ -914,13 +922,17 @@ export function createApp(
     route(async (q, r) => {
       realAdmin(q);
       if (!store.push.enabled)
-        throw new AppError(503, "Bildirim servisi (FIREBASE_SERVICE_ACCOUNT) ayarlı değil.");
-      r.json(
-        await store.push.notifyAdmins(
-          { title: "Rota Kars Yönetim", body: "Test bildirimi: bu telefon bildirim alıyor.", url: "/yonetim", kind: "test" },
-          { adminIds: [q.admin.id] },
-        ),
+        throw new AppError(
+          503,
+          store.push.status === "invalid"
+            ? "FIREBASE_SERVICE_ACCOUNT okunamadı: " + store.push.statusReason + "."
+            : "Bildirim servisi (FIREBASE_SERVICE_ACCOUNT) ayarlı değil.",
+        );
+      const result = await store.push.notifyAdmins(
+        { title: "Rota Kars Yönetim", body: "Test bildirimi: bu telefon bildirim alıyor.", url: "/yonetim", kind: "test" },
+        { adminIds: [q.admin.id] },
       );
+      r.json({ ...result, errors: result.errors.map((e) => ({ ...e, hint: fcmHint(e.code) })) });
     }),
   );
   const adminPassword = z.string().min(12, "Yönetici parolası en az 12 karakter olmalı.").max(200);

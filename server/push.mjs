@@ -3,29 +3,69 @@
 // (düz veya base64). Ayarlı değilse bildirimler sessizce atlanır.
 // Bildirimler yalnız sahip ve operasyon rolündeki, aktif yöneticilerin
 // cihazlarına gider; rehberler müşteri bilgisi içeren bildirim almaz.
-import { createHash, createSign } from "node:crypto";
+import { createHash, createPrivateKey, createSign } from "node:crypto";
 
 const RECIPIENT_ROLES = ["owner", "operations"];
 const tokenId = (token) => createHash("sha256").update(String(token)).digest("hex");
 
-function readServiceAccount(raw) {
-  if (!raw) return null;
-  try {
-    const text = raw.trim().startsWith("{") ? raw : Buffer.from(raw, "base64").toString("utf8");
-    const account = JSON.parse(text);
-    if (!account.project_id || !account.client_email || !account.private_key) return null;
-    return { ...account, private_key: account.private_key.replaceAll("\\n", "\n") };
-  } catch {
-    return null;
+// Railway/.env biçimleri farklı olabilir: düz JSON, base64, satır sonları gerçek
+// yeni satıra dönüşmüş JSON. Okunamazsa nedeni döner (ekranda ve log'da gösterilir).
+export function readServiceAccount(raw) {
+  if (!raw || !String(raw).trim()) return { account: null, status: "missing" };
+  let text = String(raw).trim();
+  if (!text.startsWith("{")) {
+    try {
+      text = Buffer.from(text, "base64").toString("utf8").trim();
+    } catch {
+      return { account: null, status: "invalid", reason: "base64 çözülemedi" };
+    }
   }
+  let data = null;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    // Anahtarın içindeki "\n" kaçışları gerçek satır sonuna dönüşmüşse JSON bozulur:
+    // gerekli üç alan doğrudan metinden okunur.
+    const field = (name) => text.match(new RegExp(`"${name}"\\s*:\\s*"([^"]+)"`))?.[1];
+    const key = text.match(/-----BEGIN PRIVATE KEY-----[\s\S]+?-----END PRIVATE KEY-----/)?.[0];
+    if (field("project_id") && field("client_email") && key)
+      data = { project_id: field("project_id"), client_email: field("client_email"), private_key: key };
+  }
+  if (!data?.project_id || !data?.client_email || !data?.private_key)
+    return { account: null, status: "invalid", reason: "project_id, client_email veya private_key bulunamadı" };
+  // Anahtar gövdesi her biçimde düzgün PEM'e çevrilir.
+  const body = data.private_key
+    .replaceAll("\\n", "\n")
+    .replace(/-----(BEGIN|END) PRIVATE KEY-----/g, "")
+    .replace(/[^A-Za-z0-9+/=]/g, "");
+  const pem = `-----BEGIN PRIVATE KEY-----\n${body.match(/.{1,64}/g)?.join("\n")}\n-----END PRIVATE KEY-----\n`;
+  try {
+    createPrivateKey(pem);
+  } catch {
+    return { account: null, status: "invalid", reason: "private_key geçerli bir anahtar değil" };
+  }
+  return { account: { project_id: data.project_id, client_email: data.client_email, private_key: pem }, status: "ok" };
 }
 
+// Firebase hata kodlarının Türkçe açıklaması (test bildiriminde ekranda gösterilir).
+const FCM_HINTS = {
+  SERVICE_DISABLED: "Google Cloud'da Firebase Cloud Messaging API kapalı. Firebase → Project settings → Cloud Messaging ekranından etkinleştirin.",
+  PERMISSION_DENIED: "Hizmet hesabının bildirim gönderme yetkisi yok. Firebase'den yeni bir özel anahtar oluşturun.",
+  SENDER_ID_MISMATCH: "Telefondaki uygulama başka bir Firebase projesine bağlı (google-services.json ile anahtar farklı projelerden).",
+  UNREGISTERED: "Telefonun bildirim kaydı geçersiz; uygulamada bildirimleri yeniden açın.",
+  invalid_grant: "Firebase anahtarı reddedildi (silinmiş ya da hatalı). Yeni bir özel anahtar oluşturup Railway'e girin.",
+};
+export const fcmHint = (code) => FCM_HINTS[code] || null;
+
 export function createPush(db, { env = process.env, fetchImpl = fetch, clock = Date.now } = {}) {
-  const account = readServiceAccount(env.FIREBASE_SERVICE_ACCOUNT);
+  const config = readServiceAccount(env.FIREBASE_SERVICE_ACCOUNT),
+    account = config.account;
   let accessToken = null,
     tokenExpires = 0;
   const log = (level, message, extra = {}) =>
     console[level === "error" ? "error" : "log"](JSON.stringify({ level, job: "push", message, ...extra }));
+  if (config.status === "invalid") log("error", "FIREBASE_SERVICE_ACCOUNT okunamadı: " + config.reason);
+  else if (config.status === "ok") log("info", "Bildirim servisi hazır (proje: " + account.project_id + ")");
 
   async function oauthToken() {
     if (accessToken && clock() < tokenExpires) return accessToken;
@@ -52,7 +92,11 @@ export function createPush(db, { env = process.env, fetchImpl = fetch, clock = D
       signal: AbortSignal.timeout(10000),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data.access_token) throw new Error(`Firebase yetkilendirmesi başarısız (${res.status})`);
+    if (!res.ok || !data.access_token) {
+      const error = new Error(`Firebase yetkilendirmesi başarısız (${res.status} ${data.error || ""})`.trim());
+      error.code = data.error || "auth_failed";
+      throw error;
+    }
     accessToken = data.access_token;
     tokenExpires = clock() + ((data.expires_in || 3600) - 120) * 1000;
     return accessToken;
@@ -79,18 +123,28 @@ export function createPush(db, { env = process.env, fetchImpl = fetch, clock = D
       },
     );
     if (res.ok) return "sent";
-    const error = await res.json().catch(() => ({}));
-    const code = error?.error?.details?.find((d) => d.errorCode)?.errorCode || error?.error?.status;
-    // Uygulama kaldırılmış veya token yenilenmiş: cihaz kaydı silinir.
-    if (res.status === 404 || code === "UNREGISTERED" || code === "INVALID_ARGUMENT") {
+    const reply = await res.json().catch(() => ({}));
+    const reason = reply?.error?.details?.find((d) => d.reason)?.reason;
+    const code = reply?.error?.details?.find((d) => d.errorCode)?.errorCode || reason || reply?.error?.status;
+    // Yalnız telefon kaydı gerçekten geçersizse silinir (uygulama kaldırıldı/token yenilendi).
+    // Mesaj içeriği hatası da INVALID_ARGUMENT döndürdüğü için yalnız token mesajı sayılır.
+    const badToken =
+      code === "UNREGISTERED" ||
+      (res.status === 404 && code !== "SERVICE_DISABLED") ||
+      (code === "INVALID_ARGUMENT" && /registration token/i.test(reply?.error?.message || ""));
+    if (badToken) {
       await db.remove("push_devices", { _id: device.id });
       return "removed";
     }
-    throw new Error(`FCM ${res.status} ${code || ""}`.trim());
+    const error = new Error(`FCM ${res.status} ${code || ""} ${reply?.error?.message || ""}`.trim().slice(0, 300));
+    error.code = code;
+    throw error;
   }
 
   const api = {
     enabled: Boolean(account),
+    status: config.status,
+    statusReason: config.reason || null,
     async register(adminId, { token, platform = "android", label = "" }) {
       const id = tokenId(token);
       // Aynı telefon başka bir yöneticiyle giriş yaparsa kayıt yeni yöneticiye geçer.
@@ -116,22 +170,27 @@ export function createPush(db, { env = process.env, fetchImpl = fetch, clock = D
     removeForAdmin: (adminId) => db.remove("push_devices", { admin_id: adminId }),
     // Hata fırlatmaz: bildirim gönderilemezse işlem (rezervasyon vb.) etkilenmez.
     async notifyAdmins(message, { adminIds = null } = {}) {
-      if (!account) return { sent: 0, skipped: true };
+      if (!account) return { sent: 0, skipped: true, errors: [] };
       const admins = await db.find("admin_users", {
         role: { $in: RECIPIENT_ROLES },
         disabled: { $ne: true },
         ...(adminIds ? { _id: { $in: adminIds } } : {}),
       });
-      if (!admins.length) return { sent: 0 };
+      if (!admins.length) return { sent: 0, errors: [] };
       const devices = await db.find("push_devices", { admin_id: { $in: admins.map((a) => a.id) } });
-      let sent = 0;
+      let sent = 0,
+        removed = 0;
+      const errors = [];
       for (const device of devices)
         try {
-          if ((await sendTo(device, message)) === "sent") sent++;
+          const result = await sendTo(device, message);
+          if (result === "sent") sent++;
+          else removed++;
         } catch (error) {
-          log("error", String(error?.message || error), { kind: message.kind });
+          log("error", String(error?.message || error), { kind: message.kind, code: error?.code });
+          errors.push({ code: error?.code || "error", message: String(error?.message || error).slice(0, 300) });
         }
-      return { sent };
+      return { sent, removed, devices: devices.length, errors };
     },
   };
   return api;

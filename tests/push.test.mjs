@@ -186,3 +186,54 @@ test("roles: guides read the phone passenger list but not devices or CSV exports
   assert.equal(roleAllows("guide", "POST", "/api/admin/devices/test"), false);
   assert.equal(roleAllows("operations", "POST", "/api/admin/devices"), true);
 });
+
+test("service account is read from plain JSON, base64 and newline-mangled env values", async () => {
+  const { readServiceAccount } = await import("../server/push.mjs");
+  const plain = SERVICE_ACCOUNT;
+  assert.equal(readServiceAccount(plain).status, "ok");
+  assert.equal(readServiceAccount(Buffer.from(plain).toString("base64")).status, "ok");
+  // Railway: anahtardaki "\n" kaçışları gerçek satır sonuna dönüşmüş (JSON.parse başarısız).
+  const mangled = plain.replace(/\\n/g, "\n");
+  assert.throws(() => JSON.parse(mangled));
+  const fixed = readServiceAccount(mangled);
+  assert.equal(fixed.status, "ok");
+  assert.equal(fixed.account.project_id, "rota-test");
+  assert.equal(readServiceAccount("").status, "missing");
+  assert.equal(readServiceAccount('{"project_id":"x"}').status, "invalid");
+  assert.equal(
+    readServiceAccount(JSON.stringify({ project_id: "x", client_email: "a@b", private_key: "-----BEGIN PRIVATE KEY-----\nbozuk\n-----END PRIVATE KEY-----" })).status,
+    "invalid",
+  );
+});
+
+test("FCM errors are reported with a hint and do not silently drop the phone", async (t) => {
+  const firebase = fakeFirebase();
+  let mode = "disabled";
+  const fetchImpl = async (url, options) => {
+    if (url.includes("messages:send") && mode === "disabled")
+      return {
+        ok: false,
+        status: 403,
+        json: async () => ({ error: { status: "PERMISSION_DENIED", message: "API has not been used", details: [{ reason: "SERVICE_DISABLED" }] } }),
+      };
+    if (url.includes("messages:send") && mode === "payload")
+      return { ok: false, status: 400, json: async () => ({ error: { status: "INVALID_ARGUMENT", message: "Invalid value at 'message.android'" } }) };
+    return firebase.fetchImpl(url, options);
+  };
+  const store = await openStore(":memory:", { env: { FIREBASE_SERVICE_ACCOUNT: SERVICE_ACCOUNT }, pushFetch: fetchImpl });
+  t.after(() => store.db.close());
+  await addAdmin(store, "owner1", "owner");
+  await store.push.register("owner1", { token: TOKEN(1) });
+  let r = await store.push.notifyAdmins({ title: "t", body: "b", kind: "test" });
+  assert.equal(r.sent, 0);
+  assert.equal(r.errors[0].code, "SERVICE_DISABLED");
+  const { fcmHint } = await import("../server/push.mjs");
+  assert.match(fcmHint("SERVICE_DISABLED"), /Cloud Messaging API/);
+  mode = "payload";
+  r = await store.push.notifyAdmins({ title: "t", body: "b", kind: "test" });
+  assert.equal(r.errors[0].code, "INVALID_ARGUMENT");
+  assert.equal((await store.push.devices("owner1")).length, 1, "içerik hatası telefonu silmez");
+  mode = "ok";
+  r = await store.push.notifyAdmins({ title: "t", body: "b", kind: "test" });
+  assert.equal(r.sent, 1);
+});

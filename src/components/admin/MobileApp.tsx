@@ -35,12 +35,17 @@ export function PushSettings({
   canReceive: boolean;
   onOpen: (path: string) => void;
 }) {
-  const [info, setInfo] = useState<{ enabled: boolean; devices: Device[] } | null>(null),
+  const [info, setInfo] = useState<{
+      enabled: boolean;
+      status?: string;
+      statusReason?: string | null;
+      devices: Device[];
+    } | null>(null),
     [busy, setBusy] = useState(""),
     [message, setMessage] = useState(""),
     [error, setError] = useState("");
   const load = () =>
-    api<{ enabled: boolean; devices: Device[] }>("/admin/devices")
+    api<NonNullable<typeof info>>("/admin/devices")
       .then(setInfo)
       .catch((e) => setError(e.message));
   useEffect(() => {
@@ -64,12 +69,25 @@ export function PushSettings({
         );
         await load();
       } else {
-        const r = await post<{ sent: number }>("/admin/devices/test", {});
+        const r = await post<{
+          sent: number;
+          removed?: number;
+          devices?: number;
+          errors?: { code: string; message: string; hint: string | null }[];
+        }>("/admin/devices/test", {});
+        if (r.errors?.length) {
+          const e = r.errors[0];
+          setError(`Firebase gönderimi reddetti (${e.code}). ${e.hint || e.message}`);
+        } else if (r.removed && !r.sent)
+          setError("Telefonun bildirim kaydı geçersizdi ve silindi. Uygulamada \"Bu telefonda bildirimleri aç\" ile yeniden kaydedin.");
         setMessage(
           r.sent
-            ? `Test bildirimi ${r.sent} cihaza gönderildi.`
-            : "Kayıtlı cihaz bulunamadı. Önce uygulamada bildirimleri açın.",
+            ? `Test bildirimi ${r.sent} cihaza gönderildi. Birkaç saniye içinde telefona düşmeli.`
+            : r.devices
+              ? ""
+              : "Kayıtlı cihaz bulunamadı. Önce uygulamada \"Bu telefonda bildirimleri aç\" butonuna basın.",
         );
+        await load();
       }
     } catch (e) {
       setError((e as Error).message);
@@ -100,7 +118,9 @@ export function PushSettings({
       </p>
       {info && !info.enabled && (
         <p className="admin-banner" role="note">
-          Bildirim servisi sunucuda henüz ayarlı değil (Firebase).
+          {info.status === "invalid"
+            ? `Railway'deki FIREBASE_SERVICE_ACCOUNT okunamadı: ${info.statusReason}. Değeri yeniden girin (base64 önerilir).`
+            : "Bildirim servisi sunucuda henüz ayarlı değil (Railway'de FIREBASE_SERVICE_ACCOUNT)."}
         </p>
       )}
       <div className="push-actions">
