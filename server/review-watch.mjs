@@ -76,6 +76,7 @@ export function createReviewWatch({ db, notifications, env = process.env, fetchI
             `Toplam ${place.count} yorum · Ortalama ${place.rating ?? "-"}`,
           ].join("\n"),
           kind: "google_review",
+          pushUrl: "/yonetim?sekme=reviews",
           dedupeKey: "google-review:" + r.id,
         });
         sent.push(r.id);
@@ -90,6 +91,7 @@ export function createReviewWatch({ db, notifications, env = process.env, fetchI
             "Ayrıntı için Google İşletme Profili'ne bakın.",
           ].join("\n"),
           kind: "google_review",
+          pushUrl: "/yonetim?sekme=reviews",
           dedupeKey: "google-review-count:" + place.count,
         });
       await save();

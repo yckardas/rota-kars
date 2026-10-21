@@ -57,7 +57,7 @@ const timeLeft = (at: number) => {
 export function Overview({
   go,
 }: {
-  go: (tab: string, options?: { status?: string; create?: boolean }) => void;
+  go: (tab: string, options?: { status?: string; flag?: string; create?: boolean; ref?: string }) => void;
 }) {
   const [data, setData] = useState<OverviewData | null>(null),
     [error, setError] = useState(""),
@@ -106,7 +106,7 @@ export function Overview({
           <span>Onay bekleyen</span>
           {urgent > 0 && <small>{urgent} tanesinin süresi 6 saatten az</small>}
         </button>
-        <button className={"overview-card" + (data.cancellationRequests ? " attention" : "")} onClick={() => go("reservations", { status: "" })}>
+        <button className={"overview-card" + (data.cancellationRequests ? " attention" : "")} onClick={() => go("reservations", { flag: "cancel_request" })}>
           <TriangleAlert size={20} />
           <strong>{data.cancellationRequests}</strong>
           <span>İptal talebi</span>
@@ -166,6 +166,9 @@ export function Overview({
               <a className="btn btn-outline btn-small" href={"tel:" + p.phone.replace(/[^\d+]/g, "")}>
                 Ara
               </a>
+              <button className="btn btn-small" onClick={() => go("reservations", { ref: p.reference })}>
+                Aç
+              </button>
             </li>
           ))}
         </ul>

@@ -114,12 +114,17 @@ export type Reservation = {
   pickup?: string;
   guide_name?: string;
   cancellation_requested_at?: number;
+  checked_in_at?: number;
+  created_at?: number;
+  notes?: string;
+  source?: string;
   ledger?: {
     id: string;
     kind: string;
     amount: number;
     method: string;
     external_reference: string;
+    created_at?: number;
   }[];
   vehicle?: Vehicle | null;
   subtotal?: number;

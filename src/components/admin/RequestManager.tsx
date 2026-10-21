@@ -1,7 +1,9 @@
-import { useState, type FormEvent } from "react";
-import { LoaderCircle, Mail, MessageCircle, Phone } from "lucide-react";
-import { post } from "../../lib/api";
+import { useEffect, useState, type FormEvent } from "react";
+import { Download, LoaderCircle, Mail, MessageCircle, Phone } from "lucide-react";
+import { api, post } from "../../lib/api";
 import { dateLabel } from "../../lib/types";
+import { downloadCsv } from "../../lib/csv";
+import { isNativeApp } from "../../lib/native";
 
 export type RequestRecord = {
   id: string;
@@ -39,20 +41,45 @@ const wa = (phone: string) => {
 };
 
 // Gelen talepler: durum takibi, not geçmişi, tek dokunuşla arama/WhatsApp.
-export function RequestManager({ initial }: { initial: RequestRecord[] }) {
-  const [items, setItems] = useState(initial),
-    [filter, setFilter] = useState("open"),
+export function RequestManager({ initialQuery = "" }: { initialQuery?: string }) {
+  const [items, setItems] = useState<RequestRecord[] | null>(null),
+    [filter, setFilter] = useState(initialQuery ? "all" : "open"),
+    [search, setSearch] = useState(initialQuery),
     [busy, setBusy] = useState(""),
     [error, setError] = useState("");
-  const visible = items.filter((r) =>
-    filter === "open" ? !["won", "lost"].includes(r.status) : filter === "all" ? true : r.status === filter,
+  useEffect(() => {
+    api<{ requests: RequestRecord[] }>("/admin/dashboard")
+      .then((d) => setItems(d.requests))
+      .catch((e) => setError(e.message));
+  }, []);
+  const text = search.trim().toLocaleLowerCase("tr-TR");
+  const visible = (items || []).filter(
+    (r) =>
+      (filter === "open" ? !["won", "lost"].includes(r.status) : filter === "all" ? true : r.status === filter) &&
+      (!text || JSON.stringify(r.body).toLocaleLowerCase("tr-TR").includes(text)),
   );
+  const exportCsv = () =>
+    downloadCsv("talepler.csv", [
+      ["Tarih", "Tür", "Durum", "Ad", "Telefon", "E-posta", "Giriş", "Çıkış", "Kişi", "Not"],
+      ...visible.map((r) => [
+        new Date(r.created_at).toLocaleDateString("tr-TR"),
+        KIND[r.kind] || r.kind,
+        STATUS[r.status] || r.status,
+        r.body.name,
+        r.body.phone,
+        r.body.email,
+        r.body.checkIn,
+        r.body.checkOut,
+        r.body.guests,
+        r.body.notes,
+      ]),
+    ]);
   async function update(id: string, body: { status?: string; note?: string }) {
     setBusy(id);
     setError("");
     try {
       const next = await post<RequestRecord>("/admin/requests/" + id, body);
-      setItems((cur) => cur.map((r) => (r.id === id ? next : r)));
+      setItems((cur) => (cur || []).map((r) => (r.id === id ? next : r)));
       return true;
     } catch (e) {
       setError((e as Error).message);
@@ -69,6 +96,22 @@ export function RequestManager({ initial }: { initial: RequestRecord[] }) {
   }
   return (
     <>
+      <div className="desk-toolbar">
+        <label className="field reservation-search">
+          Ara
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Ad, telefon, e-posta veya not"
+          />
+        </label>
+        {!isNativeApp() && visible.length > 0 && (
+          <button className="text-link" onClick={exportCsv}>
+            <Download size={15} /> CSV
+          </button>
+        )}
+      </div>
       <div className="status-filters" role="group" aria-label="Talep durumu">
         {[
           ["open", "Açık"],
@@ -79,7 +122,7 @@ export function RequestManager({ initial }: { initial: RequestRecord[] }) {
         ].map(([id, label]) => (
           <button key={id} type="button" className={"chip" + (filter === id ? " active" : "")} aria-pressed={filter === id} onClick={() => setFilter(id)}>
             {label}
-            {id === "new" ? ` (${items.filter((r) => r.status === "new").length})` : ""}
+            {id === "new" ? ` (${(items || []).filter((r) => r.status === "new").length})` : ""}
           </button>
         ))}
       </div>
@@ -89,7 +132,8 @@ export function RequestManager({ initial }: { initial: RequestRecord[] }) {
         </p>
       )}
       <div className="admin-requests">
-        {visible.length === 0 && <p className="admin-empty">Bu filtrede talep yok.</p>}
+        {!items && !error && <p className="admin-empty">Yükleniyor…</p>}
+        {items && visible.length === 0 && <p className="admin-empty">Bu filtrede talep yok.</p>}
         {visible.map((r) => (
           <article key={r.id} className={"request-card status-" + r.status}>
             <div className="section-heading">

@@ -113,6 +113,11 @@ export function attachAdvancedApi(
       r.json(await store.departures.list(filters));
     }),
   );
+  app.delete(
+    "/api/admin/departures/:id",
+    requireAdmin,
+    route(async (q, r) => r.json(await store.departures.remove(z.string().min(1).max(100).parse(q.params.id)))),
+  );
   // Toplu sefer: tarih aralığında seçilen hafta günlerine aynı plan. Aynı tur, gün ve
   // saatte zaten sefer varsa atlanır. En fazla 186 gün ve 200 sefer.
   app.post(
@@ -227,6 +232,7 @@ export function attachAdvancedApi(
           date: ymd.optional(),
           status: z.enum(["pending_agency", "confirmed", "cancelled", "expired", "completed", "no_show"]).optional(),
           q: z.string().max(80).optional(),
+          flag: z.enum(["cancel_request", "balance"]).optional(),
         })
         .parse(q.query);
       await store.cleanup();
@@ -269,14 +275,19 @@ export function attachAdvancedApi(
       r.status(201).json(await receipt(created, q, env));
     }),
   );
-  for (const action of ["confirm", "cancel", "complete"])
+  for (const [action, method] of [
+    ["confirm", "confirm"],
+    ["cancel", "cancel"],
+    ["complete", "complete"],
+    ["no-show", "noShow"],
+  ])
     app.post(
       "/api/admin/reservations/:reference/" + action,
       requireAdmin,
       route(async (q, r) =>
         r.json(
           await receipt(
-            await store.workflow[action](q.params.reference),
+            await store.workflow[method](q.params.reference),
             q,
             env,
           ),

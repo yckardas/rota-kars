@@ -10,8 +10,17 @@ import {
   Mail,
   Users,
   QrCode,
+  Phone,
+  MessageCircle,
+  UserX,
+  Trash2,
 } from "lucide-react";
 import { TicketScanner } from "./admin/TicketScanner";
+import { useFeedback } from "./admin/feedback";
+import { Modal } from "./Modal";
+import { downloadCsv } from "../lib/csv";
+import { telHref, waNumber } from "../lib/phone";
+import { whatsappLink } from "../lib/whatsapp";
 import { api, post } from "../lib/api";
 import {
   currency,
@@ -51,13 +60,13 @@ export function DepartureManager({
   catalog: Catalog;
   startCreating?: boolean;
 }) {
+  const feedback = useFeedback();
   const [items, setItems] = useState<Departure[]>([]),
     [editing, setEditing] = useState<Departure | null | false>(startCreating ? null : false),
-    [error, setError] = useState(""),
-    [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
     [tourFilter, setTourFilter] = useState(""),
     [passengers, setPassengers] = useState(""),
+    [showPast, setShowPast] = useState(false),
     [view, setView] = useState<"calendar" | "list">("calendar");
   async function load() {
     setItems(
@@ -67,13 +76,30 @@ export function DepartureManager({
     );
   }
   useEffect(() => {
-    load().catch((e) => setError(e.message));
+    load().catch(feedback.error);
   }, [tourFilter]);
+  async function remove(d: Departure) {
+    const ok = await feedback.confirm({
+      title: "Sefer silinsin mi?",
+      body: `${dateLabel(d.date)} · ${d.start_time}. Rezervasyonu olan sefer silinmez; onu satışa kapatın.`,
+      confirmLabel: "Seferi sil",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api("/admin/departures/" + encodeURIComponent(d.id), { method: "DELETE" });
+      setEditing(false);
+      feedback.ok("Sefer silindi.");
+      await load();
+    } catch (e) {
+      feedback.error(e);
+    }
+  }
+  const listed = showPast ? items : items.filter((d) => d.date >= today());
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     setBusy(true);
-    setError("");
     try {
       // Yeni seferde "tekrarlayan" seçildiyse tarih aralığına toplu sefer açılır.
       if (!editing && f.get("repeat") === "on") {
@@ -92,7 +118,7 @@ export function DepartureManager({
           active: f.get("active") === "on",
         });
         setEditing(false);
-        setNotice(
+        feedback.ok(
           `${r.created} sefer açıldı` + (r.skipped ? `; ${r.skipped} tarihte aynı saatte sefer zaten vardı, atlandı.` : "."),
         );
         await load();
@@ -112,10 +138,10 @@ export function DepartureManager({
         active: f.get("active") === "on",
       });
       setEditing(false);
-      setNotice("Sefer kaydedildi.");
+      feedback.ok("Sefer kaydedildi.");
       await load();
     } catch (e) {
-      setError((e as Error).message);
+      feedback.error(e);
     } finally {
       setBusy(false);
     }
@@ -158,17 +184,13 @@ export function DepartureManager({
             </button>
           ))}
         </div>
+        {view === "list" && (
+          <label className="checkbox-label">
+            <input type="checkbox" checked={showPast} onChange={(e) => setShowPast(e.target.checked)} />
+            <span>Geçmiş seferleri de göster</span>
+          </label>
+        )}
       </div>
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
-      {notice && (
-        <p className="notice-success" role="status">
-          {notice}
-        </p>
-      )}
       {editing !== false && (
         <DepartureEditor
           key={editing?.id || "new"}
@@ -177,6 +199,7 @@ export function DepartureManager({
           save={save}
           busy={busy}
           cancel={() => setEditing(false)}
+          remove={editing ? () => remove(editing) : undefined}
         />
       )}
       {passengers && (
@@ -188,7 +211,6 @@ export function DepartureManager({
           catalog={catalog}
           onPick={(d) => {
             setEditing(d);
-            setError("");
             window.scrollTo({ top: 0, behavior: "smooth" });
           }}
         />
@@ -206,7 +228,7 @@ export function DepartureManager({
             </tr>
           </thead>
           <tbody>
-            {items.map((d) => (
+            {listed.map((d) => (
               <tr key={d.id}>
                 <td>
                   <strong>
@@ -241,7 +263,7 @@ export function DepartureManager({
                     className="text-link"
                     onClick={() => {
                       setEditing(d);
-                      setError("");
+                      window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
                   >
                     Düzenle
@@ -264,6 +286,7 @@ export function DepartureManager({
             ))}
           </tbody>
         </table>
+        {!listed.length && <p className="admin-empty">Gösterilecek sefer yok.</p>}
       </div>
     </>
   );
@@ -274,12 +297,14 @@ function DepartureEditor({
   save,
   busy,
   cancel,
+  remove,
 }: {
   catalog: Catalog;
   departure: Departure | null;
   save: (e: FormEvent<HTMLFormElement>) => void;
   busy: boolean;
   cancel: () => void;
+  remove?: () => void;
 }) {
   const [model, setModel] = useState(
       d?.vehicle?.modelId || catalog.vehicleModels[0].id,
@@ -447,6 +472,11 @@ function DepartureEditor({
         <button className="text-link" type="button" onClick={cancel}>
           Vazgeç
         </button>
+        {remove && (
+          <button className="text-link danger-text push-right" type="button" onClick={remove}>
+            <Trash2 size={15} /> Seferi sil
+          </button>
+        )}
       </div>
     </form>
   );
@@ -459,32 +489,60 @@ const statusLabels: Record<string, string> = {
   expired: "Süresi doldu",
   no_show: "Gelmedi",
 };
+// Durum ve hızlı filtreler tek sırada: "flag:" ile başlayanlar sunucuda ayrı süzülür.
 const STATUS_FILTERS = [
   ["", "Tümü"],
   ["pending_agency", "Onay bekleyen"],
+  ["flag:cancel_request", "İptal talebi"],
+  ["flag:balance", "Bakiyesi kalan"],
   ["confirmed", "Onaylı"],
   ["completed", "Tamamlandı"],
+  ["no_show", "Gelmedi"],
   ["cancelled", "İptal"],
 ] as const;
+const PAGE = 50;
+const AUDIT_LABELS: Record<string, string> = {
+  created: "Kayıt oluşturuldu",
+  confirmed: "Acente onayı verildi",
+  payment: "Tahsilat kaydedildi",
+  refund: "İade kaydedildi",
+  cancellation_requested: "Müşteri iptal talep etti",
+  cancelled: "İptal edildi",
+  moved: "Tarih/koltuk değiştirildi",
+  passengers_updated: "Yolcu adları güncellendi",
+  completed: "Tur tamamlandı",
+  checked_in: "Bilet okutuldu (bindi)",
+  no_show: "Gelmedi olarak işaretlendi",
+};
+const stamp = (ms?: number) =>
+  ms
+    ? new Date(ms).toLocaleString("tr-TR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
+    : "";
 export function ReservationManager({
   catalog,
   initialStatus = "",
+  initialFlag = "",
+  openRef = "",
   canCreate = true,
   startCreating = false,
 }: {
   catalog: Catalog;
   initialStatus?: string;
+  initialFlag?: string;
+  openRef?: string;
   canCreate?: boolean;
   startCreating?: boolean;
 }) {
+  const feedback = useFeedback();
   const [rows, setRows] = useState<Reservation[]>([]),
-    [selected, setSelected] = useState(""),
-    [error, setError] = useState(""),
+    [loading, setLoading] = useState(true),
+    [selected, setSelected] = useState(openRef.toUpperCase()),
     [busy, setBusy] = useState(false),
     [date, setDate] = useState(""),
-    [status, setStatus] = useState(initialStatus),
-    [search, setSearch] = useState(""),
-    [query, setQuery] = useState(""),
+    [filter, setFilter] = useState(initialFlag ? "flag:" + initialFlag : initialStatus),
+    [search, setSearch] = useState(openRef),
+    [query, setQuery] = useState(openRef),
+    [shown, setShown] = useState(PAGE),
     [creating, setCreating] = useState(startCreating);
   // Arama yazarken her tuşta değil, kısa bir duraksamadan sonra sorgulanır.
   useEffect(() => {
@@ -494,33 +552,61 @@ export function ReservationManager({
   async function load() {
     const params = new URLSearchParams();
     if (date) params.set("date", date);
-    if (status) params.set("status", status);
+    if (filter.startsWith("flag:")) params.set("flag", filter.slice(5));
+    else if (filter) params.set("status", filter);
     if (query) params.set("q", query);
-    setRows(await api<Reservation[]>("/admin/reservations" + (params.size ? "?" + params : "")));
+    try {
+      setRows(await api<Reservation[]>("/admin/reservations" + (params.size ? "?" + params : "")));
+    } catch (e) {
+      feedback.error(e);
+    } finally {
+      setLoading(false);
+    }
   }
   useEffect(() => {
-    load().catch((e) => setError(e.message));
-  }, [date, status, query]);
-  async function action(ref: string, path: string, body: unknown = {}) {
+    setShown(PAGE);
+    load();
+  }, [date, filter, query]);
+  async function action(ref: string, path: string, body: unknown = {}, done = "Kaydedildi.") {
     setBusy(true);
-    setError("");
     try {
       await post("/admin/reservations/" + ref + "/" + path, body);
       await load();
+      feedback.ok(done);
+      return true;
     } catch (e) {
-      setError((e as Error).message);
+      feedback.error(e);
+      return false;
     } finally {
       setBusy(false);
     }
+  }
+  const tourName = (id: string) => catalog.tours.find((t) => t.id === id)?.name || id;
+  function exportCsv() {
+    downloadCsv("rezervasyonlar-" + today() + ".csv", [
+      ["Referans", "Durum", "Tur", "Tarih", "Saat", "Koltuk", "Müşteri", "Telefon", "E-posta", "Yolcular", "Toplam", "Net tahsilat", "Kalan", "Not"],
+      ...rows.map((r) => [
+        r.reference,
+        statusLabels[r.status] || r.status,
+        tourName(r.tourId),
+        r.date,
+        r.start_time,
+        r.seats.join(" "),
+        r.name,
+        r.phone,
+        r.email,
+        r.passengers.join("; "),
+        (r.total / 100).toFixed(2),
+        ((r.net_paid || 0) / 100).toFixed(2),
+        ((r.balance_due || 0) / 100).toFixed(2),
+        r.notes,
+      ]),
+    ]);
   }
   const booking = rows.find((r) => r.reference === selected);
   return (
     <>
       <div className="desk-toolbar">
-        <p className="muted">
-          Tahsilat kaydı, acente onayı, tarih/koltuk değişikliği ve katılım
-          durumunu yönetin. Kart tahsilatı banka bağlantısı bekliyor.
-        </p>
         {canCreate && (
           <button className="btn" onClick={() => setCreating(true)}>
             <Plus size={16} />
@@ -537,40 +623,36 @@ export function ReservationManager({
             maxLength={80}
           />
         </label>
+        <label className="field">
+          Tur günü
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        </label>
+        <div className="desk-toolbar-actions">
+          <button className="text-link" onClick={load}>
+            <RefreshCw size={15} />
+            Yenile
+          </button>
+          {!isNativeApp() && rows.length > 0 && (
+            <button className="text-link" onClick={exportCsv}>
+              <Download size={15} />
+              CSV
+            </button>
+          )}
+        </div>
         <div className="status-filters" role="group" aria-label="Duruma göre filtre">
           {STATUS_FILTERS.map(([id, label]) => (
             <button
               key={id || "all"}
               type="button"
-              className={"chip" + (status === id ? " active" : "")}
-              aria-pressed={status === id}
-              onClick={() => setStatus(id)}
+              className={"chip" + (filter === id ? " active" : "")}
+              aria-pressed={filter === id}
+              onClick={() => setFilter(id)}
             >
               {label}
             </button>
           ))}
         </div>
-        <label className="field">
-          Tur gününe göre filtre
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
-        </label>
-        <button
-          className="text-link"
-          onClick={() => load().catch((e) => setError(e.message))}
-        >
-          <RefreshCw size={15} />
-          Yenile
-        </button>
       </div>
-      {error && (
-        <p role="alert" className="error">
-          {error}
-        </p>
-      )}
       <div className="desk-table-wrap">
         <table className="desk-table">
           <thead>
@@ -583,65 +665,79 @@ export function ReservationManager({
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.reference}>
-                <td>
-                  <strong>{r.reference}</strong>
-                  <small>
-                    {r.name} ·{" "}
-                    <a href={"tel:" + r.phone.replace(/[^\d+]/g, "")}>{r.phone}</a>
-                  </small>
-                  <small>{r.passengers.join(", ")}</small>
-                </td>
-                <td>
-                  {catalog.tours.find((t) => t.id === r.tourId)?.name}
-                  <small>
-                    {dateLabel(r.date)} · {r.start_time}
-                  </small>
-                  <small>Koltuk: {r.seats.join(", ")}</small>
-                </td>
-                <td>
-                  {currency(r.total)}
-                  <small>Net tahsilat: {currency(r.net_paid || 0)}</small>
-                  <small>Kalan: {currency(r.balance_due || 0)}</small>
-                </td>
-                <td>
-                  {statusLabels[r.status] || r.status}
-                  {Boolean(r.cancellation_requested_at) &&
-                    r.status !== "cancelled" && (
+            {rows.slice(0, shown).map((r) => {
+              const wa = waNumber(r.phone);
+              return (
+                <tr key={r.reference} className="clickable-row" onClick={() => setSelected(r.reference)}>
+                  <td>
+                    <strong>{r.reference}</strong>
+                    <small>
+                      {r.name} ·{" "}
+                      <a href={telHref(r.phone)} onClick={(e) => e.stopPropagation()}>
+                        {r.phone}
+                      </a>
+                      {wa && (
+                        <>
+                          {" · "}
+                          <a
+                            href={"https://wa.me/" + wa}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            WhatsApp
+                          </a>
+                        </>
+                      )}
+                    </small>
+                    <small>{r.passengers.join(", ")}</small>
+                    {r.notes && <small className="row-note">Not: {r.notes}</small>}
+                  </td>
+                  <td>
+                    {tourName(r.tourId)}
+                    <small>
+                      {dateLabel(r.date)} · {r.start_time}
+                    </small>
+                    <small>Koltuk: {r.seats.join(", ")}</small>
+                  </td>
+                  <td>
+                    {currency(r.total)}
+                    <small>Net tahsilat: {currency(r.net_paid || 0)}</small>
+                    {Number(r.balance_due) > 0 && <small>Kalan: {currency(r.balance_due || 0)}</small>}
+                  </td>
+                  <td>
+                    <span className={"status-tag status-" + r.status}>{statusLabels[r.status] || r.status}</span>
+                    {Boolean(r.cancellation_requested_at) && r.status !== "cancelled" && (
                       <small className="error">İptal talebi var</small>
                     )}
-                  {r.status === "cancelled" && Number(r.net_paid) > 0 && (
-                    <small>İade bekleyen: {currency(r.net_paid || 0)}</small>
-                  )}
-                </td>
-                <td>
-                  <button
-                    className="btn btn-outline btn-small"
-                    onClick={() => setSelected(r.reference)}
-                  >
-                    Yönet
-                  </button>
-                </td>
-              </tr>
-            ))}
+                    {r.status === "cancelled" && Number(r.net_paid) > 0 && (
+                      <small>İade bekleyen: {currency(r.net_paid || 0)}</small>
+                    )}
+                  </td>
+                  <td>
+                    <button className="btn btn-outline btn-small">Yönet</button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
-      {!rows.length && (
-        <p className="admin-empty">Bu filtrede rezervasyon yok.</p>
+      {loading && <p className="admin-empty">Yükleniyor…</p>}
+      {!loading && !rows.length && <p className="admin-empty">Bu filtrede rezervasyon yok.</p>}
+      {rows.length > shown && (
+        <button className="btn btn-outline load-more" onClick={() => setShown((n) => n + PAGE)}>
+          Daha fazla göster ({rows.length - shown} kayıt daha)
+        </button>
       )}
       {creating && (
-        <NewReservation
-          catalog={catalog}
-          onClose={() => setCreating(false)}
-          onCreated={() => load().catch(() => {})}
-        />
+        <NewReservation catalog={catalog} onClose={() => setCreating(false)} onCreated={load} />
       )}
       {booking && (
         <BookingControls
           key={booking.reference}
           booking={booking}
+          tourName={tourName(booking.tourId)}
           busy={busy}
           action={action}
           close={() => setSelected("")}
@@ -650,20 +746,24 @@ export function ReservationManager({
     </>
   );
 }
+type AuditRow = { id: string; event: string; details: Record<string, unknown>; created_at: number };
 function BookingControls({
   booking: r,
+  tourName,
   busy,
   action,
   close,
 }: {
   booking: Reservation;
+  tourName: string;
   busy: boolean;
-  action: (ref: string, path: string, body?: unknown) => Promise<void>;
+  action: (ref: string, path: string, body?: unknown, done?: string) => Promise<boolean>;
   close: () => void;
 }) {
-  const [mode, setMode] = useState<
-      "payment" | "refund" | "move" | "passengers"
-    >("payment"),
+  const feedback = useFeedback();
+  const [mode, setMode] = useState<"payment" | "refund" | "move" | "passengers" | "history">(
+      r.status === "cancelled" && Number(r.net_paid) > 0 ? "refund" : "payment",
+    ),
     [departures, setDepartures] = useState<Departure[]>([]),
     [target, setTarget] = useState(""),
     [selected, setSelected] = useState<number[]>([]),
@@ -671,12 +771,16 @@ function BookingControls({
       seats: { number: number; status: "occupied" | "available" }[];
       vehicle: NonNullable<Reservation["vehicle"]>;
     } | null>(null),
-    [localError, setLocalError] = useState("");
+    [history, setHistory] = useState<AuditRow[] | null>(null);
   useEffect(() => {
     if (mode === "move")
       api<Departure[]>("/tours/" + r.tourId + "/departures")
         .then(setDepartures)
-        .catch((e) => setLocalError(e.message));
+        .catch(feedback.error);
+    if (mode === "history")
+      api<AuditRow[]>("/admin/reservations/" + r.reference + "/audit")
+        .then(setHistory)
+        .catch(feedback.error);
   }, [mode, r.tourId]);
   useEffect(() => {
     setSelected([]);
@@ -684,236 +788,293 @@ function BookingControls({
     if (target)
       api<NonNullable<typeof seatData>>("/departures/" + target + "/seats")
         .then(setSeatData)
-        .catch((e) => setLocalError(e.message));
+        .catch(feedback.error);
   }, [target]);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const f = new FormData(e.currentTarget);
-    if (mode === "move")
-      await action(r.reference, "move", {
-        departureId: target,
-        seats: selected,
-      });
-    else if (mode === "passengers")
-      await action(r.reference, "passengers", { names: f.getAll("passenger") });
-    else
-      await action(r.reference, mode === "payment" ? "payments" : "refunds", {
-        amount: Math.round(Number(f.get("amount")) * 100),
-        method: f.get("method"),
-        externalReference: f.get("externalReference"),
-        recordedExternally: f.get("recordedExternally") === "on",
-      });
+    const form = e.currentTarget,
+      f = new FormData(form);
+    if (current === "move") {
+      if (await action(r.reference, "move", { departureId: target, seats: selected }, "Rezervasyon yeni sefere taşındı."))
+        setTarget("");
+    } else if (current === "passengers")
+      await action(r.reference, "passengers", { names: f.getAll("passenger") }, "Yolcu adları kaydedildi.");
+    else if (
+      await action(
+        r.reference,
+        current === "payment" ? "payments" : "refunds",
+        {
+          amount: Math.round(Number(f.get("amount")) * 100),
+          method: f.get("method"),
+          externalReference: f.get("externalReference"),
+          recordedExternally: f.get("recordedExternally") === "on",
+        },
+        current === "payment" ? "Tahsilat kaydedildi." : "İade kaydedildi.",
+      )
+    )
+      form.reset();
   }
+  // Geri alınamayan durum değişiklikleri önce onay ister.
+  async function guarded(path: string, title: string, body: string, label: string, done: string) {
+    if (await feedback.confirm({ title, body, confirmLabel: label, danger: true }))
+      await action(r.reference, path, {}, done);
+  }
+  const wa = waNumber(r.phone),
+    pastOrToday = r.date <= today(),
+    activeBooking = ["pending_agency", "confirmed"].includes(r.status),
+    modes = (
+      [
+        ["payment", "Tahsilat", activeBooking && Number(r.balance_due) > 0],
+        ["refund", "İade", Number(r.net_paid) > 0],
+        ["move", "Tarih / koltuk", activeBooking],
+        ["passengers", "Yolcu adları", activeBooking],
+        ["history", "Geçmiş", true],
+      ] as const
+    ).filter((m) => m[2]),
+    current = modes.some((m) => m[0] === mode) ? mode : modes[0][0];
   return (
-    <section className="booking-desk-panel">
-      <div className="section-heading">
-        <div>
-          <span className="section-note">{r.reference}</span>
-          <h2>Rezervasyonu yönet</h2>
-        </div>
-        <button className="text-link" onClick={close}>
-          Kapat
-        </button>
-      </div>
-      <div className="desk-action-buttons">
-        <button
-          className="btn btn-small"
-          disabled={busy || r.status !== "pending_agency"}
-          onClick={() => action(r.reference, "confirm")}
-        >
-          Acente onayı ver
-        </button>
-        <button
-          className="btn btn-outline btn-small"
-          disabled={busy || !["pending_agency", "confirmed"].includes(r.status)}
-          onClick={() => action(r.reference, "cancel")}
-        >
-          İptal et
-        </button>
-        <button
-          className="btn btn-outline btn-small"
-          disabled={busy || r.status !== "confirmed"}
-          onClick={() => action(r.reference, "complete")}
-        >
-          Turu tamamlandı işaretle
-        </button>
-        <a
-          className="text-link"
-          href={"/bilet/" + r.ticket_token}
-          target="_blank"
-          rel="noreferrer"
-        >
-          <Ticket size={15} />
-          QR belgeyi doğrula
-        </a>
-      </div>
-      <p className="muted">
-        Toplam {currency(r.total)} · Net tahsilat {currency(r.net_paid || 0)} ·
-        İade {currency(r.refunded_total || 0)}. Acente onayı için en az{" "}
-        {currency(r.deposit)} tahsilat gerekir.
-      </p>
-      <div className="desk-tabs">
-        {[
-          ["payment", "Tahsilat kaydı"],
-          ["refund", "İade kaydı"],
-          ["move", "Tarih / koltuk değiştir"],
-          ["passengers", "Yolcu adları"],
-        ].map(([key, label]) => (
-          <button
-            key={key}
-            className={mode === key ? "active" : ""}
-            onClick={() => setMode(key as typeof mode)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      {localError && <p className="error">{localError}</p>}
-      <form onSubmit={submit} className="admin-editor">
-        {mode === "move" ? (
-          <>
-            <label className="field">
-              Yeni sefer
-              <select
-                aria-label="Yeni sefer"
-                value={target}
-                onChange={(e) => setTarget(e.target.value)}
-                required
-              >
-                <option value="">Tarih seçin</option>
-                {departures.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {dateLabel(d.date)} · {d.start_time} · {currency(d.price)} ·{" "}
-                    {d.vehicle?.passengerSeats}+1
-                  </option>
-                ))}
-              </select>
-            </label>
-            {seatData && (
-              <SeatMap
-                vehicle={seatData.vehicle}
-                seats={seatData.seats}
-                selected={selected}
-                onSelect={(n) =>
-                  setSelected((current) =>
-                    current.includes(n)
-                      ? current.filter((x) => x !== n)
-                      : current.length < r.passengers.length
-                        ? [...current, n]
-                        : current,
-                  )
-                }
-              />
+    <Modal title={r.reference + " · " + tourName} onClose={close} wide>
+      <section className="booking-desk-panel">
+        <div className="booking-summary">
+          <div>
+            <span className={"status-tag status-" + r.status}>{statusLabels[r.status] || r.status}</span>
+            <h2>{r.name}</h2>
+            <p className="muted">
+              {dateLabel(r.date)} · {r.start_time} · Koltuk {r.seats.join(", ")} · {r.passengers.length} kişi
+            </p>
+            {r.notes && <p className="row-note">Not: {r.notes}</p>}
+            {Boolean(r.cancellation_requested_at) && r.status !== "cancelled" && (
+              <p className="error">Müşteri iptal talep etti ({stamp(r.cancellation_requested_at)}).</p>
             )}
-            <p>
-              {selected.length}/{r.passengers.length} koltuk seçildi. Fiyat yeni
-              sefere göre tekrar hesaplanır.
-            </p>
-          </>
-        ) : mode === "passengers" ? (
-          r.passengers.map((p, i) => (
-            <label className="field" key={i}>
-              {i + 1}. yolcu
-              <input
-                name="passenger"
-                defaultValue={p}
-                minLength={2}
-                maxLength={100}
-                required
-              />
-            </label>
-          ))
-        ) : (
-          <>
-            <p className="info-note">
-              Bu form ödeme veya iade yapmaz. Acente tarafından banka/havale
-              veya nakit olarak dışarıda gerçekleştirilen işlemi kaydeder.
-            </p>
-            <div className="form-grid">
-              <label className="field">
-                {mode === "payment" ? "Tahsil edilen" : "İade edilen"} tutar
-                (TL)
-                <input
-                  type="number"
-                  name="amount"
-                  min="0.01"
-                  step="0.01"
-                  max={
-                    (mode === "payment"
-                      ? r.balance_due || 0
-                      : r.net_paid || 0) / 100
-                  }
-                  required
-                />
-              </label>
-              <label className="field">
-                İşlem yöntemi
-                <select name="method">
-                  <option value="bank_transfer">Havale / EFT</option>
-                  <option value="cash">Nakit</option>
-                </select>
-              </label>
-            </div>
-            <label className="field">
-              Dekont / makbuz referansı
-              <input
-                name="externalReference"
-                minLength={3}
-                maxLength={100}
-                required
-              />
-            </label>
-            <label className="checkbox-label">
-              <input name="recordedExternally" type="checkbox" required />
-              <span>Bu işlemin dışarıda gerçekleştiğini doğruluyorum.</span>
-            </label>
-          </>
-        )}
-        <button
-          className="btn btn-small"
-          disabled={
-            busy || (mode === "move" && selected.length !== r.passengers.length)
-          }
-        >
-          {busy ? (
-            <LoaderCircle size={15} className="spin" />
-          ) : (
-            <Check size={15} />
+          </div>
+          <div className="booking-contact">
+            <a className="btn btn-outline btn-small" href={telHref(r.phone)}>
+              <Phone size={15} /> Ara
+            </a>
+            {wa && (
+              <a
+                className="btn btn-outline btn-small"
+                href={whatsappLink(wa, `Merhaba ${r.name}, ${r.reference} numaralı ${tourName} rezervasyonunuz hakkında yazıyoruz.`)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <MessageCircle size={15} /> WhatsApp
+              </a>
+            )}
+            {r.email && (
+              <a className="btn btn-outline btn-small" href={"mailto:" + r.email}>
+                <Mail size={15} /> E-posta
+              </a>
+            )}
+          </div>
+        </div>
+        <div className="booking-money">
+          <div>
+            <span>Toplam</span>
+            <strong>{currency(r.total)}</strong>
+          </div>
+          <div>
+            <span>Net tahsilat</span>
+            <strong>{currency(r.net_paid || 0)}</strong>
+          </div>
+          <div>
+            <span>Kalan</span>
+            <strong>{currency(r.balance_due || 0)}</strong>
+          </div>
+          <div>
+            <span>Onay için kapora</span>
+            <strong>{currency(r.deposit)}</strong>
+          </div>
+        </div>
+        <div className="desk-action-buttons">
+          {r.status === "pending_agency" && (
+            <button
+              className="btn btn-small"
+              disabled={busy}
+              onClick={() => action(r.reference, "confirm", {}, "Acente onayı verildi.")}
+            >
+              <Check size={15} /> Acente onayı ver
+            </button>
           )}
-          Kaydet
-        </button>
-      </form>
-      {r.ledger?.length ? (
-        <div className="ledger-history">
-          <h3>İşlem geçmişi</h3>
-          {r.ledger.map((p) => (
-            <p key={p.id}>
-              {p.kind === "refund" ? "İade" : "Tahsilat"} · {currency(p.amount)}{" "}
-              · {p.method === "cash" ? "Nakit" : "Havale"} ·{" "}
-              {p.external_reference}
-            </p>
+          {r.status === "confirmed" && pastOrToday && (
+            <button
+              className="btn btn-small"
+              disabled={busy}
+              onClick={() =>
+                guarded("complete", "Tur tamamlandı olarak işaretlensin mi?", "Bu işlem geri alınamaz. Müşteriye yorum daveti gönderilir.", "Tamamlandı", "Tur tamamlandı.")
+              }
+            >
+              Turu tamamlandı işaretle
+            </button>
+          )}
+          {r.status === "confirmed" && pastOrToday && !r.checked_in_at && (
+            <button
+              className="btn btn-outline btn-small"
+              disabled={busy}
+              onClick={() =>
+                guarded("no-show", "Müşteri gelmedi olarak işaretlensin mi?", "Bilet okutulmamış kayıt 'Gelmedi' durumuna geçer. Bu işlem geri alınamaz.", "Gelmedi", "Gelmedi olarak işaretlendi.")
+              }
+            >
+              <UserX size={15} /> Gelmedi
+            </button>
+          )}
+          {["pending_agency", "confirmed"].includes(r.status) && (
+            <button
+              className="btn btn-outline btn-small danger-text"
+              disabled={busy}
+              onClick={() =>
+                guarded(
+                  "cancel",
+                  r.reference + " iptal edilsin mi?",
+                  "Koltuklar boşa çıkar ve müşteriye iptal e-postası gider." +
+                    (Number(r.net_paid) > 0 ? ` ${currency(r.net_paid || 0)} tahsilatın iadesini ayrıca kaydetmeniz gerekir.` : ""),
+                  "Rezervasyonu iptal et",
+                  "Rezervasyon iptal edildi.",
+                )
+              }
+            >
+              İptal et
+            </button>
+          )}
+          <a className="text-link" href={"/bilet/" + r.ticket_token} target="_blank" rel="noreferrer">
+            <Ticket size={15} />
+            QR belge
+          </a>
+        </div>
+        <div className="desk-tabs">
+          {modes.map(([key, label]) => (
+            <button key={key} className={current === key ? "active" : ""} onClick={() => setMode(key)}>
+              {label}
+            </button>
           ))}
         </div>
-      ) : null}
-    </section>
+        {current === "history" ? (
+          <div className="ledger-history">
+            {!history && <p className="muted">Yükleniyor…</p>}
+            {history && !history.length && <p className="muted">Kayıt yok.</p>}
+            <ol className="audit-timeline">
+              {history?.map((a) => (
+                <li key={a.id}>
+                  <time>{stamp(a.created_at)}</time>
+                  <span>
+                    {AUDIT_LABELS[a.event] || a.event}
+                    {typeof a.details?.amount === "number" && " · " + currency(a.details.amount)}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        ) : (
+          <form onSubmit={submit} className="admin-editor">
+            {current === "move" ? (
+              <>
+                <label className="field">
+                  Yeni sefer
+                  <select aria-label="Yeni sefer" value={target} onChange={(e) => setTarget(e.target.value)} required>
+                    <option value="">Tarih seçin</option>
+                    {departures.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {dateLabel(d.date)} · {d.start_time} · {currency(d.price)} · {d.vehicle?.passengerSeats}+1
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {seatData && (
+                  <SeatMap
+                    vehicle={seatData.vehicle}
+                    seats={seatData.seats}
+                    selected={selected}
+                    onSelect={(n) =>
+                      setSelected((current) =>
+                        current.includes(n)
+                          ? current.filter((x) => x !== n)
+                          : current.length < r.passengers.length
+                            ? [...current, n]
+                            : current,
+                      )
+                    }
+                  />
+                )}
+                <p>
+                  {selected.length}/{r.passengers.length} koltuk seçildi. Fiyat yeni sefere göre tekrar hesaplanır.
+                </p>
+              </>
+            ) : current === "passengers" ? (
+              r.passengers.map((p, i) => (
+                <label className="field" key={i}>
+                  {i + 1}. yolcu
+                  <input name="passenger" defaultValue={p} minLength={2} maxLength={100} required />
+                </label>
+              ))
+            ) : (
+              <>
+                <p className="info-note">
+                  Bu form ödeme veya iade yapmaz. Banka/havale veya nakit olarak dışarıda gerçekleşen işlemi kaydeder.
+                </p>
+                <div className="form-grid">
+                  <label className="field">
+                    {current === "payment" ? "Tahsil edilen" : "İade edilen"} tutar (TL)
+                    <input
+                      type="number"
+                      name="amount"
+                      min="0.01"
+                      step="0.01"
+                      max={(current === "payment" ? r.balance_due || 0 : r.net_paid || 0) / 100}
+                      defaultValue={current === "payment" && r.balance_due ? r.balance_due / 100 : undefined}
+                      required
+                    />
+                  </label>
+                  <label className="field">
+                    İşlem yöntemi
+                    <select name="method">
+                      <option value="bank_transfer">Havale / EFT</option>
+                      <option value="cash">Nakit</option>
+                    </select>
+                  </label>
+                </div>
+                <label className="field">
+                  Dekont / makbuz referansı
+                  <input name="externalReference" minLength={3} maxLength={100} required />
+                </label>
+                <label className="checkbox-label">
+                  <input name="recordedExternally" type="checkbox" required />
+                  <span>Bu işlemin dışarıda gerçekleştiğini doğruluyorum.</span>
+                </label>
+              </>
+            )}
+            <button className="btn btn-small" disabled={busy || (current === "move" && selected.length !== r.passengers.length)}>
+              {busy ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />}
+              Kaydet
+            </button>
+          </form>
+        )}
+        {r.ledger?.length ? (
+          <div className="ledger-history">
+            <h3>Tahsilat / iade kayıtları</h3>
+            {r.ledger.map((p) => (
+              <p key={p.id}>
+                {stamp(p.created_at)} · {p.kind === "refund" ? "İade" : "Tahsilat"} · {currency(p.amount)} ·{" "}
+                {p.method === "cash" ? "Nakit" : "Havale"} · {p.external_reference}
+              </p>
+            ))}
+          </div>
+        ) : null}
+      </section>
+    </Modal>
   );
 }
 export function CampaignManager({ catalog }: { catalog: Catalog }) {
+  const feedback = useFeedback();
   const [data, setData] = useState<Campaign | null>(null),
-    [error, setError] = useState(""),
-    [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
   useEffect(() => {
-    api<Campaign>("/campaigns")
-      .then(setData)
-      .catch((e) => setError(e.message));
+    api<Campaign>("/campaigns").then(setData).catch(feedback.error);
   }, []);
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!data) return;
     const f = new FormData(e.currentTarget);
     setBusy(true);
-    setError("");
     try {
       const updated = await post<Campaign>("/admin/campaigns", {
         active: f.get("active") === "on",
@@ -925,27 +1086,16 @@ export function CampaignManager({ catalog }: { catalog: Catalog }) {
         requireVerified: f.get("requireVerified") === "on",
       });
       setData(updated);
-      setNotice(
-        "Kampanya ayarları kaydedildi. Yeni kuponlar bu koşullarla oluşturulur.",
-      );
+      feedback.ok("Kampanya ayarları kaydedildi. Yeni kuponlar bu koşullarla oluşturulur.");
     } catch (e) {
-      setError((e as Error).message);
+      feedback.error(e);
     } finally {
       setBusy(false);
     }
   }
   return (
     <>
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
-      {notice && (
-        <p className="notice-success" role="status">
-          {notice}
-        </p>
-      )}
+      {!data && <p className="admin-empty">Yükleniyor…</p>}
       {data && (
         <form className="admin-editor campaign-editor" onSubmit={save}>
           <label className="checkbox-label">
@@ -1059,6 +1209,7 @@ export function DailyReport({ catalog }: { catalog: Catalog }) {
     [passengers, setPassengers] = useState(""),
     [scanning, setScanning] = useState(false);
   useEffect(() => {
+    setError("");
     api<NonNullable<typeof data>>("/admin/reports?date=" + date)
       .then(setData)
       .catch((e) => setError(e.message));
@@ -1150,6 +1301,7 @@ export function DailyReport({ catalog }: { catalog: Catalog }) {
                 ))}
               </tbody>
             </table>
+            {!data.departures.length && <p className="admin-empty">Bu gün için sefer yok.</p>}
           </div>
         </>
       )}
@@ -1171,7 +1323,8 @@ export function NotificationManager() {
         last_error: string | null;
       }[];
     } | null>(null),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState(false);
   async function load() {
     setData(await api<NonNullable<typeof data>>("/admin/notifications"));
   }
@@ -1197,15 +1350,21 @@ export function NotificationManager() {
           <div className="button-row">
             <button
               className="btn btn-small"
+              disabled={busy}
               onClick={async () => {
+                setBusy(true);
+                setError("");
                 try {
                   await post("/admin/notifications/process", {});
                   await load();
                 } catch (e) {
                   setError((e as Error).message);
+                } finally {
+                  setBusy(false);
                 }
               }}
             >
+              {busy && <LoaderCircle size={15} className="spin" />}
               Hatırlatmaları ve kuyruğu işle
             </button>
             <button
@@ -1215,6 +1374,7 @@ export function NotificationManager() {
               Yenile
             </button>
           </div>
+          {!data.items.length && <p className="admin-empty">Kuyrukta mesaj yok.</p>}
           <div className="notification-list">
             {data.items.map((item) => (
               <article key={item.id}>

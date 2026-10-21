@@ -58,7 +58,7 @@ test("push: agency events reach owner/operations phones once, never guides; dead
   const tokens = firebase.sent.map((m) => m.token).sort();
   assert.deepEqual(tokens, [TOKEN(1), TOKEN(2)]);
   assert.match(firebase.sent[0].notification.title, /Özel tur talebi/);
-  assert.equal(firebase.sent[0].data.url, "/yonetim");
+  assert.equal(firebase.sent[0].data.url, "/yonetim?sekme=requests");
   assert.equal(await store.db.count("push_devices", { _id: { $exists: true } }), 4, "ölü token silindi");
 
   // Aynı olay ikinci kez bildirilmez.

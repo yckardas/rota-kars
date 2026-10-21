@@ -104,7 +104,8 @@ export async function createWorkflow(
       ]
         .filter(Boolean)
         .join("\n"),
-      actionUrl: (env.PUBLIC_BASE_URL || "") + "/yonetim",
+      actionUrl: (env.PUBLIC_BASE_URL || "") + "/yonetim?sekme=reservations&ref=" + r.reference,
+      pushUrl: "/yonetim?sekme=reservations&ref=" + r.reference,
       kind,
       dedupeKey: kind + ":" + r.reference,
     });
@@ -116,7 +117,7 @@ export async function createWorkflow(
       );
     },
     // Panel listesi: tur günü, durum ve serbest arama (referans, ad, telefon, e-posta).
-    async list({ date, all = false, status, q } = {}) {
+    async list({ date, all = false, status, q, flag } = {}) {
       await cleanup();
       const filter = date
         ? {
@@ -128,6 +129,13 @@ export async function createWorkflow(
           }
         : {};
       if (status) filter.status = status;
+      // Hızlı filtreler: iptal talebi bekleyenler ve bakiyesi kalan aktif kayıtlar.
+      if (flag === "cancel_request")
+        Object.assign(filter, {
+          cancellation_requested_at: { $exists: true, $ne: null },
+          status: { $in: ["pending_agency", "confirmed"] },
+        });
+      if (flag === "balance") filter.status = { $in: ["pending_agency", "confirmed"] };
       const text = String(q || "").trim().slice(0, 80);
       if (text) {
         const escaped = text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -148,9 +156,10 @@ export async function createWorkflow(
         ...(all ? {} : { limit: 500 }),
         projection: { reference: 1 },
       });
-      return Promise.all(
+      const list = await Promise.all(
         rows.map((r) => api.get(r.reference, { fresh: false })),
       );
+      return flag === "balance" ? list.filter((r) => r.balance_due > 0) : list;
     },
     async created(reference, { byAgency = false } = {}) {
       const r = await api.get(reference);
@@ -449,6 +458,19 @@ export async function createWorkflow(
           kind: "review_request",
           dedupeKey: "review:" + r.id,
         });
+        return api.get(reference);
+      });
+    },
+    // Gelmedi: onaylı, tarihi gelmiş ve bilet okutulmamış kayıt için.
+    async noShow(reference) {
+      return tx(async () => {
+        await cleanup();
+        const r = await api.get(reference);
+        if (r.status === "no_show") return r;
+        if (r.status !== "confirmed" || r.date > localDate(clock()) || r.checked_in_at)
+          throw new AppError(409, "Yalnız tarihi gelmiş, katılımı okutulmamış onaylı kayıt 'gelmedi' olarak işaretlenebilir.");
+        await db.update("reservations", { _id: r.id }, { status: "no_show" });
+        await audit(r, "no_show", {});
         return api.get(reference);
       });
     },

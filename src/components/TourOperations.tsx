@@ -28,13 +28,13 @@ export function TourOperations({ onChange }: { onChange: () => void }) {
     setNotice("");
     try {
       await post("/admin/operations/" + id, {
-        salesOpen: f.get("salesOpen") === "on",
+        salesOpen: Boolean(tours.find((t) => t.id === id)?.salesOpen),
         vehicleModel: f.get("vehicleModel"),
         passengerSeats: Number(f.get("passengerSeats")),
       });
       await load();
       onChange();
-      setNotice("Tur satışı ve araç planı güncellendi.");
+      setNotice("Araç planı güncellendi.");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -171,14 +171,6 @@ function OperationRow({
           <small>
             {capacity}+1 araç · {Math.max(0, capacity - 1)} satılabilir koltuk
           </small>
-        </label>
-        <label className="checkbox-label">
-          <input
-            name="salesOpen"
-            type="checkbox"
-            defaultChecked={t.salesOpen}
-          />
-          <span>Bu tur için rezervasyon al</span>
         </label>
         <button className="btn btn-small" disabled={busy}>
           {busy ? (

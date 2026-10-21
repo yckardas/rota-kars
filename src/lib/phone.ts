@@ -12,3 +12,8 @@ export function safeNextPath(value: string | null | undefined) {
   if (value.includes("\\") || /[\u0000-\u001f]/.test(value)) return null;
   return value;
 }
+/** WhatsApp için ülke kodlu rakamlar ("0555 111 22 33" → "905551112233"); geçersizse boş. */
+export function waNumber(phone: string) {
+  const tel = telHref(phone).slice(5);
+  return tel.length >= 11 ? tel : "";
+}

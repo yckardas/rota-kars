@@ -261,3 +261,27 @@ test("agency booking: a late failure (reused bank reference) leaves no half-writ
   assert.equal(await s.db.count("payment_ledger", {}), 1);
   assert.equal(await s.db.count("holds", {}), 0);
 });
+
+test("quick filters, no-show and removing an unused departure", async (t) => {
+  const { s, d, advance } = await setup(t);
+  const open = await s.adminReserve(base(d, { confirm: true }), AGENT);
+  const paid = await s.adminReserve(
+    base(d, { paymentMode: "full", seats: [1], passengers: ["Tek Yolcu"], payment: { amount: 150000, method: "cash" }, confirm: true }),
+    AGENT,
+  );
+  const refs = async (flag) => (await s.workflow.list({ flag })).map((r) => r.reference);
+  assert.deepEqual(await refs("balance"), [open.reference], "tam ödenen bakiyede görünmez");
+  assert.deepEqual(await refs("cancel_request"), []);
+  // Tarihi gelmeden "gelmedi" işaretlenemez.
+  await assert.rejects(s.workflow.noShow(open.reference), (e) => e.status === 409);
+  advance(4 * 86400000);
+  assert.equal((await s.workflow.noShow(open.reference)).status, "no_show");
+  assert.ok((await s.workflow.audit(open.reference)).some((a) => a.event === "no_show"));
+  assert.equal((await s.workflow.list({ status: "no_show" }))[0].reference, open.reference);
+  assert.ok(paid.reference);
+  // Kaydı olan sefer silinmez; boş sefer silinir.
+  await assert.rejects(s.departures.remove(d.id), (e) => e.status === 409);
+  const empty = await s.departures.save({ ...base(d), tourId: "ani-cildir", date: "2026-10-30", startTime: "09:00", pickup: "Kars", guideName: "", guidePhone: "", price: 1000, vehicleModel: "vip-midibus", passengerSeats: 18, active: true });
+  await s.departures.remove(empty.id);
+  await assert.rejects(s.departures.get(empty.id, { allowClosed: true, allowPast: true }), (e) => e.status === 404);
+});

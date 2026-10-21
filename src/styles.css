@@ -7785,3 +7785,399 @@ input[type="radio"] {
   height: 10px;
   border-radius: 3px;
 }
+
+/* ---------- Yönetim paneli: gezinme, arama, bildirimler ---------- */
+.admin-sidebar nav {
+  gap: 2px;
+}
+.admin-sidebar nav > .admin-nav-group > button {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  font-size: 13px;
+  background: none;
+  color: var(--muted);
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.admin-sidebar nav > .admin-nav-group > button:hover {
+  background: var(--paper);
+  color: var(--navy);
+}
+.admin-sidebar nav > .admin-nav-group > button.active {
+  background: var(--sky);
+  color: var(--navy);
+  font-weight: 600;
+}
+.admin-sidebar nav > .admin-nav-group > button > span {
+  flex: 1;
+}
+.admin-nav-group + .admin-nav-group {
+  margin-top: 14px;
+}
+.admin-nav-group h2 {
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 4px 10px;
+}
+.nav-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #b4472f;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+.admin-search-button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  margin: -10px 0 18px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+.admin-search-button span {
+  flex: 1;
+  text-align: left;
+}
+.admin-search-button:hover {
+  border-color: var(--navy);
+}
+kbd {
+  font-family: var(--font);
+  font-size: 10px;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: white;
+  color: var(--muted);
+}
+.admin-heading-actions {
+  display: flex;
+  gap: 8px;
+}
+.admin-mobile-search {
+  display: none;
+}
+.command-palette {
+  max-width: 620px;
+  margin-top: 12vh;
+  overflow: hidden;
+}
+.command-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+.command-input input {
+  flex: 1;
+  border: 0;
+  outline: 0;
+  font-size: 16px;
+  color: var(--ink);
+  background: none;
+}
+.command-palette ul {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  max-height: 55vh;
+  overflow: auto;
+}
+.command-palette li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--muted);
+}
+.command-palette li.active {
+  background: var(--sky);
+  color: var(--navy);
+}
+.command-palette li span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.command-palette li strong {
+  font-size: 14px;
+  color: var(--ink);
+}
+.command-palette li small {
+  font-size: 12px;
+}
+.command-palette li.command-empty {
+  cursor: default;
+  padding: 18px 12px;
+}
+.toast-stack {
+  position: fixed;
+  inset: auto 20px 20px auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(420px, calc(100vw - 32px));
+}
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 12px 12px 14px;
+  border-radius: 10px;
+  background: var(--navy);
+  color: white;
+  font-size: 14px;
+  box-shadow: 0 10px 30px #0b1d2633;
+  animation: toast-in 0.18s ease-out;
+}
+.toast.error {
+  background: #8e2f1d;
+}
+.toast > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.toast span {
+  flex: 1;
+}
+.toast button {
+  background: none;
+  border: 0;
+  color: inherit;
+  opacity: 0.75;
+  cursor: pointer;
+  padding: 2px;
+}
+@keyframes toast-in {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+}
+.confirm-dialog {
+  max-width: 440px;
+  padding: 24px;
+}
+.confirm-dialog h2 {
+  font-size: 21px;
+  margin: 0 0 8px;
+}
+.confirm-dialog .button-row {
+  margin: 20px 0 0;
+}
+.btn-danger,
+.btn.btn-danger {
+  background: #a23a24;
+  border-color: #a23a24;
+  color: white;
+}
+.danger-text {
+  color: #a23a24 !important;
+}
+.push-right {
+  margin-left: auto;
+}
+
+/* Rezervasyon listesi ve yönetim penceresi */
+.admin-main .status-tag {
+  font-size: 11px;
+  padding: 3px 8px;
+}
+.status-tag.status-confirmed,
+.status-tag.status-completed {
+  background: #e3f0e6;
+  color: #2f6b3d;
+}
+.status-tag.status-cancelled,
+.status-tag.status-expired,
+.status-tag.status-no_show {
+  background: #edf0f1;
+  color: var(--muted);
+}
+.clickable-row {
+  cursor: pointer;
+}
+.clickable-row:hover td {
+  background: var(--paper);
+}
+.row-note {
+  color: var(--gold-text) !important;
+}
+.desk-toolbar-actions {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.desk-toolbar .status-filters {
+  flex-basis: 100%;
+  margin: 0;
+}
+.load-more {
+  display: block;
+  margin: 18px auto;
+}
+.modal .booking-desk-panel {
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+  padding: 22px 24px 26px;
+}
+.booking-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.booking-summary h2 {
+  font-size: 24px;
+  margin: 8px 0 2px;
+}
+.booking-summary p {
+  margin: 2px 0;
+}
+.booking-contact {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.booking-money {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin: 18px 0 4px;
+}
+.booking-money > div {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.booking-money span {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+.booking-money strong {
+  font-size: 17px;
+}
+.audit-timeline {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.audit-timeline li {
+  display: flex;
+  gap: 14px;
+  padding: 7px 0;
+  border-bottom: 1px dashed var(--line);
+}
+.audit-timeline time {
+  min-width: 115px;
+  color: var(--muted);
+}
+.admin-hotel-list article {
+  gap: 16px;
+}
+.admin-hotel-list article > img {
+  width: 84px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.admin-hotel-list article > div:first-of-type {
+  flex: 1;
+}
+.admin-hotel-list .button-row {
+  margin: 0;
+}
+.hotel-image-field {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 10px 0 16px;
+}
+.hotel-image-field img {
+  width: 120px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.passenger-list header .btn {
+  margin-top: 6px;
+}
+@media (max-width: 760px) {
+  .admin-mobile-search {
+    display: inline-flex;
+  }
+  .admin-search-button {
+    display: none;
+  }
+  .admin-shell.more-open .admin-sidebar nav > .admin-nav-group > button {
+    font-size: 15px;
+    padding: 12px 10px;
+    min-height: 48px;
+  }
+  .tabbar-icon {
+    position: relative;
+    display: inline-flex;
+  }
+  .tabbar-icon .nav-badge {
+    position: absolute;
+    top: -6px;
+    right: -12px;
+    min-width: 17px;
+    height: 17px;
+    font-size: 10px;
+    padding: 0 4px;
+  }
+  .booking-money {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .toast-stack {
+    inset: auto 16px calc(76px + env(safe-area-inset-bottom)) 16px;
+    max-width: none;
+  }
+  .command-palette {
+    margin-top: 4vh;
+  }
+  .admin-hotel-list article {
+    flex-wrap: wrap;
+  }
+}

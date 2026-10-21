@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Download, LoaderCircle, Plus, Trash2 } from "lucide-react";
 import { api, post } from "../../lib/api";
 import { ROLE_LABELS, type AdminRole, type AdminUser } from "./AdminAuth";
+import { useFeedback } from "./feedback";
 const message = (e: unknown) => (e as Error).message;
 const dateTime = (t?: number | null) =>
   t
@@ -14,6 +15,7 @@ const patch = <T,>(url: string, body: unknown) =>
   api<T>(url, { method: "PATCH", body: JSON.stringify(body) });
 // Sahip: yönetici hesapları.
 export function UserManager({ currentId }: { currentId: string }) {
+  const { confirm } = useFeedback();
   const [users, setUsers] = useState<AdminUser[] | null>(null),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
@@ -182,15 +184,20 @@ export function UserManager({ currentId }: { currentId: string }) {
                         id={"role-" + u.id}
                         value={u.role}
                         disabled={busy || self}
-                        onChange={(e) =>
-                          run(
-                            () =>
-                              patch("/admin/users/" + u.id, {
-                                role: e.target.value,
-                              }),
-                            u.name + " rolü güncellendi.",
+                        onChange={async (e) => {
+                          const role = e.target.value as AdminRole;
+                          if (
+                            await confirm({
+                              title: `${u.name} rolü "${ROLE_LABELS[role]}" olsun mu?`,
+                              body: "Kişinin görebildiği ekranlar ve yapabildiği işlemler hemen değişir.",
+                              confirmLabel: "Rolü değiştir",
+                            })
                           )
-                        }
+                            run(
+                              () => patch("/admin/users/" + u.id, { role }),
+                              u.name + " rolü güncellendi.",
+                            );
+                        }}
                       >
                         {(Object.keys(ROLE_LABELS) as AdminRole[]).map((r) => (
                           <option key={r} value={r}>
@@ -217,7 +224,14 @@ export function UserManager({ currentId }: { currentId: string }) {
                         <button
                           className="text-link"
                           disabled={busy || self}
-                          onClick={() =>
+                          onClick={async () =>
+                            (u.disabled ||
+                              (await confirm({
+                                title: u.name + " hesabı kapatılsın mı?",
+                                body: "Açık oturumları sonlanır ve tekrar açılana kadar giriş yapamaz.",
+                                confirmLabel: "Hesabı kapat",
+                                danger: true,
+                              }))) &&
                             run(
                               () =>
                                 patch("/admin/users/" + u.id, {

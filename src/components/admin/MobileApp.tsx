@@ -6,6 +6,7 @@ import {
   LoaderCircle,
   MessageCircle,
   Phone,
+  Printer,
   Smartphone,
   UserCheck,
 } from "lucide-react";
@@ -220,6 +221,36 @@ const STATUS: Record<string, string> = {
   no_show: "Gelmedi",
 };
 
+const esc = (v: unknown) =>
+  String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+// Rehbere/şoföre verilecek kâğıt liste: koltuk sırasıyla, imza sütunlu.
+function printManifest(data: PassengerData) {
+  const w = window.open("", "_blank", "width=900,height=700");
+  if (!w) return;
+  const d = data.departure,
+    rows = data.bookings
+      .flatMap((b) =>
+        b.seats.map((seat, i) => ({
+          seat,
+          passenger: b.passengers[i] || b.name,
+          contact: i === 0 ? `${b.name} · ${b.phone}` : "",
+          reference: b.reference,
+          status: STATUS[b.status] || b.status,
+          notes: i === 0 ? b.notes : "",
+        })),
+      )
+      .sort((a, b) => a.seat - b.seat);
+  w.document.write(`<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>Yolcu listesi · ${esc(d.tourName)} · ${esc(d.date)}</title>
+<style>body{font:13px/1.4 Arial,sans-serif;margin:24px;color:#111}h1{font-size:18px;margin:0 0 4px}p{margin:0 0 12px}
+table{width:100%;border-collapse:collapse}th,td{border:1px solid #999;padding:6px 8px;text-align:left;vertical-align:top}
+th{background:#eee}td.sign{width:110px}@media print{body{margin:10mm}}</style></head><body>
+<h1>${esc(d.tourName)}</h1><p>${esc(dateLabel(d.date))} · ${esc(d.startTime)} · ${esc(d.pickup)} · Rehber: ${esc(d.guideName || "-")} · ${rows.length} yolcu</p>
+<table><thead><tr><th>Koltuk</th><th>Yolcu</th><th>İrtibat</th><th>Referans</th><th>Durum</th><th>Not</th><th>İmza</th></tr></thead><tbody>
+${rows.map((r) => `<tr><td>${r.seat}</td><td>${esc(r.passenger)}</td><td>${esc(r.contact)}</td><td>${esc(r.reference)}</td><td>${esc(r.status)}</td><td>${esc(r.notes)}</td><td class="sign"></td></tr>`).join("")}
+</tbody></table><script>window.onload=()=>window.print()</script></body></html>`);
+  w.document.close();
+}
+
 // Telefonda yolcu listesi: arama, WhatsApp ve biniş işaretleme.
 export function PassengerList({ departureId, onClose }: { departureId: string; onClose: () => void }) {
   const [data, setData] = useState<PassengerData | null>(null),
@@ -268,6 +299,11 @@ export function PassengerList({ departureId, onClose }: { departureId: string; o
             <p className="muted">
               {seatsTotal} yolcu · {boarded} bindi · Rehber: {data.departure.guideName || "atanmadı"}
             </p>
+            {!isNativeApp() && data.bookings.length > 0 && (
+              <button className="btn btn-outline btn-small" onClick={() => printManifest(data)}>
+                <Printer size={15} /> Yazdır
+              </button>
+            )}
           </header>
           {data.bookings.length === 0 && <p className="muted">Bu seferde rezervasyon yok.</p>}
           <ul>

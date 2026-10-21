@@ -497,7 +497,8 @@ export async function openStore(
             .filter(([, v]) => v !== "" && v != null && typeof v !== "object")
             .map(([k, v]) => `${k}: ${String(v).slice(0, 500)}`)
             .join("\n"),
-        actionUrl: (env.PUBLIC_BASE_URL || "") + "/yonetim",
+        actionUrl: (env.PUBLIC_BASE_URL || "") + "/yonetim?sekme=requests",
+        pushUrl: "/yonetim?sekme=requests",
         kind: "request_" + kind,
         dedupeKey: "request:" + id,
       });
@@ -513,6 +514,17 @@ export async function openStore(
     },
     // Panel ana ekranı: bugün kalkan seferler, onay bekleyenler (süresi yaklaşan
     // önce), iptal talepleri, yeni talepler ve önümüzdeki 7 günün doluluğu.
+    // Menü rozetleri: hafif sayaçlar.
+    async counts() {
+      return {
+        pending: await db.count("reservations", { status: "pending_agency", expires_at: { $gt: clock() } }),
+        cancellationRequests: await db.count("reservations", {
+          cancellation_requested_at: { $exists: true, $ne: null },
+          status: { $in: ["pending_agency", "confirmed"] },
+        }),
+        newRequests: await db.count("requests", { status: "new" }),
+      };
+    },
     async overview() {
       await cleanup();
       const now = clock(),
@@ -582,7 +594,6 @@ export async function openStore(
     async dashboard() {
       await cleanup();
       return {
-        reservations: await workflow.list(),
         requests: (
           await db.find("requests", {}, { sort: { created_at: -1 }, limit: 200 })
         ).map((r) => ({ ...r, body: fromJson(r.body, {}) })),
@@ -606,6 +617,10 @@ export async function openStore(
       return {
         id,
       };
+    },
+    async removeHotel(id) {
+      if (!(await db.remove("hotels", { _id: id }))) throw new AppError(404, "Otel bulunamadı.");
+      return { ok: true };
     },
     async assignments() {
       return Object.fromEntries(

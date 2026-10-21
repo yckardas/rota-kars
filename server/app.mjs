@@ -1157,6 +1157,11 @@ export function createApp(
     }),
   );
   app.get(
+    "/api/admin/counts",
+    requireAdmin,
+    route(async (_q, r) => r.json(await store.counts())),
+  );
+  app.get(
     "/api/admin/overview",
     requireAdmin,
     route(async (_q, r) => r.json(await store.overview())),
@@ -1178,6 +1183,11 @@ export function createApp(
         .parse(q.body);
       r.json(await store.upsertHotel(hotel));
     }),
+  );
+  app.delete(
+    "/api/admin/hotels/:id",
+    requireAdmin,
+    route(async (q, r) => r.json(await store.removeHotel(z.string().uuid().parse(q.params.id)))),
   );
   app.get(
     "/api/admin/reviews",

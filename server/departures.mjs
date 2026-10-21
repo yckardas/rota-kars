@@ -134,5 +134,16 @@ export async function createDepartures(
         return this.get(id, { allowClosed: true, allowPast: true });
       });
     },
+    // Yanlış açılmış sefer silinebilir; kaydı (iptal edilmiş olsa da) olan sefer yalnız kapatılır.
+    async remove(id) {
+      return tx(async () => {
+        await this.get(id, { allowClosed: true, allowPast: true });
+        if (await db.one("reservations", { departure_id: id }))
+          throw new AppError(409, "Bu seferde rezervasyon kaydı var; silmek yerine satışa kapatın.");
+        await db.remove("seat_locks", { departure_id: id });
+        await db.remove("departures", { _id: id });
+        return { ok: true };
+      });
+    },
   };
 }
