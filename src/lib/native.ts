@@ -3,13 +3,15 @@
 // window.Capacitor olarak gelir (eklenti paketleri site koduna eklenmez).
 import { api, post } from "./api";
 
-type Listener = { remove: () => Promise<void> };
+type Listener = { remove: () => Promise<void> | void };
 type PushPlugin = {
   checkPermissions: () => Promise<{ receive: string }>;
   requestPermissions: () => Promise<{ receive: string }>;
   register: () => Promise<void>;
-  createChannel?: (c: Record<string, unknown>) => Promise<void>;
-  addListener: (event: string, fn: (data: never) => void) => Promise<Listener>;
+  createChannel?: (c: Record<string, unknown>) => Promise<void> | void;
+  // Uzak sayfaya enjekte edilen köprüde addListener Promise yerine doğrudan
+  // tutamak döndürebilir: tüm dönüşler Promise.resolve ile sarılır.
+  addListener: (event: string, fn: (data: never) => void) => Promise<Listener> | Listener;
 };
 type CapacitorGlobal = {
   isNativePlatform?: () => boolean;
@@ -57,28 +59,39 @@ export async function enablePush(onOpen: (path: string) => void): Promise<PushSt
   if (permission === "prompt" || permission === "prompt-with-rationale")
     permission = (await push.requestPermissions()).receive;
   if (permission !== "granted") return "denied";
-  await push
-    .createChannel?.({
-      id: "rota-yonetim",
-      name: "Rezervasyon ve yorum bildirimleri",
-      importance: 5,
-      visibility: 1,
-      sound: "default",
-    })
+  const listen = async (event: string, fn: (data: never) => void) => {
+    const handle = await Promise.resolve(push.addListener(event, fn));
+    if (handle) listeners.push(handle);
+  };
+  await Promise.resolve()
+    .then(() =>
+      push.createChannel?.({
+        id: "rota-yonetim",
+        name: "Rezervasyon ve yorum bildirimleri",
+        importance: 5,
+        visibility: 1,
+        sound: "default",
+      }),
+    )
     .catch(() => {});
-  await Promise.all(listeners.map((l) => l.remove().catch(() => {})));
+  await Promise.all(listeners.map((l) => Promise.resolve().then(() => l.remove()).catch(() => {})));
   listeners = [];
-  const token = await new Promise<string>((resolve, reject) => {
-    push.addListener("registration", ((t: { value: string }) => resolve(t.value)) as (d: never) => void).then((l) => listeners.push(l));
-    push.addListener("registrationError", ((e: { error: string }) => reject(new Error(e.error))) as (d: never) => void).then((l) => listeners.push(l));
-    push.register().catch(reject);
-    setTimeout(() => reject(new Error("Bildirim kaydı zaman aşımına uğradı.")), 15000);
+  let resolveToken: (t: string) => void = () => {},
+    rejectToken: (e: Error) => void = () => {};
+  const tokenPromise = new Promise<string>((resolve, reject) => {
+    resolveToken = resolve;
+    rejectToken = reject;
   });
-  listeners.push(
-    await push.addListener("pushNotificationActionPerformed", ((action: {
-      notification: { data?: { url?: string } };
-    }) => onOpen(internalPath(action.notification.data?.url))) as (d: never) => void),
-  );
+  const timer = setTimeout(() => rejectToken(new Error("Bildirim kaydı zaman aşımına uğradı.")), 15000);
+  await listen("registration", ((t: { value: string }) => resolveToken(t.value)) as (d: never) => void);
+  await listen("registrationError", ((e: { error: string }) => rejectToken(new Error(e.error))) as (d: never) => void);
+  await listen("pushNotificationActionPerformed", ((action: {
+    notification: { data?: { url?: string } };
+  }) => onOpen(internalPath(action.notification.data?.url))) as (d: never) => void);
+  await Promise.resolve()
+    .then(() => push.register())
+    .catch((e: Error) => rejectToken(e));
+  const token = await tokenPromise.finally(() => clearTimeout(timer));
   const model = navigator.userAgent.match(/Android [\d.]+; ([^;)]+)/)?.[1]?.trim() || "Android telefon";
   await post("/admin/devices", { token, platform: "android", label: model.slice(0, 60) });
   storage.set(token);
