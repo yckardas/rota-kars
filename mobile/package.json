@@ -1,7 +1,7 @@
 {
   "name": "rota-kars-yonetim",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.2",
   "description": "Rota Kars yönetim paneli için Android uygulaması (Capacitor).",
   "scripts": {
     "sync": "cap sync android",

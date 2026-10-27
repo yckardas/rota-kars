@@ -364,7 +364,8 @@ export function renderHtml(template, meta, base, catalog = null) {
   return template
     .replace(/<title>[\s\S]*?<\/title>/i, "")
     .replace(/<meta\s+name="description"[^>]*>/i, "")
-    .replace("</head>", headTags(meta, base) + data + "</head>");
+    // Fonksiyonla yerine koyma: içerikteki "$`" gibi diziler özel anlam kazanmaz.
+    .replace("</head>", () => headTags(meta, base) + data + "</head>");
 }
 
 export function robotsTxt(base, env) {

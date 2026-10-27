@@ -157,7 +157,14 @@ export async function createNotifications(db, { clock, tx, env = {}, push = null
             .update(
               "notification_outbox",
               { id: item.id },
-              { status: "sent", sent_at: clock(), lease_until: 0, last_error: null },
+              {
+                status: "sent",
+                sent_at: clock(),
+                lease_until: 0,
+                last_error: null,
+                // Tek kullanımlık hesap bağlantıları gönderildikten sonra saklanmaz.
+                ...(String(item.kind).startsWith("auth_") ? { action_url: null } : {}),
+              },
             );
           sent++;
         } catch (e) {

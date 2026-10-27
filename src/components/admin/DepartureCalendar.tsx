@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
+import { SeatCourse } from "./SeatCourse";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { today, type Catalog, type Departure } from "../../lib/types";
 
 const MONTHS = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 const DAYS = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
-const COLORS = ["#2f6b8f", "#a8642a", "#3f8a52", "#7a4f9a", "#b5462f", "#5f6b2a", "#2a7a78"];
+// Tur renkleri Ani taşlarından: tüf, okr, liken, bazalt mavisi, gül taşı.
+const COLORS = ["#7A6A58", "#B07A2A", "#5E7A4E", "#3F5A6E", "#8E5A6B", "#6B6A3A", "#2F6A68"];
 const ymd = (y: number, m: number, d: number) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
 // Seferlerin ay takvimi: her günde saat, tur ve boş koltuk; dokununca düzenleme.
@@ -69,11 +71,18 @@ export function DepartureCalendar({
                   type="button"
                   className={"calendar-chip" + (d.active ? "" : " closed") + (d.available === 0 ? " full" : "")}
                   onClick={() => onPick(d)}
-                  style={{ borderLeftColor: color(d.tour_id) }}
                   title={`${short(d.tour_id)} · ${d.start_time} · ${d.available} boş koltuk`}
                 >
-                  <strong>{d.start_time}</strong> <span className="chip-name">{short(d.tour_id)}</span>
-                  <small>{d.available === 0 ? "dolu" : d.available + " boş"}</small>
+                  <span className="chip-line">
+                    <i className="tour-stone" style={{ background: color(d.tour_id) }} aria-hidden="true" />
+                    <strong>{d.start_time}</strong> <span className="chip-name">{short(d.tour_id)}</span>
+                  </span>
+                  <SeatCourse
+                    sold={(d.vehicle?.sellableSeats || 0) - d.available}
+                    total={d.vehicle?.sellableSeats || 0}
+                    size="xs"
+                    guide={false}
+                  />
                 </button>
               ))}
             </div>

@@ -127,13 +127,19 @@ export function createApp(
     if (failures.size > 20000)
       for (const [k, v] of failures) if (v.reset < now) failures.delete(k);
   };
-  const guardLogin = async (scope, account, fn) => {
+  // Çok sayıda hatalı deneme girişi tümden kapatmaz (aksi halde saldırgan herkesi
+  // dışarıda bırakabilirdi): fn(throttled) bu durumda daha sıkı bir yol izler.
+  // Yönetici: yalnız parola + geçerli iki adımlı kod geçer. Üye: Turnstile doğrulaması
+  // zorunlu; Turnstile kapalıysa hesap başına sınır yine engeller.
+  const guardLogin = async (scope, account, fn, { canBypass = false } = {}) => {
     const accountKey = `${scope}:account:${String(account || "").toLowerCase()}`,
-      globalKey = `${scope}:global`;
-    if (tooManyFailures(accountKey, 8) || tooManyFailures(globalKey, Number(env.LOGIN_GLOBAL_LIMIT || 200)))
+      globalKey = `${scope}:global`,
+      throttled =
+        tooManyFailures(accountKey, 8) || tooManyFailures(globalKey, Number(env.LOGIN_GLOBAL_LIMIT || 200));
+    if (throttled && !canBypass)
       throw new AppError(429, "Çok fazla başarısız giriş denemesi. 15 dakika sonra tekrar deneyin.");
     try {
-      return await fn();
+      return await fn(throttled);
     } catch (e) {
       if (e instanceof AppError && e.status === 401) {
         recordFailure(accountKey);
@@ -384,8 +390,14 @@ export function createApp(
           password: z.string().min(1).max(128),
         })
         .parse(q.body);
-      const member = await guardLogin("member", input.email, () =>
-        store.members.login(input.email, input.password),
+      // Turnstile ayarlıysa her üye girişi bot doğrulamasından geçer; bu durumda
+      // toplu hatalı denemeler girişleri kilitlemez.
+      await human(q, "login");
+      const member = await guardLogin(
+        "member",
+        input.email,
+        () => store.members.login(input.email, input.password),
+        { canBypass: turnstile.enabled },
       );
       await setSession(r, member.id);
       r.json({
@@ -741,7 +753,7 @@ export function createApp(
         .parse(q.body);
       // Yanıtlanamayan sorular yalnız ziyaretçi yurt dışı aktarıma onay verdiyse
       // (Anthropic, ABD) bulut modeline gider; aksi halde yerel yanıt kullanılır.
-      r.json(await chatService.reply(messages, { ...context, abroadConsent }));
+      r.json(await chatService.reply(messages, { ...context, abroadConsent, client: clientKey(q) }));
     }),
   );
   app.get("/api/payment/status", (_q, r) => r.json(paymentStatus));
@@ -837,10 +849,22 @@ export function createApp(
           remember: z.boolean().optional(),
         })
         .parse(q.body);
-      const result = await guardLogin("admin", input.email || "bootstrap", () =>
-        input.email
-          ? store.adminAuth.login({ ...input, device: deviceLabel(String(q.headers["user-agent"] || "")) })
-          : store.adminAuth.bootstrapLogin(input.password, env.ADMIN_PASSWORD),
+      const result = await guardLogin(
+        "admin",
+        input.email || "bootstrap",
+        (throttled) => {
+          if (!input.email) {
+            if (throttled)
+              throw new AppError(429, "Çok fazla başarısız giriş denemesi. 15 dakika sonra tekrar deneyin.");
+            return store.adminAuth.bootstrapLogin(input.password, env.ADMIN_PASSWORD);
+          }
+          return store.adminAuth.login({
+            ...input,
+            strict: throttled,
+            device: deviceLabel(String(q.headers["user-agent"] || "")),
+          });
+        },
+        { canBypass: Boolean(input.email) },
       );
       if (result.needsCode) return r.json({ ok: false, needsCode: true });
       r.setHeader("Set-Cookie", adminCookie(result.sid, result.maxAge));
@@ -983,6 +1007,15 @@ export function createApp(
     route(async (q, r) => {
       const { code } = z.object({ code: z.string().regex(/^\d{6}$/) }).parse(q.body);
       await store.adminAuth.enableTotp(q.admin, code);
+      await store.notifications
+        .notifyAgency({
+          subject: `Güvenlik: ${q.admin.name} iki adımlı doğrulamayı açtı`,
+          body: `Güvenlik bildirimi\n${q.admin.name} (${q.admin.email}) hesabında iki adımlı doğrulama açıldı.\nBu işlemi o kişi yapmadıysa Kullanıcılar ekranından hesabı kapatıp 2FA'yı sıfırlayın.`,
+          kind: "security_2fa_enabled",
+          dedupeKey: "2fa:" + q.admin.id + ":" + Date.now(),
+          pushUrl: "/yonetim?sekme=users",
+        })
+        .catch(() => {});
       r.json({ ok: true });
     }),
   );

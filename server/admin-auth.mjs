@@ -50,6 +50,7 @@ export function roleAllows(role, method, rawPath) {
   // biçime göre yapılır (aksi halde /api/admin/USERS sahibe özel uçları açardı).
   const path = String(rawPath || "").toLowerCase().replace(/\/{2,}/g, "/").replace(/\/+$/, "") || "/";
   method = String(method || "").toUpperCase();
+  if (method === "HEAD") method = "GET";
   if (OWNER_ONLY.some(([m, p]) => m.test(method) && p.test(path))) return false;
   if (role === "guide")
     return SELF_SERVICE.test(path) || GUIDE_ALLOWED.some(([m, p]) => m === method && p.test(path));
@@ -132,6 +133,8 @@ export async function createAdminAuth(db, { clock = Date.now, env = process.env 
           503,
           "İlk kurulum için sunucuda ADMIN_PASSWORD tanımlayın.",
         );
+      if (String(expected).length < 16)
+        throw new AppError(503, "ADMIN_PASSWORD en az 16 karakter olmalı. Sunucu ayarını güçlendirin.");
       if (!sameSecret(String(password || ""), expected))
         throw new AppError(401, "Parola doğru değil.");
       const sid = randomBytes(32).toString("hex");
@@ -145,12 +148,17 @@ export async function createAdminAuth(db, { clock = Date.now, env = process.env 
       });
       return { sid, bootstrap: true };
     },
-    async login({ email, password, code, remember = false, device = "" }) {
+    // strict: çok sayıda hatalı deneme sonrası (veya hesap kilitliyken) yalnız parola +
+    // geçerli iki adımlı kod geçer. Kilit, doğru bilgilerle girmek isteyen kişiyi dışarıda
+    // bırakmaz; saldırganın parola + kod tahmini ise pratikte imkânsızdır.
+    async login({ email, password, code, remember = false, device = "", strict = false }) {
       const user = await db.one("admin_users", { email: String(email).trim().toLowerCase() });
-      // Kilitli hesap için de genel mesaj: hangi e-postanın yönetici olduğu anlaşılmaz.
-      if (user?.locked_until > clock())
-        throw new AppError(401, GENERIC_LOGIN_ERROR);
+      // Parola her durumda kontrol edilir: yanıt süresi kilitli/var olmayan hesabı ele vermez.
       const ok = await checkPassword(String(password || ""), user?.password_hash);
+      const locked = user?.locked_until > clock();
+      if ((strict || locked) && ok && user && !user.disabled && user.totp_enabled) {
+        if (!code) return { needsCode: true };
+      } else if (strict || locked) throw new AppError(401, GENERIC_LOGIN_ERROR);
       if (!user || !ok || user.disabled) {
         if (user && !user.disabled) {
           const failed = (user.failed_logins || 0) + 1;

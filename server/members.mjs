@@ -109,7 +109,7 @@ export async function createMembers(db, { clock, tx, campaigns }) {
         throw new AppError(401, "E-posta veya parola hatalı.");
       return publicMember(row);
     },
-    social({ provider, subject, email, name, referralCode, linkMemberId }) {
+    social({ provider, subject, email, name, referralCode, linkMemberId, emailVerified = true }) {
       return tx(async () => {
         const account = await db.one("social_accounts", {
             _id: `${provider}:${subject}`,
@@ -141,6 +141,7 @@ export async function createMembers(db, { clock, tx, campaigns }) {
           subject,
           member_id: member.id,
         });
+        if (!emailVerified) return member;
         await db.update("members", { _id: member.id }, { email_verified: 1 });
         return { ...member, emailVerified: true };
       });

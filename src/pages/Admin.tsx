@@ -20,7 +20,6 @@ import {
   Users,
   ScrollText,
   ShieldCheck,
-  UserRound,
   TriangleAlert,
   Menu,
   X,
@@ -42,6 +41,7 @@ import { RequestManager } from "../components/admin/RequestManager";
 import { HotelManager } from "../components/admin/HotelManager";
 import { CommandPalette } from "../components/admin/CommandPalette";
 import { FeedbackProvider, useFeedback } from "../components/admin/feedback";
+import "../admin.css";
 import {
   AppUpdateBanner,
   PushSettings,
@@ -129,10 +129,21 @@ function tabsFor(role: AdminRole): Tab[] {
   return [...ALL_TABS];
 }
 export function Admin(props: { catalog: Catalog; refreshCatalog: () => void }) {
+  // Tarayıcı ve telefon çubuğu panelde siyah tüf rengini alır; çıkınca sitenin rengi geri gelir.
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]'),
+      previous = meta?.getAttribute("content");
+    meta?.setAttribute("content", "#24201D");
+    return () => {
+      if (previous) meta?.setAttribute("content", previous);
+    };
+  }, []);
   return (
-    <FeedbackProvider>
-      <AdminPanel {...props} />
-    </FeedbackProvider>
+    <div className="rk-admin">
+      <FeedbackProvider>
+        <AdminPanel {...props} />
+      </FeedbackProvider>
+    </div>
   );
 }
 // Adres çubuğu: /yonetim?sekme=reservations kalıcıdır (yenileme, geri tuşu, paylaşılan bağlantı).
@@ -280,10 +291,17 @@ function AdminPanel({
   return (
     <div className={"admin-shell" + (moreOpen ? " more-open" : "")}>
       <aside className="admin-sidebar" id="admin-more-menu">
-        <Link to="/">
-          <img src="/images/logo.png" alt="Rota Kars" />
-        </Link>
-        <span>Acente yönetimi</span>
+        {isNativeApp() ? (
+          <span className="admin-wordmark">
+            ROTA KARS
+            <small>Acente yönetimi</small>
+          </span>
+        ) : (
+          <Link to="/" className="admin-wordmark" aria-label="Rota Kars ana sayfa">
+            ROTA KARS
+            <small>Acente yönetimi</small>
+          </Link>
+        )}
         <button className="admin-search-button" onClick={() => setPalette(true)}>
           <Search size={16} />
           <span>Ara veya git…</span>
@@ -315,7 +333,14 @@ function AdminPanel({
           ))}
         </nav>
         <div className="admin-user-chip">
-          <UserRound size={17} />
+          <span className="admin-initials" aria-hidden="true">
+            {me.user.name
+              .split(/\s+/)
+              .map((w) => w[0])
+              .slice(0, 2)
+              .join("")
+              .toLocaleUpperCase("tr-TR")}
+          </span>
           <div>
             <strong>{me.user.name}</strong>
             <small>{me.user.roleLabel || ROLE_LABELS[me.user.role]}</small>
@@ -338,8 +363,10 @@ function AdminPanel({
         <AppUpdateBanner />
         <div className="section-heading">
           <div>
-            <span className="section-note">Rota Kars</span>
             <h1>{title}</h1>
+            <p className="admin-date">
+              {new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "long" })}
+            </p>
           </div>
           <div className="admin-heading-actions">
             <button

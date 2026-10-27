@@ -21,6 +21,7 @@ import { usePageMeta } from "./lib/seo";
 import type { Catalog } from "./lib/types";
 import { configureTurnstile } from "./components/Turnstile";
 import { Layout } from "./components/Layout";
+import { NativeReturnBar } from "./components/NativeReturnBar";
 import { Home } from "./pages/Home";
 import { Tours } from "./pages/Tours";
 import { TourDetail } from "./pages/TourDetail";
@@ -113,6 +114,8 @@ function App() {
       </Suspense>
     );
   return (
+    <>
+    <NativeReturnBar />
     <Layout catalog={catalog}>
       <Suspense fallback={<PageLoading />}>
         <Routes>
@@ -202,6 +205,7 @@ function App() {
         </Routes>
       </Suspense>
     </Layout>
+    </>
   );
 }
 ReactDOM.createRoot(document.getElementById("root")!).render(

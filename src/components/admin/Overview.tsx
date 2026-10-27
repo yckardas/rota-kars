@@ -1,19 +1,17 @@
 import { useEffect, useState } from "react";
 import {
   AlarmClock,
-  Bus,
   CalendarDays,
-  ClipboardList,
   LoaderCircle,
   Plus,
   QrCode,
-  TriangleAlert,
   Users,
 } from "lucide-react";
 import { api } from "../../lib/api";
 import { currency, dateLabel } from "../../lib/types";
 import { PassengerList } from "./MobileApp";
 import { TicketScanner } from "./TicketScanner";
+import { SeatCourse } from "./SeatCourse";
 
 type OverviewData = {
   today: string;
@@ -99,27 +97,24 @@ export function Overview({
           <QrCode size={16} /> Bilet okut
         </button>
       </div>
-      <div className="overview-cards">
-        <button className={"overview-card" + (data.pending.count ? " attention" : "")} onClick={() => go("reservations", { status: "pending_agency" })}>
-          <AlarmClock size={20} />
+      <div className="work-band" role="group" aria-label="Bekleyen iş">
+        <button className={data.pending.count ? "attention" : ""} onClick={() => go("reservations", { status: "pending_agency" })}>
           <strong>{data.pending.count}</strong>
-          <span>Onay bekleyen</span>
-          {urgent > 0 && <small>{urgent} tanesinin süresi 6 saatten az</small>}
+          <span>onay bekleyen</span>
+          {urgent > 0 && <small>{urgent} tanesi 6 saatten az</small>}
         </button>
-        <button className={"overview-card" + (data.cancellationRequests ? " attention" : "")} onClick={() => go("reservations", { flag: "cancel_request" })}>
-          <TriangleAlert size={20} />
+        <button className={data.cancellationRequests ? "attention" : ""} onClick={() => go("reservations", { flag: "cancel_request" })}>
           <strong>{data.cancellationRequests}</strong>
-          <span>İptal talebi</span>
+          <span>iptal talebi</span>
         </button>
-        <button className={"overview-card" + (data.newRequests ? " attention" : "")} onClick={() => go("requests")}>
-          <ClipboardList size={20} />
+        <button className={data.newRequests ? "attention" : ""} onClick={() => go("requests")}>
           <strong>{data.newRequests}</strong>
-          <span>Yeni talep</span>
+          <span>yeni talep</span>
         </button>
-        <button className="overview-card" onClick={() => go("departures")}>
-          <Users size={20} />
+        <button onClick={() => go("departures")}>
           <strong>
-            {data.week.booked}/{data.week.capacity}
+            {data.week.booked}
+            <em>/{data.week.capacity}</em>
           </strong>
           <span>7 günlük doluluk · {data.week.departures} sefer</span>
         </button>
@@ -128,20 +123,24 @@ export function Overview({
       <section className="overview-section">
         <h2>Bugün kalkan seferler · {dateLabel(data.today)}</h2>
         {data.todayDepartures.length === 0 && <p className="muted">Bugün sefer yok.</p>}
-        <ul className="overview-list">
+        <ul className="overview-list departures-today">
           {data.todayDepartures.map((d) => (
             <li key={d.id}>
-              <Bus size={18} />
+              <time>{d.startTime}</time>
               <span>
-                <strong>
-                  {d.startTime} · {d.tourName}
-                </strong>
+                <strong>{d.tourName}</strong>
                 <small>
-                  {d.booked}/{d.capacity} koltuk · {d.pickup} · Rehber: {d.guideName || "atanmadı"}
+                  {d.pickup} · Rehber: {d.guideName || "atanmadı"}
                 </small>
               </span>
+              <span className="course-cell">
+                <SeatCourse sold={d.booked} total={d.capacity} />
+                <b className={d.booked >= d.capacity ? "is-full" : ""}>
+                  {d.booked >= d.capacity ? "Dolu" : `${d.booked}/${d.capacity}`}
+                </b>
+              </span>
               <button className="btn btn-outline btn-small" onClick={() => setPassengers(d.id)}>
-                Yolcular
+                <Users size={15} /> Yolcular
               </button>
             </li>
           ))}

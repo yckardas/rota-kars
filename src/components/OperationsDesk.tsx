@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { TicketScanner } from "./admin/TicketScanner";
 import { useFeedback } from "./admin/feedback";
+import { SeatCourse } from "./admin/SeatCourse";
 import { Modal } from "./Modal";
 import { downloadCsv } from "../lib/csv";
 import { telHref, waNumber } from "../lib/phone";
@@ -240,6 +241,7 @@ export function DepartureManager({
                 </td>
                 <td>
                   {d.vehicle?.passengerSeats}+1 · {d.vehicle?.name}
+                  <SeatCourse sold={(d.vehicle?.sellableSeats || 0) - d.available} total={d.vehicle?.sellableSeats || 0} size="sm" />
                   <small>
                     {d.available} / {d.vehicle?.sellableSeats} koltuk boş
                   </small>
@@ -835,10 +837,11 @@ function BookingControls({
   return (
     <Modal title={r.reference + " · " + tourName} onClose={close} wide>
       <section className="booking-desk-panel">
-        <div className="booking-summary">
+        <div className="booking-head">
           <div>
-            <span className={"status-tag status-" + r.status}>{statusLabels[r.status] || r.status}</span>
-            <h2>{r.name}</h2>
+            <h2>
+              {r.name} <span className={"status-tag status-" + r.status}>{statusLabels[r.status] || r.status}</span>
+            </h2>
             <p className="muted">
               {dateLabel(r.date)} · {r.start_time} · Koltuk {r.seats.join(", ")} · {r.passengers.length} kişi
             </p>
@@ -936,7 +939,7 @@ function BookingControls({
               İptal et
             </button>
           )}
-          <a className="text-link" href={"/bilet/" + r.ticket_token} target="_blank" rel="noreferrer">
+          <a className="btn btn-outline btn-small" href={"/bilet/" + r.ticket_token} target="_blank" rel="noreferrer">
             <Ticket size={15} />
             QR belge
           </a>
@@ -1008,7 +1011,7 @@ function BookingControls({
               ))
             ) : (
               <>
-                <p className="info-note">
+                <p className="form-hint">
                   Bu form ödeme veya iade yapmaz. Banka/havale veya nakit olarak dışarıda gerçekleşen işlemi kaydeder.
                 </p>
                 <div className="form-grid">
@@ -1277,8 +1280,10 @@ export function DailyReport({ catalog }: { catalog: Catalog }) {
                       <small>{d.guide_name || "Rehber atanmadı"}</small>
                     </td>
                     <td>
-                      {d.vehicle?.sellableSeats} / {d.confirmedGuests}
-                      <small>{d.available} boş koltuk</small>
+                      <SeatCourse sold={(d.vehicle?.sellableSeats || 0) - d.available} total={d.vehicle?.sellableSeats || 0} size="sm" />
+                      <small>
+                        {d.confirmedGuests} onaylı misafir · {d.available} boş koltuk
+                      </small>
                     </td>
                     <td>
                       <button className="text-link" onClick={() => setPassengers(d.id)}>

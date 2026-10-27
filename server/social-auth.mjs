@@ -315,10 +315,12 @@ export function attachSocialAuth(
           },
         );
         if (!profile.id || !profile.email) throw new Error("Missing email");
+        // Graph API e-postanın doğrulandığını bildirmez: üye bizim doğrulama bağlantımızla onaylar.
         identity = {
           subject: profile.id,
           name: profile.name,
           email: profile.email,
+          emailVerified: false,
         };
       } else
         identity = await verifyIdToken(tokens.id_token, config, entry.nonce);

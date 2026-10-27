@@ -55,7 +55,7 @@ export function Membership() {
       [],
     ),
     [ref, setRef] = useState(params.get("ref") || ""),
-    human = useTurnstile("register"),
+    human = useTurnstile(mode === "register" ? "register" : "login"),
     destination = safeNextPath(params.get("next")) || "/hesabim";
   useEffect(() => {
     api<{ id: string; enabled: boolean }[]>("/auth/providers")
@@ -88,15 +88,15 @@ export function Membership() {
               consent: f.get("consent") === "on",
               marketingConsent: f.get("marketingConsent") === "on",
               ...(ref.trim() ? { referralCode: ref.trim().toUpperCase() } : {}),
-              turnstileToken: human.token,
             }
           : {}),
+        turnstileToken: human.token,
       });
       await refresh();
       navigate(destination, { replace: true });
     } catch (e) {
       setError((e as Error).message);
-      if (mode === "register") human.reset();
+      human.reset();
     } finally {
       setBusy(false);
     }
@@ -316,10 +316,10 @@ export function Membership() {
               {error}
             </p>
           )}
-          {mode === "register" && human.widget}
+          {human.widget}
           <button
             className="btn block"
-            disabled={busy || (mode === "register" && !human.ready)}
+            disabled={busy || !human.ready}
           >
             {busy ? <LoaderCircle className="spin" size={17} /> : null}
             {mode === "register" ? "Üye ol, ayrıcalıkları keşfet" : "Giriş yap"}

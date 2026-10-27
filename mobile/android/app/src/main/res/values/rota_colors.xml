@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="rota_navy">#14313D</color>
-    <color name="rota_gold">#D9B06B</color>
+    <!-- Ani Taşı: siyah tüf kabuk, kırmızı tüf vurgu. -->
+    <color name="rota_tufa">#24201D</color>
+    <color name="rota_red">#9C3B2E</color>
+    <color name="rota_stone">#E4E8EA</color>
 </resources>

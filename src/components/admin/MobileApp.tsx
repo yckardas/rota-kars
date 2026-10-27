@@ -339,8 +339,11 @@ th{background:#eee}td.sign{width:110px}@media print{body{margin:10mm}}</style></
 <h1>${esc(d.tourName)}</h1><p>${esc(dateLabel(d.date))} · ${esc(d.startTime)} · ${esc(d.pickup)} · Rehber: ${esc(d.guideName || "-")} · ${rows.length} yolcu</p>
 <table><thead><tr><th>Koltuk</th><th>Yolcu</th><th>İrtibat</th><th>Referans</th><th>Durum</th><th>Not</th><th>İmza</th></tr></thead><tbody>
 ${rows.map((r) => `<tr><td>${r.seat}</td><td>${esc(r.passenger)}</td><td>${esc(r.contact)}</td><td>${esc(r.reference)}</td><td>${esc(r.status)}</td><td>${esc(r.notes)}</td><td class="sign"></td></tr>`).join("")}
-</tbody></table><script>window.onload=()=>window.print()</script></body></html>`);
+</tbody></table></body></html>`);
   w.document.close();
+  // Satır içi betik CSP'ye takılır: yazdırma bu pencereden başlatılır.
+  w.focus();
+  setTimeout(() => w.print(), 150);
 }
 
 // Telefonda yolcu listesi: arama, WhatsApp ve biniş işaretleme.

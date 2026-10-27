@@ -3,50 +3,143 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#24201D" />
     <title>Bağlantı yok · Rota Kars Yönetim</title>
     <style>
-      :root { color-scheme: light; }
-      body {
-        margin: 0;
-        min-height: 100vh;
-        display: grid;
-        place-items: center;
-        background: #f6f4ee;
-        color: #14313d;
-        font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
-        padding: 24px;
-        box-sizing: border-box;
-        text-align: center;
+      :root {
+        color-scheme: dark;
+        --tufa: #24201d;
+        --tufa-3: #3b3430;
+        --stone: #e4e8ea;
+        --muted: #aab1b5;
+        --red: #9c3b2e;
+        --red-deep: #7e2f25;
+        --black: #110e0c;
+        --mortar: #4a413a;
       }
-      main { max-width: 340px; }
-      h1 { font-size: 22px; margin: 18px 0 8px; }
-      p { color: #5a666c; margin: 0 0 24px; }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        display: grid;
+        grid-template-rows: 1fr auto;
+        background: var(--tufa);
+        color: var(--stone);
+        font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+      }
+      main {
+        align-self: center;
+        width: 100%;
+        max-width: 380px;
+        margin: 0 auto;
+        padding: 32px 24px;
+      }
+      .mark {
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.26em;
+        color: var(--stone);
+      }
+      .mark small {
+        display: block;
+        margin-top: 2px;
+        font-size: 13px;
+        font-weight: 400;
+        letter-spacing: 0;
+        color: var(--muted);
+      }
+      h1 {
+        margin: 40px 0 8px;
+        font-size: 26px;
+        line-height: 1.2;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      p {
+        margin: 0 0 28px;
+        color: var(--muted);
+      }
+      /* Kopuk bağlantı: sırası eksik bir duvar. */
+      .gap-course {
+        display: flex;
+        gap: 3px;
+        margin-top: 28px;
+      }
+      .gap-course i {
+        width: 26px;
+        height: 16px;
+        border-radius: 1px;
+        background: var(--red);
+      }
+      .gap-course i:nth-child(3n + 2) {
+        background: var(--black);
+        box-shadow: inset 0 0 0 1px var(--mortar);
+      }
+      .gap-course i:nth-child(3n) {
+        background: var(--red-deep);
+      }
+      .gap-course i.missing {
+        background: transparent;
+        box-shadow: inset 0 0 0 1px var(--mortar);
+      }
       button {
+        width: 100%;
+        min-height: 52px;
+        border: 0;
+        border-radius: 4px;
+        background: var(--stone);
+        color: var(--tufa);
         font: inherit;
         font-weight: 600;
-        border: 0;
-        border-radius: 999px;
-        padding: 14px 28px;
-        min-height: 48px;
-        background: #14313d;
-        color: white;
+        transition: transform 0.1s;
       }
-      svg { width: 56px; height: 56px; color: #8a6229; }
+      button:active {
+        transform: translateY(1px);
+      }
+      button:focus-visible {
+        outline: 2px solid var(--red);
+        outline-offset: 3px;
+      }
+      button[aria-busy="true"] {
+        opacity: 0.7;
+      }
+      footer {
+        height: calc(10px + env(safe-area-inset-bottom));
+        background: repeating-linear-gradient(
+          90deg,
+          var(--red) 0 34px,
+          var(--mortar) 34px 37px,
+          var(--black) 37px 60px,
+          var(--mortar) 60px 63px,
+          var(--red-deep) 63px 90px,
+          var(--mortar) 90px 93px
+        );
+      }
     </style>
   </head>
   <body>
     <main>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
-        <path d="M2 8.8a15 15 0 0 1 20 0M5 12.6a10 10 0 0 1 14 0M8.5 16.4a5 5 0 0 1 7 0M12 20h.01" stroke-linecap="round" />
-        <path d="M3 3l18 18" stroke-linecap="round" />
-      </svg>
+      <div class="mark">ROTA KARS<small>Acente yönetimi</small></div>
+      <div class="gap-course" aria-hidden="true">
+        <i></i><i></i><i></i><i class="missing"></i><i></i><i></i><i></i><i></i>
+      </div>
       <h1>İnternet bağlantısı yok</h1>
-      <p>Yönetim paneli canlı sunucudan açılır. Bağlantınız gelince yeniden deneyin.</p>
+      <p>Panel canlı sunucudan açılır. Bağlantı gelince yeniden deneyin; açık kayıtlarınız sunucuda durur.</p>
       <button type="button" id="retry">Yeniden dene</button>
     </main>
+    <footer aria-hidden="true"></footer>
     <script src="config.js"></script>
     <script>
-      document.getElementById("retry").addEventListener("click", function () {
+      var retry = document.getElementById("retry");
+      retry.addEventListener("click", function () {
+        retry.setAttribute("aria-busy", "true");
+        retry.textContent = "Bağlanıyor…";
         location.replace((window.ROTA_APP_URL || "https://rotakarsturizm.com") + "/yonetim");
       });
     </script>

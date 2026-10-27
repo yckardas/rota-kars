@@ -141,3 +141,25 @@ test("Van comparison offers the three Van variants", async () => {
   assert.equal(result.cards.length, 3);
   assert.ok(result.cards.every((card) => card.id.startsWith("van")));
 });
+
+test("chat: paid model calls stop at the daily per-visitor budget", async () => {
+  let calls = 0;
+  const client = {
+    messages: {
+      create: async () => {
+        calls++;
+        return { content: [{ type: "text", text: "Model yanıtı" }] };
+      },
+    },
+  };
+  const chat = createChatService({ CHAT_CLIENT_DAILY_LIMIT: "2", CHAT_DAILY_LIMIT: "3" }, client);
+  const ask = (who) =>
+    chat.reply([{ role: "user", content: "Uzay mekiği ile Kars'a gidebilir miyim acaba?" }], { abroadConsent: true, client: who });
+  await ask("a");
+  await ask("a");
+  await ask("a");
+  assert.equal(calls, 2, "ziyaretçi başına sınır");
+  await ask("b");
+  await ask("c");
+  assert.equal(calls, 3, "günlük toplam sınır");
+});

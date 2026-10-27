@@ -1,4 +1,6 @@
 :root {
+  /* Site yalnız açık tema için tasarlandı: telefonun karanlık modu sayfayı zorla koyulaştırmasın. */
+  color-scheme: only light;
   --navy: #183847;
   --ink: #21323b;
   --gold: #a87835;
@@ -8057,17 +8059,17 @@ kbd {
   margin: 0;
   padding: 22px 24px 26px;
 }
-.booking-summary {
+.booking-head {
   display: flex;
   justify-content: space-between;
   gap: 18px;
   flex-wrap: wrap;
 }
-.booking-summary h2 {
+.booking-head h2 {
   font-size: 24px;
   margin: 8px 0 2px;
 }
-.booking-summary p {
+.booking-head p {
   margin: 2px 0;
 }
 .booking-contact {
@@ -8180,4 +8182,25 @@ kbd {
   .admin-hotel-list article {
     flex-wrap: wrap;
   }
+}
+
+/* Android yönetim uygulamasında site sayfasından panele dönüş çubuğu. */
+.native-return-bar {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 16px;
+  background: #24201d;
+  color: #ece6dc;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.native-return-bar:focus-visible {
+  outline: 2px solid #9c3b2e;
+  outline-offset: -4px;
 }

@@ -131,6 +131,20 @@ export function createChatService(
         maxRetries: 0,
       })
     : null;
+  // Ücretli model çağrıları için günlük bütçe: toplam ve ziyaretçi (IP) başına.
+  // Sınır dolunca yerel yanıt ve WhatsApp yönlendirmesi döner; maliyet sınırsız büyüyemez.
+  const dailyLimit = Number(env.CHAT_DAILY_LIMIT || 300),
+    clientLimit = Number(env.CHAT_CLIENT_DAILY_LIMIT || 20),
+    budget = { day: "", total: 0, clients: new Map() };
+  const spend = (client) => {
+    const day = new Date().toISOString().slice(0, 10);
+    if (budget.day !== day) Object.assign(budget, { day, total: 0, clients: new Map() });
+    const used = budget.clients.get(client) || 0;
+    if (budget.total >= dailyLimit || (client && used >= clientLimit)) return false;
+    budget.total++;
+    if (client) budget.clients.set(client, used + 1);
+    return true;
+  };
   async function answer(messages, pageTourId) {
     const last = messages.at(-1).content,
       q = normalize(last),
@@ -526,11 +540,12 @@ export function createChatService(
   }
   return {
     provider: enabled ? "claude" : "local",
-    async reply(messages, { tourId, abroadConsent = false } = {}) {
+    async reply(messages, { tourId, abroadConsent = false, client = "" } = {}) {
       const local = await answer(messages, tourId);
       if (!anthropic || !local.unknown) return local;
       // Yurt dışı aktarım rızası yoksa mesaj buluta gönderilmez.
       if (!abroadConsent) return { ...local, consentNeeded: true };
+      if (!spend(client)) return local;
       try {
         const response = await anthropic.messages.create({
           model: env.CHAT_MODEL || "claude-opus-5-5",
@@ -550,7 +565,8 @@ export function createChatService(
               },
             },
           ],
-          messages,
+          // Yalnız son konuşma gönderilir (tek sayı: ilk mesaj kullanıcıdan başlar).
+          messages: messages.slice(-7),
         });
         const text = response.content
           .filter((b) => b.type === "text")

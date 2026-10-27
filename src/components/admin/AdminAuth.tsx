@@ -1,3 +1,4 @@
+import { isNativeApp } from "../../lib/native";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -96,9 +97,7 @@ export function AdminLogin({
   }
   return (
     <div className="admin-login">
-      <Link to="/">
-        <img src="/images/logo.png" alt="Rota Kars" />
-      </Link>
+      <SiteLogo />
       <LockKeyhole size={27} />
       <h1>Acente yönetimi</h1>
       <p>Rezervasyonlar, seferler, talepler ve günlük operasyon.</p>
@@ -410,9 +409,7 @@ export function ForcedTwoFactor({
 }) {
   return (
     <div className="admin-login admin-2fa-gate">
-      <Link to="/">
-        <img src="/images/logo.png" alt="Rota Kars" />
-      </Link>
+      <SiteLogo />
       <ShieldCheck size={27} />
       <h1>İki adımlı doğrulama</h1>
       <p>
@@ -649,3 +646,8 @@ export function AdminAccount({
 }
 export const isTwoFactorRequired = (e: unknown) =>
   e instanceof ApiError && e.status === 403 && e.code === "2FA_REQUIRED";
+// Logo tarayıcıda siteye götürür; yönetim uygulamasında panelde kalınır.
+function SiteLogo() {
+  const img = <img src="/images/logo.png" alt="Rota Kars" />;
+  return isNativeApp() ? <span className="admin-login-logo">{img}</span> : <Link to="/">{img}</Link>;
+}

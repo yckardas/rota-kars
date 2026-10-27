@@ -1,0 +1,667 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-21T15:35:32+00:00",
+  "title": "Design System: Rota Kars Yönetim (Ani Taşı)",
+  "scope": {
+    "surface": "agency panel (/yonetim, .rk-admin) and Android wrapper",
+    "designFile": "docs/DESIGN-PANEL.md",
+    "notCovered": "public site; see docs/DESIGN.md"
+  },
+  "extensions": {
+    "colorMeta": {
+      "tufa": {
+        "role": "primary",
+        "displayName": "Black Tufa",
+        "canonical": "#24201d",
+        "tonalRamp": [
+          "#0d0b09",
+          "#272423",
+          "#45413e",
+          "#65605d",
+          "#86817d",
+          "#a9a4a0",
+          "#cdc8c4",
+          "#f1eeeb"
+        ]
+      },
+      "tufa-2": {
+        "role": "primary",
+        "displayName": "Tufa Lit",
+        "canonical": "#2e2925",
+        "tonalRamp": [
+          "#0d0b09",
+          "#272422",
+          "#46413d",
+          "#66605b",
+          "#87817c",
+          "#aaa49f",
+          "#cec8c3",
+          "#f2eeea"
+        ]
+      },
+      "tufa-3": {
+        "role": "primary",
+        "displayName": "Tufa Face",
+        "canonical": "#3b3430",
+        "tonalRamp": [
+          "#0e0a08",
+          "#282422",
+          "#48403c",
+          "#675f5b",
+          "#89807c",
+          "#aca39e",
+          "#d0c7c2",
+          "#f3edea"
+        ]
+      },
+      "tufa-black": {
+        "role": "primary",
+        "displayName": "Fired Black",
+        "canonical": "#110e0c",
+        "tonalRamp": [
+          "#0c0b0a",
+          "#272523",
+          "#45413f",
+          "#64605e",
+          "#86817f",
+          "#a8a4a1",
+          "#cdc8c5",
+          "#f1eeec"
+        ]
+      },
+      "rail-mortar": {
+        "role": "primary",
+        "displayName": "Rail Mortar",
+        "canonical": "#4a413a",
+        "tonalRamp": [
+          "#0e0a07",
+          "#292420",
+          "#494039",
+          "#695f58",
+          "#8a8078",
+          "#ada39b",
+          "#d2c7be",
+          "#f4ede8"
+        ]
+      },
+      "rail-text": {
+        "role": "neutral",
+        "displayName": "Rail Text",
+        "canonical": "#ece6dc",
+        "tonalRamp": [
+          "#0d0b07",
+          "#272520",
+          "#464139",
+          "#666058",
+          "#878279",
+          "#aaa49b",
+          "#cec8bf",
+          "#f2eee8"
+        ]
+      },
+      "rail-muted": {
+        "role": "neutral",
+        "displayName": "Rail Muted",
+        "canonical": "#aaa093",
+        "tonalRamp": [
+          "#0e0a06",
+          "#29241e",
+          "#494035",
+          "#696054",
+          "#8a8174",
+          "#ada396",
+          "#d2c7ba",
+          "#f4ede5"
+        ]
+      },
+      "red": {
+        "role": "secondary",
+        "displayName": "Red Tufa",
+        "canonical": "#9c3b2e",
+        "tonalRamp": [
+          "#240000",
+          "#44110b",
+          "#752016",
+          "#9a4236",
+          "#bf6456",
+          "#e68777",
+          "#ffab9a",
+          "#ffdbcf"
+        ]
+      },
+      "red-deep": {
+        "role": "secondary",
+        "displayName": "Deep Red Tufa",
+        "canonical": "#7e2f25",
+        "tonalRamp": [
+          "#200000",
+          "#401610",
+          "#72241b",
+          "#96453a",
+          "#bc675a",
+          "#e2897b",
+          "#ffad9e",
+          "#ffdfd4"
+        ]
+      },
+      "red-wash": {
+        "role": "secondary",
+        "displayName": "Red Wash",
+        "canonical": "#f4e5e1",
+        "tonalRamp": [
+          "#0f0a08",
+          "#2a2322",
+          "#4b3f3c",
+          "#6b5e5b",
+          "#8c7f7b",
+          "#afa19e",
+          "#d4c5c2",
+          "#f5ecea"
+        ]
+      },
+      "lichen": {
+        "role": "tertiary",
+        "displayName": "Lichen",
+        "canonical": "#4b6740",
+        "tonalRamp": [
+          "#040f01",
+          "#1b2a15",
+          "#304a25",
+          "#4e6a43",
+          "#6f8c63",
+          "#91b085",
+          "#b4d4a8",
+          "#e2f6db"
+        ]
+      },
+      "lichen-wash": {
+        "role": "tertiary",
+        "displayName": "Lichen Wash",
+        "canonical": "#e2eadc",
+        "tonalRamp": [
+          "#090c07",
+          "#232620",
+          "#3e4439",
+          "#5d6458",
+          "#7e8578",
+          "#a0a89b",
+          "#c4ccbe",
+          "#ebf0e8"
+        ]
+      },
+      "ochre": {
+        "role": "tertiary",
+        "displayName": "Ochre",
+        "canonical": "#8f611b",
+        "tonalRamp": [
+          "#1a0500",
+          "#371f00",
+          "#623700",
+          "#84560a",
+          "#a77836",
+          "#cc9b5a",
+          "#f2bf7d",
+          "#ffe9c2"
+        ]
+      },
+      "ochre-wash": {
+        "role": "tertiary",
+        "displayName": "Ochre Wash",
+        "canonical": "#f3e9d6",
+        "tonalRamp": [
+          "#0e0b04",
+          "#29241c",
+          "#494131",
+          "#696050",
+          "#8a8170",
+          "#ada492",
+          "#d2c8b6",
+          "#f4eee2"
+        ]
+      },
+      "closed": {
+        "role": "tertiary",
+        "displayName": "Weathered Stone",
+        "canonical": "#6f6962",
+        "tonalRamp": [
+          "#0d0b08",
+          "#282421",
+          "#46413a",
+          "#666059",
+          "#87817a",
+          "#aaa49c",
+          "#cfc8c0",
+          "#f2eee9"
+        ]
+      },
+      "closed-wash": {
+        "role": "tertiary",
+        "displayName": "Closed Wash",
+        "canonical": "#e4e6e7",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#242526",
+          "#414243",
+          "#606162",
+          "#818383",
+          "#a3a5a6",
+          "#c7c9ca",
+          "#edefef"
+        ]
+      },
+      "ground": {
+        "role": "neutral",
+        "displayName": "Pale Stone Ground",
+        "canonical": "#dfe2e3",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#242526",
+          "#404243",
+          "#5f6262",
+          "#808384",
+          "#a3a5a6",
+          "#c7cacb",
+          "#edefef"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Dressed Face",
+        "canonical": "#f6f7f7",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#414242",
+          "#606161",
+          "#818282",
+          "#a4a5a5",
+          "#c8c9c9",
+          "#eeeeee"
+        ]
+      },
+      "surface-2": {
+        "role": "neutral",
+        "displayName": "Shaded Face",
+        "canonical": "#eceeef",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#242526",
+          "#414243",
+          "#606162",
+          "#818383",
+          "#a3a5a6",
+          "#c7c9ca",
+          "#edefef"
+        ]
+      },
+      "field": {
+        "role": "neutral",
+        "displayName": "Field Face",
+        "canonical": "#fbfcfc",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#414242",
+          "#606161",
+          "#818282",
+          "#a4a5a5",
+          "#c8c9c9",
+          "#eeeeee"
+        ]
+      },
+      "row-hover": {
+        "role": "neutral",
+        "displayName": "Row Hover",
+        "canonical": "#eef0f1",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#242526",
+          "#414243",
+          "#606162",
+          "#818383",
+          "#a3a5a6",
+          "#c7c9ca",
+          "#edefef"
+        ]
+      },
+      "mortar": {
+        "role": "neutral",
+        "displayName": "Mortar",
+        "canonical": "#c9ced0",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#232526",
+          "#3f4344",
+          "#5e6264",
+          "#7f8385",
+          "#a1a6a8",
+          "#c5cacc",
+          "#eceff0"
+        ]
+      },
+      "mortar-soft": {
+        "role": "neutral",
+        "displayName": "Soft Mortar",
+        "canonical": "#dde1e2",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#242526",
+          "#3f4343",
+          "#5e6263",
+          "#7f8384",
+          "#a2a6a7",
+          "#c6cacb",
+          "#ecefef"
+        ]
+      },
+      "mortar-hover": {
+        "role": "neutral",
+        "displayName": "Hover Mortar",
+        "canonical": "#aeb5b8",
+        "tonalRamp": [
+          "#090c0d",
+          "#222627",
+          "#3d4346",
+          "#5c6265",
+          "#7d8486",
+          "#9fa6a9",
+          "#c3cacd",
+          "#ebeff1"
+        ]
+      },
+      "free": {
+        "role": "neutral",
+        "displayName": "Limestone",
+        "canonical": "#d6d9da",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#242526",
+          "#404243",
+          "#5f6263",
+          "#808384",
+          "#a3a5a6",
+          "#c7cacb",
+          "#edefef"
+        ]
+      },
+      "free-edge": {
+        "role": "neutral",
+        "displayName": "Limestone Edge",
+        "canonical": "#b9bfc2",
+        "tonalRamp": [
+          "#090c0d",
+          "#232627",
+          "#3e4345",
+          "#5d6265",
+          "#7e8386",
+          "#a0a6a9",
+          "#c4cacd",
+          "#ebeff1"
+        ]
+      },
+      "ink-strong": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#1f1b18",
+        "tonalRamp": [
+          "#0d0b09",
+          "#272423",
+          "#46413e",
+          "#65605c",
+          "#86817d",
+          "#a9a4a0",
+          "#cdc8c4",
+          "#f1eeeb"
+        ]
+      },
+      "ink-soft": {
+        "role": "neutral",
+        "displayName": "Ink Soft",
+        "canonical": "#5e5750",
+        "tonalRamp": [
+          "#0e0a08",
+          "#282421",
+          "#47413a",
+          "#676059",
+          "#888179",
+          "#aba49c",
+          "#d0c8bf",
+          "#f3ede8"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page title in the main header and login; 24px under 760px."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section and editor headings."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card and calendar headings."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Work-band counts; 20px on phone."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Tables, lists, inputs, buttons; tabular numerals."
+      },
+      "body-small": {
+        "displayName": "Body Small",
+        "purpose": "Field labels, chips, text links, small buttons."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase table column and weekday headers only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "window",
+        "value": "0 24px 64px #14100e47",
+        "purpose": "Modals and booking window, over #1a1613a6 backdrop."
+      },
+      {
+        "name": "toast",
+        "value": "0 12px 32px #14100e40",
+        "purpose": "Toasts."
+      },
+      {
+        "name": "tabbar-lift",
+        "value": "0 -8px 24px #14100e33",
+        "purpose": "Phone bottom tab bar."
+      },
+      {
+        "name": "field-focus",
+        "value": "0 0 0 3px #9c3b2e22",
+        "purpose": "Focused input halo with black tufa border."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state",
+        "value": "0.15s (background, color, border-color)",
+        "purpose": "Hover and focus state changes."
+      },
+      {
+        "name": "press",
+        "value": "transform translateY(1px) 0.1s",
+        "purpose": "Button press."
+      },
+      {
+        "name": "reduced",
+        "value": "transition: none",
+        "purpose": "prefers-reduced-motion disables all transitions."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone",
+        "value": "760px",
+        "purpose": "Rail becomes bottom tab bar; tables become stone cards; larger touch targets."
+      },
+      {
+        "name": "departure-row-wide",
+        "value": "820px (container)",
+        "purpose": "Departure row goes single-line."
+      }
+    ],
+    "masonryBand": {
+      "vertical": "repeating-linear-gradient(180deg, #9c3b2e 0 22px, #4a413a 22px 24px, #110e0c 24px 40px, #4a413a 40px 42px, #7e2f25 42px 58px, #4a413a 58px 60px, #110e0c 60px 84px, #4a413a 84px 86px)",
+      "purpose": "6px rail edge; horizontal variants on login form top and offline footer."
+    },
+    "android": {
+      "rota_tufa": "#24201D",
+      "rota_red": "#9C3B2E",
+      "rota_stone": "#E4E8EA",
+      "statusBar": "rota_tufa, light icons",
+      "navigationBar": "rota_tufa",
+      "splashBackground": "rota_tufa"
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Black tufa block button for the main action in a view or row.",
+      "html": "<button class=\"ds-btn\">Onayla</button>",
+      "css": ":host{--tufa:#24201d;--tufa-2:#2e2925;--tufa-3:#3b3430;--rail-text:#ece6dc;--rail-muted:#aaa093;--ground:#dfe2e3;--surface:#f6f7f7;--surface-2:#eceeef;--mortar:#c9ced0;--mortar-soft:#dde1e2;--ink:#1f1b18;--ink-soft:#5e5750;--red:#9c3b2e;--red-deep:#7e2f25;--lichen:#4b6740;--lichen-wash:#e2eadc;--ochre:#8f611b;--ochre-wash:#f3e9d6;--closed:#6f6962;--closed-wash:#e4e6e7;--free:#d6d9da;--free-edge:#b9bfc2;font-family:Onest,Arial,sans-serif;font-variant-numeric:tabular-nums;} .ds-btn{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:0 16px;border:1px solid var(--tufa);border-radius:4px;background:var(--tufa);color:#fff;font:500 14px/1.5 Onest,Arial,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,transform .1s;} .ds-btn:hover{background:var(--tufa-3);border-color:var(--tufa-3);} .ds-btn:active{transform:translateY(1px);} .ds-btn:focus-visible{outline:2px solid var(--red);outline-offset:2px;}"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary action on a dressed stone face with a mortar edge.",
+      "html": "<button class=\"ds-btn ds-btn-outline\">Ödeme kaydet</button>",
+      "css": ":host{--tufa:#24201d;--tufa-2:#2e2925;--tufa-3:#3b3430;--rail-text:#ece6dc;--rail-muted:#aaa093;--ground:#dfe2e3;--surface:#f6f7f7;--surface-2:#eceeef;--mortar:#c9ced0;--mortar-soft:#dde1e2;--ink:#1f1b18;--ink-soft:#5e5750;--red:#9c3b2e;--red-deep:#7e2f25;--lichen:#4b6740;--lichen-wash:#e2eadc;--ochre:#8f611b;--ochre-wash:#f3e9d6;--closed:#6f6962;--closed-wash:#e4e6e7;--free:#d6d9da;--free-edge:#b9bfc2;font-family:Onest,Arial,sans-serif;font-variant-numeric:tabular-nums;} .ds-btn{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:0 16px;border:1px solid var(--tufa);border-radius:4px;background:var(--tufa);color:#fff;font:500 14px/1.5 Onest,Arial,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,transform .1s;} .ds-btn:hover{background:var(--tufa-3);border-color:var(--tufa-3);} .ds-btn:active{transform:translateY(1px);} .ds-btn:focus-visible{outline:2px solid var(--red);outline-offset:2px;} .ds-btn-outline{background:var(--surface);border-color:var(--mortar);color:var(--ink);} .ds-btn-outline:hover{background:var(--surface-2);border-color:#aeb5b8;}"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Red tufa button for irreversible actions, always behind a confirmation.",
+      "html": "<button class=\"ds-btn ds-btn-danger\">Rezervasyonu iptal et</button>",
+      "css": ":host{--tufa:#24201d;--tufa-2:#2e2925;--tufa-3:#3b3430;--rail-text:#ece6dc;--rail-muted:#aaa093;--ground:#dfe2e3;--surface:#f6f7f7;--surface-2:#eceeef;--mortar:#c9ced0;--mortar-soft:#dde1e2;--ink:#1f1b18;--ink-soft:#5e5750;--red:#9c3b2e;--red-deep:#7e2f25;--lichen:#4b6740;--lichen-wash:#e2eadc;--ochre:#8f611b;--ochre-wash:#f3e9d6;--closed:#6f6962;--closed-wash:#e4e6e7;--free:#d6d9da;--free-edge:#b9bfc2;font-family:Onest,Arial,sans-serif;font-variant-numeric:tabular-nums;} .ds-btn{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:0 16px;border:1px solid var(--tufa);border-radius:4px;background:var(--tufa);color:#fff;font:500 14px/1.5 Onest,Arial,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,transform .1s;} .ds-btn:hover{background:var(--tufa-3);border-color:var(--tufa-3);} .ds-btn:active{transform:translateY(1px);} .ds-btn:focus-visible{outline:2px solid var(--red);outline-offset:2px;} .ds-btn-danger{background:var(--red);border-color:var(--red);} .ds-btn-danger:hover{background:var(--red-deep);border-color:var(--red-deep);}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Labelled field cut into the surface; focus shifts the border to black tufa with a faint red halo.",
+      "html": "<label class=\"ds-field\">Dekont no<input placeholder=\"Örn. 2026-1042\"></label>",
+      "css": ":host{--tufa:#24201d;--tufa-2:#2e2925;--tufa-3:#3b3430;--rail-text:#ece6dc;--rail-muted:#aaa093;--ground:#dfe2e3;--surface:#f6f7f7;--surface-2:#eceeef;--mortar:#c9ced0;--mortar-soft:#dde1e2;--ink:#1f1b18;--ink-soft:#5e5750;--red:#9c3b2e;--red-deep:#7e2f25;--lichen:#4b6740;--lichen-wash:#e2eadc;--ochre:#8f611b;--ochre-wash:#f3e9d6;--closed:#6f6962;--closed-wash:#e4e6e7;--free:#d6d9da;--free-edge:#b9bfc2;font-family:Onest,Arial,sans-serif;font-variant-numeric:tabular-nums;} .ds-field{display:grid;gap:6px;font:500 13px/1.5 Onest,Arial,sans-serif;color:var(--ink);max-width:320px;} .ds-field input{min-height:40px;padding:8px 12px;border:1px solid var(--mortar);border-radius:4px;background:#fbfcfc;font:400 14px Onest,Arial,sans-serif;color:var(--ink);transition:border-color .15s,box-shadow .15s;} .ds-field input::placeholder{color:#776f67;} .ds-field input:hover{border-color:#aeb5b8;} .ds-field input:focus{outline:none;border-color:var(--tufa);box-shadow:0 0 0 3px #9c3b2e22;}"
+    },
+    {
+      "name": "Rail Navigation",
+      "kind": "nav",
+      "refersTo": "rail",
+      "description": "Black tufa rail with grouped items; the active item carries one red stone and the right edge is a masonry band.",
+      "html": "<nav class=\"ds-rail\"><b class=\"ds-mark\">ROTA KARS<small>Acente yönetimi</small></b><h2>Günlük iş</h2><button class=\"active\">Özet <span class=\"ds-badge\">3</span></button><button>Rezervasyonlar</button><button>Seferler</button></nav>",
+      "css": ":host{--tufa:#24201d;--tufa-2:#2e2925;--tufa-3:#3b3430;--rail-text:#ece6dc;--rail-muted:#aaa093;--ground:#dfe2e3;--surface:#f6f7f7;--surface-2:#eceeef;--mortar:#c9ced0;--mortar-soft:#dde1e2;--ink:#1f1b18;--ink-soft:#5e5750;--red:#9c3b2e;--red-deep:#7e2f25;--lichen:#4b6740;--lichen-wash:#e2eadc;--ochre:#8f611b;--ochre-wash:#f3e9d6;--closed:#6f6962;--closed-wash:#e4e6e7;--free:#d6d9da;--free-edge:#b9bfc2;font-family:Onest,Arial,sans-serif;font-variant-numeric:tabular-nums;} .ds-rail{position:relative;width:256px;padding:22px 20px 14px 14px;background:var(--tufa);color:var(--rail-text);display:flex;flex-direction:column;} .ds-rail::after{content:'';position:absolute;top:0;right:0;width:6px;height:100%;background:repeating-linear-gradient(180deg,var(--red) 0 22px,#4a413a 22px 24px,#110e0c 24px 40px,#4a413a 40px 42px,var(--red-deep) 42px 58px,#4a413a 58px 60px,#110e0c 60px 84px,#4a413a 84px 86px);} .ds-mark{display:block;padding:0 10px 8px;font:600 15px Onest,Arial,sans-serif;letter-spacing:.26em;color:#f3eee6;} .ds-mark small{display:block;margin-top:3px;font-size:12px;font-weight:400;letter-spacing:0;color:var(--rail-muted);} .ds-rail h2{margin:14px 0 4px 10px;font:600 11px Onest,Arial,sans-serif;letter-spacing:.1em;color:var(--rail-muted);} .ds-rail button{position:relative;display:flex;align-items:center;justify-content:space-between;min-height:34px;padding:7px 10px 7px 22px;border:0;border-radius:4px;background:none;color:#d8d0c4;font:400 13.5px Onest,Arial,sans-serif;text-align:left;cursor:pointer;transition:background .15s,color .15s;} .ds-rail button:hover{background:var(--tufa-2);color:#fff;} .ds-rail button:focus-visible{outline:2px solid var(--red);outline-offset:2px;} .ds-rail button.active{background:var(--tufa-3);color:#fff;font-weight:600;} .ds-rail button.active::before{content:'';position:absolute;left:8px;top:50%;width:6px;height:12px;margin-top:-6px;border-radius:1px;background:var(--red);} .ds-badge{min-width:20px;height:18px;padding:0 6px;border-radius:3px;background:var(--red);color:#fff;font-size:12px;font-weight:600;display:inline-grid;place-items:center;}"
+    },
+    {
+      "name": "Filter Chips",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Status filter blocks; the active one fills black tufa.",
+      "html": "<div class=\"ds-chips\"><button class=\"ds-chip active\">Bekleyen</button><button class=\"ds-chip\">Onaylı</button><button class=\"ds-chip\">İptal</button></div>",
+      "css": ":host{--tufa:#24201d;--tufa-2:#2e2925;--tufa-3:#3b3430;--rail-text:#ece6dc;--rail-muted:#aaa093;--ground:#dfe2e3;--surface:#f6f7f7;--surface-2:#eceeef;--mortar:#c9ced0;--mortar-soft:#dde1e2;--ink:#1f1b18;--ink-soft:#5e5750;--red:#9c3b2e;--red-deep:#7e2f25;--lichen:#4b6740;--lichen-wash:#e2eadc;--ochre:#8f611b;--ochre-wash:#f3e9d6;--closed:#6f6962;--closed-wash:#e4e6e7;--free:#d6d9da;--free-edge:#b9bfc2;font-family:Onest,Arial,sans-serif;font-variant-numeric:tabular-nums;} .ds-chips{display:flex;gap:6px;} .ds-chip{min-height:32px;padding:0 12px;border:1px solid var(--mortar);border-radius:4px;background:var(--surface);color:var(--ink);font:500 13px Onest,Arial,sans-serif;cursor:pointer;} .ds-chip:hover{border-color:#aeb5b8;} .ds-chip:focus-visible{outline:2px solid var(--red);outline-offset:2px;} .ds-chip.active{background:var(--tufa);border-color:var(--tufa);color:#fff;}"
+    },
+    {
+      "name": "Status Tags",
+      "kind": "chip",
+      "refersTo": "status-tag-waiting",
+      "description": "Flat state stones: ochre waiting, lichen confirmed, weathered stone closed.",
+      "html": "<span class=\"ds-tag\">Onay bekliyor</span> <span class=\"ds-tag ok\">Onaylandı</span> <span class=\"ds-tag off\">İptal</span>",
+      "css": ":host{--tufa:#24201d;--tufa-2:#2e2925;--tufa-3:#3b3430;--rail-text:#ece6dc;--rail-muted:#aaa093;--ground:#dfe2e3;--surface:#f6f7f7;--surface-2:#eceeef;--mortar:#c9ced0;--mortar-soft:#dde1e2;--ink:#1f1b18;--ink-soft:#5e5750;--red:#9c3b2e;--red-deep:#7e2f25;--lichen:#4b6740;--lichen-wash:#e2eadc;--ochre:#8f611b;--ochre-wash:#f3e9d6;--closed:#6f6962;--closed-wash:#e4e6e7;--free:#d6d9da;--free-edge:#b9bfc2;font-family:Onest,Arial,sans-serif;font-variant-numeric:tabular-nums;} .ds-tag{display:inline-block;padding:2px 8px;border-radius:3px;background:var(--ochre-wash);color:var(--ochre);font:600 12px/1.5 Onest,Arial,sans-serif;} .ds-tag.ok{background:var(--lichen-wash);color:var(--lichen);} .ds-tag.off{background:var(--closed-wash);color:var(--closed);}"
+    },
+    {
+      "name": "Departure Row",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Flat mortar-bordered list block: time, tour and meeting point, the seat course, and the action.",
+      "html": "<ul class=\"ds-list\"><li><time>08:30</time><span><strong>Ani Ören Yeri</strong><small>Kars Valiliği önü · Rehber: Elif</small></span><span class=\"ds-course\"><i class=\"g\"></i><i class=\"s\"></i><i class=\"s a\"></i><i class=\"s\"></i><i class=\"s\"></i><i class=\"s a\"></i><i></i><i></i><i></i><b>5/9</b></span><button class=\"ds-btn\">Yolcular</button></li></ul>",
+      "css": ":host{--tufa:#24201d;--tufa-2:#2e2925;--tufa-3:#3b3430;--rail-text:#ece6dc;--rail-muted:#aaa093;--ground:#dfe2e3;--surface:#f6f7f7;--surface-2:#eceeef;--mortar:#c9ced0;--mortar-soft:#dde1e2;--ink:#1f1b18;--ink-soft:#5e5750;--red:#9c3b2e;--red-deep:#7e2f25;--lichen:#4b6740;--lichen-wash:#e2eadc;--ochre:#8f611b;--ochre-wash:#f3e9d6;--closed:#6f6962;--closed-wash:#e4e6e7;--free:#d6d9da;--free-edge:#b9bfc2;font-family:Onest,Arial,sans-serif;font-variant-numeric:tabular-nums;} .ds-btn{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:0 16px;border:1px solid var(--tufa);border-radius:4px;background:var(--tufa);color:#fff;font:500 14px/1.5 Onest,Arial,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,transform .1s;} .ds-btn:hover{background:var(--tufa-3);border-color:var(--tufa-3);} .ds-btn:active{transform:translateY(1px);} .ds-btn:focus-visible{outline:2px solid var(--red);outline-offset:2px;} .ds-list{list-style:none;margin:0;padding:0;border:1px solid var(--mortar);border-radius:4px;background:var(--surface);} .ds-list li{display:grid;grid-template-columns:56px minmax(0,1fr) auto auto;gap:6px 20px;align-items:center;padding:14px 16px;color:var(--ink);font:400 14px/1.5 Onest,Arial,sans-serif;} .ds-list time{font-size:18px;font-weight:600;} .ds-list strong{display:block;font-weight:600;} .ds-list small{font-size:12.5px;color:var(--ink-soft);} .ds-course{display:inline-flex;align-items:center;gap:2px;} .ds-course i{display:block;width:15px;height:11px;border-radius:1px;background:var(--free);box-shadow:inset 0 0 0 1px var(--free-edge);} .ds-course i.s{background:var(--red);box-shadow:none;} .ds-course i.s.a{background:var(--red-deep);} .ds-course i.g{background:var(--tufa);box-shadow:none;margin-right:4px;} .ds-course b{margin-left:10px;min-width:44px;text-align:right;font-size:13px;font-weight:600;}"
+    },
+    {
+      "name": "Masonry Course",
+      "kind": "custom",
+      "refersTo": "stone-sold",
+      "description": "Signature: seat occupancy as laid stone. Guide block black, sold red with every third deep red, free limestone.",
+      "html": "<span class=\"ds-course\" role=\"img\" aria-label=\"7/12 koltuk dolu\"><i class=\"g\"></i><i class=\"s\"></i><i class=\"s a\"></i><i class=\"s\"></i><i class=\"s\"></i><i class=\"s a\"></i><i class=\"s\"></i><i class=\"s\"></i><i></i><i></i><i></i><i></i><i></i></span>",
+      "css": ":host{--tufa:#24201d;--tufa-2:#2e2925;--tufa-3:#3b3430;--rail-text:#ece6dc;--rail-muted:#aaa093;--ground:#dfe2e3;--surface:#f6f7f7;--surface-2:#eceeef;--mortar:#c9ced0;--mortar-soft:#dde1e2;--ink:#1f1b18;--ink-soft:#5e5750;--red:#9c3b2e;--red-deep:#7e2f25;--lichen:#4b6740;--lichen-wash:#e2eadc;--ochre:#8f611b;--ochre-wash:#f3e9d6;--closed:#6f6962;--closed-wash:#e4e6e7;--free:#d6d9da;--free-edge:#b9bfc2;font-family:Onest,Arial,sans-serif;font-variant-numeric:tabular-nums;} .ds-course{display:inline-flex;flex-wrap:wrap;gap:2px;} .ds-course i{display:block;width:15px;height:11px;border-radius:1px;background:var(--free);box-shadow:inset 0 0 0 1px var(--free-edge);} .ds-course i.s{background:var(--red);box-shadow:none;} .ds-course i.s.a{background:var(--red-deep);} .ds-course i.g{background:var(--tufa);box-shadow:none;margin-right:4px;}"
+    },
+    {
+      "name": "Work Band",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "Live counts joined by 1px mortar lines; attention counts turn red tufa.",
+      "html": "<div class=\"ds-band\"><button class=\"att\"><strong>4</strong><span>onay bekleyen</span><small>2 iptal talebi</small></button><button><strong>3</strong><span>bugünkü sefer</span></button><button><strong>27<em>/36</em></strong><span>bugün koltuk</span></button><button><strong>5</strong><span>yeni talep</span></button></div>",
+      "css": ":host{--tufa:#24201d;--tufa-2:#2e2925;--tufa-3:#3b3430;--rail-text:#ece6dc;--rail-muted:#aaa093;--ground:#dfe2e3;--surface:#f6f7f7;--surface-2:#eceeef;--mortar:#c9ced0;--mortar-soft:#dde1e2;--ink:#1f1b18;--ink-soft:#5e5750;--red:#9c3b2e;--red-deep:#7e2f25;--lichen:#4b6740;--lichen-wash:#e2eadc;--ochre:#8f611b;--ochre-wash:#f3e9d6;--closed:#6f6962;--closed-wash:#e4e6e7;--free:#d6d9da;--free-edge:#b9bfc2;font-family:Onest,Arial,sans-serif;font-variant-numeric:tabular-nums;} .ds-band{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;border:1px solid var(--mortar);border-radius:4px;background:var(--mortar);overflow:hidden;} .ds-band button{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:8px;row-gap:2px;padding:14px 18px;border:0;background:var(--surface);color:var(--ink);text-align:left;font-family:Onest,Arial,sans-serif;cursor:pointer;transition:background .15s;} .ds-band button:hover{background:#eef0f1;} .ds-band button:focus-visible{outline:2px solid var(--red);outline-offset:-2px;} .ds-band strong{font-size:24px;line-height:1.1;font-weight:600;} .ds-band em{font-style:normal;font-size:15px;font-weight:500;color:var(--ink-soft);} .ds-band span{font-size:13.5px;color:var(--ink-soft);} .ds-band small{flex-basis:100%;color:var(--red);font-size:12.5px;font-weight:600;} .ds-band .att strong{color:var(--red);}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Ani Taşı (the Ani wall)",
+    "overview": "**Creative North Star: \"Ani Taşı\" (the Ani wall)**\n\nThe panel is built like the walls of Ani: courses of dressed black and red tufa set in pale mortar. The shell is black tufa, the working ground is cool pale stone, and surfaces are flat dressed blocks divided by thin mortar lines instead of floating on shadows. It deliberately avoids the usual admin look of white cards on grey with one blue accent.\n\nThe stone shows up in only three places: seat occupancy drawn as a course of blocks, the two-tone tufa band along the rail edge (and at the top of the login form and the bottom of the offline page), and the single red stone marking the active tab. Everything else (tables, forms, lists) stays plain, dense and fast, because the panel is used at a desk and one-handed on a phone in daylight. Red tufa means today, waiting or needing attention. Lichen means confirmed, ochre means waiting on someone, and stone grey means closed.\n\nOnest is the only typeface, numbers are always tabular, and corners are small and square-cut (4px), like cut blocks.",
+    "keyCharacteristics": [
+      "Black tufa rail and dark bars; cool pale stone ground (not cream, not white).",
+      "Flat surfaces with 1px mortar hairlines; shadows only on things that float above the page.",
+      "The masonry course (seat blocks) wherever a departure appears.",
+      "Red tufa is scarce and has a meaning: today, pending, attention, the active marker, destructive actions.",
+      "One family (Onest), tabular numerals, a dense 14px body."
+    ],
+    "rules": [
+      {
+        "name": "The Red Tufa Rule",
+        "body": "Red appears only for today's work, pending or full counts, sold seats, the single active marker, focus, and destructive actions. Never use it for decoration, headings or generic emphasis.",
+        "section": "colors"
+      },
+      {
+        "name": "The Cool Ground Rule",
+        "body": "The ground is cool pale stone (ground, surface). Never warm it toward cream; the warmth belongs to the tufa.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Stone Rule",
+        "body": "One family, Onest. Any contrast comes from weight 600 and size, never from a display face.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular Rule",
+        "body": "Every number in the panel uses tabular figures; columns of times, seats and amounts must align.",
+        "section": "typography"
+      },
+      {
+        "name": "The Mortar Not Shadow Rule",
+        "body": "Cards, tables, lists, editors and chips have `box-shadow: none` and a 1px mortar border. A shadow means the element floats (window, toast, tab bar); nothing else gets one.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Cut Block Rule",
+        "body": "No pills and no radius above 6px. If an element reads as a soft lozenge, it is outside this world.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "**Do** draw seat occupancy as the masonry course (guide block, red sold, limestone free) everywhere a departure is shown.",
+      "**Do** separate surfaces with 1px Mortar borders and joined 1px-gap grids, keeping cards and tables at `box-shadow: none`.",
+      "**Do** keep Red Tufa for today, pending or full counts, sold seats, the one active marker, focus and destructive actions.",
+      "**Do** use Lichen, Ochre and Weathered Stone tags for confirmed, waiting and closed, always on their own wash.",
+      "**Do** use Onest with tabular numerals for all panel text and figures.",
+      "**Do** grow touch targets under 760px (buttons 42px, inputs 44px with 16px text, nav rows 48px)."
+    ],
+    "donts": [
+      "**Don't** use white cards on a grey ground with a single blue accent; that is the category default this world refuses.",
+      "**Don't** add drop shadows to cards, tables, lists or chips; shadow is reserved for windows, toasts and the phone tab bar.",
+      "**Don't** spread stone texture onto tables, forms or backgrounds. Masonry appears only as occupancy, the rail edge (and its login/offline echoes) and active markers.",
+      "**Don't** use pills or radii above 6px.",
+      "**Don't** warm the ground toward cream or bring in the public site's navy, gold or Marcellus. The public site's system stays in docs/DESIGN.md."
+    ]
+  }
+}
