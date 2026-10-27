@@ -237,3 +237,54 @@ test("FCM errors are reported with a hint and do not silently drop the phone", a
   r = await store.push.notifyAdmins({ title: "t", body: "b", kind: "test" });
   assert.equal(r.sent, 1);
 });
+
+test("HTTP: owner sees each team member's phones and per-device results of a team test", async (t) => {
+  const firebase = fakeFirebase({ dead: [TOKEN(7)] });
+  const store = await openStore(":memory:", { env: { FIREBASE_SERVICE_ACCOUNT: SERVICE_ACCOUNT }, pushFetch: firebase.fetchImpl });
+  const app = createApp(store, {
+    env: { ADMIN_PASSWORD: "ilk-kurulum-parolasi" },
+    reviewsService: { get: async () => ({ status: "not_configured", reviews: [] }) },
+  });
+  const server = app.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(async () => {
+    await new Promise((r) => server.close(r));
+    await store.db.close();
+  });
+  const base = `http://127.0.0.1:${server.address().port}/api`;
+  const call = async (path, { body, cookie } = {}) => {
+    const r = await fetch(base + path, {
+      method: body ? "POST" : "GET",
+      body: body ? JSON.stringify(body) : undefined,
+      headers: { "Content-Type": "application/json", "X-Rota-Client": "web", ...(cookie ? { Cookie: cookie } : {}) },
+    });
+    return { status: r.status, json: await r.json().catch(() => null), cookie: r.headers.get("set-cookie")?.split(";")[0] };
+  };
+  const boot = (await call("/admin/login", { body: { password: "ilk-kurulum-parolasi" } })).cookie;
+  const owner = (
+    await call("/admin/users", { body: { email: "sahip@rotakars.test", name: "Sahip", password: "sahip-parolasi-2026", role: "owner" }, cookie: boot })
+  ).cookie;
+  for (const [email, name, role] of [
+    ["ops@rotakars.test", "Operasyon", "operations"],
+    ["ops2@rotakars.test", "Telefonsuz", "operations"],
+    ["rehber@rotakars.test", "Rehber", "guide"],
+  ])
+    await call("/admin/users", { body: { email, name, password: "uzun-parola-2026-x", role }, cookie: owner });
+  const ops = (await call("/admin/login", { body: { email: "ops@rotakars.test", password: "uzun-parola-2026-x" } })).cookie;
+  await call("/admin/devices", { body: { token: TOKEN(1), label: "Sahip telefonu" }, cookie: owner });
+  await call("/admin/devices", { body: { token: TOKEN(2), label: "Operasyon telefonu" }, cookie: ops });
+  await call("/admin/devices", { body: { token: TOKEN(7), label: "Eski telefon" }, cookie: ops });
+
+  assert.equal((await call("/admin/devices/team", { cookie: ops })).status, 403, "yalnız sahip");
+  assert.equal((await call("/admin/devices/test-team", { body: {}, cookie: ops })).status, 403);
+  const team = (await call("/admin/devices/team", { cookie: owner })).json.team;
+  const by = (n) => team.find((m) => m.name === n);
+  assert.equal(by("Operasyon").devices.length, 2);
+  assert.equal(by("Telefonsuz").devices.length, 0);
+  assert.equal(by("Rehber").receives, false);
+
+  const res = (await call("/admin/devices/test-team", { body: {}, cookie: owner })).json;
+  assert.equal(res.sent, 2, "sahip + operasyonun çalışan telefonu");
+  assert.equal(res.results.find((r) => r.label === "Eski telefon").outcome, "removed");
+  assert.deepEqual(firebase.sent.map((m) => m.token).sort(), [TOKEN(1), TOKEN(2)]);
+});

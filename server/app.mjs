@@ -916,6 +916,27 @@ export function createApp(
       r.json({ removed: await store.push.unregister(q.admin.id, input.token) });
     }),
   );
+  // Sahip: ekipte kimin telefonu kayıtlı, herkese test gönderip cihaz bazında sonuç.
+  app.get(
+    "/api/admin/devices/team",
+    requireAdmin,
+    route(async (_q, r) => r.json({ enabled: store.push.enabled, team: await store.push.team() })),
+  );
+  app.post(
+    "/api/admin/devices/test-team",
+    requireAdmin,
+    route(async (q, r) => {
+      realAdmin(q);
+      if (!store.push.enabled) throw new AppError(503, "Bildirim servisi (FIREBASE_SERVICE_ACCOUNT) ayarlı değil.");
+      const result = await store.push.notifyAdmins({
+        title: "Rota Kars Yönetim",
+        body: `Ekip testi (${q.admin.name}): bu telefon bildirim alıyor.`,
+        url: "/yonetim",
+        kind: "test",
+      });
+      r.json({ ...result, results: result.results.map((x) => ({ ...x, hint: x.code ? fcmHint(x.code) : null })) });
+    }),
+  );
   app.post(
     "/api/admin/devices/test",
     requireAdmin,

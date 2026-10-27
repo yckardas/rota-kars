@@ -164,7 +164,99 @@ export function PushSettings({
           ))}
         </ul>
       )}
+      <TeamPush />
     </section>
+  );
+}
+
+type TeamMember = {
+  id: string;
+  name: string;
+  role: string;
+  receives: boolean;
+  devices: { id: string; label: string; lastSeen: number }[];
+};
+type TeamResult = { adminId: string; deviceId: string; label: string; outcome: string; code?: string; hint?: string | null };
+const ROLE_NAMES: Record<string, string> = { owner: "Sahip", operations: "Operasyon", guide: "Rehber" };
+
+// Yalnız sahip görür (sunucu diğer rollere 403 döner): kimin telefonu kayıtlı,
+// herkese test gönderilince her telefon için sonuç.
+function TeamPush() {
+  const [team, setTeam] = useState<TeamMember[] | null>(null),
+    [results, setResults] = useState<TeamResult[] | null>(null),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  const load = () =>
+    api<{ team: TeamMember[] }>("/admin/devices/team")
+      .then((d) => setTeam(d.team))
+      .catch(() => setTeam(null));
+  useEffect(() => {
+    load();
+  }, []);
+  if (!team) return null;
+  const outcome = (r?: TeamResult) =>
+    !r
+      ? null
+      : r.outcome === "sent"
+        ? "✓ Gönderildi"
+        : r.outcome === "removed"
+          ? "Kayıt geçersizdi, silindi: telefonda bildirimleri yeniden açın"
+          : `✗ ${r.code}${r.hint ? " · " + r.hint : ""}`;
+  return (
+    <div className="team-push" style={{ marginTop: 22, paddingTop: 16, borderTop: "1px solid var(--line)", display: "grid", gap: 10 }}>
+      <h3 style={{ margin: 0, fontSize: 16 }}>Ekip bildirim durumu</h3>
+      <p className="muted">
+        Bildirimler sahip ve operasyon rolündekilerin kayıtlı telefonlarına gider. Telefonu listede yoksa o kişi kendi
+        hesabıyla uygulamada "Bu telefonda bildirimleri aç" demeli.
+      </p>
+      <ul className="device-list">
+        {team.map((m) => (
+          <li key={m.id} className="team-member">
+            <span>
+              <strong>
+                {m.name} · {ROLE_NAMES[m.role] || m.role}
+              </strong>
+              {!m.receives && <small>Rehber rolü bildirim almaz.</small>}
+              {m.receives && m.devices.length === 0 && <small className="error">Kayıtlı telefon yok</small>}
+              {m.devices.map((d) => {
+                const r = results?.find((x) => x.deviceId === d.id);
+                return (
+                  <small key={d.id}>
+                    {d.label || "Android telefon"} · son görülme {new Date(d.lastSeen).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" })}
+                    {r && <b style={{ color: r.outcome === "sent" ? "#2f6b3d" : "#b5462f" }}> · {outcome(r)}</b>}
+                  </small>
+                );
+              })}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      <button
+        className="btn btn-outline"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setError("");
+          try {
+            const r = await post<{ results: TeamResult[] }>("/admin/devices/test-team", {});
+            setResults(r.results);
+            await load();
+          } catch (e) {
+            setError((e as Error).message);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        {busy ? <LoaderCircle className="spin" size={16} /> : <BellRing size={16} />}
+        Tüm ekibe test gönder
+      </button>
+    </div>
   );
 }
 

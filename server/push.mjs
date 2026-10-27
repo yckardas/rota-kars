@@ -180,17 +180,35 @@ export function createPush(db, { env = process.env, fetchImpl = fetch, clock = D
       const devices = await db.find("push_devices", { admin_id: { $in: admins.map((a) => a.id) } });
       let sent = 0,
         removed = 0;
-      const errors = [];
+      const errors = [],
+        results = [];
       for (const device of devices)
         try {
           const result = await sendTo(device, message);
           if (result === "sent") sent++;
           else removed++;
+          results.push({ adminId: device.admin_id, deviceId: device.id, label: device.label, outcome: result });
         } catch (error) {
           log("error", String(error?.message || error), { kind: message.kind, code: error?.code });
-          errors.push({ code: error?.code || "error", message: String(error?.message || error).slice(0, 300) });
+          const e = { code: error?.code || "error", message: String(error?.message || error).slice(0, 300) };
+          errors.push(e);
+          results.push({ adminId: device.admin_id, deviceId: device.id, label: device.label, outcome: "error", ...e });
         }
-      return { sent, removed, devices: devices.length, errors };
+      return { sent, removed, devices: devices.length, errors, results };
+    },
+    // Sahip için: bildirim alacak ekip üyeleri ve kayıtlı telefonları.
+    async team() {
+      const admins = await db.find("admin_users", { disabled: { $ne: true } }, { sort: { created_at: 1 } });
+      const devices = await db.find("push_devices", { admin_id: { $in: admins.map((a) => a.id) } }, { sort: { last_seen: -1 } });
+      return admins.map((a) => ({
+        id: a.id,
+        name: a.name,
+        role: a.role,
+        receives: RECIPIENT_ROLES.includes(a.role),
+        devices: devices
+          .filter((d) => d.admin_id === a.id)
+          .map((d) => ({ id: d.id, label: d.label, createdAt: d.created_at, lastSeen: d.last_seen })),
+      }));
     },
   };
   return api;

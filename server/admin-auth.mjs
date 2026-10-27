@@ -39,6 +39,7 @@ const OWNER_ONLY = [
   [/^(GET|POST)$/, /^\/api\/admin\/kvkk(\/|$)/],
   [/^(POST)$/, /^\/api\/admin\/campaigns$/],
   [/^(POST)$/, /^\/api\/admin\/content\/business$/],
+  [/^(GET|POST)$/, /^\/api\/admin\/devices\/(team|test-team)$/],
 ];
 // Kendi hesap güvenliği uçları: 2FA zorunluyken de açık kalır.
 const SELF_SERVICE = /^\/api\/admin\/(session|me|me\/.*|logout)$/;
