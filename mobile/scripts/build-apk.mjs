@@ -1,11 +1,24 @@
 // APK derleme: node scripts/build-apk.mjs [debug|release]
 // ROTA_APP_URL: uygulamanın açacağı site (varsayılan https://rotakarsturizm.com).
 // Release için imza bilgileri: ROTA_KEYSTORE, ROTA_KEYSTORE_PASSWORD, ROTA_KEY_ALIAS, ROTA_KEY_PASSWORD.
+// Ortamda yoksa ~/.rota-kars/imza.env okunur (ROTA_SIGNING_ENV ile başka dosya verilebilir).
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync, copyFileSync, mkdirSync } from "node:fs";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
 
 const mode = process.argv[2] === "release" ? "release" : "debug";
+if (mode === "release" && !process.env.ROTA_KEYSTORE) {
+  const file = process.env.ROTA_SIGNING_ENV || resolve(homedir(), ".rota-kars/imza.env");
+  if (existsSync(file))
+    for (const line of readFileSync(file, "utf8").split("\n")) {
+      const m = line.match(/^\s*(ROTA_[A-Z_]+)=(.*)$/);
+      if (m) process.env[m[1]] = m[2].trim();
+    }
+  // İmzasız release APK telefona kurulamaz; sessizce üretmek yerine dur.
+  if (!process.env.ROTA_KEYSTORE || !existsSync(process.env.ROTA_KEYSTORE))
+    throw new Error("Release imza anahtarı bulunamadı (" + file + "). docs/ANDROID-YONETIM-UYGULAMASI.md → İmza.");
+}
 const root = resolve(import.meta.dirname, "..");
 const url = (process.env.ROTA_APP_URL || "https://rotakarsturizm.com").replace(/\/+$/, "");
 if (!/^https:\/\/[a-z0-9.-]+$/i.test(url)) throw new Error("ROTA_APP_URL https://alan-adi biçiminde olmalı.");

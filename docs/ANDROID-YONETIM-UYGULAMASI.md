@@ -69,13 +69,13 @@ ROTA_APP_URL=https://uygulama-adi.up.railway.app npm run apk:debug
 
 ### Dağıtılacak (imzalı) sürüm
 
-İmza anahtarı bir kez oluşturulur ve **asla kaybedilmemelidir** (kaybolursa güncellemeler eski
-uygulamanın üstüne kurulamaz; herkes kaldırıp yeniden kurmak zorunda kalır). Anahtarı ve
-parolasını şifre yöneticisinde saklayın; repoya koymayın.
+İmza anahtarı oluşturuldu ve `~/.rota-kars/` klasöründe duruyor (ayrıntı: 5. bölüm → İmza
+anahtarı). `npm run apk:release` onu kendiliğinden bulur; anahtar yoksa imzasız APK üretmek
+yerine durur. Başka bir bilgisayarda derlemek için klasörü oraya kopyalayın ya da
+`ROTA_KEYSTORE`, `ROTA_KEYSTORE_PASSWORD`, `ROTA_KEY_ALIAS`, `ROTA_KEY_PASSWORD` verin.
 
 ```bash
-keytool -genkey -v -keystore ~/rota-yonetim.jks -alias rota -keyalg RSA -keysize 4096 -validity 10000
-ROTA_KEYSTORE=~/rota-yonetim.jks ROTA_KEYSTORE_PASSWORD=… ROTA_KEY_ALIAS=rota ROTA_KEY_PASSWORD=… npm run apk:release
+npm run apk:release        # mobile/dist/rota-kars-yonetim-<sürüm>.apk
 ```
 
 ## 4. Telefonlara kurulum
@@ -88,13 +88,32 @@ ROTA_KEYSTORE=~/rota-yonetim.jks ROTA_KEYSTORE_PASSWORD=… ROTA_KEY_ALIAS=rota 
 
 ## 5. Uygulama güncelleme
 
-1. `mobile/package.json` içindeki `version` değerini artırın (ör. 1.0.0 → 1.1.0).
-2. İmzalı APK'yı derleyin ve erişilebilir bir HTTPS adresine koyun (ör. yönetim → dosya yükleme
-   veya Google Drive "bağlantıya sahip herkes").
-3. Railway'e: `ANDROID_APP_VERSION=1.1.0`, `ANDROID_APK_URL=https://…/rota-kars-yonetim-1.1.0.apk`,
-   isteğe bağlı `ANDROID_APP_NOTES="Yolcu listesine not alanı eklendi"`.
-   Eski sürümü kullanılmaz yapmak için `ANDROID_APP_MIN_VERSION=1.1.0`.
-4. Uygulama açılışta bunu görür ve üstte "Yeni sürüm hazır · Güncelle" uyarısı gösterir.
+Panelin ekranları ve özellikleri canlı siteden gelir: Railway yayına aldığında telefonlar
+yeniliği bir sonraki açılışta görür, APK gerekmez. Yeni APK yalnız Android tarafı
+(simge, renkler, izinler, eklentiler, `MainActivity`) değiştiğinde gerekir:
+
+1. `mobile/package.json` içindeki `version` değerini artırın (ör. 1.2.0 → 1.2.1).
+2. `cd mobile && npm run apk:release` — imza anahtarı `~/.rota-kars/imza.env`'den okunur.
+3. `npm run apk:publish -- "Ne değişti"` — APK `yckardas/rota-kars` deposunun GitHub
+   Releases sayfasına yüklenir ve `server/android-release.json` güncellenir. Eski sürümleri
+   zorunlu güncellemeye almak için sona `--zorunlu` ekleyin.
+4. `server/android-release.json` dosyasını commit edip push edin. Railway yayına alınca
+   uygulama üstte "Uygulamanın yeni sürümü hazır · Güncelle" uyarısı gösterir; dokununca APK
+   iner ve eski sürümün üstüne kurulur (giriş ve ayarlar korunur).
+
+Railway'de `ANDROID_APP_VERSION` tanımlanırsa dosya yerine o takım
+(`ANDROID_APK_URL`, `ANDROID_APP_NOTES`, `ANDROID_APP_MIN_VERSION`) geçerli olur; acil
+durumda geri almak için kullanılabilir.
+
+### İmza anahtarı
+
+- Release APK'lar `~/.rota-kars/rota-kars-release.jks` ile imzalanır; parolası aynı klasördeki
+  `imza.env` dosyasındadır. İkisi de repoya girmez.
+- **Bu klasörü yedekleyin** (parola yöneticisi veya şifreli yedek). Anahtar kaybolursa
+  telefonlardaki uygulama artık güncellenemez; herkesin uygulamayı kaldırıp yeniden kurması gerekir.
+- Sertifika SHA-256: `BE:1A:5C:1B:90:F3:C0:FB:C0:59:96:20:75:98:12:B7:C3:BD:1A:8B:0C:C0:F5:C7:1F:D5:B7:95:DA:7D:0D:75`
+- 1.1.x deneme (debug) APK'ları başka anahtarla imzalıydı: 1.2.0'a geçerken telefonda eski
+  uygulama bir kez kaldırılıp yeni APK kurulur. Sonraki sürümler doğrudan üstüne kurulur.
 
 ## Güvenlik notları
 

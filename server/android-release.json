@@ -1,0 +1,6 @@
+{
+  "version": "1.2.0",
+  "minVersion": null,
+  "apkUrl": "https://github.com/yckardas/rota-kars/releases/download/android-v1.2.0/rota-kars-yonetim-1.2.0.apk",
+  "notes": "Kalıcı imzalı ilk sürüm. 1.1.x deneme sürümünden geçerken eski uygulamayı bir kez kaldırıp bunu kurun; sonraki güncellemeler doğrudan üstüne kurulur."
+}

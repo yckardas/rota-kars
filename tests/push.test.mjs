@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { once } from "node:events";
+import { readFileSync } from "node:fs";
 import { generateKeyPairSync, createVerify } from "node:crypto";
 import { createApp } from "../server/app.mjs";
 import { openStore } from "../server/store.mjs";
@@ -126,9 +127,28 @@ test("HTTP: device registration needs a real owner/operations account", async (t
   assert.equal((await call("/admin/devices", { body: { token: TOKEN(2) }, cookie: guide })).status, 403);
 
   assert.equal((await call("/admin/devices/remove", { body: { token: TOKEN(1) }, cookie: owner })).json.removed, 1);
-  const info = await call("/app/android");
-  assert.equal(info.status, 200);
-  assert.equal(info.json.apkUrl, null);
+});
+
+test("app update info comes from android-release.json unless Railway overrides it", async (t) => {
+  const store = await openStore(":memory:", { env: {} });
+  t.after(() => store.db.close());
+  const info = async (env) => {
+    const server = createApp(store, { env }).listen(0, "127.0.0.1");
+    await once(server, "listening");
+    const r = await fetch(`http://127.0.0.1:${server.address().port}/api/app/android`);
+    await new Promise((done) => server.close(done));
+    return r.json();
+  };
+  const file = JSON.parse(readFileSync(new URL("../server/android-release.json", import.meta.url), "utf8"));
+  const fromFile = await info({});
+  assert.equal(fromFile.latestVersion, file.version);
+  assert.equal(fromFile.apkUrl, file.apkUrl);
+  assert.match(fromFile.apkUrl, /^https:\/\/github\.com\/[\w-]+\/rota-kars\/releases\/download\//);
+
+  const fromEnv = await info({ ANDROID_APP_VERSION: "9.0.0", ANDROID_APK_URL: "http://duz-http.test/a.apk" });
+  assert.equal(fromEnv.latestVersion, "9.0.0");
+  assert.equal(fromEnv.apkUrl, null);
+  assert.equal(fromEnv.minVersion, null);
 });
 
 test("Google review watch: first run is silent, new reviews and rating bumps notify once", async (t) => {

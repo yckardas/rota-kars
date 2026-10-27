@@ -7,6 +7,13 @@ import { readFileSync } from "node:fs";
 const photoCredits = JSON.parse(
   readFileSync(new URL("./photo-credits.json", import.meta.url), "utf8"),
 );
+const androidRelease = (() => {
+  try {
+    return JSON.parse(readFileSync(new URL("./android-release.json", import.meta.url), "utf8"));
+  } catch {
+    return {};
+  }
+})();
 import { randomBytes, createHash, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import {
@@ -588,13 +595,23 @@ export function createApp(
   app.locals.catalog = catalogData;
   app.get("/api/catalog", async (_q, r) => r.json(await catalogData()));
   // Android yönetici uygulaması güncelleme bilgisi (uygulama açılışta sorar).
+  // Son yayımlanan sürümü mobile/scripts/publish-apk.mjs android-release.json'a yazar;
+  // Railway'de ANDROID_APP_VERSION tanımlıysa onun takımı geçerli olur.
   app.get("/api/app/android", (_q, r) => {
-    const apkUrl = /^https:\/\//.test(env.ANDROID_APK_URL || "") ? env.ANDROID_APK_URL : null;
+    const release = env.ANDROID_APP_VERSION
+      ? {
+          version: env.ANDROID_APP_VERSION,
+          minVersion: env.ANDROID_APP_MIN_VERSION,
+          apkUrl: env.ANDROID_APK_URL,
+          notes: env.ANDROID_APP_NOTES,
+        }
+      : androidRelease;
+    const apkUrl = /^https:\/\//.test(release.apkUrl || "") ? release.apkUrl : null;
     r.json({
-      latestVersion: env.ANDROID_APP_VERSION || null,
-      minVersion: env.ANDROID_APP_MIN_VERSION || null,
+      latestVersion: release.version || null,
+      minVersion: release.minVersion || null,
       apkUrl,
-      notes: String(env.ANDROID_APP_NOTES || "").slice(0, 500),
+      notes: String(release.notes || "").slice(0, 500),
     });
   });
   app.get(
