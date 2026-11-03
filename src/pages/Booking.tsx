@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useTurnstile } from "../components/Turnstile";
+import { placeName } from "../lib/place";
+import { useClearOfLaunchers } from "../lib/launchers";
 import { responsive } from "../lib/images";
 import {
   Link,
@@ -82,6 +84,8 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     location = useLocation(),
     stepHeading = useRef<HTMLHeadingElement>(null),
     firstStepRender = useRef(true);
+  const summaryRef = useRef<HTMLElement>(null);
+  useClearOfLaunchers(summaryRef, "summaryVisible");
   const { member } = useMember();
   const membershipHref =
     "/uyelik?next=" + encodeURIComponent(location.pathname + location.search);
@@ -346,6 +350,12 @@ export function Booking({ catalog }: { catalog: Catalog }) {
       <div className="booking-page-title">
         <div>
           <h1>Yolculuğunuzu planlayın.</h1>
+          <p className="booking-page-sub">
+            {tour.name}
+            {departure
+              ? ` · ${dateLabel(departure.date)} · ${departure.start_time}`
+              : ""}
+          </p>
         </div>
         {hold && (
           <span className="hold-timer" role="timer" aria-live="off">
@@ -402,6 +412,19 @@ export function Booking({ catalog }: { catalog: Catalog }) {
           ),
         )}
       </ol>
+      <div className="booking-mini" aria-hidden="true">
+        <img {...responsive(tour.image, "96px")} alt="" decoding="async" />
+        <div>
+          <strong>{tour.name}</strong>
+          <span>
+            {departure
+              ? `${dateLabel(departure.date)} · ${departure.start_time}`
+              : "Tarih seçin"}
+            {selected.length ? ` · Koltuk ${selected.join(", ")}` : ""}
+          </span>
+        </div>
+        <b>{currency(total)}</b>
+      </div>
       <div className="booking-layout">
         <div className="booking-main">
           {step === 0 ? (
@@ -753,13 +776,18 @@ export function Booking({ catalog }: { catalog: Catalog }) {
             </form>
           )}
         </div>
-        <aside className="booking-summary">
-          <img
-            {...responsive(tour.image, "320px")}
-            alt={tour.name}
-            loading="lazy"
-            decoding="async"
-          />
+        <aside className="booking-summary" ref={summaryRef}>
+          <div className="booking-summary-photo">
+            <img
+              {...responsive(tour.image, "320px")}
+              alt={tour.name}
+              loading="lazy"
+              decoding="async"
+            />
+            <span className="booking-summary-ribbon" aria-hidden="true">
+              {placeName(tour)}
+            </span>
+          </div>
           <div>
             <h3>{tour.name}</h3>
             <p>
@@ -774,6 +802,12 @@ export function Booking({ catalog }: { catalog: Catalog }) {
               <Armchair size={15} />
               {count} yolcu · {vehicle.passengerSeats}+1 {vehicle.name}
             </p>
+            {selected.length > 0 && (
+              <p>
+                <Ticket size={15} />
+                Koltuk {selected.join(", ")}
+              </p>
+            )}
             {departure?.pickup && (
               <p>
                 <MapPin size={15} />
@@ -825,9 +859,13 @@ export function Booking({ catalog }: { catalog: Catalog }) {
             </div>
             <div className="summary-total">
               <span>
-                {catalog.demo
-                  ? "İndirim sonrası örnek tur bedeli"
-                  : "İndirim sonrası tur bedeli"}
+                {quote && quote.discount > 0
+                  ? catalog.demo
+                    ? "İndirim sonrası örnek tur bedeli"
+                    : "İndirim sonrası tur bedeli"
+                  : catalog.demo
+                    ? "Örnek tur bedeli"
+                    : "Tur bedeli"}
               </span>
               <strong>{currency(total)}</strong>
             </div>

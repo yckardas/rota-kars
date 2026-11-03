@@ -1,16 +1,8 @@
 import { Link } from "react-router-dom";
 import { responsive } from "../lib/images";
 import { currency, type Tour } from "../lib/types";
+import { placeName } from "../lib/place";
 // Tek görüntülü hatıra kartı: büyük manzara, köşede ikinci görüntü, kırmızı yer şeridi.
-// Şeritteki yer: güzergâhta geçen ve tur adında da yer alan ilk durak (Kars hariç).
-const placeName = (tour: Tour) => {
-  const stops = tour.location.split(" · ").filter(Boolean);
-  return (
-    stops.find((s) => s !== "Kars" && tour.name.includes(s)) ||
-    stops[stops.length - 1] ||
-    tour.name
-  );
-};
 export function TourCard({ tour }: { tour: Tour }) {
   const inset = tour.gallery.find((g) => g !== tour.image);
   return (

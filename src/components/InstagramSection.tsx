@@ -192,7 +192,6 @@ function VideoCard({
         </span>
       </div>
       <div className="instagram-card-caption">
-        <span>{post.title}</span>
         <a href={post.permalink} target="_blank" rel="noreferrer">
           Instagram’da aç <ExternalLink size={12} />
         </a>
@@ -229,7 +228,6 @@ function EmbedCard({ post, open }: { post: InstagramPost; open: () => void }) {
         </button>
       </div>
       <div className="instagram-card-caption">
-        <span>{post.title}</span>
         <a href={post.permalink} target="_blank" rel="noreferrer">
           Instagram’da aç <ExternalLink size={12} />
         </a>

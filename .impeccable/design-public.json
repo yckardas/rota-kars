@@ -1,11 +1,12 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-03T16:03:16+00:00",
+  "generatedAt": "2026-11-03T16:57:36+00:00",
   "title": "Design System: Rota Kars (halka açık site, Hatıra Kartı)",
   "scope": {
-    "surface": "public site (home, tour list, tour detail, booking; styles scoped to .kp in src/postcard.css)",
+    "surface": "public site (home incl. lower sections, tour list, tour detail, booking steps 1-2; styles scoped to .kp in src/postcard.css)",
     "designFile": "docs/DESIGN.md",
-    "notCovered": "agency panel (/yonetim, .rk-admin) and Android wrapper; see docs/DESIGN-PANEL.md and .impeccable/design.json"
+    "notCovered": "agency panel (/yonetim, .rk-admin) and Android wrapper; see docs/DESIGN-PANEL.md and .impeccable/design.json",
+    "legacy": "booking step 3 (Ön rezervasyon), success/ticket page (.booking-success), base seat drawing, Instagram rail footnote text: legacy layouts re-coloured by token mapping only"
   },
   "extensions": {
     "colorMeta": {
@@ -188,12 +189,99 @@
           "#e3d8c9",
           "#f6f3ef"
         ]
+      },
+      "card-press": {
+        "role": "neutral",
+        "displayName": "Bastırılmış Karton",
+        "canonical": "#eef2f5",
+        "tonalRamp": [
+          "#20272c",
+          "#36444f",
+          "#4a6173",
+          "#5b7f99",
+          "#829cb0",
+          "#aabac5",
+          "#d0d7dc",
+          "#f1f2f4"
+        ]
+      },
+      "stamp": {
+        "role": "neutral",
+        "displayName": "Pul Zemini",
+        "canonical": "#e6ecf1",
+        "tonalRamp": [
+          "#20272d",
+          "#354450",
+          "#486075",
+          "#597d9c",
+          "#809bb2",
+          "#a9b9c6",
+          "#cfd7dd",
+          "#f1f2f4"
+        ]
+      },
+      "rating-star": {
+        "role": "secondary",
+        "displayName": "Puan Yıldızı",
+        "canonical": "#b9862f",
+        "tonalRamp": [
+          "#332a19",
+          "#5e4a26",
+          "#8e6b2f",
+          "#c18d33",
+          "#cea764",
+          "#d7c098",
+          "#e5dac8",
+          "#f6f3ef"
+        ]
+      },
+      "scrim": {
+        "role": "overlay",
+        "displayName": "Mürekkep Karartma",
+        "canonical": "rgba(12, 20, 38, 0.6)",
+        "tonalRamp": [
+          "#1b2232",
+          "#2a395b",
+          "#354e88",
+          "#3c63b9",
+          "#6a87c8",
+          "#9cadd3",
+          "#cad1e3",
+          "#eff1f5"
+        ]
+      },
+      "scrim-deep": {
+        "role": "overlay",
+        "displayName": "Koyu Mürekkep Karartma",
+        "canonical": "rgba(12, 20, 38, 0.82)",
+        "tonalRamp": [
+          "#1b2232",
+          "#2a395b",
+          "#354e88",
+          "#3c63b9",
+          "#6a87c8",
+          "#9cadd3",
+          "#cad1e3",
+          "#eff1f5"
+        ]
+      },
+      "band-shade": {
+        "role": "overlay",
+        "displayName": "Şerit Gölgesi",
+        "canonical": "rgba(0, 0, 0, 0.55)",
+        "purpose": "Shadow/text-shadow colour only; never a surface."
+      },
+      "mask-opaque": {
+        "role": "utility",
+        "displayName": "Maske",
+        "canonical": "#000",
+        "purpose": "Opacity value inside the price-stamp perforation mask only; never painted."
       }
     },
     "typographyMeta": {
       "display": {
         "displayName": "Display",
-        "purpose": "Hatıra kartı kırmızı başlık şeridi (h1); telefonda 38px."
+        "purpose": "Hatıra kartı kırmızı başlık şeridi (h1); telefonda display-phone (38px)."
       },
       "page-title": {
         "displayName": "Page Title",
@@ -201,7 +289,7 @@
       },
       "headline": {
         "displayName": "Headline",
-        "purpose": "Bölüm başlıkları; arka yüzde clamp(28px,2.6vw,34px)."
+        "purpose": "Sayfa ölçeğinde bölüm başlıkları."
       },
       "price-stamp": {
         "displayName": "Stamp Price",
@@ -213,7 +301,7 @@
       },
       "title": {
         "displayName": "Title",
-        "purpose": "Program adımları, alt bilgi sütun başlıkları, şeritler (20-22px)."
+        "purpose": "Program adımları (21px); alt bilgi başlıkları ve özet şeridi 20px."
       },
       "field-value": {
         "displayName": "Field Value",
@@ -229,23 +317,79 @@
       },
       "lead": {
         "displayName": "Lead",
-        "purpose": "Arka yüz giriş metni."
+        "purpose": "Arka yüz giriş metni, hero alt satırı, rezervasyon alt başlığı."
       },
       "label": {
         "displayName": "Label",
-        "purpose": "Alan ve bilgi etiketleri; basılı satır 13px."
+        "purpose": "Bilgi bandı dt, filo notları, fotoğraf etiketi."
+      },
+      "display-phone": {
+        "displayName": "Display (telefon)",
+        "purpose": "700px altında başlık şeridi."
+      },
+      "booking-title": {
+        "displayName": "Booking Title",
+        "purpose": "Rezervasyon sayfası başlığı."
+      },
+      "booking-headline": {
+        "displayName": "Booking Headline",
+        "purpose": "Rezervasyon form kartı içindeki adım başlığı."
+      },
+      "back-headline": {
+        "displayName": "Back-of-card Headline",
+        "purpose": "Tur detayı arka yüzündeki başlıklar."
+      },
+      "band-headline": {
+        "displayName": "Band Headline",
+        "purpose": "Özel tur bandının kırmızı şeridi."
+      },
+      "price-total": {
+        "displayName": "Total Price",
+        "purpose": "Rezervasyon özetindeki tur bedeli, altın."
+      },
+      "price-total-compact": {
+        "displayName": "Total Price (compact)",
+        "purpose": "950px altında özet tur bedeli."
+      },
+      "seat-heading": {
+        "displayName": "Seat Heading",
+        "purpose": "Koltuk seçimi yanındaki başlık."
+      },
+      "ribbon": {
+        "displayName": "Ribbon",
+        "purpose": "Tur kartı şeridi, hizmet başlıkları, harita yedeği, mobil özet şeridi fiyatı (22px)."
+      },
+      "intro": {
+        "displayName": "Intro",
+        "purpose": "Tur listesi giriş metni."
+      },
+      "section-body": {
+        "displayName": "Section Body",
+        "purpose": "Ana sayfa alt bölüm giriş paragrafları; rezervasyon alan değerleri."
+      },
+      "body-small": {
+        "displayName": "Body Small",
+        "purpose": "Hizmet metni, özet satırları, adımlar, notlar, alt bilgi bağlantıları."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Basılı satır, breadcrumb, alan etiketleri, lejant, 'Tur bedeli' etiketi."
+      },
+      "micro": {
+        "displayName": "Micro",
+        "purpose": "Pulun basılı yer yazısı (büyük harf); telefonda küçük manzara fiyatı."
       }
     },
     "shadows": [
       {
         "name": "kp-shadow",
         "value": "0 30px 60px -32px rgba(26,40,70,0.42), 0 2px 6px rgba(26,40,70,0.08)",
-        "purpose": "Hatıra kartı; tur kartı üzerine gelme."
+        "purpose": "Hatıra kartı, VIP arka yüzü, filo/konaklama çerçeveleri; tur kartı üzerine gelme."
       },
       {
         "name": "kp-shadow-sm",
         "value": "0 18px 34px -24px rgba(26,40,70,0.45), 0 1px 3px rgba(26,40,70,0.08)",
-        "purpose": "Tur kartı, arka yüz, fiyat kutusu."
+        "purpose": "Tur kartı, arka yüz, fiyat kutusu, şeritler, hikâye kartpostalı, özel tur bandı, rezervasyon formu/özeti/mobil şerit."
       },
       {
         "name": "title-band",
@@ -261,13 +405,28 @@
         "name": "mobile-bar",
         "value": "0 -10px 30px -18px rgba(26,40,70,0.5)",
         "purpose": "Tur detayı sabit mobil rezervasyon çubuğu."
+      },
+      {
+        "name": "scrim-view",
+        "value": "linear-gradient(transparent, rgba(12,20,38,0.6)) on the lower 55%",
+        "purpose": "Büyük manzara karartması."
+      },
+      {
+        "name": "scrim-story",
+        "value": "linear-gradient(0deg, rgba(12,20,38,0.82), transparent 62%)",
+        "purpose": "Hikâye kartpostalı karartması."
+      },
+      {
+        "name": "band-text",
+        "value": "text-shadow: 0 1px 12px rgba(0,0,0,0.55)",
+        "purpose": "Başlık şeridi altındaki beyaz satır."
       }
     ],
     "motion": [
       {
         "name": "ease-paper",
         "value": "cubic-bezier(0.16, 1, 0.3, 1)",
-        "purpose": "Kart kalkışı (0.45s), manzara büyümesi (0.9s), seçim çerçevesi (0.3s), sık sorulan oku (0.25s), mobil çubuk (0.3s)."
+        "purpose": "Kart kalkışı (0.45s), manzara büyümesi (0.9s), seçim çerçevesi (0.3s), sık sorulan oku (0.25s), mobil çubuk (0.3s), sohbet yazısı (0.4s), ilk ekran yerleşmesi."
       },
       {
         "name": "card-lift",
@@ -277,15 +436,40 @@
       {
         "name": "launcher-retreat",
         "value": "opacity 0 + translateY(24px), 0.25s ease",
-        "purpose": "Hatıra kartı eylem bandı görünürken yüzen sohbet düğmeleri çekilir (body[data-cta-visible])."
+        "purpose": "Yüzen düğmeler yalnız geniş ekranda çekilir: body[data-cta-visible] >=701px (hatıra kartı / detay bandı), body[data-summary-visible] >=951px (rezervasyon özeti). Telefonda WhatsApp ve asistan her sayfada görünür."
+      },
+      {
+        "name": "kp-settle",
+        "value": "translateY(16px) rotate(-0.7deg) -> none, 0.9s ease-paper",
+        "purpose": "İlk ekranda hatıra kartı masaya yerleşir (ana sayfa, tur detayı)."
+      },
+      {
+        "name": "kp-band",
+        "value": "translateX(-14px) -> none, 0.8s 0.15s ease-paper",
+        "purpose": "Başlık şeridi kenardan oturur."
+      },
+      {
+        "name": "chat-expand",
+        "value": "max-width 0 -> 260px, 0.4s ease-paper",
+        "purpose": "Sohbet düğmesinin yazısı üzerine gelince/odakta açılır."
+      },
+      {
+        "name": "tilt",
+        "value": "rotate(-1deg | 0.8deg | -0.4deg)",
+        "purpose": "Hikâye kartpostalları ve fotoğraf çerçeveleri; telefonda hikâyeler düz."
       },
       {
         "name": "reduced",
-        "value": "transition: none",
-        "purpose": "prefers-reduced-motion tüm bu geçişleri kapatır."
+        "value": "animation: none; transition: none",
+        "purpose": "prefers-reduced-motion kp-settle, kp-band, sohbet yazısı, düğme geri çekilmesi, mobil çubuk, SSS oku, manzara ve tur kartı geçişlerini kapatır."
       }
     ],
     "breakpoints": [
+      {
+        "name": "booking-1200",
+        "value": "1200px",
+        "purpose": "Rezervasyon özet sütunu 340px -> 300px, aralık 28px."
+      },
       {
         "name": "nav-1350",
         "value": "1350px",
@@ -297,14 +481,24 @@
         "purpose": "Menü 13px; rezervasyon bağlantısı yalnız ikon."
       },
       {
+        "name": "desktop-min",
+        "value": "951px",
+        "purpose": "Rezervasyon özeti görünürken yüzen düğmeler çekilir (yalnız masaüstü)."
+      },
+      {
         "name": "tablet",
         "value": "950px",
-        "purpose": "Manzaralar alt alta, küçük manzaralar şerit, açıklama bandı iki sütun."
+        "purpose": "Manzaralar alt alta, küçük manzaralar şerit, açıklama bandı iki sütun. Rezervasyon tek sütun, mobil özet şeridi görünür, özet sonda."
       },
       {
         "name": "phone",
         "value": "700px",
         "purpose": "Üst bilgi şeridi gizli, kart 8px, aralıklar 6px, açılır menü."
+      },
+      {
+        "name": "booking-560",
+        "value": "560px",
+        "purpose": "Rezervasyon özeti fotoğrafı üstte, 16:9."
       }
     ],
     "airmailEdge": {
@@ -388,27 +582,73 @@
       "description": "Tur programı: tek kesintisiz kırmızı rota çizgisi, halkalı duraklar, son durak dolu.",
       "html": "<ol class=\"ds-route\"><li><time>08:30</time><h3>Kars’ta buluşma</h3><p>Kars merkezden hareket.</p></li><li><time>Öğlen</time><h3>Çıldır Gölü kıyısında</h3><p>Göl çevresinde gezi.</p></li><li><time>17:00</time><h3>Kars şehir gezisi</h3><p>Tarihî yapılar.</p></li></ol>",
       "css": ":host{--kp-snow:#e9eef1;--kp-card:#fff;--kp-ink:#1a2846;--kp-ink-2:#47536e;--kp-rule:#c9d2dc;--kp-hair:#e3e8ee;--kp-red:#c2342b;--kp-red-d:#9f271f;--kp-gold:#8a6128;--paper:#f3f6f8;--sky:#e3e9ee;--kp-shadow:0 30px 60px -32px rgba(26,40,70,.42),0 2px 6px rgba(26,40,70,.08);--kp-shadow-sm:0 18px 34px -24px rgba(26,40,70,.45),0 1px 3px rgba(26,40,70,.08);--display:Marcellus,Georgia,serif;--font:Onest,Arial,sans-serif;font-family:var(--font);color:var(--kp-ink);} .ds-route{list-style:none;margin:0;padding:20px;background:var(--kp-card);max-width:420px;} .ds-route li{position:relative;padding:0 0 26px 44px;} .ds-route li::before{content:'';position:absolute;left:11px;top:14px;bottom:-14px;border-left:2px solid var(--kp-red);} .ds-route li:last-child::before{display:none;} .ds-route time{position:relative;display:block;font:600 13px var(--font);color:var(--kp-red);font-variant-numeric:tabular-nums;} .ds-route time::after{content:'';position:absolute;left:-41px;top:0;width:16px;height:16px;border-radius:50%;background:var(--kp-card);border:2px solid var(--kp-red);box-sizing:border-box;} .ds-route li:last-child time::after{background:var(--kp-red);} .ds-route h3{margin:2px 0 0;font:400 21px var(--display);} .ds-route p{margin:4px 0 0;font-size:15px;line-height:1.6;color:var(--kp-ink-2);}"
+    },
+    {
+      "name": "Booking Steps",
+      "kind": "custom",
+      "refersTo": "booking-step",
+      "description": "Rezervasyon adımları: rota çizgisi üstünde duraklar; tamamlanan parça kırmızı.",
+      "html": "<ol class=\"ds-steps\"><li class=\"complete\"><span><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 6 9 17l-5-5\"/></svg></span>Tarih ve koltuk</li><li class=\"current\" aria-current=\"step\"><span>2</span>Yolcu bilgileri</li><li><span>3</span>Ön rezervasyon</li></ol>",
+      "css": ":host{--kp-snow:#e9eef1;--kp-card:#fff;--kp-ink:#1a2846;--kp-ink-2:#47536e;--kp-rule:#c9d2dc;--kp-hair:#e3e8ee;--kp-red:#c2342b;--kp-red-d:#9f271f;--kp-gold:#8a6128;--paper:#f3f6f8;--sky:#e3e9ee;--kp-shadow:0 30px 60px -32px rgba(26,40,70,.42),0 2px 6px rgba(26,40,70,.08);--kp-shadow-sm:0 18px 34px -24px rgba(26,40,70,.45),0 1px 3px rgba(26,40,70,.08);--display:Marcellus,Georgia,serif;--font:Onest,Arial,sans-serif;font-family:var(--font);color:var(--kp-ink);} .ds-steps{display:flex;list-style:none;margin:0;padding:20px;background:var(--kp-snow);} .ds-steps li{flex:1;display:flex;align-items:center;gap:10px;font:500 14px var(--font);color:var(--kp-ink-2);} .ds-steps li:not(:last-child)::after{content:'';flex:1;height:2px;margin:0 16px 0 6px;background:var(--kp-rule);} .ds-steps li.complete::after{background:var(--kp-red);} .ds-steps span{display:grid;place-items:center;width:28px;height:28px;flex:none;border-radius:50%;border:2px solid var(--kp-rule);background:var(--kp-card);font:600 13px var(--font);box-sizing:border-box;} .ds-steps .current{color:var(--kp-ink);} .ds-steps .current span{border-color:var(--kp-red);color:var(--kp-red);} .ds-steps .complete span{border-color:var(--kp-red);background:var(--kp-red);color:#fff;}"
+    },
+    {
+      "name": "Booking Field",
+      "kind": "input",
+      "refersTo": "booking-field",
+      "description": "Rezervasyon formu alanı: kutulu, 48px, odakta kırmızı kenar ve halka.",
+      "html": "<label class=\"ds-bfield\"><span>Yolcu sayısı</span><input value=\"1 kişi\"></label>",
+      "css": ":host{--kp-snow:#e9eef1;--kp-card:#fff;--kp-ink:#1a2846;--kp-ink-2:#47536e;--kp-rule:#c9d2dc;--kp-hair:#e3e8ee;--kp-red:#c2342b;--kp-red-d:#9f271f;--kp-gold:#8a6128;--paper:#f3f6f8;--sky:#e3e9ee;--kp-shadow:0 30px 60px -32px rgba(26,40,70,.42),0 2px 6px rgba(26,40,70,.08);--kp-shadow-sm:0 18px 34px -24px rgba(26,40,70,.45),0 1px 3px rgba(26,40,70,.08);--display:Marcellus,Georgia,serif;--font:Onest,Arial,sans-serif;font-family:var(--font);color:var(--kp-ink);} .ds-bfield{display:grid;gap:8px;max-width:320px;padding:16px;background:var(--kp-card);font:600 13px var(--font);color:var(--kp-ink-2);} .ds-bfield input{min-height:48px;padding:0 14px;border:1px solid var(--kp-rule);border-radius:4px;background:var(--kp-card);font:400 16px var(--font);color:var(--kp-ink);} .ds-bfield input:hover{border-color:var(--kp-ink-2);} .ds-bfield input:focus-visible{outline:none;border-color:var(--kp-red);box-shadow:0 0 0 1px var(--kp-red);}"
+    },
+    {
+      "name": "Booking Summary Postcard",
+      "kind": "card",
+      "refersTo": "booking-summary",
+      "description": "Rezervasyon özeti: tek görüntülü hatıra kartı, kırmızı yer şeridi, 'Tur bedeli' etiketiyle altın tutar.",
+      "html": "<aside class=\"ds-sum\"><div class=\"ds-sum-photo\"><span class=\"ds-sum-rib\">Ani</span></div><div class=\"ds-sum-body\"><h3>Ani, Çıldır ve Kars</h3><p>6 Kasım 2026 · 08:30 hareket</p><p>1 yolcu · Koltuk 5</p><div class=\"ds-sum-total\"><span>Tur bedeli</span><strong>₺1.000</strong></div><p class=\"ds-sum-pay\">Şimdi ödeme alınmaz.</p></div></aside>",
+      "css": ":host{--kp-snow:#e9eef1;--kp-card:#fff;--kp-ink:#1a2846;--kp-ink-2:#47536e;--kp-rule:#c9d2dc;--kp-hair:#e3e8ee;--kp-red:#c2342b;--kp-red-d:#9f271f;--kp-gold:#8a6128;--paper:#f3f6f8;--sky:#e3e9ee;--kp-shadow:0 30px 60px -32px rgba(26,40,70,.42),0 2px 6px rgba(26,40,70,.08);--kp-shadow-sm:0 18px 34px -24px rgba(26,40,70,.45),0 1px 3px rgba(26,40,70,.08);--display:Marcellus,Georgia,serif;--font:Onest,Arial,sans-serif;font-family:var(--font);color:var(--kp-ink);} .ds-sum{width:320px;background:var(--kp-card);border-radius:4px;padding:10px;box-shadow:var(--kp-shadow-sm);} .ds-sum-photo{position:relative;aspect-ratio:4/3;background:linear-gradient(#a9c3da,#7f9a5c);} .ds-sum-rib{position:absolute;left:0;bottom:14px;background:var(--kp-red);color:#fff;font:400 20px/1 var(--display);padding:8px 12px 9px;} .ds-sum-body{padding:18px 10px 12px;} .ds-sum h3{margin:0 0 14px;font:400 24px var(--display);color:var(--kp-ink);} .ds-sum p{margin:9px 0;font-size:14px;color:var(--kp-ink);} .ds-sum-total{margin-top:16px;padding-top:14px;border-top:1px solid var(--kp-ink-2);} .ds-sum-total span{display:block;font-size:13px;color:var(--kp-ink-2);} .ds-sum-total strong{font:400 36px var(--display);color:var(--kp-gold);} .ds-sum-pay{font-size:14px;}"
+    },
+    {
+      "name": "Ruled Strip",
+      "kind": "card",
+      "refersTo": "ruled-strip",
+      "description": "Güven satırı ve hizmetler: tek beyaz şerit, sütunlar kıl çizgiyle ayrılır; görsel yok.",
+      "html": "<div class=\"ds-strip\"><a class=\"ds-cell\" href=\"#\"><h3>Turizm taşımacılığı</h3><p>Havalimanı, otel ve tur transferleri.</p><span>Hizmeti keşfet →</span></a><a class=\"ds-cell\" href=\"#\"><h3>VIP transfer</h3><p>Grubunuza uygun araçla.</p><span>Hizmeti keşfet →</span></a><a class=\"ds-cell\" href=\"#\"><h3>Kongre ve toplantı</h3><p>Etkinlik ulaşımı ve planlama.</p><span>Hizmeti keşfet →</span></a></div>",
+      "css": ":host{--kp-snow:#e9eef1;--kp-card:#fff;--kp-ink:#1a2846;--kp-ink-2:#47536e;--kp-rule:#c9d2dc;--kp-hair:#e3e8ee;--kp-red:#c2342b;--kp-red-d:#9f271f;--kp-gold:#8a6128;--paper:#f3f6f8;--sky:#e3e9ee;--kp-shadow:0 30px 60px -32px rgba(26,40,70,.42),0 2px 6px rgba(26,40,70,.08);--kp-shadow-sm:0 18px 34px -24px rgba(26,40,70,.45),0 1px 3px rgba(26,40,70,.08);--display:Marcellus,Georgia,serif;--font:Onest,Arial,sans-serif;font-family:var(--font);color:var(--kp-ink);} .ds-strip{display:grid;grid-template-columns:repeat(3,1fr);background:var(--kp-card);border-radius:5px;padding:8px;box-shadow:var(--kp-shadow-sm);} .ds-cell{display:flex;flex-direction:column;padding:22px 22px 20px;border-radius:3px;color:var(--kp-ink);text-decoration:none;transition:background .25s ease;} .ds-cell:not(:first-child){border-left:1px solid var(--kp-hair);} .ds-cell:hover{background:var(--paper);} .ds-cell:focus-visible{outline:2px solid var(--kp-red);outline-offset:3px;} .ds-cell h3{margin:0;font:400 22px var(--display);} .ds-cell p{flex:1;margin:8px 0 0;font-size:14px;line-height:1.6;color:var(--kp-ink-2);} .ds-cell span{margin-top:14px;font:600 14px var(--font);color:var(--kp-red);}"
+    },
+    {
+      "name": "Chat Button",
+      "kind": "button",
+      "refersTo": "chat-button",
+      "description": "Yüzen asistan düğmesi: mürekkep daire; yazı üzerine gelince/odakta açılır.",
+      "html": "<button class=\"ds-chat\" aria-label=\"Asistana sorun\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M7.9 20A9 9 0 1 0 4 16.1L2 22Z\"/></svg><span>Asistana sorun</span></button>",
+      "css": ":host{--kp-snow:#e9eef1;--kp-card:#fff;--kp-ink:#1a2846;--kp-ink-2:#47536e;--kp-rule:#c9d2dc;--kp-hair:#e3e8ee;--kp-red:#c2342b;--kp-red-d:#9f271f;--kp-gold:#8a6128;--paper:#f3f6f8;--sky:#e3e9ee;--kp-shadow:0 30px 60px -32px rgba(26,40,70,.42),0 2px 6px rgba(26,40,70,.08);--kp-shadow-sm:0 18px 34px -24px rgba(26,40,70,.45),0 1px 3px rgba(26,40,70,.08);--display:Marcellus,Georgia,serif;--font:Onest,Arial,sans-serif;font-family:var(--font);color:var(--kp-ink);} .ds-chat{display:inline-flex;align-items:center;height:58px;min-width:58px;padding:0 17px;border:0;border-radius:999px;background:var(--kp-ink);color:#fff;cursor:pointer;} .ds-chat span{max-width:0;overflow:hidden;white-space:nowrap;font:500 14px var(--font);transition:max-width .4s cubic-bezier(.16,1,.3,1),margin .4s cubic-bezier(.16,1,.3,1);} .ds-chat:hover span,.ds-chat:focus-visible span{max-width:260px;margin-left:10px;} .ds-chat:focus-visible{outline:2px solid var(--kp-red);outline-offset:3px;} @media (prefers-reduced-motion:reduce){.ds-chat span{transition:none;}}"
     }
   ],
   "narrative": {
     "northStar": "Hatıra Kartı (çok görüntülü Kars kartpostalı)",
-    "overview": "**Creative North Star: \"Hatıra Kartı\" (çok görüntülü Kars kartpostalı)**\n\nSite, eski usul çok görüntülü bir Kars hatıra kartı gibi kurulur: bir büyük manzara, yanında küçük manzaralar, fotoğrafın üstüne binen kırmızı başlık şeridi ve altta beyaz bir açıklama bandı. Kart, kar renginde soğuk açık bir zeminin üstünde 14px beyaz kenarlı bir karton olarak durur; yumuşak, aşağı düşen bir gölgeyle kâğıt gibi kalkar. Tur sayfaları kartın arka yüzüdür: program tek kesintisiz kırmızı rota çizgisinde okunur, fiyat dişli kenarlı bir pul ve üstüne vurulmuş bir posta damgasıyla gösterilir.\n\nDünyanın tüm stilleri `src/postcard.css` içinde, `.kp` kapsayıcısıyla sınırlıdır (`Layout.tsx` halka açık sayfaları `.kp` ile sarar). Bu dosya aynı zamanda `src/styles.css` içindeki eski site jetonlarını (`--navy`, `--ink`, `--muted`, `--line`, `--paper`, `--sky`, `--gold`, `--gold-text`) yeni dünyanın değerlerine eşler. Tam olarak tasarlanmış yüzeyler: üst kenar ve menü, ana sayfa hatıra kartı, tur listesi kartları, tur detayı kartı ve arka yüzü, pul fiyat, alt bilgi. Ana sayfanın alt bölümleri (hikâye, VIP araç ve koltuk planı, hizmetler, filo, konaklama, Instagram, yorumlar) ve rezervasyon akışı eski düzenlerini korur; yalnız jeton eşlemesi, 4px köşe normalizasyonu ve düğme stilleriyle bu dünyaya oturtulmuştur. Onlar yeni dünyanın örneği sayılmaz.\n\nReddedilen kalıp: tam genişlikte hero fotoğrafı ve üstünde yüzen arama kutusu (her tur acentesinin varsayılanı).",
+    "overview": "**Creative North Star: \"Hatıra Kartı\" (çok görüntülü Kars kartpostalı)**\n\nSite, eski usul çok görüntülü bir Kars hatıra kartı gibi kurulur: bir büyük manzara, yanında küçük manzaralar, fotoğrafın üstüne binen kırmızı başlık şeridi ve altta beyaz bir açıklama bandı. Kart, kar renginde soğuk açık bir zeminin üstünde 14px beyaz kenarlı bir karton olarak durur; yumuşak, aşağı düşen bir gölgeyle kâğıt gibi kalkar. Tur sayfaları kartın arka yüzüdür: program tek kesintisiz kırmızı rota çizgisinde okunur, fiyat dişli kenarlı bir pul ve üstüne vurulmuş bir posta damgasıyla gösterilir. Rezervasyon da aynı masada sürer: adımlar bir rota çizgisi üstündeki duraklardır, form kartın arka yüzüdür, özet tek görüntülü küçük bir hatıra kartıdır.\n\nDünyanın tüm stilleri `src/postcard.css` içinde, `.kp` kapsayıcısıyla sınırlıdır (`Layout.tsx` halka açık sayfaları `.kp` ile sarar). Bu dosya aynı zamanda `src/styles.css` içindeki eski site jetonlarını (`--navy`, `--ink`, `--muted`, `--line`, `--paper`, `--sky`, `--gold`, `--gold-text`) yeni dünyanın değerlerine eşler. Bu dünyada tasarlanmış yüzeyler: üst kenar ve menü, ana sayfa hatıra kartı ve alt bölümleri (güven şeridi, hikâye kartpostalları, VIP araç arka yüzü, hizmetler şeridi, filo ve konaklama çerçeveleri, özel tur bandı, Instagram ve yorumlar), tur listesi kartları, tur detayı kartı ve arka yüzü, pul fiyat, rezervasyonun 1. ve 2. adımları (adım çizgisi, form kartı, koltuk seçimi, özet kartı, mobil özet şeridi), sohbet düğmesi ve alt bilgi.\n\nHâlâ eski düzende kalanlar (yalnız jeton eşlemesiyle renklenir, bu dünyanın örneği sayılmaz): rezervasyonun 3. adımı (ön rezervasyon onayı), başarı / bilet sayfası (`.booking-success`), koltuk planının temel koltuk çizimi (yalnız seçili koltuk yeniden boyanmıştır) ve Instagram şeridinin altındaki dipnot metni.\n\nReddedilen kalıp: tam genişlikte hero fotoğrafı ve üstünde yüzen arama kutusu (her tur acentesinin varsayılanı).",
     "keyCharacteristics": [
       "Soğuk kar zemini üstünde beyaz kart kartonu; fotoğraflar kartın içine 10px aralıkla yerleşir.",
       "Mavi-siyah mürekkep metin; kırmızı başlık şeridi ve eylem; logo altını fiyat ve pul için.",
       "Sayfanın üstünde ve alt bilginin üstünde ince uçak postası şeridi.",
       "Marcellus başlıklar, form değerleri ve fiyatlar; Onest etiketler ve gövde.",
-      "Küçük, düz köşeler (0–5px); hap biçimi yok."
+      "Küçük, düz köşeler (0–5px); hap biçimi yok (tek istisna yüzen sohbet düğmesi).",
+      "Masaya bırakılmış kartlar: hikâye kartpostalları ve fotoğraf çerçeveleri 1 dereceye kadar eğik durur."
     ],
     "rules": [
       {
         "name": "The Kırmızı Mürekkep Rule",
-        "body": "Kırmızı başlık şeridi, eylem, seçim/odak ve rota çizgisi içindir. Gövde metninde, büyük yüzey dolgularında veya süslemede kullanılmaz; bir ekranda tek bir dolu kırmızı eylem düğmesi vardır.",
+        "body": "Kırmızı başlık şeridi, eylem, seçim/odak, ilerleme (tamamlanan rezervasyon adımı) ve rota çizgisi içindir. Gövde metninde, büyük yüzey dolgularında veya süslemede kullanılmaz; bir ekranda tek bir dolu kırmızı eylem düğmesi vardır.",
         "section": "colors"
       },
       {
         "name": "The Altın Fiyat Rule",
         "body": "Bir rakam para ise altın (gold) ve Marcellus ile yazılır; altın başka hiçbir metin için kullanılmaz.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tur Bedeli Rule",
+        "body": "Rezervasyon özetindeki tutar ödeme değil tur bedelidir: etiket \"Tur bedeli\", üyelik indirimi uygulandıysa \"İndirim sonrası tur bedeli\" olur (demo veride başına \"örnek\" eklenir); hemen altında \"Şimdi ödeme alınmaz.\" satırı durur. \"Toplam\", \"Ödenecek\" gibi etiketler kullanılmaz.",
         "section": "colors"
       },
       {
@@ -422,6 +662,11 @@
         "section": "typography"
       },
       {
+        "name": "The Kart İçi Ölçek Rule",
+        "body": "Bir başlık kartın içindeyse sayfa başlığından bir basamak küçüktür (28–36px aralığı); sayfa ölçeğindeki 50px başlık kartın içine girmez.",
+        "section": "typography"
+      },
+      {
         "name": "The Etiketsiz Başlık Rule",
         "body": "Bölüm başlıklarının üstünde küçük üst etiket (eyebrow) yoktur; eski `.section-note` bu dünyada gizlidir.",
         "section": "typography"
@@ -430,22 +675,31 @@
         "name": "The Kâğıt Gölgesi Rule",
         "body": "Gölge hep aşağı ve mürekkep tonludur, ışık gibi yayılmaz; sert kaydırılmış gölge kullanılmaz.",
         "section": "elevation"
+      },
+      {
+        "name": "The Masaya Bırakılmış Kart Rule",
+        "body": "Eğim yalnız serbest duran kartlara verilir (hikâye kartpostalları, filo / konaklama çerçeveleri, ilk ekrandaki yerleşme hareketi) ve 1 dereceyi geçmez; form, özet, şerit ve metin kutuları düz durur.",
+        "section": "elevation"
       }
     ],
     "dos": [
       "**Do** yeni halka açık yüzeyleri `.kp` içinde ve `--kp-*` jetonlarıyla kur; eski jetonları doğrudan yeniden tanımlama.",
       "**Do** ana ilk görünümü kar zemininde beyaz bir kart olarak kur: kart içinde fotoğraflar 10px aralıkla, keskin köşeli; kartın kendisi 5px köşeli ve kart gölgeli.",
+      "**Do** yeni bir bölümü kendi zemin rengiyle değil, kar zemininde beyaz bir kart, şerit veya çerçeve olarak kur.",
       "**Do** her fiyatı Marcellus ve altın (gold) ile, tabular rakamlarla yaz.",
-      "**Do** form değerlerini açıklama bandı gibi kutusuz, alt çizgili ve Marcellus 20px tut.",
-      "**Do** kırmızıyı başlık şeridi, eylem, seçim/odak ve rota çizgisiyle sınırla.",
+      "**Do** açıklama bandı alanlarını kutusuz, alt çizgili ve Marcellus 20px tut; uzun formlarda (rezervasyon) kutulu 48px Onest alanı kullan.",
+      "**Do** kırmızıyı başlık şeridi, eylem, seçim/odak, tamamlanan ilerleme ve rota çizgisiyle sınırla.",
+      "**Do** rezervasyon tutarını \"Tur bedeli\" / \"İndirim sonrası tur bedeli\" diye etiketle ve altına \"Şimdi ödeme alınmaz.\" satırını koy.",
+      "**Do** yüzen düğmeleri, sayfanın ana eylemi veya özeti ekrandayken geri çek.",
       "**Do** Google puanını yalnız canlı veriden göster; veri yoksa satırı gösterme."
     ],
     "donts": [
       "**Don't** tam genişlikte hero fotoğrafı ve üstünde yüzen arama kutusu kullanma.",
-      "**Don't** hap biçimli düğme, etiket veya filtre yapma; 5px üstü köşe yok.",
-      "**Don't** bölüm başlıklarına üst etiket (eyebrow) ekleme.",
+      "**Don't** hap biçimli düğme, etiket veya filtre yapma; 5px üstü köşe yok (yüzen sohbet düğmesi tek istisnadır).",
+      "**Don't** bölüm başlıklarına veya kartpostallara üst etiket (eyebrow) ekleme.",
+      "**Don't** kartları 1 dereceden fazla eğme; formu, özeti ve şeritleri eğme.",
       "**Don't** zemini kremaya ısıtma veya panelin tüf siyahını, kırmızısını getirme; panel sistemi `docs/DESIGN-PANEL.md` içindedir.",
-      "**Don't** logo altınını (logo-gold) metin rengi olarak kullanma; metin altını gold'dur."
+      "**Don't** logo altınını (logo-gold) veya puan yıldızı rengini metin rengi olarak kullanma; metin altını gold'dur."
     ]
   }
 }

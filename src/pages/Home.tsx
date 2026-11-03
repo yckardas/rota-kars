@@ -280,7 +280,6 @@ export function Home({ catalog }: { catalog: Catalog }) {
                   <Play size={17} fill="currentColor" />
                 </span>
                 <span className="story-card-copy">
-                  <small>{s.location}</small>
                   <strong>{s.title}</strong>
                   <span>
                     Hikâyeyi keşfet <ChevronRight size={14} />
@@ -304,20 +303,11 @@ export function Home({ catalog }: { catalog: Catalog }) {
               sayfasında inceleyin; şoför yanındaki ön koltuk rehberinize
               ayrılmış olsun.
             </p>
-            <div className="vip-facts">
-              <div>
-                <strong>{previewVehicle.passengerSeats}+1</strong>
-                <span>{previewTour?.name || "Örnek araç düzeni"}</span>
-              </div>
-              <div>
-                <strong>{previewVehicle.sellableSeats}</strong>
-                <span>Misafir için koltuk</span>
-              </div>
-              <div>
-                <ShieldCheck size={27} />
-                <span>Şoför yanı rehbere ayrılır</span>
-              </div>
-            </div>
+            <p className="vip-caption">
+              {previewVehicle.passengerSeats}+1 {previewVehicle.name} ·{" "}
+              {previewVehicle.sellableSeats} misafir koltuğu · şoför yanı
+              rehbere ayrılır
+            </p>
             <Link
               className="btn btn-white"
               to={previewTour ? "/rezervasyon/" + previewTour.id : "/turlar"}
@@ -357,12 +347,6 @@ export function Home({ catalog }: { catalog: Catalog }) {
         <div className="service-grid">
           {catalog.services.map((s) => (
             <Link className="service-card" key={s.id} to={"/hizmetler/" + s.id}>
-              <img
-                {...responsive(s.image)}
-                alt=""
-                loading="lazy"
-                decoding="async"
-              />
               <h3>{s.title}</h3>
               <p>{s.text}</p>
               <span className="service-discover">
