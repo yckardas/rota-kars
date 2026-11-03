@@ -39,6 +39,14 @@ typography:
     fontWeight: 400
     lineHeight: 1.16
     letterSpacing: "-1.8px"
+  hero-title-single:
+    fontFamily: "Marcellus, Georgia, serif"
+    fontSize: "clamp(40px, 5.2vw, 64px)"
+    fontWeight: 400
+  hero-title-single-phone:
+    fontFamily: "Marcellus, Georgia, serif"
+    fontSize: "36px"
+    fontWeight: 400
   booking-title:
     fontFamily: "Marcellus, Georgia, serif"
     fontSize: "clamp(38px, 4.4vw, 56px)"
@@ -57,6 +65,10 @@ typography:
   back-headline:
     fontFamily: "Marcellus, Georgia, serif"
     fontSize: "clamp(28px, 2.6vw, 34px)"
+    fontWeight: 400
+  verify-subhead:
+    fontFamily: "Marcellus, Georgia, serif"
+    fontSize: "clamp(22px, 2.4vw, 28px)"
     fontWeight: 400
   band-headline:
     fontFamily: "Marcellus, Georgia, serif"
@@ -84,6 +96,11 @@ typography:
     fontWeight: 400
     lineHeight: 1
     fontFeature: "tnum"
+  process-numeral:
+    fontFamily: "Marcellus, Georgia, serif"
+    fontSize: "28px"
+    fontWeight: 400
+    lineHeight: 1
   ribbon:
     fontFamily: "Marcellus, Georgia, serif"
     fontSize: "22px"
@@ -93,11 +110,29 @@ typography:
     fontFamily: "Marcellus, Georgia, serif"
     fontSize: "21px"
     fontWeight: 400
+  ticket-amount:
+    fontFamily: "Marcellus, Georgia, serif"
+    fontSize: "21px"
+    fontWeight: 400
+    fontFeature: "tnum"
   field-value:
     fontFamily: "Marcellus, Georgia, serif"
     fontSize: "20px"
     fontWeight: 400
     lineHeight: 1.3
+  reference:
+    fontFamily: "Onest, Arial, sans-serif"
+    fontSize: "24px"
+    fontWeight: 600
+    lineHeight: 1.2
+    letterSpacing: "0.08em"
+    fontFeature: "tnum"
+  reference-phone:
+    fontFamily: "Onest, Arial, sans-serif"
+    fontSize: "22px"
+    fontWeight: 600
+    letterSpacing: "0.08em"
+    fontFeature: "tnum"
   intro:
     fontFamily: "Onest, Arial, sans-serif"
     fontSize: "18px"
@@ -135,6 +170,12 @@ typography:
     fontFamily: "Onest, Arial, sans-serif"
     fontSize: "12px"
     fontWeight: 400
+  stamp-label:
+    fontFamily: "Onest, Arial, sans-serif"
+    fontSize: "12px"
+    fontWeight: 600
+    lineHeight: 1.3
+    letterSpacing: "0.1em"
   micro:
     fontFamily: "Onest, Arial, sans-serif"
     fontSize: "11px"
@@ -304,6 +345,46 @@ components:
     backgroundColor: "{colors.card}"
     rounded: "{rounded.sm}"
     padding: "8px 14px 8px 8px"
+  status-stamp-ok:
+    backgroundColor: "transparent"
+    textColor: "{colors.red}"
+    typography: "{typography.stamp-label}"
+    rounded: "{rounded.chip}"
+    padding: "5px 10px 4px"
+  status-stamp-pending:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink}"
+    typography: "{typography.stamp-label}"
+    rounded: "{rounded.chip}"
+    padding: "5px 10px 4px"
+  status-stamp-void:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink-2}"
+    typography: "{typography.stamp-label}"
+    rounded: "{rounded.chip}"
+    padding: "5px 10px 4px"
+  reservation-ticket:
+    backgroundColor: "{colors.card}"
+    rounded: "{rounded.card}"
+    padding: "36px 40px 0"
+  ticket-qr:
+    backgroundColor: "{colors.card}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.label}"
+    size: "164px"
+  ticket-check:
+    backgroundColor: "{colors.card}"
+    rounded: "{rounded.card}"
+    padding: "36px 40px 30px"
+    width: "720px"
+  service-directory-card:
+    backgroundColor: "{colors.card}"
+    rounded: "{rounded.sm}"
+    padding: "30px 32px 26px"
+  service-detail-cta:
+    backgroundColor: "{colors.card}"
+    rounded: "{rounded.card}"
+    padding: "34px 40px"
 ---
 
 # Design System: Rota Kars (halka açık site)
@@ -316,9 +397,9 @@ Bu dosya halka açık siteyi (ana sayfa, tur listesi, tur detayı, rezervasyon) 
 
 Site, eski usul çok görüntülü bir Kars hatıra kartı gibi kurulur: bir büyük manzara, yanında küçük manzaralar, fotoğrafın üstüne binen kırmızı başlık şeridi ve altta beyaz bir açıklama bandı. Kart, kar renginde soğuk açık bir zeminin üstünde 14px beyaz kenarlı bir karton olarak durur; yumuşak, aşağı düşen bir gölgeyle kâğıt gibi kalkar. Tur sayfaları kartın arka yüzüdür: program tek kesintisiz kırmızı rota çizgisinde okunur, fiyat dişli kenarlı bir pul ve üstüne vurulmuş bir posta damgasıyla gösterilir. Rezervasyon da aynı masada sürer: adımlar bir rota çizgisi üstündeki duraklardır, form kartın arka yüzüdür, özet tek görüntülü küçük bir hatıra kartıdır.
 
-Dünyanın tüm stilleri `src/postcard.css` içinde, `.kp` kapsayıcısıyla sınırlıdır (`Layout.tsx` halka açık sayfaları `.kp` ile sarar). Bu dosya aynı zamanda `src/styles.css` içindeki eski site jetonlarını (`--navy`, `--ink`, `--muted`, `--line`, `--paper`, `--sky`, `--gold`, `--gold-text`) yeni dünyanın değerlerine eşler. Bu dünyada tasarlanmış yüzeyler: üst kenar ve menü, ana sayfa hatıra kartı ve alt bölümleri (güven şeridi, hikâye kartpostalları, VIP araç arka yüzü, hizmetler şeridi, filo ve konaklama çerçeveleri, özel tur bandı, Instagram ve yorumlar), tur listesi kartları, tur detayı kartı ve arka yüzü, pul fiyat, rezervasyonun 1. ve 2. adımları (adım çizgisi, form kartı, koltuk seçimi, özet kartı, mobil özet şeridi), sohbet düğmesi ve alt bilgi.
+Dünyanın tüm stilleri `src/postcard.css` içinde, `.kp` kapsayıcısıyla sınırlıdır (`Layout.tsx` halka açık sayfaları `.kp` ile sarar). Bu dosya aynı zamanda `src/styles.css` içindeki eski site jetonlarını (`--navy`, `--ink`, `--muted`, `--line`, `--paper`, `--sky`, `--gold`, `--gold-text`) yeni dünyanın değerlerine eşler. Bu dünyada tasarlanmış yüzeyler: üst kenar ve menü, ana sayfa hatıra kartı ve alt bölümleri (güven şeridi, hikâye kartpostalları, VIP araç arka yüzü, hizmetler şeridi, filo ve konaklama çerçeveleri, özel tur bandı, Instagram ve yorumlar), tur listesi kartları, tur detayı kartı ve arka yüzü, pul fiyat, rezervasyon adımları (adım çizgisi, form kartı, koltuk seçimi, özet kartı, mobil özet şeridi, 3. adımın ödeme tercihi kutuları), başarı sayfası ve ön rezervasyon belgesi (bilet), `/bilet/:token` doğrulama kartı, hizmetler dizini ve hizmet detayı, konaklama, hakkımızda, sohbet düğmesi ve alt bilgi.
 
-Hâlâ eski düzende kalanlar (yalnız jeton eşlemesiyle renklenir, bu dünyanın örneği sayılmaz): rezervasyonun 3. adımı (ön rezervasyon onayı), başarı / bilet sayfası (`.booking-success`), koltuk planının temel koltuk çizimi (yalnız seçili koltuk yeniden boyanmıştır) ve Instagram şeridinin altındaki dipnot metni.
+Hâlâ eski düzende kalanlar (yalnız jeton eşlemesiyle renklenir, bu dünyanın örneği sayılmaz): koltuk planının temel koltuk çizimi (yalnız seçili koltuk yeniden boyanmıştır) ve Instagram şeridinin altındaki dipnot metni. Panelin `.status-tag` etiketi `/yonetim` dünyasına aittir; halka açık sitede durum lastik damgayla (StatusStamp) gösterilir.
 
 Reddedilen kalıp: tam genişlikte hero fotoğrafı ve üstünde yüzen arama kutusu (her tur acentesinin varsayılanı).
 
@@ -329,13 +410,14 @@ Reddedilen kalıp: tam genişlikte hero fotoğrafı ve üstünde yüzen arama ku
 - Marcellus başlıklar, form değerleri ve fiyatlar; Onest etiketler ve gövde.
 - Küçük, düz köşeler (0–5px); hap biçimi yok (tek istisna yüzen sohbet düğmesi).
 - Masaya bırakılmış kartlar: hikâye kartpostalları ve fotoğraf çerçeveleri 1 dereceye kadar eğik durur.
+- Posta nesneleri bilgi taşır: pul fiyatı, posta damgası tarihi, lastik damga durumu söyler; başlıkların üstünde süs ikonu yoktur.
 
 ## Colors
 
 Soğuk mavi-gri bir kâğıt dünyası; sıcaklık yalnız kırmızı mürekkepte ve altında.
 
 ### Primary
-- **Uçak Postası Kırmızısı** (red): başlık şeridi (hero `h1`, tur kartı şeridi, rezervasyon özet şeridi, özel tur bandı), birincil düğme, etkin menü alt çizgisi, seçili manzara çerçevesi ve işareti, seçili koltuk, rezervasyon adımlarında geçerli durak halkası, tamamlanan durak ve tamamlanan çizgi parçası, klavye ve alan odağı, tur programındaki rota çizgisi ve saatleri, eylem bağlantıları ("Hizmeti keşfet", özetteki üyelik bağlantısı) ve liste ikonları. Üzerine her zaman beyaz yazılır.
+- **Uçak Postası Kırmızısı** (red): başlık şeridi (hero `h1`, tur kartı şeridi, rezervasyon özet şeridi, özel tur bandı), birincil düğme, etkin menü alt çizgisi, seçili manzara çerçevesi ve işareti, seçili koltuk, rezervasyon adımlarında geçerli durak halkası, tamamlanan durak ve tamamlanan çizgi parçası, klavye ve alan odağı, tur programındaki rota çizgisi ve saatleri, eylem bağlantıları ("Hizmeti keşfet", özetteki üyelik bağlantısı), liste ikonları, onaylı / tamamlanmış rezervasyonun lastik damgası ve hizmet / konaklama süreç adımlarının üst çizgisi ve sıra rakamları. Dolgu olduğunda üzerine her zaman beyaz yazılır.
 - **Koyu Posta Kırmızısı** (red-deep): birincil düğmenin üzerine gelme durumu ve seçili koltuğun kenarı.
 
 ### Secondary
@@ -347,22 +429,22 @@ Soğuk mavi-gri bir kâğıt dünyası; sıcaklık yalnız kırmızı mürekkept
 - **Kar** (snow): sayfa zemini ve `body` arka planı; kartlar bunun üstünde durur.
 - **Kart Kartonu** (card): hatıra kartı, tur kartları, arka yüz, pul, şeritler, çerçeveler, rezervasyon formu ve özeti, harita yedeği, alt bilgi, beyaz düğme.
 - **Bastırılmış Karton** (card-press): beyaz düğmenin üzerine gelme durumu.
-- **Mavi-Siyah Mürekkep** (ink): ana metin, çerçeveli düğme, etkin filtre, sohbet düğmesi, metin seçimi arka planı, posta damgası.
-- **Soluk Mürekkep** (ink-2): etiketler, ikincil metin, alan alt çizgisi, basılı küçük satır, ikonlar, özet toplamının üst çizgisi.
-- **Çizgi** (rule): filtre, arama ve rezervasyon alanlarının kenarı, bekleyen adım halkası ve adım çizgisi, pul içindeki çerçeve, koltuk etiketi kenarı.
+- **Mavi-Siyah Mürekkep** (ink): ana metin, çerçeveli düğme, etkin filtre, sohbet düğmesi, metin seçimi arka planı, posta damgası, onay bekleyen rezervasyonun lastik damgası ve bilet QR kodunun koyu modülleri (QR beyaz zeminde bu tonla üretilir).
+- **Soluk Mürekkep** (ink-2): etiketler, ikincil metin, alan alt çizgisi, bilet adres satırlarının alt çizgisi, basılı küçük satır, ikonlar, özet toplamının üst çizgisi, iptal edilmiş / süresi dolmuş rezervasyonun kesik çizgili damgası.
+- **Çizgi** (rule): filtre, arama ve rezervasyon alanlarının kenarı, bilet sütun ayırıcısı ve QR çerçevesi, bekleyen adım halkası ve adım çizgisi, pul içindeki çerçeve, koltuk etiketi kenarı.
 - **Kıl Çizgi** (hair): basılı satırın ve VIP basılı satırının ayırıcıları, şerit sütunları arasındaki ince çizgiler, `details` ayırıcıları.
 - **Kâğıt** (paper): arka yüz içindeki sakin kutular (dahil olanlar, bilgi notu, buluşma, sonraki hareketler), VIP koltuk planı zemini, hizmet hücresinin üzerine gelme durumu.
 - **Gök** (sky): fotoğraflar yüklenmeden önceki yer tutucu zemin.
 - **Pul Zemini** (stamp): yalnız fiyat pulunun delikli kenar bandı.
 
 ### Overlay
-- **Mürekkep Karartma** (scrim): büyük manzaranın alt yarısındaki karartma (alt %55, şeffaftan bu tona).
+- **Mürekkep Karartma** (scrim): büyük manzaranın alt yarısındaki karartma (alt %55, şeffaftan bu tona); konaklama fotoğraf künyesinin koyu zemini.
 - **Koyu Mürekkep Karartma** (scrim-deep): hikâye kartpostalının fotoğrafında alttan %62'ye kadar karartma; beyaz başlık bunun üstünde okunur.
 - **Şerit Gölgesi** (band-shade): kırmızı başlık şeridinin, yapıştırılmış fotoğrafın gölgesi ve şerit altındaki beyaz satırın metin gölgesi. Yüzey rengi değildir.
 - **Maske** (mask-opaque): yalnız pulun dişli kenar maskesinde opaklık değeri; hiçbir yüzeye boya olarak verilmez.
 
 ### Named Rules
-**The Kırmızı Mürekkep Rule.** Kırmızı başlık şeridi, eylem, seçim/odak, ilerleme (tamamlanan rezervasyon adımı) ve rota çizgisi içindir. Gövde metninde, büyük yüzey dolgularında veya süslemede kullanılmaz; bir ekranda tek bir dolu kırmızı eylem düğmesi vardır.
+**The Kırmızı Mürekkep Rule.** Kırmızı başlık şeridi, eylem, seçim/odak, ilerleme (tamamlanan rezervasyon adımı, süreç adımlarının çizgisi), rota çizgisi ve onay damgası içindir. Gövde metninde, büyük yüzey dolgularında veya süslemede kullanılmaz; bir ekranda tek bir dolu kırmızı eylem düğmesi vardır.
 
 **The Altın Fiyat Rule.** Bir rakam para ise altın (gold) ve Marcellus ile yazılır; altın başka hiçbir metin için kullanılmaz.
 
@@ -379,31 +461,33 @@ Soğuk mavi-gri bir kâğıt dünyası; sıcaklık yalnız kırmızı mürekkept
 
 ### Hierarchy
 Marcellus basamakları (hep 400):
-- **Display** (clamp(40px, 5.2vw, 76px), 1.02; telefonda 38px): yalnız hatıra kartı başlık şeridi (ana sayfa ve tur detayı `h1`).
+- **Display** (clamp(40px, 5.2vw, 76px), 1.02; telefonda 38px): yalnız hatıra kartı başlık şeridi (ana sayfa ve tur detayı `h1`). Tek görüntülü kartın (konaklama girişi) şeridi bir basamak küçüktür: clamp(40px, 5.2vw, 64px), telefonda 36px.
 - **Page title** (clamp(40px, 5vw, 64px)): tur listesi gibi kartsız sayfa girişleri. **Booking title** (clamp(38px, 4.4vw, 56px)): rezervasyon sayfası başlığı, altında 17px soluk mürekkep tur / tarih satırı.
-- **Headline** (clamp(34px, 3.6vw, 50px), 1.08, `text-wrap: balance`): bölüm başlıkları. Kart içinde küçülür: rezervasyon form kartında clamp(28px, 2.8vw, 36px), tur detayı arka yüzünde clamp(28px, 2.6vw, 34px), özel tur bandında clamp(24px, 2.6vw, 34px).
-- **Fiyat basamakları:** pul 40px, rezervasyon özeti toplamı 36px (950px altında 30px), tur kartı ve bilgi bandı 24px (tabular), mobil özet şeridi 22px.
-- **Seat heading** (28px): koltuk seçimi yanındaki başlık.
-- **Ribbon / Title** (20–22px): tur kartı şeridi, hizmet başlıkları, harita yedeği başlığı (22px); program adımları (21px); alt bilgi sütun başlıkları ve rezervasyon özet şeridi (20px). Rezervasyon özetinin tur adı 24px.
-- **Field value** (20px, 1.3): açıklama bandındaki seçim ve tarih değerleri.
+- **Headline** (clamp(34px, 3.6vw, 50px), 1.08, `text-wrap: balance`): bölüm başlıkları ve bilet doğrulama kartının sonuç cümlesi (altında tur adı clamp(22px, 2.4vw, 28px) soluk mürekkep). Kart içinde küçülür: rezervasyon form kartında, bilette ve hizmet detayı eylem kartında clamp(28px, 2.8vw, 36px), tur detayı arka yüzünde clamp(28px, 2.6vw, 34px), özel tur bandında clamp(24px, 2.6vw, 34px).
+- **Fiyat basamakları:** pul 40px, rezervasyon özeti toplamı 36px (950px altında 30px), tur kartı ve bilgi bandı 24px (tabular), mobil özet şeridi ve 3. adım ödeme tercihi 22px, bilet tutarları 21px (tabular; ilk tutar, toplam tur bedeli, altın), bilet pulundaki fiyat 15px.
+- **Seat heading** (28px): koltuk seçimi yanındaki başlık. Aynı 28px, satır yüksekliği 1, hizmet süreç adımlarının kırmızı sıra rakamıdır.
+- **Ribbon / Title** (20–22px): tur kartı şeridi, hizmet başlıkları, harita yedeği başlığı (22px); program adımları (21px); konaklama ve hizmet süreç adımı başlıkları (22px); alt bilgi sütun başlıkları ve rezervasyon özet şeridi (20px). Rezervasyon özetinin tur adı 24px.
+- **Field value** (20px, 1.3): açıklama bandındaki seçim ve tarih değerleri; bilet ve doğrulama kartının çizgili adres satırları (`dd`, 1.35).
 
 Onest basamakları:
 - **Intro** (18px): tur listesi giriş metni.
 - **Lead** (17px, 1.75): arka yüz giriş metni, hero alt satırı (telefonda 14px), rezervasyon alt başlığı.
 - **Section body** (16px, 1.7): hikâye, VIP, filo ve konaklama giriş paragrafları; rezervasyon alan değerleri 16px.
+- **Reference** (600, 24px, 0.08em, tabular; 760px altında 22px): rezervasyon referans numarası. Onest'tir çünkü referans elle yazılır: onaltılık karakterlerdir ve sunucu O harfini 0'a çevirir; Marcellus'ta O ile 0 karışır.
 - **Card title** (600, 16px, 1.3): tur kartı adı.
 - **Body** (15px, 1.6; en çok 60–62ch): program metni, sık sorulanlar, düğmeler, VIP basılı satırı.
 - **Body small** (14px): hizmet metinleri, kart alt satırları, rezervasyon adımları, özet satırları, onay kutusu ve bilgi notları, süre sayacı, alt bilgi bağlantıları, sohbet düğmesi yazısı.
 - **Caption** (13px): basılı satır, breadcrumb, alan etiketleri (600), adım numaraları (600), koltuk açıklaması ve lejandı, hikâye kartı alt satırı, VIP olguları, "Tur bedeli" etiketi, mobil özet şeridi alt satırı, alt bilgi alt satırı.
-- **Label** (12px): bilgi bandı `dt`, filo grup notları, konaklama fotoğraf etiketi; telefonda adım adları.
-- **Micro** (600, 11px, 0.08em, büyük harf): pulun basılı yer yazısı; telefonda küçük manzara fiyatı (büyük harf değil).
+- **Label** (12px): bilgi bandı `dt`, filo grup notları, konaklama fotoğraf künyesi; telefonda adım adları.
+- **Stamp label** (600, 12px, 1.3, 0.1em, büyük harf): yalnız lastik damga (StatusStamp).
+- **Micro** (600, 11px, 0.08em, büyük harf): pulun basılı yer yazısı (bilet pulunda 0.06em); telefonda küçük manzara fiyatı (büyük harf değil).
 
 ### Named Rules
 **The Kartpostal Baskısı Rule.** Marcellus başlık, değer ve fiyattır; Onest her şeyin geri kalanıdır. Başlıklarda seçili kelime italik veya renkle öne çıkarılmaz.
 
 **The Kart İçi Ölçek Rule.** Bir başlık kartın içindeyse sayfa başlığından bir basamak küçüktür (28–36px aralığı); sayfa ölçeğindeki 50px başlık kartın içine girmez.
 
-**The Etiketsiz Başlık Rule.** Bölüm başlıklarının üstünde küçük üst etiket (eyebrow) yoktur; eski `.section-note` bu dünyada gizlidir.
+**The Etiketsiz Başlık Rule.** Bölüm başlıklarının üstünde küçük üst etiket (eyebrow) yoktur; eski `.section-note` bu dünyada gizlidir. Lastik damga bir etiket değil, belgenin durumudur: yalnız rezervasyon belgesinde ve doğrulama kartında, başlığın üstünde durur.
 
 ## Layout
 
@@ -417,6 +501,10 @@ Rezervasyon: sol form kartı + sağda 340px özet sütunu, 36px aralık (1200px 
 
 950px altında manzaralar alt alta iner, küçük manzaralar dört sütunlu bir şerit olur (170px), açıklama bandı iki sütuna ve tam genişlik düğmeye geçer. 700px altında üst bilgi şeridi gizlenir, kart iç boşluğu 8px, manzara aralıkları 6px olur, basılı satır alt alta dizilir. Menü 1350 / 1100 / 950px eşiklerinde küçülür, 700px altında açılır menüye döner.
 
+Bilet (ön rezervasyon belgesi) en çok 980px'lik tek karttır: sol mesaj sütunu, 1px çizgi ayırıcı, sağ adres sütunu (1.15fr : 1px : 1fr, 40px aralık); en altta kâğıt zeminli tam genişlik not bandı. 760px altında tek sütuna iner, ayırıcı yatay olur. Doğrulama sayfası en çok 720px'lik tek kart, 64px üst / 90px alt boşlukla (700px altında 28px / 70px).
+
+Hizmet dizini kartları masaüstünde görsel + metin yan yanadır, 700px altında üst üste yığılır (görsel 210px). Konaklama girişi tek görüntülü bir hatıra kartıdır: 14px beyaz kenarlı (telefonda 8px), 460px (telefonda 420px) yükseklikte gerçek Sarıkamış fotoğrafı; karartma masaüstünde soldan sağa, 700px altında dikey ve daha koyudur (yukarıda 0.5, %70'te 0.78 mürekkep).
+
 ## Elevation & Depth
 
 Derinlik kâğıt mantığıyla verilir: kart kartonu kar zemininden yumuşak, aşağı uzanan, mürekkep tonlu bir gölgeyle kalkar. Gölge yalnız kartlara (hatıra kartı, tur kartı, arka yüz, fiyat kutusu, şeritler, hikâye kartpostalları, fotoğraf çerçeveleri, VIP arka yüzü, rezervasyon formu, özet ve mobil özet şeridi) ve kartın üstündeki yapıştırma öğelerine (başlık şeridi, tur kartı içindeki küçük fotoğraf) verilir. İç yüzeyler (kâğıt kutular, alanlar, etiketler, rezervasyon özet şeridi) düzdür. Fotoğraf üstündeki yazı, mürekkep tonlu karartma ile okunur hâle getirilir; renkli tül veya bulanıklık kullanılmaz.
@@ -426,6 +514,7 @@ Derinlik kâğıt mantığıyla verilir: kart kartonu kar zemininden yumuşak, a
 - **Küçük kart** (`box-shadow: 0 18px 34px -24px rgba(26,40,70,0.45), 0 1px 3px rgba(26,40,70,0.08)`): tur kartı, arka yüz, fiyat kutusu, güven ve hizmet şeritleri, hikâye kartpostalı, özel tur bandı, rezervasyon formu, özeti ve mobil özet şeridi.
 - **Şerit** (`box-shadow: 0 12px 26px -14px rgba(0,0,0,0.55)`): fotoğraf üstündeki kırmızı başlık şeridi.
 - **Yapıştırma fotoğraf** (`box-shadow: 0 8px 16px -8px rgba(0,0,0,0.55)`): tur kartındaki 4px beyaz kenarlı küçük manzara.
+- **Bilet ve doğrulama kartı:** kart gölgesi; yazdırırken gölge kalkar, yerine 1px çizgi kenar gelir.
 - **Mobil çubuk** (`box-shadow: 0 -10px 30px -18px rgba(26,40,70,0.5)`): tur detayının sabit rezervasyon çubuğu.
 - **Karartmalar:** büyük manzara `linear-gradient(transparent, scrim)` alt %55'te; hikâye kartpostalı `linear-gradient(0deg, scrim-deep, transparent 62%)`; şerit altı satırda `text-shadow: 0 1px 12px rgba(0,0,0,0.55)`.
 
@@ -436,7 +525,7 @@ Derinlik kâğıt mantığıyla verilir: kart kartonu kar zemininden yumuşak, a
 
 ## Shapes
 
-Köşeler kâğıt kesimi gibi küçük ve düzdür: kart, şerit, VIP arka yüzü ve rezervasyon formu 5px; düğme / filtre / tur kartı / hikâye kartpostalı / fotoğraf çerçevesi / rezervasyon alanı / özet / mobil özet şeridi / harita yedeği 4px; hizmet hücresi ve etiketler 2–3px. Kartın içindeki fotoğraflar, başlık şeridi, tur kartı şeridi, özet şeridi ve özel tur bandı tamamen keskin köşelidir (0). Açıklama bandı alanları kutusuzdur: yalnız 1px alt çizgi. Tekrarlanan biçimler: uçak postası kenarı (kırmızı / beyaz / mürekkep / beyaz, -45° eğik, sayfa üstünde 8px, alt bilginin üstünde 6px), pulun dişli kenarı (radyal maske ile delikli 9px çerçeve), yuvarlak posta damgası (iki halka, -12° döndürülmüş, `multiply` karışım). Yuvarlak öğeler yalnız işaretlerdir: seçili manzara işareti (26px), program durakları (16px), rezervasyon adım numaraları (28px), yüzen sohbet düğmesi (58px daire; yazısı açılınca kapsül olur, bu dünyadaki tek kapsül).
+Köşeler kâğıt kesimi gibi küçük ve düzdür: kart, şerit, VIP arka yüzü ve rezervasyon formu 5px; düğme / filtre / tur kartı / hikâye kartpostalı / fotoğraf çerçevesi / rezervasyon alanı / özet / mobil özet şeridi / harita yedeği 4px; hizmet hücresi ve etiketler 2–3px. Kartın içindeki fotoğraflar, başlık şeridi, tur kartı şeridi, özet şeridi ve özel tur bandı tamamen keskin köşelidir (0). Açıklama bandı alanları kutusuzdur: yalnız 1px alt çizgi. Tekrarlanan biçimler: uçak postası kenarı (kırmızı / beyaz / mürekkep / beyaz, -45° eğik, sayfa üstünde 8px, alt bilginin üstünde 6px), pulun dişli kenarı (radyal maske ile delikli 9px çerçeve), yuvarlak posta damgası (iki halka, -12° döndürülmüş, `multiply` karışım). Lastik damga (StatusStamp): 3px köşeli, 2px mürekkep kenar ve içte 2px beyaz boşluktan sonra 1px ikinci halka (çift çizgi), -2° eğik; geçersiz durumda kesik çizgi, iç halka yok. QR çerçevesi 1px çizgi, 2px köşe. Yuvarlak öğeler yalnız işaretlerdir: seçili manzara işareti (26px), program durakları (16px), rezervasyon adım numaraları (28px), yüzen sohbet düğmesi (58px daire; yazısı açılınca kapsül olur, bu dünyadaki tek kapsül).
 
 ## Components
 
@@ -504,6 +593,29 @@ Hatıra kartının en altında, kıl çizgiyle ayrılmış 13px soluk mürekkep 
 ### Sohbet düğmesi ve yüzen düğmelerin geri çekilmesi
 Asistan düğmesi 58px mürekkep daire, içinde beyaz ikon; yazısı (14px) gizlidir ve üzerine gelince ya da klavye odağında 0.4s içinde açılır (en çok 260px), böylece kart fiyatlarını kapatmaz. Telefonda (700px ve altı) WhatsApp ve asistan düğmeleri her sayfada görünür; telefonda kart yüksekliği eylem düğmesi bu düğmelerin üstünde kalacak şekilde ayarlıdır (yalnız eski koltuk planı kuralı, koltuk haritası ekrandayken onları çeker). Geniş ekranda 24px aşağı kayıp gizlenirler (0.25s): ana sayfada hatıra kartı ve tur detayında kart bandı ekrandayken (`body[data-cta-visible]`, 701px ve üstü); rezervasyon özeti ekrandayken (`body[data-summary-visible]`, 951px ve üstü). Tur detayının mobil rezervasyon çubuğu da karttaki düğme görünürken saklanır. Azaltılmış hareket tercihinde bu geçişler kapanır.
 
+### Lastik damga (StatusStamp)
+Rezervasyonun durumu kartın köşesine basılmış bir lastik damgadır; halka açık sitede eski kırmızı durum etiketinin yerini alır. Onest 600 12px, 0.1em, büyük harf; 2px `currentColor` kenar, içte kart beyazı 2px ve `currentColor` 1px halka (çift çizgi), 5px 10px 4px iç boşluk, -2° (sol merkezden). Tonlar: **onaylı / tamamlandı** kırmızı; **acente onayı bekliyor** mürekkep; **iptal / süresi doldu** soluk mürekkep, kesik çizgi, iç halka yok. Dolgu yoktur; damga zemini kartın beyazıdır. Yazdırırken renkler korunur.
+
+### Ön rezervasyon belgesi (bilet)
+Kartın arka yüzü: solda damga, Marcellus clamp(28px, 2.8vw, 36px) tur adı, referans, dört tutar, QR; sağda bilet pulu (150px, 1.5° eğik; 760px altında 116px), üstüne vurulmuş posta damgası (-10°) ve çizgili adres satırları (13px soluk `dt`, Marcellus 20px `dd`, 1px soluk mürekkep alt çizgi). Alt bant kâğıt zeminli, kırmızı bilgi ikonu ve 14px soluk not.
+- **Referans:** Onest 600 24px (760px altında 22px), 0.08em, tabular rakam (bkz. Reference).
+- **Tutarlar:** 13px soluk etiket, Marcellus 400 21px tabular değer; ilki (toplam tur bedeli) altın, diğerleri mürekkep. Üstte kıl çizgi.
+- **QR:** mürekkep (#1a2846) modüller, beyaz zemin, 4 modül sessiz bölge; 164px (760px altında 148px), 1px çizgi çerçeve, 2px köşe. Hiçbir filtre, renk değişimi veya karışım uygulanmaz; karşıtlık kodun kendisinindir. Yanında Onest 16px başlık, 14px soluk açıklama, "Belgeyi doğrula" ve "Yazdır / PDF kaydet" metin bağlantıları.
+- **Yazdırma:** gölge yerine 1px çizgi kenar; QR bağlantı ve düğmeleri, sayfa üstü uçak postası şeridi ve yüzen düğmeler gizlenir; damga, pul ve QR `print-color-adjust: exact` ile renklerini korur.
+
+### Bilet doğrulama kartı (`/bilet/:token`)
+QR okutulunca açılan sayfa: en çok 720px beyaz kart, 5px köşe, kart gölgesi, 36px 40px 30px (telefonda 26px 20px 24px). Sol üstte lastik damga, sağ üstte mutlak konumlu posta damgası (112px; telefonda 92px). Sonuç cümlesi `h1` clamp(34px, 3.6vw, 50px), posta damgasını açıkta bırakmak için sağdan 120px (telefonda 92px) boşluklu; altında soluk mürekkep tur adı, referans, çizgili satırlar (hareket, koltuklar, buluşma) ve 15px soluk not. Yetkili için tek kırmızı "katılım" düğmesi.
+
+### Hizmetler dizini ve hizmet detayı
+- **Giriş:** dizin ve her hizmet detayı, tur detayıyla aynı tek görüntülü hatıra kartıyla açılır (`kp-detail-card` + `kp-views-single`, kırmızı başlık şeridi). Fotoğraf gerçektir: taşımacılık, VIP transfer ve kongre için filonun Rota logolu otobüsü (`object-position: 50% 100%`, logo şeridin üstünde kalır), express tur için Ani. Detayda altta beyaz bant: üç kısa bilgi (ikon yanında) ve tek kırmızı eylem.
+- **Dizin kartı:** görselsiz kartpostal sırtı; kart beyazı, 2px kırmızı üst çizgi (uçak postası kenarı), alt köşeler 4px, küçük kart gölgesi, 30px 32px 26px (telefonda 24px 22px 22px). Başlık Marcellus clamp(28px, 2.8vw, 36px), 16px / 1.65 soluk metin, altta 15px 600 kırmızı eylem. İki sütun; 760px altında tek sütun. Üzerine gelince 3px kalkıp kart gölgesine geçer (0.45s, `cubic-bezier(0.16,1,0.3,1)`; azaltılmış harekette kapalı).
+- **Görseller:** eski beyaz zeminli kesme hizmet görselleri (logo filigranlı, stok insanlı) kullanılmaz.
+- **Süreç adımları:** her adımın üstünde 1px kırmızı ince çizgi; Marcellus 28px kırmızı sıra rakamı (daire veya kutu yok), Marcellus 22px `h3`, 15px / 1.6 soluk metin. Konaklama süreci aynı dili 2px kırmızı üst çizgi ve kırmızı sırayla konuşur.
+- **Eylem kartı:** detay sonundaki çağrı beyaz karttır (5px, küçük kart gölgesi, 34px 40px; telefonda 24px 20px), başlık clamp(28px, 2.8vw, 36px), 16px soluk metin.
+
+### Konaklama girişi (tek görüntülü hatıra kartı)
+Gerçek Sarıkamış fotoğrafı (temsili oda görseli değil), `object-position: 50% 44%`. Kırmızı başlık şeridi (bkz. Display), 17px beyaz satır (en çok 46ch; telefonda 15px), eylem. Fotoğraf künyesi (yer adı) 12px, mürekkep karartma zeminli (scrim) küçük bir çip içinde, 2px köşe; karın üstünde de okunur. Otel listesi boşken süs kutusu yoktur; yalnız hata durumunda tek soluk satır.
+
 ## Do's and Don'ts
 
 ### Do:
@@ -516,6 +628,9 @@ Asistan düğmesi 58px mürekkep daire, içinde beyaz ikon; yazısı (14px) gizl
 - **Do** rezervasyon tutarını "Tur bedeli" / "İndirim sonrası tur bedeli" diye etiketle ve altına "Şimdi ödeme alınmaz." satırını koy.
 - **Do** yüzen düğmeleri, sayfanın ana eylemi veya özeti ekrandayken geri çek.
 - **Do** Google puanını yalnız canlı veriden göster; veri yoksa satırı gösterme.
+- **Do** rezervasyon durumunu lastik damgayla göster: onaylı kırmızı, bekleyen mürekkep, geçersiz soluk ve kesik çizgili.
+- **Do** referans numarasını Onest 600 tabular rakamla yaz; QR'ı mürekkep-beyaz, 4 modül sessiz bölgeli ve filtresiz bırak.
+- **Do** hizmet sayfalarını gerçek filo ya da yer fotoğrafıyla aç; dizin kartları görselsiz kartpostal sırtıdır.
 
 ### Don't:
 - **Don't** tam genişlikte hero fotoğrafı ve üstünde yüzen arama kutusu kullanma.
@@ -524,6 +639,9 @@ Asistan düğmesi 58px mürekkep daire, içinde beyaz ikon; yazısı (14px) gizl
 - **Don't** kartları 1 dereceden fazla eğme; formu, özeti ve şeritleri eğme.
 - **Don't** zemini kremaya ısıtma veya panelin tüf siyahını, kırmızısını getirme; panel sistemi `docs/DESIGN-PANEL.md` içindedir.
 - **Don't** logo altınını (logo-gold) veya puan yıldızı rengini metin rengi olarak kullanma; metin altını gold'dur.
+- **Don't** başlıkların üstüne veya boş durum kutularına süs amaçlı büyük ince çizgili ikon (yatak, pusula gibi) koyma; bu dünyanın süsü pul, damga ve şerittir. İkon yalnız metnin yanında iş görür (liste işareti, güven şeridi satırı, düğme oku, bilgi notu).
+- **Don't** halka açık sitede durumu dolu renkli etiket (panelin `.status-tag`'i) ile gösterme.
+- **Don't** QR koduna renk, filtre, karışım veya yuvarlatma uygulama.
 
 ## Araç
 

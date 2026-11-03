@@ -40,25 +40,29 @@ export const services = [
   {
     id: "turizm-tasimaciligi",
     title: "Turizm taşımacılığı",
-    image: "/images/service-tur.webp",
+    image: "/images/rota-bus.webp",
+    imageAlt: "Rota Kars Tur logolu turizm otobüsü",
     text: "Yerli ve yabancı misafirlerimizin transferlerinde zamanlama, konfor ve emniyeti ön planda tutan uzman bir kadro.",
   },
   {
     id: "vip-transfer",
     title: "VIP transfer",
-    image: "/images/service-vip.webp",
+    image: "/images/rota-bus.webp",
+    imageAlt: "Rota Kars Tur logolu turizm otobüsü",
     text: "Özel üretilmiş, prestijli ve konforlu VIP araç filomuzla dilediğiniz destinasyona eğitimli personelle ulaşım.",
   },
   {
     id: "kongre-toplanti",
     title: "Kongre ve toplantı",
-    image: "/images/service-kongre.webp",
+    image: "/images/rota-bus.webp",
+    imageAlt: "Rota Kars Tur logolu turizm otobüsü",
     text: "Fuar, seminer ve toplantı katılımcılarınızın transferleri için dakik ve güvenilir çözüm ortağı.",
   },
   {
     id: "express-tur",
     title: "Express tur",
-    image: "/images/service-express.webp",
+    image: "/images/tours/ani.webp",
+    imageAlt: "Ani’de katedral ve bozkır",
     text: "Gezi, eğitim, kültür, sanat ve eğlence etkinlikleri için size özel planlanan ulaşım.",
   },
 ];

@@ -10,10 +10,8 @@ import {
   Instagram,
   ExternalLink,
   Check,
-  BedDouble,
   Search,
   LoaderCircle,
-  Compass,
 } from "lucide-react";
 import { RequestForm } from "../components/RequestForm";
 import { ReservationTicket } from "../components/ReservationTicket";
@@ -34,8 +32,8 @@ export function Hotels() {
     <>
       <section className="hotel-hero">
         <img
-          {...responsive("/images/stay.webp", "(max-width: 950px) 100vw, 50vw")}
-          alt="Temsili konaklama görseli"
+          {...responsive("/images/tours/sarikamis.webp", "100vw")}
+          alt="Sarıkamış’ta karlı çam ormanı ve Allahuekber Dağları"
           decoding="async"
         />
         <div className="container">
@@ -53,7 +51,7 @@ export function Hotels() {
             Konaklama talebi oluştur <ArrowRight size={17} />
           </button>
         </div>
-        <small>Temsili oda görseli</small>
+        <small>Sarıkamış · Allahuekber Dağları</small>
       </section>
       <section className="container section">
         <div className="section-heading">
@@ -95,20 +93,12 @@ export function Hotels() {
             ))}
           </div>
         ) : (
-          <div className="hotel-empty">
-            <BedDouble size={42} strokeWidth={1} />
-            <div>
-              <h3>Konaklamanızı size göre planlayalım.</h3>
-              <p>
-                {error
-                  ? "Otel listesine şu anda erişilemiyor. Talep bırakarak seçeneklerinizi sorabilirsiniz."
-                  : "Otel seçeneklerini tarihlerinize ve oda tercihinize göre acentemizle netleştirebilirsiniz."}
-              </p>
-            </div>
-            <button className="btn" onClick={() => setRequest(true)}>
-              Tarihlerimi paylaşayım
-            </button>
-          </div>
+          error && (
+            <p className="muted">
+              Otel listesine şu anda erişilemiyor. Talep bırakarak
+              seçeneklerinizi sorabilirsiniz.
+            </p>
+          )
         )}
         <div className="stay-process">
           <div>
@@ -317,7 +307,6 @@ export function About() {
       </section>
       <section className="about-note">
         <div className="container">
-          <Compass size={35} strokeWidth={1} />
           <h2>
             İyi bildiğimiz yollar,
             <br />

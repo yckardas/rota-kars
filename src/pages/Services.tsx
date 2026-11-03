@@ -9,6 +9,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import type { Catalog } from "../lib/types";
+import { responsive } from "../lib/images";
 import { RequestForm } from "../components/RequestForm";
 const details: Record<
   string,
@@ -128,35 +129,51 @@ export function Services({ catalog }: { catalog: Catalog }) {
     info = id ? details[id] : null;
   if (!service || !info)
     return (
-      <section className="container section">
-        <h1>Birlikte planlıyoruz.</h1>
-        <p className="lead-copy">
-          Grubunuza, zamanınıza ve ihtiyaçlarınıza uygun bir yolculuk.
-        </p>
-        <div className="services-directory">
+      <>
+        {/* Dizin: filodan gerçek bir kart, altında dört hizmet kartpostal
+            sırtı gibi; eski kesme görseller kullanılmaz. */}
+        <section
+          className="container kp-detail-card services-hero"
+          aria-labelledby="services-title"
+        >
+          <div className="kp-card">
+            <div className="kp-views kp-views-single">
+              <div className="kp-main-view">
+                <img
+                  {...responsive(
+                    "/images/rota-bus.webp",
+                    "(max-width: 760px) 100vw, 90vw",
+                  )}
+                  alt="Rota Kars Tur logolu turizm otobüsü"
+                  width="1400"
+                  height="788"
+                />
+                <div className="kp-title">
+                  <h1 id="services-title">Birlikte planlıyoruz.</h1>
+                  <p>
+                    Grubunuza, zamanınıza ve ihtiyaçlarınıza uygun bir yolculuk.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section className="container section services-directory">
           {catalog.services.map((s) => (
             <Link
               className="service-directory-card"
               key={s.id}
               to={"/hizmetler/" + s.id}
             >
-              <img
-                src={s.image}
-                alt={s.title}
-                loading="lazy"
-                decoding="async"
-              />
-              <div>
-                <h2>{s.title}</h2>
-                <p>{s.text}</p>
-                <span>
-                  Hizmeti keşfet <ArrowRight size={17} />
-                </span>
-              </div>
+              <h2>{s.title}</h2>
+              <p>{s.text}</p>
+              <span>
+                Hizmeti keşfet <ArrowRight size={17} />
+              </span>
             </Link>
           ))}
-        </div>
-      </section>
+        </section>
+      </>
     );
   return (
     <>
@@ -167,30 +184,47 @@ export function Services({ catalog }: { catalog: Catalog }) {
         <ChevronRight size={12} />
         <span>{service.title}</span>
       </div>
-      <section className="service-detail-hero container">
-        <div>
-          <h1>{service.title}</h1>
-          <p>{info.lead}</p>
-          <button className="btn" onClick={() => setRequest(true)}>
-            {info.cta}
-            <ArrowRight size={17} />
-          </button>
-          <div className="service-detail-points">
-            <span>
-              <MapPin size={15} />
-              Kars merkezli
-            </span>
-            <span>
-              <Bus size={15} />
-              Grubunuza uygun araç
-            </span>
-            <span>
-              <Clock3 size={15} />
-              Size özel plan
-            </span>
+      <section
+        className="container kp-detail-card service-hero"
+        aria-labelledby="service-title"
+      >
+        <div className="kp-card">
+          <div className="kp-views kp-views-single">
+            <div className="kp-main-view">
+              <img
+                {...responsive(service.image, "(max-width: 760px) 100vw, 90vw")}
+                alt={service.imageAlt || service.title}
+                width="1400"
+                height="788"
+                decoding="async"
+              />
+              <div className="kp-title">
+                <h1 id="service-title">{service.title}</h1>
+                <p>{info.lead}</p>
+              </div>
+            </div>
+          </div>
+          <div className="kp-strip kp-detail-strip">
+            <ul className="kp-facts service-detail-points">
+              <li>
+                <MapPin size={15} />
+                Kars merkezli
+              </li>
+              <li>
+                <Bus size={15} />
+                Grubunuza uygun araç
+              </li>
+              <li>
+                <Clock3 size={15} />
+                Size özel plan
+              </li>
+            </ul>
+            <button className="btn" onClick={() => setRequest(true)}>
+              {info.cta}
+              <ArrowRight size={17} />
+            </button>
           </div>
         </div>
-        <img src={service.image} alt={service.title} decoding="async" />
       </section>
       <section className="container service-detail-body">
         <div>

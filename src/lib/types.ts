@@ -65,7 +65,13 @@ export type Catalog = {
     founded: number;
   };
   features: { icon: string; title: string; text: string }[];
-  services: { id: string; title: string; image: string; text: string }[];
+  services: {
+    id: string;
+    title: string;
+    image: string;
+    imageAlt?: string;
+    text: string;
+  }[];
   fleet: { note: string; tourism: string[]; vip: string[]; perks: string[] };
   cancellationPolicy: string;
   tours: Tour[];

@@ -1795,7 +1795,7 @@ html:has(.kp) {
   font-size: 24px;
   line-height: 1.2;
   letter-spacing: 0.08em;
-  font-variant-numeric: tabular-nums slashed-zero;
+  font-variant-numeric: tabular-nums;
 }
 .kp .ticket-discount {
   font-size: 14px;
@@ -1965,7 +1965,7 @@ html:has(.kp) {
 @media print {
   .kp .reservation-ticket {
     box-shadow: none;
-    border: 1px solid #999;
+    border: 1px solid var(--kp-rule);
   }
   .kp .ticket-qr button,
   .kp .ticket-qr .text-link {
@@ -2056,6 +2056,10 @@ html:has(.kp) {
   border-radius: 5px;
   box-shadow: var(--kp-shadow);
 }
+/* Sarıkamış fotoğrafı dikey; bant ormanla dağların buluştuğu yerden kesilir */
+.kp .hotel-hero > img {
+  object-position: 50% 44%;
+}
 .kp .hotel-hero::after {
   background: linear-gradient(90deg, rgba(12, 20, 38, 0.72), transparent 70%);
 }
@@ -2081,10 +2085,13 @@ html:has(.kp) {
 .kp .hotel-hero .btn {
   margin-left: 30px;
 }
+/* Fotoğraf künyesi karın üstüne düşer: kendi koyu zemininde */
 .kp .hotel-hero > small {
   font-size: 12px;
+  background: rgba(12, 20, 38, 0.6);
+  padding: 3px 8px;
+  border-radius: 2px;
 }
-.kp .hotel-empty,
 .kp .contact-details,
 .kp .lookup-form {
   background: var(--kp-card);
@@ -2094,15 +2101,12 @@ html:has(.kp) {
 .kp .lookup-form {
   padding: 24px 26px;
 }
-.kp .hotel-empty p,
 .kp .stay-process p,
 .kp .hotel-card p {
   font-size: 15px;
   color: var(--kp-ink-2);
 }
-.kp .hotel-empty > svg,
-.kp .contact-details svg,
-.kp .about-note svg {
+.kp .contact-details svg {
   color: var(--kp-red);
 }
 .kp .hotel-card {
@@ -2154,17 +2158,41 @@ html:has(.kp) {
   color: var(--kp-ink-2);
 }
 .kp .about-layout .lead-copy {
-  font-size: 19px;
+  font-size: 20px;
   color: var(--kp-ink);
 }
 .kp .about-note {
   background: transparent;
 }
-/* Hizmetler dizini ve hizmet detayı: kartpostal kartlar */
+/* Hizmetler: başta filodan gerçek bir kart, altında kartpostal sırtı gibi
+   görselsiz hizmet kartları; kırmızı ince üst çizgi uçak postası kenarıdır. */
+@media (min-width: 951px) {
+  .kp .services-hero .kp-views,
+  .kp .service-hero .kp-views {
+    height: clamp(360px, calc(100svh - 340px), 500px);
+  }
+}
+/* Otobüsün üstündeki ROTA yazısı kırmızı bandın üstünde kalsın */
+.kp .services-hero .kp-main-view > img,
+.kp .service-hero .kp-main-view > img[src*="rota-bus"] {
+  object-position: 50% 100%;
+}
+.kp .services-directory {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 0;
+  padding-top: 44px;
+}
 .kp .service-directory-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 30px 32px 26px;
   background: var(--kp-card);
   border: 0;
-  border-radius: 4px;
+  border-top: 2px solid var(--kp-red);
+  border-radius: 0 0 4px 4px;
   box-shadow: var(--kp-shadow-sm);
   transition:
     transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
@@ -2174,23 +2202,91 @@ html:has(.kp) {
   transform: translateY(-3px);
   box-shadow: var(--kp-shadow);
 }
-.kp .service-directory-card img,
-.kp .service-detail-hero > img {
-  border-radius: 0;
+.kp .service-directory-card h2 {
+  font-size: clamp(28px, 2.8vw, 36px);
+  margin: 0 0 12px;
 }
-.kp .service-directory-card p,
-.kp .service-detail-hero p {
-  font-size: 15px;
+.kp .service-directory-card p {
+  flex: 1;
+  font-size: 16px;
+  line-height: 1.65;
   color: var(--kp-ink-2);
+  margin: 0;
 }
 .kp .service-directory-card span {
-  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 22px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--kp-red);
 }
-.kp .service-detail-hero > img {
-  border: 12px solid var(--kp-card);
-  box-shadow: var(--kp-shadow);
+.kp .service-detail-points {
+  list-style: none;
+  padding: 0;
+}
+.kp .service-detail-points li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.kp .service-detail-points svg,
+.kp .service-benefits svg {
+  color: var(--kp-red);
+}
+.kp .service-benefits p {
+  font-size: 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--kp-hair);
+}
+.kp .service-detail-body .muted {
+  font-size: 14px;
+  color: var(--kp-ink-2);
+}
+/* Süreç: tur detayındaki güzergâh gibi kırmızı ince çizgi ve Marcellus sıra */
+.kp .service-process article {
+  gap: 20px;
+  padding: 18px 0 20px;
+  border-bottom: 0;
+  border-top: 1px solid var(--kp-red);
+}
+.kp .service-process article > span {
+  display: block;
+  width: 28px;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  font-family: var(--display);
+  font-size: 28px;
+  line-height: 1;
+  color: var(--kp-red);
+}
+.kp .service-process h3 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 22px;
+  margin-bottom: 6px;
+}
+.kp .service-process p {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--kp-ink-2);
+}
+.kp .service-detail-cta {
+  background: var(--kp-card);
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow-sm);
+  padding: 34px 40px;
+}
+.kp .service-detail-cta h2 {
+  font-size: clamp(28px, 2.8vw, 36px);
+}
+.kp .service-detail-cta p {
+  font-size: 16px;
+  color: var(--kp-ink-2);
 }
 .kp .legal-toc a {
   font-size: 14px;
@@ -2203,6 +2299,14 @@ html:has(.kp) {
   }
   .kp .hotel-hero > .container {
     padding-top: 30px;
+  }
+  /* Dar ekranda metin karın üstüne düşer: perde dikey ve daha koyu */
+  .kp .hotel-hero::after {
+    background: linear-gradient(
+      180deg,
+      rgba(12, 20, 38, 0.5),
+      rgba(12, 20, 38, 0.78) 70%
+    );
   }
   .kp .hotel-hero h1 {
     font-size: 36px;
@@ -2218,6 +2322,17 @@ html:has(.kp) {
   .kp .about-layout > img {
     transform: none;
     border-width: 8px;
+  }
+  .kp .services-directory {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding-top: 28px;
+  }
+  .kp .service-directory-card {
+    padding: 24px 22px 22px;
+  }
+  .kp .service-detail-cta {
+    padding: 24px 20px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

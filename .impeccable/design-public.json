@@ -1,12 +1,12 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-03T16:57:36+00:00",
+  "generatedAt": "2026-11-03T19:12:31+00:00",
   "title": "Design System: Rota Kars (halka açık site, Hatıra Kartı)",
   "scope": {
-    "surface": "public site (home incl. lower sections, tour list, tour detail, booking steps 1-2; styles scoped to .kp in src/postcard.css)",
+    "surface": "public site (home incl. lower sections, tour list, tour detail, booking steps 1-3, success page and reservation ticket, /bilet/:token verification, services directory and detail, konaklama, hakkımızda; styles scoped to .kp in src/postcard.css)",
     "designFile": "docs/DESIGN.md",
     "notCovered": "agency panel (/yonetim, .rk-admin) and Android wrapper; see docs/DESIGN-PANEL.md and .impeccable/design.json",
-    "legacy": "booking step 3 (Ön rezervasyon), success/ticket page (.booking-success), base seat drawing, Instagram rail footnote text: legacy layouts re-coloured by token mapping only"
+    "legacy": "base seat drawing, Instagram rail footnote text: legacy layouts re-coloured by token mapping only"
   },
   "extensions": {
     "colorMeta": {
@@ -378,6 +378,30 @@
       "micro": {
         "displayName": "Micro",
         "purpose": "Pulun basılı yer yazısı (büyük harf); telefonda küçük manzara fiyatı."
+      },
+      "hero-title-single": {
+        "displayName": "Single-view Title",
+        "purpose": "Tek görüntülü kartın (konaklama girişi) kırmızı şeridi; telefonda hero-title-single-phone (36px)."
+      },
+      "verify-subhead": {
+        "displayName": "Verify Subhead",
+        "purpose": "Bilet doğrulama kartında sonuç cümlesinin altındaki soluk tur adı."
+      },
+      "process-numeral": {
+        "displayName": "Process Numeral",
+        "purpose": "Hizmet süreç adımlarının kırmızı Marcellus sıra rakamı."
+      },
+      "ticket-amount": {
+        "displayName": "Ticket Amount",
+        "purpose": "Bilet tutarları; ilki (toplam tur bedeli) altın."
+      },
+      "reference": {
+        "displayName": "Reference",
+        "purpose": "Rezervasyon referansı; Onest çünkü elle yazılır (onaltılık, O->0). 760px altında reference-phone (22px)."
+      },
+      "stamp-label": {
+        "displayName": "Stamp Label",
+        "purpose": "Yalnız lastik damga (StatusStamp), büyük harf."
       }
     },
     "shadows": [
@@ -486,6 +510,11 @@
         "purpose": "Rezervasyon özeti görünürken yüzen düğmeler çekilir (yalnız masaüstü)."
       },
       {
+        "name": "ticket-760",
+        "value": "760px",
+        "purpose": "Bilet tek sütun, ayırıcı yatay; QR 148px, referans 22px, bilet pulu 116px."
+      },
+      {
         "name": "tablet",
         "value": "950px",
         "purpose": "Manzaralar alt alta, küçük manzaralar şerit, açıklama bandı iki sütun. Rezervasyon tek sütun, mobil özet şeridi görünür, özet sonda."
@@ -508,6 +537,17 @@
     "focus": {
       "value": "outline: 2px solid #c2342b; outline-offset: 3px",
       "purpose": "Tüm etkileşimli öğeler; açıklama bandı alanlarında alt çizgi kırmızıya döner."
+    },
+    "print": {
+      "ticket": "Gölge yerine 1px çizgi kenar; QR bağlantı/düğmeleri, uçak postası şeridi ve yüzen düğmeler gizli; damga, pul ve QR print-color-adjust: exact."
+    },
+    "qr": {
+      "dark": "#1a2846",
+      "light": "#ffffff",
+      "quietZoneModules": 4,
+      "size": "164px (148px <=760px)",
+      "frame": "1px rule, 2px radius",
+      "treatment": "never filtered, recoloured or blended"
     }
   },
   "components": [
@@ -622,23 +662,55 @@
       "description": "Yüzen asistan düğmesi: mürekkep daire; yazı üzerine gelince/odakta açılır.",
       "html": "<button class=\"ds-chat\" aria-label=\"Asistana sorun\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M7.9 20A9 9 0 1 0 4 16.1L2 22Z\"/></svg><span>Asistana sorun</span></button>",
       "css": ":host{--kp-snow:#e9eef1;--kp-card:#fff;--kp-ink:#1a2846;--kp-ink-2:#47536e;--kp-rule:#c9d2dc;--kp-hair:#e3e8ee;--kp-red:#c2342b;--kp-red-d:#9f271f;--kp-gold:#8a6128;--paper:#f3f6f8;--sky:#e3e9ee;--kp-shadow:0 30px 60px -32px rgba(26,40,70,.42),0 2px 6px rgba(26,40,70,.08);--kp-shadow-sm:0 18px 34px -24px rgba(26,40,70,.45),0 1px 3px rgba(26,40,70,.08);--display:Marcellus,Georgia,serif;--font:Onest,Arial,sans-serif;font-family:var(--font);color:var(--kp-ink);} .ds-chat{display:inline-flex;align-items:center;height:58px;min-width:58px;padding:0 17px;border:0;border-radius:999px;background:var(--kp-ink);color:#fff;cursor:pointer;} .ds-chat span{max-width:0;overflow:hidden;white-space:nowrap;font:500 14px var(--font);transition:max-width .4s cubic-bezier(.16,1,.3,1),margin .4s cubic-bezier(.16,1,.3,1);} .ds-chat:hover span,.ds-chat:focus-visible span{max-width:260px;margin-left:10px;} .ds-chat:focus-visible{outline:2px solid var(--kp-red);outline-offset:3px;} @media (prefers-reduced-motion:reduce){.ds-chat span{transition:none;}}"
+    },
+    {
+      "name": "Status Stamp",
+      "kind": "chip",
+      "refersTo": "status-stamp-ok",
+      "description": "Rezervasyon durumu: çift çizgili lastik damga, -2°. Onaylı kırmızı, bekleyen mürekkep, geçersiz soluk ve kesik çizgili.",
+      "html": "<div class=\"ds-wrap\"><span class=\"ds-status-stamp is-ok\">Onaylı rezervasyon</span><span class=\"ds-status-stamp is-pending\">Acente onayı bekliyor</span><span class=\"ds-status-stamp is-void\">İptal edildi</span></div>",
+      "css": ":host{--kp-card:#fff;--kp-ink:#1a2846;--kp-ink-2:#47536e;--kp-rule:#c9d2dc;--kp-hair:#e3e8ee;--kp-red:#c2342b;--kp-gold:#8a6128;--kp-shadow:0 30px 60px -32px rgba(26,40,70,.42),0 2px 6px rgba(26,40,70,.08);--kp-shadow-sm:0 18px 34px -24px rgba(26,40,70,.45),0 1px 3px rgba(26,40,70,.08);--display:Marcellus,Georgia,serif;--font:Onest,Arial,sans-serif;font-family:var(--font);color:var(--kp-ink);} .ds-wrap{display:flex;flex-wrap:wrap;gap:22px;padding:24px;background:var(--kp-card);} .ds-status-stamp{display:inline-block;padding:5px 10px 4px;border:2px solid currentColor;border-radius:3px;box-shadow:inset 0 0 0 2px var(--kp-card),inset 0 0 0 3px currentColor;font-size:12px;font-weight:600;line-height:1.3;letter-spacing:.1em;text-transform:uppercase;transform:rotate(-2deg);transform-origin:left center;} .ds-status-stamp.is-ok{color:var(--kp-red);} .ds-status-stamp.is-pending{color:var(--kp-ink);} .ds-status-stamp.is-void{color:var(--kp-ink-2);border-style:dashed;box-shadow:none;}"
+    },
+    {
+      "name": "Ticket Reference and Amounts",
+      "kind": "card",
+      "refersTo": "reservation-ticket",
+      "description": "Bilet mesaj sütunu: Onest 600 tabular referans, Marcellus 21px tutarlar (ilki altın), QR satırı.",
+      "html": "<article class=\"ds-ticket\"><div class=\"ds-ref\"><span>Referans numarası</span><strong>RK-8F3A0C</strong></div><div class=\"ds-data\"><div><span>Toplam tur bedeli</span><strong class=\"g\">₺4.200</strong></div><div><span>Kalan ödeme</span><strong>₺3.200</strong></div></div><div class=\"ds-qr\"><div class=\"ds-qr-img\" aria-label=\"QR kodu\"></div><div><strong>Rezervasyon belgeniz</strong><p>Kodu okutan güncel onay durumunu görür.</p><a href=\"#\">Belgeyi doğrula</a></div></div></article>",
+      "css": ":host{--kp-card:#fff;--kp-ink:#1a2846;--kp-ink-2:#47536e;--kp-rule:#c9d2dc;--kp-hair:#e3e8ee;--kp-red:#c2342b;--kp-gold:#8a6128;--kp-shadow:0 30px 60px -32px rgba(26,40,70,.42),0 2px 6px rgba(26,40,70,.08);--kp-shadow-sm:0 18px 34px -24px rgba(26,40,70,.45),0 1px 3px rgba(26,40,70,.08);--display:Marcellus,Georgia,serif;--font:Onest,Arial,sans-serif;font-family:var(--font);color:var(--kp-ink);} .ds-ticket{background:var(--kp-card);border-radius:5px;box-shadow:var(--kp-shadow);padding:30px 34px;max-width:460px;} .ds-ref span,.ds-data span{display:block;font-size:13px;color:var(--kp-ink-2);margin-bottom:3px;} .ds-ref strong{display:block;font-weight:600;font-size:24px;line-height:1.2;letter-spacing:.08em;font-variant-numeric:tabular-nums;} .ds-data{display:grid;grid-template-columns:1fr 1fr;gap:16px 24px;margin-top:18px;padding:18px 0 22px;border-top:1px solid var(--kp-hair);} .ds-data strong{font-family:var(--display);font-weight:400;font-size:21px;font-variant-numeric:tabular-nums;} .ds-data strong.g{color:var(--kp-gold);} .ds-qr{display:flex;gap:20px;align-items:center;border-top:1px solid var(--kp-hair);padding-top:20px;} .ds-qr-img{flex:none;width:164px;height:164px;background:#fff repeating-conic-gradient(#1a2846 0 25%,#fff 0 50%) 0 0/16px 16px content-box;padding:12px;box-sizing:border-box;border:1px solid var(--kp-rule);border-radius:2px;} .ds-qr strong{font-size:16px;} .ds-qr p{font-size:14px;color:var(--kp-ink-2);margin:4px 0 8px;} .ds-qr a{color:var(--kp-ink);font-weight:600;font-size:15px;text-underline-offset:5px;} .ds-qr a:hover{color:var(--kp-red);} .ds-qr a:focus-visible{outline:2px solid var(--kp-red);outline-offset:3px;}"
+    },
+    {
+      "name": "Ticket Verification Card",
+      "kind": "card",
+      "refersTo": "ticket-check",
+      "description": "/bilet/:token: beyaz kart, damga + sağ üstte posta damgası, sağdan boşluklu sonuç başlığı, çizgili satırlar.",
+      "html": "<article class=\"ds-check\"><span class=\"ds-st\">Onaylı rezervasyon</span><svg class=\"ds-pm\" viewBox=\"0 0 132 132\"><circle cx=\"66\" cy=\"66\" r=\"60\"/><circle cx=\"66\" cy=\"66\" r=\"42\"/><text x=\"66\" y=\"22\" text-anchor=\"middle\" class=\"r\">KARS</text><text x=\"66\" y=\"64\" text-anchor=\"middle\" class=\"d\">06 KAS 26</text><text x=\"66\" y=\"84\" text-anchor=\"middle\" class=\"t\">08:30</text></svg><h1>Rezervasyon doğrulandı.</h1><h2>Ani, Çıldır ve Kars</h2><dl><div><dt>Hareket</dt><dd>6 Kasım · 08:30</dd></div><div><dt>Koltuklar</dt><dd>4, 5</dd></div></dl></article>",
+      "css": ":host{--kp-card:#fff;--kp-ink:#1a2846;--kp-ink-2:#47536e;--kp-rule:#c9d2dc;--kp-hair:#e3e8ee;--kp-red:#c2342b;--kp-gold:#8a6128;--kp-shadow:0 30px 60px -32px rgba(26,40,70,.42),0 2px 6px rgba(26,40,70,.08);--kp-shadow-sm:0 18px 34px -24px rgba(26,40,70,.45),0 1px 3px rgba(26,40,70,.08);--display:Marcellus,Georgia,serif;--font:Onest,Arial,sans-serif;font-family:var(--font);color:var(--kp-ink);} .ds-check{position:relative;background:var(--kp-card);border-radius:5px;box-shadow:var(--kp-shadow);padding:36px 40px 30px;max-width:720px;} .ds-st{display:inline-block;padding:5px 10px 4px;border:2px solid currentColor;border-radius:3px;box-shadow:inset 0 0 0 2px var(--kp-card),inset 0 0 0 3px currentColor;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;transform:rotate(-2deg);color:var(--kp-red);} .ds-pm{position:absolute;right:34px;top:30px;width:112px;height:112px;color:var(--kp-ink);opacity:.82;mix-blend-mode:multiply;transform:rotate(-12deg);} .ds-pm circle{fill:none;stroke:currentColor;stroke-width:1.4;} .ds-pm circle:first-of-type{stroke-width:2.6;} .ds-pm text{fill:currentColor;} .ds-pm .r{font:600 10px var(--font);letter-spacing:2px;} .ds-pm .d{font:400 16px var(--display);} .ds-pm .t{font:600 10px var(--font);} h1{font-family:var(--display);font-weight:400;font-size:clamp(34px,3.6vw,50px);line-height:1.08;margin:26px 0 10px;padding-right:120px;} h2{font-family:var(--display);font-weight:400;font-size:clamp(22px,2.4vw,28px);color:var(--kp-ink-2);margin:0 0 22px;} dl{margin:20px 0 0;} dl>div{border-bottom:1px solid var(--kp-ink-2);padding:10px 0 8px;} dt{font-size:13px;color:var(--kp-ink-2);} dd{margin:0;font-family:var(--display);font-size:20px;line-height:1.35;}"
+    },
+    {
+      "name": "Service Process Steps",
+      "kind": "custom",
+      "description": "Hizmet süreci: kırmızı 1px üst çizgi, kırmızı Marcellus 28px sıra rakamı, Marcellus 22px başlık.",
+      "html": "<div class=\"ds-proc\"><article><span>1</span><div><h3>Tarihlerinizi paylaşın</h3><p>Acentemiz seçenekleri aynı gün iletir.</p></div></article><article><span>2</span><div><h3>Onaylayın</h3><p>Rezervasyon belgeniz e-postanıza gelir.</p></div></article></div>",
+      "css": ":host{--kp-card:#fff;--kp-ink:#1a2846;--kp-ink-2:#47536e;--kp-rule:#c9d2dc;--kp-hair:#e3e8ee;--kp-red:#c2342b;--kp-gold:#8a6128;--kp-shadow:0 30px 60px -32px rgba(26,40,70,.42),0 2px 6px rgba(26,40,70,.08);--kp-shadow-sm:0 18px 34px -24px rgba(26,40,70,.45),0 1px 3px rgba(26,40,70,.08);--display:Marcellus,Georgia,serif;--font:Onest,Arial,sans-serif;font-family:var(--font);color:var(--kp-ink);} .ds-proc{background:var(--kp-card);padding:24px 28px;max-width:520px;} .ds-proc article{display:flex;gap:20px;padding:18px 0 20px;border-top:1px solid var(--kp-red);} .ds-proc span{display:block;width:28px;font-family:var(--display);font-size:28px;line-height:1;color:var(--kp-red);} .ds-proc h3{font-family:var(--display);font-weight:400;font-size:22px;margin:0 0 6px;} .ds-proc p{font-size:15px;line-height:1.6;color:var(--kp-ink-2);margin:0;}"
     }
   ],
   "narrative": {
     "northStar": "Hatıra Kartı (çok görüntülü Kars kartpostalı)",
-    "overview": "**Creative North Star: \"Hatıra Kartı\" (çok görüntülü Kars kartpostalı)**\n\nSite, eski usul çok görüntülü bir Kars hatıra kartı gibi kurulur: bir büyük manzara, yanında küçük manzaralar, fotoğrafın üstüne binen kırmızı başlık şeridi ve altta beyaz bir açıklama bandı. Kart, kar renginde soğuk açık bir zeminin üstünde 14px beyaz kenarlı bir karton olarak durur; yumuşak, aşağı düşen bir gölgeyle kâğıt gibi kalkar. Tur sayfaları kartın arka yüzüdür: program tek kesintisiz kırmızı rota çizgisinde okunur, fiyat dişli kenarlı bir pul ve üstüne vurulmuş bir posta damgasıyla gösterilir. Rezervasyon da aynı masada sürer: adımlar bir rota çizgisi üstündeki duraklardır, form kartın arka yüzüdür, özet tek görüntülü küçük bir hatıra kartıdır.\n\nDünyanın tüm stilleri `src/postcard.css` içinde, `.kp` kapsayıcısıyla sınırlıdır (`Layout.tsx` halka açık sayfaları `.kp` ile sarar). Bu dosya aynı zamanda `src/styles.css` içindeki eski site jetonlarını (`--navy`, `--ink`, `--muted`, `--line`, `--paper`, `--sky`, `--gold`, `--gold-text`) yeni dünyanın değerlerine eşler. Bu dünyada tasarlanmış yüzeyler: üst kenar ve menü, ana sayfa hatıra kartı ve alt bölümleri (güven şeridi, hikâye kartpostalları, VIP araç arka yüzü, hizmetler şeridi, filo ve konaklama çerçeveleri, özel tur bandı, Instagram ve yorumlar), tur listesi kartları, tur detayı kartı ve arka yüzü, pul fiyat, rezervasyonun 1. ve 2. adımları (adım çizgisi, form kartı, koltuk seçimi, özet kartı, mobil özet şeridi), sohbet düğmesi ve alt bilgi.\n\nHâlâ eski düzende kalanlar (yalnız jeton eşlemesiyle renklenir, bu dünyanın örneği sayılmaz): rezervasyonun 3. adımı (ön rezervasyon onayı), başarı / bilet sayfası (`.booking-success`), koltuk planının temel koltuk çizimi (yalnız seçili koltuk yeniden boyanmıştır) ve Instagram şeridinin altındaki dipnot metni.\n\nReddedilen kalıp: tam genişlikte hero fotoğrafı ve üstünde yüzen arama kutusu (her tur acentesinin varsayılanı).",
+    "overview": "Site, eski usul çok görüntülü bir Kars hatıra kartı gibi kurulur: bir büyük manzara, yanında küçük manzaralar, fotoğrafın üstüne binen kırmızı başlık şeridi ve altta beyaz bir açıklama bandı. Kart, kar renginde soğuk açık bir zeminin üstünde 14px beyaz kenarlı bir karton olarak durur; yumuşak, aşağı düşen bir gölgeyle kâğıt gibi kalkar. Tur sayfaları kartın arka yüzüdür: program tek kesintisiz kırmızı rota çizgisinde okunur, fiyat dişli kenarlı bir pul ve üstüne vurulmuş bir posta damgasıyla gösterilir. Rezervasyon da aynı masada sürer: adımlar bir rota çizgisi üstündeki duraklardır, form kartın arka yüzüdür, özet tek görüntülü küçük bir hatıra kartıdır.\n\nDünyanın tüm stilleri `src/postcard.css` içinde, `.kp` kapsayıcısıyla sınırlıdır (`Layout.tsx` halka açık sayfaları `.kp` ile sarar). Bu dosya aynı zamanda `src/styles.css` içindeki eski site jetonlarını (`--navy`, `--ink`, `--muted`, `--line`, `--paper`, `--sky`, `--gold`, `--gold-text`) yeni dünyanın değerlerine eşler. Bu dünyada tasarlanmış yüzeyler: üst kenar ve menü, ana sayfa hatıra kartı ve alt bölümleri (güven şeridi, hikâye kartpostalları, VIP araç arka yüzü, hizmetler şeridi, filo ve konaklama çerçeveleri, özel tur bandı, Instagram ve yorumlar), tur listesi kartları, tur detayı kartı ve arka yüzü, pul fiyat, rezervasyon adımları (adım çizgisi, form kartı, koltuk seçimi, özet kartı, mobil özet şeridi, 3. adımın ödeme tercihi kutuları), başarı sayfası ve ön rezervasyon belgesi (bilet), `/bilet/:token` doğrulama kartı, hizmetler dizini ve hizmet detayı, konaklama, hakkımızda, sohbet düğmesi ve alt bilgi.\n\nHâlâ eski düzende kalanlar (yalnız jeton eşlemesiyle renklenir, bu dünyanın örneği sayılmaz): koltuk planının temel koltuk çizimi (yalnız seçili koltuk yeniden boyanmıştır) ve Instagram şeridinin altındaki dipnot metni. Panelin `.status-tag` etiketi `/yonetim` dünyasına aittir; halka açık sitede durum lastik damgayla (StatusStamp) gösterilir.\n\nReddedilen kalıp: tam genişlikte hero fotoğrafı ve üstünde yüzen arama kutusu (her tur acentesinin varsayılanı).",
     "keyCharacteristics": [
       "Soğuk kar zemini üstünde beyaz kart kartonu; fotoğraflar kartın içine 10px aralıkla yerleşir.",
       "Mavi-siyah mürekkep metin; kırmızı başlık şeridi ve eylem; logo altını fiyat ve pul için.",
       "Sayfanın üstünde ve alt bilginin üstünde ince uçak postası şeridi.",
       "Marcellus başlıklar, form değerleri ve fiyatlar; Onest etiketler ve gövde.",
       "Küçük, düz köşeler (0–5px); hap biçimi yok (tek istisna yüzen sohbet düğmesi).",
-      "Masaya bırakılmış kartlar: hikâye kartpostalları ve fotoğraf çerçeveleri 1 dereceye kadar eğik durur."
+      "Masaya bırakılmış kartlar: hikâye kartpostalları ve fotoğraf çerçeveleri 1 dereceye kadar eğik durur.",
+      "Posta nesneleri bilgi taşır: pul fiyatı, posta damgası tarihi, lastik damga durumu söyler; başlıkların üstünde süs ikonu yoktur."
     ],
     "rules": [
       {
         "name": "The Kırmızı Mürekkep Rule",
-        "body": "Kırmızı başlık şeridi, eylem, seçim/odak, ilerleme (tamamlanan rezervasyon adımı) ve rota çizgisi içindir. Gövde metninde, büyük yüzey dolgularında veya süslemede kullanılmaz; bir ekranda tek bir dolu kırmızı eylem düğmesi vardır.",
+        "body": "Kırmızı başlık şeridi, eylem, seçim/odak, ilerleme (tamamlanan rezervasyon adımı, süreç adımlarının çizgisi), rota çizgisi ve onay damgası içindir. Gövde metninde, büyük yüzey dolgularında veya süslemede kullanılmaz; bir ekranda tek bir dolu kırmızı eylem düğmesi vardır.",
         "section": "colors"
       },
       {
@@ -668,7 +740,7 @@
       },
       {
         "name": "The Etiketsiz Başlık Rule",
-        "body": "Bölüm başlıklarının üstünde küçük üst etiket (eyebrow) yoktur; eski `.section-note` bu dünyada gizlidir.",
+        "body": "Bölüm başlıklarının üstünde küçük üst etiket (eyebrow) yoktur; eski `.section-note` bu dünyada gizlidir. Lastik damga bir etiket değil, belgenin durumudur: yalnız rezervasyon belgesinde ve doğrulama kartında, başlığın üstünde durur.",
         "section": "typography"
       },
       {
@@ -691,7 +763,10 @@
       "**Do** kırmızıyı başlık şeridi, eylem, seçim/odak, tamamlanan ilerleme ve rota çizgisiyle sınırla.",
       "**Do** rezervasyon tutarını \"Tur bedeli\" / \"İndirim sonrası tur bedeli\" diye etiketle ve altına \"Şimdi ödeme alınmaz.\" satırını koy.",
       "**Do** yüzen düğmeleri, sayfanın ana eylemi veya özeti ekrandayken geri çek.",
-      "**Do** Google puanını yalnız canlı veriden göster; veri yoksa satırı gösterme."
+      "**Do** Google puanını yalnız canlı veriden göster; veri yoksa satırı gösterme.",
+      "**Do** rezervasyon durumunu lastik damgayla göster: onaylı kırmızı, bekleyen mürekkep, geçersiz soluk ve kesik çizgili.",
+      "**Do** referans numarasını Onest 600 tabular rakamla yaz; QR'ı mürekkep-beyaz, 4 modül sessiz bölgeli ve filtresiz bırak.",
+      "**Do** hizmet sayfalarını gerçek filo ya da yer fotoğrafıyla aç; dizin kartları görselsiz kartpostal sırtıdır."
     ],
     "donts": [
       "**Don't** tam genişlikte hero fotoğrafı ve üstünde yüzen arama kutusu kullanma.",
@@ -699,7 +774,10 @@
       "**Don't** bölüm başlıklarına veya kartpostallara üst etiket (eyebrow) ekleme.",
       "**Don't** kartları 1 dereceden fazla eğme; formu, özeti ve şeritleri eğme.",
       "**Don't** zemini kremaya ısıtma veya panelin tüf siyahını, kırmızısını getirme; panel sistemi `docs/DESIGN-PANEL.md` içindedir.",
-      "**Don't** logo altınını (logo-gold) veya puan yıldızı rengini metin rengi olarak kullanma; metin altını gold'dur."
+      "**Don't** logo altınını (logo-gold) veya puan yıldızı rengini metin rengi olarak kullanma; metin altını gold'dur.",
+      "**Don't** başlıkların üstüne veya boş durum kutularına süs amaçlı büyük ince çizgili ikon (yatak, pusula gibi) koyma; bu dünyanın süsü pul, damga ve şerittir. İkon yalnız metnin yanında iş görür (liste işareti, güven şeridi satırı, düğme oku, bilgi notu).",
+      "**Don't** halka açık sitede durumu dolu renkli etiket (panelin `.status-tag`'i) ile gösterme.",
+      "**Don't** QR koduna renk, filtre, karışım veya yuvarlatma uygulama."
     ]
   }
 }
