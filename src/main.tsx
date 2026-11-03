@@ -16,6 +16,7 @@ import "@fontsource/onest/latin-500.css";
 import "@fontsource/onest/latin-ext-600.css";
 import "@fontsource/onest/latin-600.css";
 import "./styles.css";
+import "./postcard.css";
 import { api } from "./lib/api";
 import { usePageMeta } from "./lib/seo";
 import type { Catalog } from "./lib/types";

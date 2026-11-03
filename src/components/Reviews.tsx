@@ -32,9 +32,6 @@ export function Reviews({ tourId }: { tourId?: string }) {
       <div className="container">
         <div className="section-heading">
           <div>
-            <span className="section-note">
-              Yol arkadaşlarımızın hikâyeleri
-            </span>
             <h2>
               {!tourId
                 ? "Müşterilerimizin gözünden Rota Kars"
@@ -74,13 +71,28 @@ export function Reviews({ tourId }: { tourId?: string }) {
               </a>
             </div>
             {!tourId && (
-              <iframe
-                className="google-map"
-                title="Rota Kars Turizm Google Haritalar konumu"
-                src="https://www.google.com/maps?cid=1539703208462618989&hl=tr&output=embed"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
+              <div className="google-map-frame">
+                {/* Harita yüklenmezse (engelleyici, yavaş bağlantı) alan boş kalmasın. */}
+                <a
+                  className="google-map-fallback"
+                  href={url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <strong>Rota Kars Turizm</strong>
+                  <span>Yeni Mah. Cumhuriyet Cad. No:26, Merkez / Kars</span>
+                  <span className="text-link">
+                    Haritada açın <ExternalLink size={14} />
+                  </span>
+                </a>
+                <iframe
+                  className="google-map"
+                  title="Rota Kars Turizm Google Haritalar konumu"
+                  src="https://www.google.com/maps?cid=1539703208462618989&hl=tr&output=embed"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              </div>
             )}
           </div>
         )}

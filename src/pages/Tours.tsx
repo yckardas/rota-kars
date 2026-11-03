@@ -15,7 +15,6 @@ export function Tours({ catalog }: { catalog: Catalog }) {
   return (
     <>
       <section className="page-intro container">
-        <span className="section-note">Kars’tan başlayan yolculuklar</span>
         <h1>Bir sonraki rotanız.</h1>
         <p>
           Kısa bir kaçamak, kışın peşinde bir gün veya yeni bir şehrin hikâyesi.

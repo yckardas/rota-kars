@@ -315,7 +315,6 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         <div className="success-icon">
           <Check />
         </div>
-        <span className="section-note">Rota Kars ön rezervasyon</span>
         <h1>Yolculuğunuzun ilk adımı tamam.</h1>
         <p>
           Talebiniz kaydedildi. Kesin rezervasyon için acente teyidi gerekir.
@@ -346,7 +345,6 @@ export function Booking({ catalog }: { catalog: Catalog }) {
       </Link>
       <div className="booking-page-title">
         <div>
-          <span className="section-note">{tour.name}</span>
           <h1>Yolculuğunuzu planlayın.</h1>
         </div>
         {hold && (
@@ -763,7 +761,6 @@ export function Booking({ catalog }: { catalog: Catalog }) {
             decoding="async"
           />
           <div>
-            <span className="section-note">Yolculuğunuz</span>
             <h3>{tour.name}</h3>
             <p>
               <CalendarDays size={15} />

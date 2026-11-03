@@ -53,7 +53,6 @@ export function MembershipInvite() {
         <div className="member-gift">
           <Gift size={32} />
         </div>
-        <span className="section-note">Yol arkadaşlarımıza özel</span>
         <h2>
           Bir sonraki rotanız
           <br />

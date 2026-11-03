@@ -75,7 +75,7 @@ export function Layout({
   const b = catalog.business;
   const { member } = useMember();
   return (
-    <>
+    <div className="kp">
       <a href="#main" className="skip-link">
         İçeriğe geç
       </a>
@@ -262,6 +262,6 @@ export function Layout({
           </span>
         </div>
       </footer>
-    </>
+    </div>
   );
 }

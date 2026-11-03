@@ -1,6 +1,6 @@
 import { InstagramSection } from "../components/InstagramSection";
 import { responsive } from "../lib/images";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   Clock3,
@@ -17,18 +17,31 @@ import { Reviews } from "../components/Reviews";
 import { RequestForm } from "../components/RequestForm";
 import { api } from "../lib/api";
 import { telHref } from "../lib/phone";
+import { useClearOfLaunchers } from "../lib/launchers";
 import {
   currency,
   dateLabel,
   type Catalog,
   type Departure,
 } from "../lib/types";
+// Posta damgası tarihi: "2026-11-06" -> "06 KAS 26"
+const postmarkDate = (iso: string) =>
+  new Date(iso + "T12:00:00")
+    .toLocaleDateString("tr-TR", {
+      day: "2-digit",
+      month: "short",
+      year: "2-digit",
+    })
+    .replace(/\./g, "")
+    .toLocaleUpperCase("tr-TR");
 export function TourDetail({ catalog }: { catalog: Catalog }) {
   const { id } = useParams(),
     t = catalog.tours.find((t) => t.id === id);
   const [request, setRequest] = useState(false),
     [departures, setDepartures] = useState<Departure[]>([]),
     [activeImage, setActiveImage] = useState(0);
+  const strip = useRef<HTMLDivElement>(null),
+    stripVisible = useClearOfLaunchers(strip);
   useEffect(() => {
     setActiveImage(0);
     if (t && !t.inquiryOnly)
@@ -63,53 +76,104 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
         <ChevronRight size={12} />
         <span>{t.name}</span>
       </div>
-      <section className="container detail-heading">
-        <span className="section-note">{t.season}</span>
-        <h1>{t.name}</h1>
-        <p>{t.subtitle}</p>
-        <div className="detail-meta">
-          <span>
-            <MapPin size={16} />
-            {t.location}
-          </span>
-          <span>
-            <Clock3 size={16} />
-            {t.duration}
-          </span>
-          <span>
-            <Armchair size={16} />
-            {currentVehicle.passengerSeats}+1 {currentVehicle.name}
-          </span>
+      <section
+        className="container kp-detail-card"
+        aria-labelledby="tour-title"
+      >
+        <div className="kp-card">
+          <div
+            className={
+              "kp-views" + (t.gallery.length > 1 ? "" : " kp-views-single")
+            }
+          >
+            <div className="kp-main-view">
+              <img
+                {...responsive(
+                  t.gallery[activeImage] || t.image,
+                  "(max-width: 760px) 100vw, 62vw",
+                )}
+                alt={t.name}
+                width="1280"
+                height="720"
+              />
+              <div className="kp-title">
+                <h1 id="tour-title">{t.name}</h1>
+                <p>{t.subtitle}</p>
+              </div>
+              {!t.salesOpen && !t.inquiryOnly && (
+                <span className="tour-sales-closed">Şu an satışa kapalı</span>
+              )}
+            </div>
+            {t.gallery.length > 1 && (
+              <div className="kp-insets kp-insets-stack">
+                {t.gallery.map((img, i) => (
+                  <button
+                    key={img}
+                    type="button"
+                    className="kp-inset"
+                    onClick={() => setActiveImage(i)}
+                    aria-label={`${i + 1}. fotoğrafı göster`}
+                    aria-pressed={activeImage === i}
+                  >
+                    <img
+                      {...responsive(img, "(max-width: 760px) 33vw, 20vw")}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="kp-strip kp-detail-strip" ref={strip}>
+            <dl className="kp-facts">
+              <div>
+                <dt>Güzergâh</dt>
+                <dd>
+                  <MapPin size={15} />
+                  {t.location}
+                </dd>
+              </div>
+              <div>
+                <dt>Süre</dt>
+                <dd>
+                  <Clock3 size={15} />
+                  {t.duration}
+                </dd>
+              </div>
+              <div>
+                <dt>Araç</dt>
+                <dd>
+                  <Armchair size={15} />
+                  {currentVehicle.passengerSeats}+1 {currentVehicle.name}
+                </dd>
+              </div>
+              <div className="kp-fact-price">
+                <dt>Kişi başı</dt>
+                <dd>{currency(startingPrice)}’den</dd>
+              </div>
+            </dl>
+            {t.inquiryOnly ? (
+              <button className="btn" onClick={() => setRequest(true)}>
+                Bu tur için bilgi alın
+              </button>
+            ) : (
+              <Link className="btn" to={"/rezervasyon/" + t.id}>
+                Tarih ve koltuk seç <ArrowRight size={17} />
+              </Link>
+            )}
+          </div>
+          <p className="kp-printed">
+            <span>{t.season} · Kars çıkışlı</span>
+            <span>
+              {!t.inquiryOnly && departures.length
+                ? `İlk hareket: ${dateLabel(departures[0].date)} · ${departures[0].start_time}`
+                : "Uygun tarih için bize ulaşın."}
+            </span>
+          </p>
         </div>
       </section>
-      <div className="container detail-gallery">
-        <img
-          className="detail-main-image"
-          {...responsive(t.gallery[activeImage], "100vw")}
-          alt={t.name}
-          width="1280"
-          height="600"
-        />
-        {t.gallery.length > 1 && (
-          <div className="gallery-thumbs">
-            {t.gallery.map((img, i) => (
-              <button
-                key={img}
-                onClick={() => setActiveImage(i)}
-                aria-label={`${i + 1}. fotoğrafı göster`}
-                className={activeImage === i ? "active" : ""}
-              >
-                <img
-                  {...responsive(img, "120px")}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                />
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
       <div className="container detail-layout">
         <div className="detail-content">
           <section>
@@ -231,9 +295,34 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
           </section>
         </div>
         <aside className="booking-aside">
-          <div className="booking-price">
-            <strong>{currency(startingPrice)}</strong>
-            <span>kişi başı başlangıç fiyatı</span>
+          <div className="kp-stamp-row">
+            <div className="kp-stamp">
+              <div className="booking-price">
+                <span className="kp-stamp-place">{t.name}</span>
+                <strong>{currency(startingPrice)}</strong>
+                <span>kişi başı başlangıç fiyatı</span>
+              </div>
+            </div>
+            {!t.inquiryOnly && next && (
+              <svg
+                className="kp-postmark"
+                viewBox="0 0 132 132"
+                role="img"
+                aria-label={`İlk hareket ${dateLabel(next.date)}, ${next.start_time}`}
+              >
+                <circle cx="66" cy="66" r="60" />
+                <circle cx="66" cy="66" r="42" />
+                <text x="66" y="22" textAnchor="middle" className="kp-pm-ring">
+                  KARS
+                </text>
+                <text x="66" y="64" textAnchor="middle" className="kp-pm-date">
+                  {postmarkDate(next.date)}
+                </text>
+                <text x="66" y="84" textAnchor="middle" className="kp-pm-time">
+                  {next.start_time}
+                </text>
+              </svg>
+            )}
           </div>
           <p>
             Size uyan günü seçin.
@@ -286,7 +375,10 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
       </div>
       <InstagramSection profileUrl={catalog.business.instagram} />
       <Reviews tourId={t.id} />
-      <div className="tour-mobile-booking">
+      <div
+        className={"tour-mobile-booking" + (stripVisible ? " is-tucked" : "")}
+        aria-hidden={stripVisible || undefined}
+      >
         <div>
           <strong>{currency(startingPrice)}</strong>
           <small>kişi başı başlangıç</small>

@@ -259,9 +259,6 @@ export function InstagramSection({ profileUrl }: { profileUrl: string }) {
       <div className="container">
         <div className="section-heading">
           <div>
-            <span className="section-note">
-              <Instagram size={14} /> @rotakarstur
-            </span>
             <h2>Instagram’da biz.</h2>
             <p className="muted">
               Yollardan, buluşmalardan, birlikte biriktirdiğimiz anlardan.

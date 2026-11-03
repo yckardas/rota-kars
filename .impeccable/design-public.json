@@ -1,0 +1,451 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-03T16:03:16+00:00",
+  "title": "Design System: Rota Kars (halka açık site, Hatıra Kartı)",
+  "scope": {
+    "surface": "public site (home, tour list, tour detail, booking; styles scoped to .kp in src/postcard.css)",
+    "designFile": "docs/DESIGN.md",
+    "notCovered": "agency panel (/yonetim, .rk-admin) and Android wrapper; see docs/DESIGN-PANEL.md and .impeccable/design.json"
+  },
+  "extensions": {
+    "colorMeta": {
+      "snow": {
+        "role": "neutral",
+        "displayName": "Kar",
+        "canonical": "#e9eef1",
+        "tonalRamp": [
+          "#21282b",
+          "#37454d",
+          "#4c6370",
+          "#608195",
+          "#859ead",
+          "#acbbc4",
+          "#d1d8dc",
+          "#f1f3f4"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Kart Kartonu",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5e5e5e",
+          "#7a7a7a",
+          "#999999",
+          "#b8b8b8",
+          "#d6d6d6",
+          "#f2f2f2"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Mavi-Siyah Mürekkep",
+        "canonical": "#1a2846",
+        "tonalRamp": [
+          "#1b2231",
+          "#2c3a59",
+          "#395183",
+          "#4466b1",
+          "#6f8ac3",
+          "#9fafd0",
+          "#cad2e2",
+          "#eff1f5"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Soluk Mürekkep",
+        "canonical": "#47536e",
+        "tonalRamp": [
+          "#21242b",
+          "#383e4d",
+          "#4d5870",
+          "#617094",
+          "#8591ad",
+          "#acb3c3",
+          "#d1d4dc",
+          "#f1f2f4"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Çizgi",
+        "canonical": "#c9d2dc",
+        "tonalRamp": [
+          "#21262b",
+          "#38424d",
+          "#4d5d70",
+          "#617994",
+          "#8698ac",
+          "#acb7c3",
+          "#d1d6dc",
+          "#f1f2f4"
+        ]
+      },
+      "hair": {
+        "role": "neutral",
+        "displayName": "Kıl Çizgi",
+        "canonical": "#e3e8ee",
+        "tonalRamp": [
+          "#20262c",
+          "#36414e",
+          "#4b5d72",
+          "#5d7898",
+          "#8397af",
+          "#aab6c5",
+          "#d0d6dc",
+          "#f1f2f4"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Kâğıt",
+        "canonical": "#f3f6f8",
+        "tonalRamp": [
+          "#20272c",
+          "#35454f",
+          "#496374",
+          "#5b819a",
+          "#819eb1",
+          "#a9bac6",
+          "#cfd8dd",
+          "#f1f3f4"
+        ]
+      },
+      "sky": {
+        "role": "neutral",
+        "displayName": "Gök",
+        "canonical": "#e3e9ee",
+        "tonalRamp": [
+          "#20272c",
+          "#36434e",
+          "#4b6072",
+          "#5d7d98",
+          "#839baf",
+          "#aab9c5",
+          "#d0d7dc",
+          "#f1f2f4"
+        ]
+      },
+      "red": {
+        "role": "primary",
+        "displayName": "Uçak Postası Kırmızısı",
+        "canonical": "#c2342b",
+        "tonalRamp": [
+          "#351917",
+          "#612723",
+          "#92312b",
+          "#c7372e",
+          "#d3665f",
+          "#da9995",
+          "#e6c8c6",
+          "#f6efee"
+        ]
+      },
+      "red-deep": {
+        "role": "primary",
+        "displayName": "Koyu Posta Kırmızısı",
+        "canonical": "#9f271f",
+        "tonalRamp": [
+          "#361816",
+          "#632621",
+          "#952f28",
+          "#cb342a",
+          "#d6635c",
+          "#dc9893",
+          "#e7c7c5",
+          "#f7eeee"
+        ]
+      },
+      "gold": {
+        "role": "secondary",
+        "displayName": "Logo Altını (metin)",
+        "canonical": "#8a6128",
+        "tonalRamp": [
+          "#332819",
+          "#5d4727",
+          "#8b6632",
+          "#bc8538",
+          "#cba167",
+          "#d5bc9a",
+          "#e4d8c8",
+          "#f6f3ef"
+        ]
+      },
+      "logo-gold": {
+        "role": "secondary",
+        "displayName": "Logo Altını, açık ton",
+        "canonical": "#a87835",
+        "tonalRamp": [
+          "#32281a",
+          "#5c4629",
+          "#886534",
+          "#b9853c",
+          "#c8a16a",
+          "#d4bc9b",
+          "#e3d8c9",
+          "#f6f3ef"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Hatıra kartı kırmızı başlık şeridi (h1); telefonda 38px."
+      },
+      "page-title": {
+        "displayName": "Page Title",
+        "purpose": "Kartsız sayfa girişleri (tur listesi)."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Bölüm başlıkları; arka yüzde clamp(28px,2.6vw,34px)."
+      },
+      "price-stamp": {
+        "displayName": "Stamp Price",
+        "purpose": "Pul içindeki fiyat, altın."
+      },
+      "price": {
+        "displayName": "Price",
+        "purpose": "Tur kartı ve bilgi bandı fiyatları, altın, tabular."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Program adımları, alt bilgi sütun başlıkları, şeritler (20-22px)."
+      },
+      "field-value": {
+        "displayName": "Field Value",
+        "purpose": "Açıklama bandı alan değerleri."
+      },
+      "card-title": {
+        "displayName": "Card Title",
+        "purpose": "Tur kartı adı."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Program, sık sorulanlar, kart metni; 60-62ch."
+      },
+      "lead": {
+        "displayName": "Lead",
+        "purpose": "Arka yüz giriş metni."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Alan ve bilgi etiketleri; basılı satır 13px."
+      }
+    },
+    "shadows": [
+      {
+        "name": "kp-shadow",
+        "value": "0 30px 60px -32px rgba(26,40,70,0.42), 0 2px 6px rgba(26,40,70,0.08)",
+        "purpose": "Hatıra kartı; tur kartı üzerine gelme."
+      },
+      {
+        "name": "kp-shadow-sm",
+        "value": "0 18px 34px -24px rgba(26,40,70,0.45), 0 1px 3px rgba(26,40,70,0.08)",
+        "purpose": "Tur kartı, arka yüz, fiyat kutusu."
+      },
+      {
+        "name": "title-band",
+        "value": "0 12px 26px -14px rgba(0,0,0,0.55)",
+        "purpose": "Fotoğraf üstündeki kırmızı başlık şeridi."
+      },
+      {
+        "name": "pasted-photo",
+        "value": "0 8px 16px -8px rgba(0,0,0,0.55)",
+        "purpose": "Tur kartındaki 4px beyaz kenarlı ikinci manzara."
+      },
+      {
+        "name": "mobile-bar",
+        "value": "0 -10px 30px -18px rgba(26,40,70,0.5)",
+        "purpose": "Tur detayı sabit mobil rezervasyon çubuğu."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-paper",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Kart kalkışı (0.45s), manzara büyümesi (0.9s), seçim çerçevesi (0.3s), sık sorulan oku (0.25s), mobil çubuk (0.3s)."
+      },
+      {
+        "name": "card-lift",
+        "value": "translateY(-4px) rotate(-0.4deg)",
+        "purpose": "Tur kartı üzerine gelme."
+      },
+      {
+        "name": "launcher-retreat",
+        "value": "opacity 0 + translateY(24px), 0.25s ease",
+        "purpose": "Hatıra kartı eylem bandı görünürken yüzen sohbet düğmeleri çekilir (body[data-cta-visible])."
+      },
+      {
+        "name": "reduced",
+        "value": "transition: none",
+        "purpose": "prefers-reduced-motion tüm bu geçişleri kapatır."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "nav-1350",
+        "value": "1350px",
+        "purpose": "Menü 14px / 20px aralık."
+      },
+      {
+        "name": "nav-1100",
+        "value": "1100px",
+        "purpose": "Menü 13px; rezervasyon bağlantısı yalnız ikon."
+      },
+      {
+        "name": "tablet",
+        "value": "950px",
+        "purpose": "Manzaralar alt alta, küçük manzaralar şerit, açıklama bandı iki sütun."
+      },
+      {
+        "name": "phone",
+        "value": "700px",
+        "purpose": "Üst bilgi şeridi gizli, kart 8px, aralıklar 6px, açılır menü."
+      }
+    ],
+    "airmailEdge": {
+      "value": "repeating-linear-gradient(-45deg, #c2342b 0 14px, #ffffff 14px 22px, #1a2846 22px 36px, #ffffff 36px 44px)",
+      "purpose": "Sayfanın en üstünde 8px, alt bilginin üstünde 6px."
+    },
+    "focus": {
+      "value": "outline: 2px solid #c2342b; outline-offset: 3px",
+      "purpose": "Tüm etkileşimli öğeler; açıklama bandı alanlarında alt çizgi kırmızıya döner."
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Kırmızı eylem düğmesi; ekranda tek dolu kırmızı eylem.",
+      "html": "<button class=\"ds-btn\">Rotamı bul <svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></button>",
+      "css": ":host{--kp-snow:#e9eef1;--kp-card:#fff;--kp-ink:#1a2846;--kp-ink-2:#47536e;--kp-rule:#c9d2dc;--kp-hair:#e3e8ee;--kp-red:#c2342b;--kp-red-d:#9f271f;--kp-gold:#8a6128;--paper:#f3f6f8;--sky:#e3e9ee;--kp-shadow:0 30px 60px -32px rgba(26,40,70,.42),0 2px 6px rgba(26,40,70,.08);--kp-shadow-sm:0 18px 34px -24px rgba(26,40,70,.45),0 1px 3px rgba(26,40,70,.08);--display:Marcellus,Georgia,serif;--font:Onest,Arial,sans-serif;font-family:var(--font);color:var(--kp-ink);} .ds-btn{display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:14px 24px;border:1px solid var(--kp-red);border-radius:4px;background:var(--kp-red);color:#fff;font:600 15px var(--font);cursor:pointer;transition:background .2s;} .ds-btn:hover{background:var(--kp-red-d);border-color:var(--kp-red-d);} .ds-btn:focus-visible{outline:2px solid var(--kp-red);outline-offset:3px;} "
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Mürekkep kenarlı ikincil düğme; üst menüdeki 'Birlikte planlayalım'.",
+      "html": "<button class=\"ds-btn-outline\">Birlikte planlayalım</button>",
+      "css": ":host{--kp-snow:#e9eef1;--kp-card:#fff;--kp-ink:#1a2846;--kp-ink-2:#47536e;--kp-rule:#c9d2dc;--kp-hair:#e3e8ee;--kp-red:#c2342b;--kp-red-d:#9f271f;--kp-gold:#8a6128;--paper:#f3f6f8;--sky:#e3e9ee;--kp-shadow:0 30px 60px -32px rgba(26,40,70,.42),0 2px 6px rgba(26,40,70,.08);--kp-shadow-sm:0 18px 34px -24px rgba(26,40,70,.45),0 1px 3px rgba(26,40,70,.08);--display:Marcellus,Georgia,serif;--font:Onest,Arial,sans-serif;font-family:var(--font);color:var(--kp-ink);} .ds-btn-outline{min-height:46px;padding:12px 16px;border:1.5px solid var(--kp-ink);border-radius:4px;background:transparent;color:var(--kp-ink);font:600 14px var(--font);cursor:pointer;transition:background .2s,color .2s;} .ds-btn-outline:hover{background:var(--kp-ink);color:#fff;} .ds-btn-outline:focus-visible{outline:2px solid var(--kp-red);outline-offset:3px;}"
+    },
+    {
+      "name": "Caption Field",
+      "kind": "input",
+      "refersTo": "caption-field",
+      "description": "Açıklama bandı alanı: kutusuz, Marcellus değer, alt çizgi; odakta kırmızı.",
+      "html": "<label class=\"ds-field\"><span>Rota</span><input value=\"Ani, Çıldır ve Kars\"></label>",
+      "css": ":host{--kp-snow:#e9eef1;--kp-card:#fff;--kp-ink:#1a2846;--kp-ink-2:#47536e;--kp-rule:#c9d2dc;--kp-hair:#e3e8ee;--kp-red:#c2342b;--kp-red-d:#9f271f;--kp-gold:#8a6128;--paper:#f3f6f8;--sky:#e3e9ee;--kp-shadow:0 30px 60px -32px rgba(26,40,70,.42),0 2px 6px rgba(26,40,70,.08);--kp-shadow-sm:0 18px 34px -24px rgba(26,40,70,.45),0 1px 3px rgba(26,40,70,.08);--display:Marcellus,Georgia,serif;--font:Onest,Arial,sans-serif;font-family:var(--font);color:var(--kp-ink);} .ds-field{display:block;max-width:320px;background:var(--kp-card);padding:12px;} .ds-field span{display:block;font-size:12px;color:var(--kp-ink-2);margin-bottom:2px;} .ds-field input{width:100%;min-height:44px;border:0;border-bottom:1px solid var(--kp-ink-2);border-radius:0;background:transparent;font:400 20px/1.3 var(--display);color:var(--kp-ink);padding:4px 0 7px;} .ds-field input:focus-visible{outline:none;border-bottom-color:var(--kp-red);box-shadow:0 1px 0 var(--kp-red);}"
+    },
+    {
+      "name": "Site Navigation",
+      "kind": "nav",
+      "refersTo": "nav",
+      "description": "Kar zeminde şeffaf menü; etkin bağlantının altında kırmızı çizgi, sağda çerçeveli eylem.",
+      "html": "<nav class=\"ds-nav\"><a class=\"active\" href=\"#\">Ana sayfa</a><a href=\"#\">Turlarımız</a><a href=\"#\">Hizmetler</a><a href=\"#\">Konaklama</a><button class=\"ds-cta\">Birlikte planlayalım</button></nav>",
+      "css": ":host{--kp-snow:#e9eef1;--kp-card:#fff;--kp-ink:#1a2846;--kp-ink-2:#47536e;--kp-rule:#c9d2dc;--kp-hair:#e3e8ee;--kp-red:#c2342b;--kp-red-d:#9f271f;--kp-gold:#8a6128;--paper:#f3f6f8;--sky:#e3e9ee;--kp-shadow:0 30px 60px -32px rgba(26,40,70,.42),0 2px 6px rgba(26,40,70,.08);--kp-shadow-sm:0 18px 34px -24px rgba(26,40,70,.45),0 1px 3px rgba(26,40,70,.08);--display:Marcellus,Georgia,serif;--font:Onest,Arial,sans-serif;font-family:var(--font);color:var(--kp-ink);} .ds-nav{display:flex;align-items:center;gap:30px;padding:0 20px;background:var(--kp-snow);font:500 15px var(--font);} .ds-nav a{position:relative;padding:24px 0;color:var(--kp-ink);text-decoration:none;} .ds-nav a.active::after{content:'';position:absolute;left:0;right:0;bottom:16px;height:2px;background:var(--kp-red);} .ds-nav a:focus-visible{outline:2px solid var(--kp-red);outline-offset:3px;} .ds-cta{margin-left:auto;min-height:46px;padding:12px 16px;border:1.5px solid var(--kp-ink);border-radius:4px;background:transparent;color:var(--kp-ink);font:600 14px var(--font);cursor:pointer;} .ds-cta:hover{background:var(--kp-ink);color:#fff;}"
+    },
+    {
+      "name": "Filter Chips",
+      "kind": "chip",
+      "refersTo": "filter-chip",
+      "description": "Tur listesi filtreleri; etkin olan mürekkep dolgu.",
+      "html": "<div class=\"ds-chips\"><button class=\"active\">Tümü</button><button>Kültür</button><button>Kış</button><button>Yurt dışı</button></div>",
+      "css": ":host{--kp-snow:#e9eef1;--kp-card:#fff;--kp-ink:#1a2846;--kp-ink-2:#47536e;--kp-rule:#c9d2dc;--kp-hair:#e3e8ee;--kp-red:#c2342b;--kp-red-d:#9f271f;--kp-gold:#8a6128;--paper:#f3f6f8;--sky:#e3e9ee;--kp-shadow:0 30px 60px -32px rgba(26,40,70,.42),0 2px 6px rgba(26,40,70,.08);--kp-shadow-sm:0 18px 34px -24px rgba(26,40,70,.45),0 1px 3px rgba(26,40,70,.08);--display:Marcellus,Georgia,serif;--font:Onest,Arial,sans-serif;font-family:var(--font);color:var(--kp-ink);} .ds-chips{display:flex;gap:8px;background:var(--kp-snow);padding:12px;} .ds-chips button{padding:8px 14px;border:1px solid var(--kp-rule);border-radius:4px;background:var(--kp-card);color:var(--kp-ink);font:500 14px var(--font);cursor:pointer;} .ds-chips button:hover{border-color:var(--kp-ink-2);} .ds-chips button.active{background:var(--kp-ink);border-color:var(--kp-ink);color:#fff;} .ds-chips button:focus-visible{outline:2px solid var(--kp-red);outline-offset:3px;}"
+    },
+    {
+      "name": "Postcard Views",
+      "kind": "custom",
+      "refersTo": "postcard",
+      "description": "İmza: beyaz kart kartonunda büyük manzara + kırmızı başlık şeridi ve seçilebilir küçük manzaralar.",
+      "html": "<div class=\"ds-wrap\"><div class=\"ds-card\"><div class=\"ds-views\"><div class=\"ds-main\"><div class=\"ds-title\"><h1>Kars’tan selamlar.</h1></div></div><div class=\"ds-insets\"><button class=\"ds-inset\" aria-pressed=\"true\"><span class=\"ds-lab\">Çıldır<small>₺1.000’den</small></span></button><button class=\"ds-inset\" aria-pressed=\"false\"><span class=\"ds-lab\">Sarıkamış<small>₺1.350’den</small></span></button></div></div></div></div>",
+      "css": ":host{--kp-snow:#e9eef1;--kp-card:#fff;--kp-ink:#1a2846;--kp-ink-2:#47536e;--kp-rule:#c9d2dc;--kp-hair:#e3e8ee;--kp-red:#c2342b;--kp-red-d:#9f271f;--kp-gold:#8a6128;--paper:#f3f6f8;--sky:#e3e9ee;--kp-shadow:0 30px 60px -32px rgba(26,40,70,.42),0 2px 6px rgba(26,40,70,.08);--kp-shadow-sm:0 18px 34px -24px rgba(26,40,70,.45),0 1px 3px rgba(26,40,70,.08);--display:Marcellus,Georgia,serif;--font:Onest,Arial,sans-serif;font-family:var(--font);color:var(--kp-ink);} .ds-wrap{background:var(--kp-snow);padding:24px;} .ds-card{background:var(--kp-card);border-radius:5px;padding:14px;box-shadow:var(--kp-shadow);} .ds-views{display:grid;grid-template-columns:1.85fr 1fr;gap:10px;height:260px;} .ds-main{position:relative;background:linear-gradient(#7fa8cf,#c9d7e2 55%,#6b6157);} .ds-title{position:absolute;left:0;bottom:24px;} .ds-title h1{margin:0;display:inline-block;background:var(--kp-red);color:#fff;font:400 40px/1.02 var(--display);padding:10px 22px 12px;box-shadow:0 12px 26px -14px rgba(0,0,0,.55);} .ds-insets{display:grid;grid-template-rows:1fr 1fr;gap:10px;} .ds-inset{position:relative;border:0;padding:0;border-radius:0;background:linear-gradient(#9bbad6,#eef3f6);cursor:pointer;} .ds-inset[aria-pressed=true]{box-shadow:inset 0 0 0 4px var(--kp-red);} .ds-inset:focus-visible{outline:2px solid var(--kp-red);outline-offset:3px;} .ds-lab{position:absolute;left:10px;bottom:10px;background:var(--kp-card);color:var(--kp-ink);font:400 17px/1.05 var(--display);padding:7px 10px 6px;border-radius:2px;text-align:left;} .ds-lab small{display:block;font:600 12px var(--font);color:var(--kp-gold);margin-top:4px;}"
+    },
+    {
+      "name": "Tour Card",
+      "kind": "card",
+      "refersTo": "tour-card",
+      "description": "Tur listesi kartı: kırmızı yer şeridi, yapıştırılmış ikinci manzara, altın fiyat; üzerine gelince hafif kalkıp döner.",
+      "html": "<a class=\"ds-tour\" href=\"#\"><div class=\"ds-img\"><span class=\"ds-ins\"></span><span class=\"ds-rib\">Ani</span></div><div class=\"ds-info\"><div><h3>Ani, Çıldır ve Kars</h3><p>Günübirlik · Kars çıkışlı</p></div><strong>₺1.000<small>kişi başı</small></strong></div></a>",
+      "css": ":host{--kp-snow:#e9eef1;--kp-card:#fff;--kp-ink:#1a2846;--kp-ink-2:#47536e;--kp-rule:#c9d2dc;--kp-hair:#e3e8ee;--kp-red:#c2342b;--kp-red-d:#9f271f;--kp-gold:#8a6128;--paper:#f3f6f8;--sky:#e3e9ee;--kp-shadow:0 30px 60px -32px rgba(26,40,70,.42),0 2px 6px rgba(26,40,70,.08);--kp-shadow-sm:0 18px 34px -24px rgba(26,40,70,.45),0 1px 3px rgba(26,40,70,.08);--display:Marcellus,Georgia,serif;--font:Onest,Arial,sans-serif;font-family:var(--font);color:var(--kp-ink);} .ds-tour{display:block;width:320px;background:var(--kp-card);padding:10px 10px 0;border-radius:4px;box-shadow:var(--kp-shadow-sm);color:var(--kp-ink);text-decoration:none;transition:transform .45s cubic-bezier(.16,1,.3,1),box-shadow .45s cubic-bezier(.16,1,.3,1);} .ds-tour:hover{transform:translateY(-4px) rotate(-.4deg);box-shadow:var(--kp-shadow);} .ds-tour:focus-visible{outline:2px solid var(--kp-red);outline-offset:3px;} .ds-img{position:relative;aspect-ratio:4/3;background:linear-gradient(#a9c3da,#7f9a5c);} .ds-ins{position:absolute;right:10px;top:10px;width:30%;aspect-ratio:1;border:4px solid var(--kp-card);background:#cfe0ee;box-shadow:0 8px 16px -8px rgba(0,0,0,.55);} .ds-rib{position:absolute;left:0;bottom:16px;background:var(--kp-red);color:#fff;font:400 22px/1 var(--display);padding:9px 14px 10px;} .ds-info{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px 4px;} .ds-info h3{margin:0;font:600 16px/1.3 var(--font);} .ds-info p{margin:3px 0 0;font-size:14px;color:var(--kp-ink-2);} .ds-info strong{font:400 24px/1 var(--display);color:var(--kp-gold);text-align:right;font-variant-numeric:tabular-nums;} .ds-info small{display:block;font:400 12px var(--font);color:var(--kp-ink-2);margin-top:4px;}"
+    },
+    {
+      "name": "Price Stamp",
+      "kind": "custom",
+      "refersTo": "price-stamp",
+      "description": "İmza: delikli kenarlı pul içinde altın fiyat ve üstüne vurulmuş posta damgası.",
+      "html": "<div class=\"ds-row\"><div class=\"ds-stamp\"><div class=\"ds-price\"><span class=\"ds-place\">Ani, Çıldır ve Kars</span><strong>₺1.000</strong><span>kişi başı başlangıç fiyatı</span></div></div><svg class=\"ds-pm\" viewBox=\"0 0 132 132\" role=\"img\" aria-label=\"İlk hareket 6 Kasım, 08:30\"><circle cx=\"66\" cy=\"66\" r=\"60\"/><circle cx=\"66\" cy=\"66\" r=\"42\"/><text x=\"66\" y=\"22\" text-anchor=\"middle\" class=\"r\">KARS</text><text x=\"66\" y=\"64\" text-anchor=\"middle\" class=\"d\">06 KAS 26</text><text x=\"66\" y=\"84\" text-anchor=\"middle\" class=\"t\">08:30</text></svg></div>",
+      "css": ":host{--kp-snow:#e9eef1;--kp-card:#fff;--kp-ink:#1a2846;--kp-ink-2:#47536e;--kp-rule:#c9d2dc;--kp-hair:#e3e8ee;--kp-red:#c2342b;--kp-red-d:#9f271f;--kp-gold:#8a6128;--paper:#f3f6f8;--sky:#e3e9ee;--kp-shadow:0 30px 60px -32px rgba(26,40,70,.42),0 2px 6px rgba(26,40,70,.08);--kp-shadow-sm:0 18px 34px -24px rgba(26,40,70,.45),0 1px 3px rgba(26,40,70,.08);--display:Marcellus,Georgia,serif;--font:Onest,Arial,sans-serif;font-family:var(--font);color:var(--kp-ink);} .ds-row{position:relative;display:flex;padding:20px;background:var(--kp-card);width:300px;} .ds-stamp{--h:5px;background:#e6ecf1;padding:9px;-webkit-mask:linear-gradient(#000 0 0) content-box,radial-gradient(circle 3.4px,#0000 96%,#000) calc(-1*var(--h)) calc(-1*var(--h))/10px 10px;mask:linear-gradient(#000 0 0) content-box,radial-gradient(circle 3.4px,#0000 96%,#000) calc(-1*var(--h)) calc(-1*var(--h))/10px 10px;} .ds-price{border:1px solid var(--kp-rule);padding:12px 16px;min-width:190px;background:var(--kp-card);font-size:13px;color:var(--kp-ink-2);} .ds-place{display:block;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--kp-ink);margin-bottom:4px;} .ds-price strong{display:block;font:400 40px var(--display);color:var(--kp-gold);} .ds-pm{position:absolute;right:-6px;top:34px;width:112px;height:112px;color:var(--kp-ink);opacity:.82;mix-blend-mode:multiply;transform:rotate(-12deg);pointer-events:none;} .ds-pm circle{fill:none;stroke:currentColor;stroke-width:1.4;} .ds-pm circle:first-of-type{stroke-width:2.6;} .ds-pm text{fill:currentColor;} .ds-pm .r{font:600 10px var(--font);letter-spacing:2px;} .ds-pm .d{font:400 16px var(--display);} .ds-pm .t{font:600 13px var(--font);}"
+    },
+    {
+      "name": "Route Line",
+      "kind": "custom",
+      "refersTo": "title",
+      "description": "Tur programı: tek kesintisiz kırmızı rota çizgisi, halkalı duraklar, son durak dolu.",
+      "html": "<ol class=\"ds-route\"><li><time>08:30</time><h3>Kars’ta buluşma</h3><p>Kars merkezden hareket.</p></li><li><time>Öğlen</time><h3>Çıldır Gölü kıyısında</h3><p>Göl çevresinde gezi.</p></li><li><time>17:00</time><h3>Kars şehir gezisi</h3><p>Tarihî yapılar.</p></li></ol>",
+      "css": ":host{--kp-snow:#e9eef1;--kp-card:#fff;--kp-ink:#1a2846;--kp-ink-2:#47536e;--kp-rule:#c9d2dc;--kp-hair:#e3e8ee;--kp-red:#c2342b;--kp-red-d:#9f271f;--kp-gold:#8a6128;--paper:#f3f6f8;--sky:#e3e9ee;--kp-shadow:0 30px 60px -32px rgba(26,40,70,.42),0 2px 6px rgba(26,40,70,.08);--kp-shadow-sm:0 18px 34px -24px rgba(26,40,70,.45),0 1px 3px rgba(26,40,70,.08);--display:Marcellus,Georgia,serif;--font:Onest,Arial,sans-serif;font-family:var(--font);color:var(--kp-ink);} .ds-route{list-style:none;margin:0;padding:20px;background:var(--kp-card);max-width:420px;} .ds-route li{position:relative;padding:0 0 26px 44px;} .ds-route li::before{content:'';position:absolute;left:11px;top:14px;bottom:-14px;border-left:2px solid var(--kp-red);} .ds-route li:last-child::before{display:none;} .ds-route time{position:relative;display:block;font:600 13px var(--font);color:var(--kp-red);font-variant-numeric:tabular-nums;} .ds-route time::after{content:'';position:absolute;left:-41px;top:0;width:16px;height:16px;border-radius:50%;background:var(--kp-card);border:2px solid var(--kp-red);box-sizing:border-box;} .ds-route li:last-child time::after{background:var(--kp-red);} .ds-route h3{margin:2px 0 0;font:400 21px var(--display);} .ds-route p{margin:4px 0 0;font-size:15px;line-height:1.6;color:var(--kp-ink-2);}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Hatıra Kartı (çok görüntülü Kars kartpostalı)",
+    "overview": "**Creative North Star: \"Hatıra Kartı\" (çok görüntülü Kars kartpostalı)**\n\nSite, eski usul çok görüntülü bir Kars hatıra kartı gibi kurulur: bir büyük manzara, yanında küçük manzaralar, fotoğrafın üstüne binen kırmızı başlık şeridi ve altta beyaz bir açıklama bandı. Kart, kar renginde soğuk açık bir zeminin üstünde 14px beyaz kenarlı bir karton olarak durur; yumuşak, aşağı düşen bir gölgeyle kâğıt gibi kalkar. Tur sayfaları kartın arka yüzüdür: program tek kesintisiz kırmızı rota çizgisinde okunur, fiyat dişli kenarlı bir pul ve üstüne vurulmuş bir posta damgasıyla gösterilir.\n\nDünyanın tüm stilleri `src/postcard.css` içinde, `.kp` kapsayıcısıyla sınırlıdır (`Layout.tsx` halka açık sayfaları `.kp` ile sarar). Bu dosya aynı zamanda `src/styles.css` içindeki eski site jetonlarını (`--navy`, `--ink`, `--muted`, `--line`, `--paper`, `--sky`, `--gold`, `--gold-text`) yeni dünyanın değerlerine eşler. Tam olarak tasarlanmış yüzeyler: üst kenar ve menü, ana sayfa hatıra kartı, tur listesi kartları, tur detayı kartı ve arka yüzü, pul fiyat, alt bilgi. Ana sayfanın alt bölümleri (hikâye, VIP araç ve koltuk planı, hizmetler, filo, konaklama, Instagram, yorumlar) ve rezervasyon akışı eski düzenlerini korur; yalnız jeton eşlemesi, 4px köşe normalizasyonu ve düğme stilleriyle bu dünyaya oturtulmuştur. Onlar yeni dünyanın örneği sayılmaz.\n\nReddedilen kalıp: tam genişlikte hero fotoğrafı ve üstünde yüzen arama kutusu (her tur acentesinin varsayılanı).",
+    "keyCharacteristics": [
+      "Soğuk kar zemini üstünde beyaz kart kartonu; fotoğraflar kartın içine 10px aralıkla yerleşir.",
+      "Mavi-siyah mürekkep metin; kırmızı başlık şeridi ve eylem; logo altını fiyat ve pul için.",
+      "Sayfanın üstünde ve alt bilginin üstünde ince uçak postası şeridi.",
+      "Marcellus başlıklar, form değerleri ve fiyatlar; Onest etiketler ve gövde.",
+      "Küçük, düz köşeler (0–5px); hap biçimi yok."
+    ],
+    "rules": [
+      {
+        "name": "The Kırmızı Mürekkep Rule",
+        "body": "Kırmızı başlık şeridi, eylem, seçim/odak ve rota çizgisi içindir. Gövde metninde, büyük yüzey dolgularında veya süslemede kullanılmaz; bir ekranda tek bir dolu kırmızı eylem düğmesi vardır.",
+        "section": "colors"
+      },
+      {
+        "name": "The Altın Fiyat Rule",
+        "body": "Bir rakam para ise altın (gold) ve Marcellus ile yazılır; altın başka hiçbir metin için kullanılmaz.",
+        "section": "colors"
+      },
+      {
+        "name": "The Soğuk Zemin Rule",
+        "body": "Zemin kar mavisi-gri kalır; kremaya veya sıcak beje çekilmez. Sıcaklık yalnız kırmızı ve altından gelir.",
+        "section": "colors"
+      },
+      {
+        "name": "The Kartpostal Baskısı Rule",
+        "body": "Marcellus başlık, değer ve fiyattır; Onest her şeyin geri kalanıdır. Başlıklarda seçili kelime italik veya renkle öne çıkarılmaz.",
+        "section": "typography"
+      },
+      {
+        "name": "The Etiketsiz Başlık Rule",
+        "body": "Bölüm başlıklarının üstünde küçük üst etiket (eyebrow) yoktur; eski `.section-note` bu dünyada gizlidir.",
+        "section": "typography"
+      },
+      {
+        "name": "The Kâğıt Gölgesi Rule",
+        "body": "Gölge hep aşağı ve mürekkep tonludur, ışık gibi yayılmaz; sert kaydırılmış gölge kullanılmaz.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** yeni halka açık yüzeyleri `.kp` içinde ve `--kp-*` jetonlarıyla kur; eski jetonları doğrudan yeniden tanımlama.",
+      "**Do** ana ilk görünümü kar zemininde beyaz bir kart olarak kur: kart içinde fotoğraflar 10px aralıkla, keskin köşeli; kartın kendisi 5px köşeli ve kart gölgeli.",
+      "**Do** her fiyatı Marcellus ve altın (gold) ile, tabular rakamlarla yaz.",
+      "**Do** form değerlerini açıklama bandı gibi kutusuz, alt çizgili ve Marcellus 20px tut.",
+      "**Do** kırmızıyı başlık şeridi, eylem, seçim/odak ve rota çizgisiyle sınırla.",
+      "**Do** Google puanını yalnız canlı veriden göster; veri yoksa satırı gösterme."
+    ],
+    "donts": [
+      "**Don't** tam genişlikte hero fotoğrafı ve üstünde yüzen arama kutusu kullanma.",
+      "**Don't** hap biçimli düğme, etiket veya filtre yapma; 5px üstü köşe yok.",
+      "**Don't** bölüm başlıklarına üst etiket (eyebrow) ekleme.",
+      "**Don't** zemini kremaya ısıtma veya panelin tüf siyahını, kırmızısını getirme; panel sistemi `docs/DESIGN-PANEL.md` içindedir.",
+      "**Don't** logo altınını (logo-gold) metin rengi olarak kullanma; metin altını gold'dur."
+    ]
+  }
+}

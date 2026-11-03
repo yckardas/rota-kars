@@ -10,6 +10,69 @@
           "src/admin.css"
         ],
         "createdAt": "2026-10-21T15:33:44.151Z"
+      },
+      {
+        "rule": "repeating-stripes-gradient",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/public-site/a-kartpostal.html"
+        ],
+        "createdAt": "2026-11-03T15:04:24.319Z",
+        "reason": "Claude: uçak postası şeridi Kartpostal yönünün imza malzemesi, dekor değil"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/public-site/a-kartpostal.html"
+        ],
+        "createdAt": "2026-11-03T15:04:24.347Z",
+        "reason": "Claude: tam taşan fotoğraf ve 1px ayraçta yanlış pozitif; iç boşluk satırlarda"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/public-site/b-bilet.html"
+        ],
+        "createdAt": "2026-11-03T15:04:24.368Z",
+        "reason": "Claude: tam taşan fotoğraf ve 1px ayraçta yanlış pozitif; iç boşluk satırlarda"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/public-site/c-bazalt.html"
+        ],
+        "createdAt": "2026-11-03T15:04:24.389Z",
+        "reason": "Claude: tam taşan fotoğraf ve 1px ayraçta yanlış pozitif; iç boşluk satırlarda"
+      },
+      {
+        "rule": "repeating-stripes-gradient",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/public-site/a2-zarf.html"
+        ],
+        "createdAt": "2026-11-03T15:31:03.343Z",
+        "reason": "Claude: uçak postası zarf kenarı bu yönün nesnesi"
+      },
+      {
+        "rule": "repeating-stripes-gradient",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/public-site/a1-hatira-karti.html"
+        ],
+        "createdAt": "2026-11-03T15:31:03.363Z",
+        "reason": "Claude: kartpostal ailesinin uçak postası şeridi"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/postcard.css"
+        ],
+        "createdAt": "2026-11-03T15:48:57.685Z",
+        "reason": "Claude: alt bilgideki uçak postası şeridi Hatıra Kartı dünyasının imzası, kenar sekmesi değil"
       }
     ]
   }
