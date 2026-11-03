@@ -1,7 +1,7 @@
 import { z } from "zod";
 import QRCode from "qrcode";
 import { AppError } from "./store.mjs";
-import { vehicleModels } from "./operations.mjs";
+import { vehicleModels, fleetVehicles } from "./operations.mjs";
 import { tours } from "./catalog.mjs";
 import { localDate } from "./departures.mjs";
 import { siteBase as configuredBase } from "./seo.mjs";
@@ -144,6 +144,9 @@ export function attachAdvancedApi(
           guidePhone: z.union([phone, z.literal("")]).default(""),
           vehicleModel: z.enum(vehicleModels.map((m) => m.id)),
           passengerSeats: z.number().int().min(4).max(54),
+          vehicleId: z
+            .enum(["", ...fleetVehicles.map((v) => v.id)])
+            .default(""),
           active: z.boolean(),
         })
         .parse(q.body);
@@ -189,6 +192,9 @@ export function attachAdvancedApi(
           guidePhone: z.union([phone, z.literal("")]).default(""),
           vehicleModel: z.enum(vehicleModels.map((m) => m.id)),
           passengerSeats: z.number().int().min(4).max(54),
+          vehicleId: z
+            .enum(["", ...fleetVehicles.map((v) => v.id)])
+            .default(""),
           active: z.boolean(),
         })
         .parse(q.body);

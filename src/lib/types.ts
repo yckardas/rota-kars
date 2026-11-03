@@ -47,6 +47,19 @@ export type Vehicle = {
   sellableSeats: number;
   layout: (string | number | null)[][];
   description: string;
+  // Gövde çizimi: binek, minibüs, midibüs, turizm midibüsü, otobüs.
+  shape?: "car" | "van" | "midibus" | "bus" | "coach";
+  // Sefere filodan bir araç atanmışsa; plaka yalnız panel yanıtlarında gelir.
+  unit?: { id: string; name: string; year: number; plate?: string };
+};
+export type FleetVehicle = {
+  id: string;
+  plate: string;
+  name: string;
+  year: number;
+  vehicleModel: string;
+  passengerSeats: number;
+  note: string;
 };
 export type Catalog = {
   business: {
@@ -104,6 +117,7 @@ export type Departure = {
   pickup: string;
   guide_name: string;
   guide_phone: string;
+  vehicle_id?: string;
   vehicle: Vehicle;
 };
 export type Seat = { number: number; status: "occupied" | "available" };

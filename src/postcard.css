@@ -1487,14 +1487,361 @@ html:has(.kp) {
 .kp .inline-note {
   font-size: 14px;
 }
-/* Koltuk planı: seçim kırmızı mürekkep */
+/* ---------- Koltuk planı: üstten görülen araç ----------
+   Gövde aracın tipine göre çizilir (binek, minibüs, midibüs, otobüs). Araç
+   aşağıdan yerine süzülür, sıralar önden arkaya belirir; seçilen koltuk
+   kırmızı mürekkebe döner. Ön taraf yukarıdadır, kapılar sağdadır. */
+/* Yan boşluk: ayna ve tekerlekler gövdeden taşar, kesilmesin */
+.kp .seat-map {
+  --seat-h: 46px;
+  --seat-gap: 7px;
+  width: 310px;
+  max-width: 100%;
+  padding-inline: 10px;
+}
+.kp .seat-map.shape-car {
+  width: 252px;
+}
+.kp .seat-map.shape-van {
+  width: 270px;
+}
+.kp .seat-map.shape-bus,
+.kp .seat-map.shape-coach {
+  --seat-h: 42px;
+  --seat-gap: 6px;
+  width: 352px;
+}
+.kp .vehicle-roof {
+  display: none;
+}
+.kp .vehicle-body {
+  position: relative;
+  background: var(--kp-card);
+  border: 1.5px solid var(--kp-rule);
+  border-radius: 34px 34px 12px 12px;
+  padding: 14px 20px 14px;
+  box-shadow: var(--kp-shadow-sm);
+  animation: kp-drive-in 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.kp .shape-car .vehicle-body {
+  border-radius: 48% 48% 36% 36% / 15% 15% 12% 12%;
+  padding: 24px 22px 30px;
+}
+.kp .shape-van .vehicle-body {
+  border-radius: 42px 42px 16px 16px / 34px 34px 16px 16px;
+}
+.kp .shape-bus .vehicle-body {
+  border-radius: 26px 26px 10px 10px;
+}
+.kp .shape-coach .vehicle-body {
+  border-radius: 22px 22px 10px 10px;
+  padding: 12px 16px 12px;
+}
+.kp .vehicle-body::before,
+.kp .vehicle-body::after {
+  display: none;
+}
+/* Aynalar ve tekerlekler: gövdenin dışına taşan küçük işaretler */
+.kp .vehicle-mirror {
+  position: absolute;
+  top: 42px;
+  width: 9px;
+  height: 15px;
+  border-radius: 4px;
+  background: var(--kp-rule);
+}
+.kp .vehicle-mirror.left {
+  left: -9px;
+  border-radius: 4px 0 0 4px;
+}
+.kp .vehicle-mirror.right {
+  right: -9px;
+  border-radius: 0 4px 4px 0;
+}
+.kp .shape-coach .vehicle-mirror,
+.kp .shape-bus .vehicle-mirror {
+  top: 30px;
+}
+.kp .shape-car .vehicle-mirror {
+  top: 27%;
+}
+.kp .vehicle-wheel {
+  position: absolute;
+  width: 6px;
+  height: 34px;
+  border-radius: 3px;
+  background: var(--kp-ink);
+  opacity: 0.85;
+}
+.kp .vehicle-wheel.left {
+  left: -5px;
+}
+.kp .vehicle-wheel.right {
+  right: -5px;
+}
+.kp .vehicle-wheel.front {
+  top: 76px;
+}
+.kp .vehicle-wheel.rear {
+  bottom: 13%;
+}
+.kp .shape-car .vehicle-wheel {
+  height: 26px;
+}
+.kp .shape-car .vehicle-wheel.front {
+  top: 22%;
+}
+.kp .shape-car .vehicle-wheel.rear {
+  bottom: 16%;
+}
+.kp .shape-coach .vehicle-wheel.rear {
+  bottom: 9%;
+  box-shadow: 0 -40px 0 var(--kp-ink);
+}
+.kp .windshield {
+  height: 16px;
+  margin: 0 4px 12px;
+  border: 0;
+  border-radius: 60% 60% 6px 6px / 100% 100% 6px 6px;
+  background: linear-gradient(180deg, var(--kp-rule), var(--kp-snow));
+}
+.kp .seat-row {
+  column-gap: var(--seat-gap);
+}
+.kp .cockpit {
+  margin: 0 0 6px;
+}
+.kp .crew-seat {
+  min-height: var(--seat-h);
+  font-size: 11px;
+  color: var(--kp-ink-2);
+}
+.kp .crew-seat > svg {
+  display: none;
+}
+.kp .crew-seat.guide {
+  min-height: var(--seat-h);
+  background: rgba(138, 97, 40, 0.1);
+  border: 1px solid rgba(138, 97, 40, 0.42);
+  border-radius: 9px 9px 6px 6px;
+  color: var(--kp-gold);
+  font-weight: 600;
+}
+.kp .crew-seat.guide small {
+  font-size: 11px;
+  font-weight: 500;
+}
+/* Direksiyon: halka, göbek ve üç kol; araç girerken çeyrek tur döner */
+.kp .steering {
+  width: 26px;
+  height: 26px;
+  border: 2.5px solid var(--kp-ink);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, var(--kp-ink) 0 3.5px, transparent 4px),
+    linear-gradient(var(--kp-ink), var(--kp-ink)) center / 100% 2px no-repeat,
+    linear-gradient(var(--kp-ink), var(--kp-ink)) 50% 100% / 2px 50% no-repeat;
+  animation: kp-steer 1.1s 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.kp .vehicle-divider {
+  margin: 10px 0 12px;
+  border-top: 1px dashed var(--kp-rule);
+  font-size: 11px;
+  color: var(--kp-ink-2);
+}
+.kp .vehicle-divider > span {
+  top: -9px;
+  background: var(--kp-card);
+}
+.kp .passenger-row {
+  margin-bottom: var(--seat-gap);
+  column-gap: var(--seat-gap);
+  animation: kp-row-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(260ms + var(--row, 0) * 45ms);
+}
+/* Koltuk: üstten görünüş; arkalık alttadır (yolcu öne bakar) */
+.kp .vehicle-seat {
+  min-height: var(--seat-h);
+  padding: 0 0 6px;
+  border: 1px solid var(--kp-rule);
+  border-bottom-width: 1px;
+  border-radius: 9px 9px 6px 6px;
+  background: var(--kp-card);
+  color: var(--kp-ink);
+  cursor: pointer;
+  transition:
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+.kp .vehicle-seat::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 3px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--kp-hair);
+  transition: background 0.2s ease;
+}
+.kp .vehicle-seat > svg:not(.seat-check) {
+  display: none;
+}
+.kp .vehicle-seat > span {
+  position: static;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--kp-ink);
+}
+.kp .vehicle-seat:not(.occupied):not(.selected):not(:disabled):hover {
+  transform: translateY(-2px);
+  border-color: var(--kp-ink-2);
+  box-shadow: 0 8px 14px -10px rgba(26, 40, 70, 0.55);
+}
+.kp .vehicle-seat:focus-visible {
+  outline: 2px solid var(--kp-red);
+  outline-offset: 2px;
+}
 .kp .vehicle-seat.selected {
   background: var(--kp-red);
   border-color: var(--kp-red-d);
+  animation: kp-seat-pick 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.kp .vehicle-seat.selected::after {
+  background: var(--kp-red-d);
+}
+.kp .vehicle-seat.selected > span {
   color: #fff;
 }
-.kp .vehicle-seat:not(.occupied):not(.selected):hover {
-  border-color: var(--kp-ink-2);
+.kp .vehicle-seat .seat-check {
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  padding: 2px;
+  border-radius: 50%;
+  background: var(--kp-ink);
+  color: #fff;
+  animation: kp-pop 0.35s 0.08s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+/* Dolu koltuk: taranmış, numarası soluk */
+.kp .vehicle-seat.occupied {
+  cursor: not-allowed;
+  border-color: var(--kp-hair);
+  background: repeating-linear-gradient(
+    -45deg,
+    #f1f4f7 0 4px,
+    var(--kp-hair) 4px 5px
+  );
+}
+.kp .vehicle-seat.occupied > span {
+  color: var(--kp-ink-2);
+  opacity: 0.7;
+}
+/* Kapı: basamak çizgileri ve sağda kırmızı açıklık */
+.kp .seat-door {
+  min-height: var(--seat-h);
+  border: 0;
+  border-right: 3px solid var(--kp-red);
+  border-radius: 4px;
+  background: repeating-linear-gradient(
+    180deg,
+    transparent 0 6px,
+    var(--kp-hair) 6px 8px
+  );
+  color: var(--kp-ink-2);
+  font-size: 11px;
+}
+.kp .seat-door > svg {
+  display: none;
+}
+.kp .vehicle-rear {
+  margin: 8px 10px 0;
+  border-top: 2px solid var(--kp-hair);
+}
+.kp .seat-caption {
+  margin-top: 14px;
+  color: var(--kp-ink);
+  font-weight: 500;
+}
+.kp .seat-caption span {
+  color: var(--kp-ink-2);
+  font-weight: 400;
+}
+.kp .seat-legend .taken {
+  background: repeating-linear-gradient(
+    -45deg,
+    #f1f4f7 0 3px,
+    var(--kp-rule) 3px 4px
+  );
+  border-color: var(--kp-rule);
+}
+.kp .seat-legend .crew {
+  background: rgba(138, 97, 40, 0.1);
+  border-color: rgba(138, 97, 40, 0.42);
+}
+@keyframes kp-drive-in {
+  from {
+    opacity: 0;
+    transform: translateY(36px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes kp-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes kp-steer {
+  from {
+    transform: rotate(-90deg);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes kp-seat-pick {
+  0% {
+    transform: scale(0.86);
+  }
+  55% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes kp-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kp .vehicle-body,
+  .kp .passenger-row,
+  .kp .steering,
+  .kp .vehicle-seat.selected,
+  .kp .vehicle-seat .seat-check {
+    animation: none;
+  }
+  .kp .vehicle-seat {
+    transition: none;
+  }
 }
 .kp .seat-legend {
   font-size: 13px;

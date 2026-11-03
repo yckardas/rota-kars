@@ -30,7 +30,7 @@ import { createChatService } from "./chat.mjs";
 import { attachSeoRoutes } from "./seo.mjs";
 import { roleAllows, ROLES } from "./admin-auth.mjs";
 import { createStorage, MEDIA_LIMITS } from "./storage.mjs";
-import { vehicleModels } from "./operations.mjs";
+import { vehicleModels, fleetVehicles } from "./operations.mjs";
 import { attachSocialAuth, cookieValue } from "./social-auth.mjs";
 import { createTurnstile } from "./turnstile.mjs";
 import { fcmHint } from "./push.mjs";
@@ -109,7 +109,13 @@ const clientKey = (req) => {
   return parts.slice(0, 4).join(":") + "::/64";
 };
 // Herkese açık sefer bilgisinde rehberin adı/telefonu yer almaz (yalnız yönetim ve bilette).
-const publicDeparture = ({ guide_name, guide_phone, ...d }) => d;
+// Plaka da yalnız panelde: halka açık seferde araç adı ve yılı kalır.
+const publicDeparture = ({ guide_name, guide_phone, ...d }) => {
+  const plate = d.vehicle?.unit?.plate;
+  if (!plate) return d;
+  const { plate: _, ...unit } = d.vehicle.unit;
+  return { ...d, vehicle: { ...d.vehicle, unit } };
+};
 export function createApp(
   store,
   {
@@ -502,6 +508,11 @@ export function createApp(
     setSession,
     fetchImpl: socialFetch,
   });
+  app.get(
+    "/api/admin/vehicles",
+    requireAdmin,
+    route(async (_q, r) => r.json(fleetVehicles)),
+  );
   app.get(
     "/api/admin/operations",
     requireAdmin,

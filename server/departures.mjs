@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { AppError } from "./store.mjs";
-import { makeVehicle } from "./operations.mjs";
+import {
+  makeVehicle,
+  fleetVehicle,
+  fleetVehicles,
+  fleetVehicleLayout,
+} from "./operations.mjs";
 import { tours } from "./catalog.mjs";
 export const localDate = (now) =>
   new Intl.DateTimeFormat("en-CA", {
@@ -26,9 +31,21 @@ export async function createDepartures(
         row.vehicle_model && row.passenger_seats
           ? makeVehicle(row.vehicle_model, Number(row.passenger_seats))
           : base.vehicle;
+    const unit = fleetVehicles.find((v) => v.id === row.vehicle_id);
     return {
       ...row,
-      vehicle,
+      vehicle: unit
+        ? {
+            ...fleetVehicleLayout(unit, vehicle),
+            unit: {
+              id: unit.id,
+              name: unit.name,
+              year: unit.year,
+              plate: unit.plate,
+            },
+          }
+        : vehicle,
+      vehicle_id: unit ? unit.id : "",
       start_time:
         row.start_time ||
         tours
@@ -86,6 +103,15 @@ export async function createDepartures(
       );
     },
     async save(input) {
+      // Filodan bir araç seçildiyse sınıf ve kapasite o araçtan gelir.
+      if (input.vehicleId) {
+        const unit = fleetVehicle(input.vehicleId);
+        input = {
+          ...input,
+          vehicleModel: unit.vehicleModel,
+          passengerSeats: unit.passengerSeats,
+        };
+      }
       makeVehicle(input.vehicleModel, input.passengerSeats);
       return tx(async () => {
         await cleanup();
@@ -113,6 +139,18 @@ export async function createDepartures(
             409,
             "Ayrılmış koltuklar varken tarih, fiyat veya araç değiştirilemez. Yolcuyu başka sefere taşıyabilirsiniz.",
           );
+        if (input.vehicleId) {
+          const clash = await db.one("departures", {
+            vehicle_id: input.vehicleId,
+            date: input.date,
+            _id: { $ne: id },
+          });
+          if (clash)
+            throw new AppError(
+              409,
+              `Bu araç ${input.date} günü başka bir sefere atanmış (${tours.find((t) => t.id === clash.tour_id)?.name || clash.tour_id}, ${clash.start_time || ""}). Önce o seferin aracını değiştirin.`,
+            );
+        }
         const fields = {
           date: input.date,
           price: input.price,
@@ -123,6 +161,7 @@ export async function createDepartures(
           guide_phone: input.guidePhone,
           vehicle_model: input.vehicleModel,
           passenger_seats: input.passengerSeats,
+          vehicle_id: input.vehicleId || "",
         };
         if (old) await db.update("departures", { _id: id }, fields);
         else

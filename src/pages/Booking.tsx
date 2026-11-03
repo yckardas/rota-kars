@@ -800,7 +800,8 @@ export function Booking({ catalog }: { catalog: Catalog }) {
             </p>
             <p>
               <Armchair size={15} />
-              {count} yolcu · {vehicle.passengerSeats}+1 {vehicle.name}
+              {count} yolcu · {vehicle.passengerSeats}+1{" "}
+              {vehicle.unit ? vehicle.unit.name : vehicle.name}
             </p>
             {selected.length > 0 && (
               <p>

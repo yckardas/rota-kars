@@ -68,18 +68,13 @@ export const services = [
 ];
 export const fleet = {
   note: "Araçlarımız şoförlü olarak kiralanır. Kaptanlarımız bölgeye hâkim, işinde profesyoneldir.",
-  tourism: [
-    "13+1",
-    "16+1",
-    "19+1",
-    "27+1",
-    "29+1",
-    "31+1",
-    "35+1",
-    "38+1",
-    "46+1",
+  tourism: ["31+1 Otokar Sultan", "46+1 Mercedes Travego"],
+  vip: [
+    "4+1 Fiat Egea",
+    "9+1 Mercedes Vito",
+    "19+1 Mercedes Sprinter",
+    "19+1 Volkswagen Crafter",
   ],
-  vip: ["4+1", "9+1", "11+1"],
   perks: ["D2 ve B2 belgeli", "Lüks ve klimalı", "Mikrofonlu", "Buzdolaplı"],
 };
 export const cancellationPolicy =

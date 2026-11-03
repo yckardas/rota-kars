@@ -29,6 +29,7 @@ import {
   today,
   type Catalog,
   type Departure,
+  type FleetVehicle,
   type Reservation,
 } from "../lib/types";
 import { SeatMap } from "./SeatMap";
@@ -116,6 +117,7 @@ export function DepartureManager({
           guidePhone: f.get("guidePhone"),
           vehicleModel: f.get("vehicleModel"),
           passengerSeats: Number(f.get("passengerSeats")),
+          vehicleId: f.get("vehicleId") || "",
           active: f.get("active") === "on",
         });
         setEditing(false);
@@ -136,6 +138,7 @@ export function DepartureManager({
         guidePhone: f.get("guidePhone"),
         vehicleModel: f.get("vehicleModel"),
         passengerSeats: Number(f.get("passengerSeats")),
+        vehicleId: f.get("vehicleId") || "",
         active: f.get("active") === "on",
       });
       setEditing(false);
@@ -240,7 +243,9 @@ export function DepartureManager({
                   </small>
                 </td>
                 <td>
-                  {d.vehicle?.passengerSeats}+1 · {d.vehicle?.name}
+                  {d.vehicle?.unit
+                    ? `${d.vehicle.unit.name} · ${d.vehicle.unit.plate}`
+                    : `${d.vehicle?.passengerSeats}+1 · ${d.vehicle?.name}`}
                   <SeatCourse sold={(d.vehicle?.sellableSeats || 0) - d.available} total={d.vehicle?.sellableSeats || 0} size="sm" />
                   <small>
                     {d.available} / {d.vehicle?.sellableSeats} koltuk boş
@@ -315,7 +320,23 @@ function DepartureEditor({
       d?.vehicle?.passengerSeats || catalog.vehicleModels[0].seats,
     ),
     m = catalog.vehicleModels.find((v) => v.id === model)!,
-    [repeat, setRepeat] = useState(false);
+    [repeat, setRepeat] = useState(false),
+    [fleet, setFleet] = useState<FleetVehicle[]>([]),
+    [unitId, setUnitId] = useState(d?.vehicle_id || "");
+  useEffect(() => {
+    api<FleetVehicle[]>("/admin/vehicles")
+      .then(setFleet)
+      .catch(() => setFleet([]));
+  }, []);
+  // Filodan araç seçilince sınıf ve kapasite o araca kilitlenir.
+  function pickUnit(id: string) {
+    setUnitId(id);
+    const unit = fleet.find((v) => v.id === id);
+    if (unit) {
+      setModel(unit.vehicleModel);
+      setCapacity(unit.passengerSeats);
+    }
+  }
   return (
     <form className="admin-editor departure-editor" onSubmit={save}>
       <h2>{d ? "Seferi düzenle" : "Yeni sefer"}</h2>
@@ -395,10 +416,32 @@ function DepartureEditor({
           />
         </label>
         <label className="field">
-          Araç sınıfı
+          Araç
           <select
-            name="vehicleModel"
+            name="vehicleId"
+            value={unitId}
+            onChange={(e) => pickUnit(e.target.value)}
+          >
+            <option value="">Henüz atanmadı (yalnız sınıf seç)</option>
+            {fleet.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.name} {v.passengerSeats}+1 · {v.year} · {v.plate}
+                {v.note ? " · " + v.note : ""}
+              </option>
+            ))}
+          </select>
+          <small>
+            Aynı araç aynı gün tek sefere atanabilir.
+          </small>
+        </label>
+        <label className="field">
+          Araç sınıfı
+          {/* Kilitli (disabled) alan gönderilmez; sınıf gizli alandan gider. */}
+          {unitId && <input type="hidden" name="vehicleModel" value={model} />}
+          <select
+            name={unitId ? undefined : "vehicleModel"}
             value={model}
+            disabled={Boolean(unitId)}
             onChange={(e) => {
               setModel(e.target.value);
               setCapacity(
@@ -422,6 +465,7 @@ function DepartureEditor({
             min={m.min}
             max={m.max}
             value={capacity}
+            readOnly={Boolean(unitId)}
             onChange={(e) => setCapacity(Number(e.target.value))}
             required
           />

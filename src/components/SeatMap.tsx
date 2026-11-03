@@ -5,7 +5,7 @@ import {
   Check,
   DoorOpen,
 } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 import type { Seat, Vehicle } from "../lib/types";
 // Ekranda görünen etkileşimli koltuk haritası sayısı: mobilde sohbet/WhatsApp
 // düğmeleri koltukların üstüne binmesin diye gövdeye işaret konur.
@@ -52,22 +52,43 @@ export function SeatMap({
       : seats.find((s) => s.number === n)?.status === "occupied"
         ? "occupied"
         : "available";
+  const shape = vehicle.shape || "midibus",
+    cols = cockpit.length;
+  // Kapı iki sütun kaplıyorsa tek parça çizilir.
+  const cells = (row: (string | number | null)[]) =>
+    row.flatMap((cell, j) =>
+      cell === "door" && row[j - 1] === "door"
+        ? []
+        : [{ cell, j, span: cell === "door" && row[j + 1] === "door" ? 2 : 1 }],
+    );
   return (
-    <div className="seat-map" ref={root}>
+    <div className={"seat-map shape-" + shape} ref={root}>
       <div className="vehicle-roof">
         <span>VIP</span>
         <span>Ön taraf</span>
       </div>
-      <div className="vehicle-body">
+      {/* Araç değişince gövde yeniden kurulur: giriş animasyonu baştan oynar. */}
+      <div
+        className="vehicle-body"
+        key={vehicle.id + (vehicle.unit?.id || "")}
+        style={{ "--cols": cols } as CSSProperties}
+      >
+        <span className="vehicle-mirror left" aria-hidden="true" />
+        <span className="vehicle-mirror right" aria-hidden="true" />
+        <span className="vehicle-wheel front left" aria-hidden="true" />
+        <span className="vehicle-wheel front right" aria-hidden="true" />
+        <span className="vehicle-wheel rear left" aria-hidden="true" />
+        <span className="vehicle-wheel rear right" aria-hidden="true" />
         <div className="windshield" />
         <div
           className="seat-row cockpit"
-          style={{ gridTemplateColumns: `repeat(${cockpit.length}, 1fr)` }}
+          style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
         >
           {cockpit.map((cell, i) =>
             cell === "driver" ? (
-              <div className="crew-seat" key={i}>
+              <div className="crew-seat driver" key={i}>
                 <CircleGauge size={24} />
+                <i className="steering" aria-hidden="true" />
                 <span>Şoför</span>
               </div>
             ) : cell === "guide" ? (
@@ -94,12 +115,22 @@ export function SeatMap({
           <div
             className="seat-row passenger-row"
             key={i}
-            style={{ gridTemplateColumns: `repeat(${cockpit.length}, 1fr)` }}
+            style={
+              {
+                gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                "--row": i,
+              } as CSSProperties
+            }
           >
-            {row.map((cell, j) => {
+            {cells(row).map(({ cell, j, span }) => {
               if (typeof cell !== "number")
                 return cell === "door" ? (
-                  <div key={"x" + j} className="seat-door" aria-label="Kapı">
+                  <div
+                    key={"x" + j}
+                    className="seat-door"
+                    aria-label="Kapı"
+                    style={span > 1 ? { gridColumn: "span 2" } : undefined}
+                  >
                     <DoorOpen size={18} strokeWidth={1.4} />
                     <small>Kapı</small>
                   </div>
@@ -130,7 +161,10 @@ export function SeatMap({
         <div className="vehicle-rear" />
       </div>
       <div className="seat-caption">
-        {vehicle.passengerSeats}+{vehicle.driverSeats} · {vehicle.name}{" "}
+        {vehicle.passengerSeats}+{vehicle.driverSeats} ·{" "}
+        {vehicle.unit
+          ? `${vehicle.unit.name} (${vehicle.unit.year})`
+          : vehicle.name}{" "}
         <span>
           {vehicle.sellableSeats} misafir + {vehicle.guideSeats} rehber +{" "}
           {vehicle.driverSeats} şoför

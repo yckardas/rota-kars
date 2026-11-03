@@ -187,6 +187,15 @@ rounded:
   chip: "3px"
   sm: "4px"
   card: "5px"
+  seat: "9px"
+  seat-back: "6px"
+  vehicle-coach: "22px"
+  vehicle-bus: "26px"
+  vehicle-midibus: "34px"
+  vehicle-van: "42px"
+  vehicle-tail-coach: "10px"
+  vehicle-tail-midibus: "12px"
+  vehicle-tail-van: "16px"
   round: "999px"
 spacing:
   view-gap: "10px"
@@ -612,6 +621,12 @@ QR okutulunca açılan sayfa: en çok 720px beyaz kart, 5px köşe, kart gölges
 - **Görseller:** eski beyaz zeminli kesme hizmet görselleri (logo filigranlı, stok insanlı) kullanılmaz.
 - **Süreç adımları:** her adımın üstünde 1px kırmızı ince çizgi; Marcellus 28px kırmızı sıra rakamı (daire veya kutu yok), Marcellus 22px `h3`, 15px / 1.6 soluk metin. Konaklama süreci aynı dili 2px kırmızı üst çizgi ve kırmızı sırayla konuşur.
 - **Eylem kartı:** detay sonundaki çağrı beyaz karttır (5px, küçük kart gölgesi, 34px 40px; telefonda 24px 20px), başlık clamp(28px, 2.8vw, 36px), 16px soluk metin.
+
+### Koltuk planı (üstten görülen araç)
+Her sefer kendi aracının planıyla çizilir: filodan araç atanmışsa `server/operations.mjs` içindeki standart düzen (`seatPlans`: Egea 4+1, Vito 9+1, Sprinter/Crafter 19+1, Otokar Sultan 31+1, Travego 46+1), yoksa sınıfın genel ızgarası. Ön taraf yukarıda, kapılar sağda; koltuk numaraları 1'den satılabilir koltuk sayısına kesintisizdir.
+- **Gövde:** kart beyazı, 1.5px çizgi, küçük kart gölgesi; köşeler araç tipine göre (`vehicle-*` yuvarlak jetonları; binek oval). Ön camı çizgi→kar renginde yumuşak bant. Aynalar ve tekerlekler gövdeden taşan koyu mürekkep işaretlerdir; otobüste arka aks çifttir.
+- **Koltuk:** üstten görünüş, arkalık altta 6px şerit; 14px 600 tabular numara. Boş: beyaz, çizgi; üzerine gelince 2px kalkar. Seçili: kırmızı mürekkep, arkalık koyu kırmızı, köşede mürekkep onay rozeti. Dolu: taranmış, soluk numara. Rehber: altın tonlu, seçilemez. Kapı: basamak çizgileri ve sağda 3px kırmızı açıklık; iki sütunlu kapı tek parça.
+- **Hareket:** gövde aşağıdan süzülerek gelir (0.85s), sıralar önden arkaya 45ms arayla belirir, direksiyon çeyrek tur döner; seçimde koltuk yaylanır (0.45s), onay rozeti açılır. Araç değişince (başka tarih) gövde yeniden kurulur ve giriş baştan oynar. Azaltılmış harekette hepsi kapalı.
 
 ### Konaklama girişi (tek görüntülü hatıra kartı)
 Gerçek Sarıkamış fotoğrafı (temsili oda görseli değil), `object-position: 50% 44%`. Kırmızı başlık şeridi (bkz. Display), 17px beyaz satır (en çok 46ch; telefonda 15px), eylem. Fotoğraf künyesi (yer adı) 12px, mürekkep karartma zeminli (scrim) küçük bir çip içinde, 2px köşe; karın üstünde de okunur. Otel listesi boşken süs kutusu yoktur; yalnız hata durumunda tek soluk satır.
