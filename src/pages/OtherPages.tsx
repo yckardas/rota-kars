@@ -39,9 +39,6 @@ export function Hotels() {
           decoding="async"
         />
         <div className="container">
-          <span className="section-note">
-            Yolculuğunuza bir gece daha ekleyin
-          </span>
           <h1>
             Kars’ta güzel
             <br />
@@ -61,9 +58,6 @@ export function Hotels() {
       <section className="container section">
         <div className="section-heading">
           <div>
-            <span className="section-note">
-              Sizin için birlikte planlıyoruz
-            </span>
             <h2>İyi bir yolculuğa, iyi bir konaklama.</h2>
           </div>
         </div>
@@ -189,7 +183,6 @@ export function Lookup({ catalog }: { catalog: Catalog }) {
   }
   return (
     <div className="container lookup-page">
-      <span className="section-note">Yolculuğunuzun detayları</span>
       <h1>Rezervasyonunuz burada.</h1>
       <p className="muted">
         Ön rezervasyon referansınız ve e-posta adresinizle sorgulayın.
@@ -285,7 +278,6 @@ export function About() {
     <>
       <section className="container about-layout section">
         <div>
-          <span className="section-note">Kars’ı tanıyanlarla yola çıkın.</span>
           <h1>
             Bu coğrafyanın
             <br />
@@ -347,7 +339,6 @@ export function Contact({ catalog }: { catalog: Catalog }) {
   return (
     <div className="container contact-page section">
       <div>
-        <span className="section-note">Bir telefon kadar yakınız.</span>
         <h1>
           Yolculuğu
           <br />
@@ -404,9 +395,6 @@ export function Information({ catalog }: { catalog: Catalog }) {
     b = catalog.business;
   return (
     <article className="container legal-page section">
-      <span className="section-note">
-        {demo ? "Demo sürümü" : "Bilgilendirme"}
-      </span>
       <h1>Kişisel Verilerin Korunması Aydınlatma Metni</h1>
       {demo && (
         <div className="info-note legal-review-note" role="note">

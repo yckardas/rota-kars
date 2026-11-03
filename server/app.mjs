@@ -46,6 +46,14 @@ const clean = z.string().trim().min(2).max(100),
     .min(10)
     .max(24)
     .regex(/^[+\d\s()-]+$/);
+// Referanslar "RK-" + onaltılık rakamdır; O harfi hiç geçmez. Biletten elle
+// yazılırken karışan O, sıfıra çevrilir; boşluklar atılır.
+const referenceInput = z
+  .string()
+  .trim()
+  .min(3)
+  .max(30)
+  .transform((s) => s.replace(/\s+/g, "").toUpperCase().replace(/O/g, "0"));
 const ymd = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -712,7 +720,7 @@ export function createApp(
     route(async (q, r) => {
       const input = z
         .object({
-          reference: z.string().trim().min(3).max(30),
+          reference: referenceInput,
           email,
         })
         .parse(q.body);
@@ -726,7 +734,7 @@ export function createApp(
     route(async (q, r) => {
       const input = z
         .object({
-          reference: z.string().trim().min(3).max(30),
+          reference: referenceInput,
           email,
         })
         .parse(q.body);

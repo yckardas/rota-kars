@@ -18,22 +18,13 @@ import { RequestForm } from "../components/RequestForm";
 import { api } from "../lib/api";
 import { telHref } from "../lib/phone";
 import { useClearOfLaunchers } from "../lib/launchers";
+import { Postmark } from "../components/Postmark";
 import {
   currency,
   dateLabel,
   type Catalog,
   type Departure,
 } from "../lib/types";
-// Posta damgası tarihi: "2026-11-06" -> "06 KAS 26"
-const postmarkDate = (iso: string) =>
-  new Date(iso + "T12:00:00")
-    .toLocaleDateString("tr-TR", {
-      day: "2-digit",
-      month: "short",
-      year: "2-digit",
-    })
-    .replace(/\./g, "")
-    .toLocaleUpperCase("tr-TR");
 export function TourDetail({ catalog }: { catalog: Catalog }) {
   const { id } = useParams(),
     t = catalog.tours.find((t) => t.id === id);
@@ -304,24 +295,11 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
               </div>
             </div>
             {!t.inquiryOnly && next && (
-              <svg
-                className="kp-postmark"
-                viewBox="0 0 132 132"
-                role="img"
-                aria-label={`İlk hareket ${dateLabel(next.date)}, ${next.start_time}`}
-              >
-                <circle cx="66" cy="66" r="60" />
-                <circle cx="66" cy="66" r="42" />
-                <text x="66" y="22" textAnchor="middle" className="kp-pm-ring">
-                  KARS
-                </text>
-                <text x="66" y="64" textAnchor="middle" className="kp-pm-date">
-                  {postmarkDate(next.date)}
-                </text>
-                <text x="66" y="84" textAnchor="middle" className="kp-pm-time">
-                  {next.start_time}
-                </text>
-              </svg>
+              <Postmark
+                date={next.date}
+                time={next.start_time}
+                label={`İlk hareket ${dateLabel(next.date)}, ${next.start_time}`}
+              />
             )}
           </div>
           <p>

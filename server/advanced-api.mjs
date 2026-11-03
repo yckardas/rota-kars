@@ -11,7 +11,14 @@ export async function receipt(reservation, q, env) {
   return {
     ...reservation,
     ticketUrl,
-    qrDataUrl: await QRCode.toDataURL(ticketUrl, { width: 200, margin: 1 }),
+    // Kart mürekkebiyle (lacivert) beyaz zemine, 4 modül sessiz bölgeyle ve tam
+    // sayı ölçekle basılır: ekranda, baskıda ve paneldeki okuyucuda net okunur.
+    qrDataUrl: await QRCode.toDataURL(ticketUrl, {
+      errorCorrectionLevel: "M",
+      margin: 4,
+      scale: 8,
+      color: { dark: "#1a2846", light: "#ffffff" },
+    }),
   };
 }
 export function attachAdvancedApi(

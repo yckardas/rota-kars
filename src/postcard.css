@@ -1672,6 +1672,560 @@ html:has(.kp) {
   }
 }
 
+/* 3. adım: yolcu listesi ve ödeme tercihi */
+.kp .confirmation-passengers {
+  border-top: 1px solid var(--kp-ink-2);
+  border-bottom: 1px solid var(--kp-hair);
+}
+.kp .confirmation-passengers > div {
+  font-size: 15px;
+  padding: 10px 0;
+}
+.kp .confirmation-passengers > div + div {
+  border-top: 1px solid var(--kp-hair);
+}
+.kp .confirmation-passengers span {
+  color: var(--kp-ink-2);
+}
+.kp .payment-choice {
+  border: 1px solid var(--kp-rule);
+  border-radius: 4px;
+  padding: 16px 18px;
+  font-size: 15px;
+  background: var(--kp-card);
+  transition: border-color 0.2s ease;
+}
+.kp .payment-choice:hover {
+  border-color: var(--kp-ink-2);
+}
+.kp .payment-choice.active {
+  border-color: var(--kp-red);
+  box-shadow: inset 0 0 0 1px var(--kp-red);
+  background: var(--kp-card);
+}
+.kp .payment-choice > input {
+  accent-color: var(--kp-red);
+}
+.kp .payment-choice small {
+  font-size: 13px;
+  color: var(--kp-ink-2);
+}
+.kp .payment-choice > strong {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 22px;
+  color: var(--kp-gold);
+}
+
+/* Başarı sayfası ve ön rezervasyon belgesi: kartın arka yüzü */
+.kp .booking-success {
+  padding-top: 40px;
+}
+.kp .success-icon {
+  background: var(--kp-red);
+  color: #fff;
+}
+.kp .booking-success h1 {
+  font-size: clamp(38px, 4.4vw, 56px);
+}
+.kp .booking-success > p {
+  font-size: 17px;
+  color: var(--kp-ink-2);
+}
+.kp .reservation-ticket {
+  max-width: 980px;
+  border: 0;
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow);
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) 1px minmax(0, 1fr);
+  gap: 0 40px;
+  padding: 36px 40px 0;
+  overflow: visible;
+}
+.kp .ticket-divider {
+  background: var(--kp-rule);
+  margin-bottom: 30px;
+}
+/* Lastik damga: çift çizgili mürekkep çerçeve, hafif eğik basılmış */
+.kp .status-stamp {
+  display: inline-block;
+  padding: 5px 10px 4px;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+  box-shadow:
+    inset 0 0 0 2px var(--kp-card),
+    inset 0 0 0 3px currentColor;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transform: rotate(-2deg);
+  transform-origin: left center;
+}
+.kp .status-stamp.is-ok {
+  color: var(--kp-red);
+}
+.kp .status-stamp.is-pending {
+  color: var(--kp-ink);
+}
+.kp .status-stamp.is-void {
+  color: var(--kp-ink-2);
+  border-style: dashed;
+  box-shadow: none;
+}
+.kp .reservation-ticket h2 {
+  font-size: clamp(28px, 2.8vw, 36px);
+  margin: 16px 0 18px;
+}
+.kp .ticket-reference span,
+.kp .ticket-data span,
+.kp .ticket-lines dt {
+  display: block;
+  font-size: 13px;
+  color: var(--kp-ink-2);
+  margin-bottom: 3px;
+}
+/* Referans elle yazılabilsin diye Onest'te: O ile 0 karışmaz */
+.kp .ticket-reference strong {
+  display: block;
+  font-family: var(--font);
+  font-weight: 600;
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+.kp .ticket-discount {
+  font-size: 14px;
+  color: var(--kp-ink-2);
+}
+.kp .ticket-data {
+  padding: 18px 0 22px;
+  margin-top: 18px;
+  border-top: 1px solid var(--kp-hair);
+  gap: 16px 24px;
+}
+.kp .ticket-data strong {
+  font-family: var(--display);
+  font-size: 21px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.kp .ticket-data > div:first-child strong {
+  color: var(--kp-gold);
+}
+.kp .ticket-qr {
+  background: none;
+  border-radius: 0;
+  margin: 0;
+  border-top: 1px solid var(--kp-hair);
+  padding: 20px 0 28px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+/* QR kendi beyaz sessiz bölgesiyle gelir; çerçeve yalnız kartı ondan ayırır.
+   Renk ve filtre verilmez: karşıtlık her koşulda kodun kendisinindir. */
+.kp .ticket-qr img {
+  flex: none;
+  width: 164px;
+  height: 164px;
+  padding: 0;
+  margin: 0;
+  background: #fff;
+  border: 1px solid var(--kp-rule);
+  border-radius: 2px;
+}
+.kp .ticket-qr strong {
+  font-size: 16px;
+}
+.kp .ticket-qr p {
+  font-size: 14px;
+  color: var(--kp-ink-2);
+  margin: 4px 0 8px;
+}
+.kp .ticket-qr .text-link {
+  margin-right: 16px;
+}
+.kp .ticket-address {
+  padding-bottom: 26px;
+}
+.kp .ticket-stamp-row {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  min-height: 190px;
+}
+.kp .ticket-stamp {
+  width: 150px;
+  transform: rotate(1.5deg);
+}
+.kp .ticket-stamp-face {
+  border: 1px solid var(--kp-rule);
+  background: var(--kp-card);
+  padding: 5px 5px 7px;
+}
+.kp .ticket-stamp-face img {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+}
+.kp .ticket-stamp-face span {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.kp .ticket-stamp-face b {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 15px;
+  letter-spacing: 0;
+  color: var(--kp-gold);
+}
+.kp .ticket-stamp-row .kp-postmark {
+  right: 104px;
+  top: 40px;
+  transform: rotate(-10deg);
+}
+.kp .ticket-lines {
+  margin: 22px 0 0;
+}
+.kp .ticket-lines > div {
+  border-bottom: 1px solid var(--kp-ink-2);
+  padding: 10px 0 8px;
+}
+.kp .ticket-lines dd {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 20px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.kp .ticket-bottom {
+  grid-column: 1 / -1;
+  margin: 0 -40px;
+  padding: 16px 40px;
+  background: var(--paper);
+  border-radius: 0 0 5px 5px;
+}
+.kp .ticket-bottom p {
+  font-size: 14px;
+  color: var(--kp-ink-2);
+}
+.kp .ticket-bottom svg {
+  color: var(--kp-red);
+}
+@media (max-width: 760px) {
+  .kp .reservation-ticket {
+    grid-template-columns: 1fr;
+    padding: 24px 20px 0;
+  }
+  .kp .ticket-divider {
+    height: 1px;
+    margin: 4px 0 18px;
+  }
+  .kp .ticket-stamp-row {
+    min-height: 150px;
+  }
+  .kp .ticket-stamp {
+    width: 116px;
+  }
+  .kp .ticket-stamp-row .kp-postmark {
+    right: 84px;
+    top: 24px;
+  }
+  .kp .ticket-bottom {
+    margin: 0 -20px;
+    padding: 14px 20px;
+  }
+  .kp .ticket-qr {
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .kp .ticket-qr img {
+    width: 148px;
+    height: 148px;
+  }
+  .kp .ticket-qr .text-link {
+    display: table;
+    margin: 0 0 8px;
+  }
+  .kp .ticket-reference strong {
+    font-size: 22px;
+  }
+}
+@media print {
+  .kp .reservation-ticket {
+    box-shadow: none;
+    border: 1px solid #999;
+  }
+  .kp .ticket-qr button,
+  .kp .ticket-qr .text-link {
+    display: none;
+  }
+  .kp .status-stamp,
+  .kp .ticket-stamp,
+  .kp .ticket-qr img {
+    print-color-adjust: exact;
+  }
+  .kp::before,
+  .chat-launchers {
+    display: none;
+  }
+}
+
+/* ---------- Bilet doğrulama (/bilet/:token) ---------- */
+.kp .ticket-verification {
+  max-width: 720px;
+  min-height: 65vh;
+  padding: 64px 0 90px;
+}
+.kp .ticket-check {
+  position: relative;
+  background: var(--kp-card);
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow);
+  padding: 36px 40px 30px;
+}
+.kp .ticket-check-head .kp-postmark {
+  right: 34px;
+  top: 30px;
+}
+/* Sonuç cümlesi damganın yanından akar; posta damgasına sağdan yer bırakır */
+.kp .ticket-check h1 {
+  font-size: clamp(34px, 3.6vw, 50px);
+  margin: 26px 0 10px;
+  padding-right: 120px;
+}
+.kp .ticket-check h2 {
+  font-size: clamp(22px, 2.4vw, 28px);
+  color: var(--kp-ink-2);
+  margin: 0 0 22px;
+}
+.kp .ticket-check .ticket-lines {
+  margin: 20px 0 0;
+}
+.kp .ticket-check-note {
+  margin: 20px 0 0;
+  font-size: 15px;
+  color: var(--kp-ink-2);
+}
+.kp .ticket-check .btn {
+  margin-top: 22px;
+}
+@media (max-width: 700px) {
+  .kp .ticket-verification {
+    padding: 28px 0 70px;
+  }
+  .kp .ticket-check {
+    padding: 26px 20px 24px;
+  }
+  .kp .ticket-check h1 {
+    margin-top: 22px;
+    padding-right: 92px;
+  }
+  .kp .ticket-check-head .kp-postmark {
+    width: 92px;
+    height: 92px;
+    right: 12px;
+    top: 44px;
+  }
+}
+
+/* ---------- Diğer sayfalar ---------- */
+.kp .page-intro > p,
+.kp .lookup-page > .muted,
+.kp .contact-page p {
+  font-size: 17px;
+  color: var(--kp-ink-2);
+}
+/* Konaklama girişi: tek görüntülü hatıra kartı */
+.kp .hotel-hero {
+  width: min(1280px, calc(100% - 112px));
+  margin: 6px auto 0;
+  height: 460px;
+  border: 14px solid var(--kp-card);
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow);
+}
+.kp .hotel-hero::after {
+  background: linear-gradient(90deg, rgba(12, 20, 38, 0.72), transparent 70%);
+}
+.kp .hotel-hero > .container {
+  width: auto;
+  padding: 56px 0 0;
+}
+.kp .hotel-hero h1 {
+  display: inline-block;
+  background: var(--kp-red);
+  color: #fff;
+  font-size: clamp(40px, 5.2vw, 64px);
+  padding: 12px 28px 16px 30px;
+  box-shadow: 0 12px 26px -14px rgba(0, 0, 0, 0.55);
+}
+.kp .hotel-hero p {
+  font-size: 17px;
+  line-height: 1.6;
+  color: #fff;
+  padding-left: 30px;
+  max-width: 46ch;
+}
+.kp .hotel-hero .btn {
+  margin-left: 30px;
+}
+.kp .hotel-hero > small {
+  font-size: 12px;
+}
+.kp .hotel-empty,
+.kp .contact-details,
+.kp .lookup-form {
+  background: var(--kp-card);
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow-sm);
+}
+.kp .lookup-form {
+  padding: 24px 26px;
+}
+.kp .hotel-empty p,
+.kp .stay-process p,
+.kp .hotel-card p {
+  font-size: 15px;
+  color: var(--kp-ink-2);
+}
+.kp .hotel-empty > svg,
+.kp .contact-details svg,
+.kp .about-note svg {
+  color: var(--kp-red);
+}
+.kp .hotel-card {
+  background: var(--kp-card);
+  border: 0;
+  border-radius: 4px;
+  padding: 10px;
+  box-shadow: var(--kp-shadow-sm);
+}
+.kp .hotel-card .muted,
+.kp .hotel-amenities {
+  font-size: 13px;
+}
+.kp .stay-process > div {
+  border-top: 2px solid var(--kp-red);
+}
+.kp .stay-process > div > span {
+  color: var(--kp-red);
+}
+.kp .stay-process h3 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 22px;
+}
+.kp .contact-details span,
+.kp .contact-details small {
+  font-size: 13px;
+  color: var(--kp-ink-2);
+}
+.kp .contact-details strong {
+  font-size: 16px;
+}
+.kp .cancel-confirm {
+  background: var(--kp-card);
+  border: 1px solid var(--kp-red);
+  border-radius: 4px;
+  font-size: 15px;
+}
+/* Hakkımızda: fotoğraf beyaz çerçevede, masaya bırakılmış */
+.kp .about-layout > img {
+  border: 12px solid var(--kp-card);
+  border-radius: 4px;
+  box-shadow: var(--kp-shadow);
+  transform: rotate(0.8deg);
+}
+.kp .about-layout p {
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--kp-ink-2);
+}
+.kp .about-layout .lead-copy {
+  font-size: 19px;
+  color: var(--kp-ink);
+}
+.kp .about-note {
+  background: transparent;
+}
+/* Hizmetler dizini ve hizmet detayı: kartpostal kartlar */
+.kp .service-directory-card {
+  background: var(--kp-card);
+  border: 0;
+  border-radius: 4px;
+  box-shadow: var(--kp-shadow-sm);
+  transition:
+    transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.kp .service-directory-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--kp-shadow);
+}
+.kp .service-directory-card img,
+.kp .service-detail-hero > img {
+  border-radius: 0;
+}
+.kp .service-directory-card p,
+.kp .service-detail-hero p {
+  font-size: 15px;
+  color: var(--kp-ink-2);
+}
+.kp .service-directory-card span {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--kp-red);
+}
+.kp .service-detail-hero > img {
+  border: 12px solid var(--kp-card);
+  box-shadow: var(--kp-shadow);
+}
+.kp .legal-toc a {
+  font-size: 14px;
+}
+@media (max-width: 700px) {
+  .kp .hotel-hero {
+    width: calc(100% - 24px);
+    height: 420px;
+    border-width: 8px;
+  }
+  .kp .hotel-hero > .container {
+    padding-top: 30px;
+  }
+  .kp .hotel-hero h1 {
+    font-size: 36px;
+    padding: 10px 16px 12px 18px;
+  }
+  .kp .hotel-hero p {
+    font-size: 15px;
+    padding: 0 18px;
+  }
+  .kp .hotel-hero .btn {
+    margin-left: 18px;
+  }
+  .kp .about-layout > img {
+    transform: none;
+    border-width: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kp .service-directory-card {
+    transition: none;
+  }
+}
+
 /* Telefonda rezervasyon: önce küçük özet şeridi ve form, tam özet en sonda. */
 .kp .booking-mini {
   display: none;

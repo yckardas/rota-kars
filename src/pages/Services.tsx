@@ -129,7 +129,6 @@ export function Services({ catalog }: { catalog: Catalog }) {
   if (!service || !info)
     return (
       <section className="container section">
-        <span className="section-note">Yolun her aşamasında</span>
         <h1>Birlikte planlıyoruz.</h1>
         <p className="lead-copy">
           Grubunuza, zamanınıza ve ihtiyaçlarınıza uygun bir yolculuk.
@@ -170,7 +169,6 @@ export function Services({ catalog }: { catalog: Catalog }) {
       </div>
       <section className="service-detail-hero container">
         <div>
-          <span className="section-note">Kars’tan, size özel</span>
           <h1>{service.title}</h1>
           <p>{info.lead}</p>
           <button className="btn" onClick={() => setRequest(true)}>
@@ -196,7 +194,6 @@ export function Services({ catalog }: { catalog: Catalog }) {
       </section>
       <section className="container service-detail-body">
         <div>
-          <span className="section-note">İhtiyacınıza göre</span>
           <h2>Yolculuğunuzun detayları.</h2>
           <div className="service-benefits">
             {info.benefits.map((text) => (
