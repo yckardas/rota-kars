@@ -9,7 +9,10 @@ const OWNER = { email: "sahip@rotakars.test", name: "Sahip", password: "sahip-pa
 const BOOT = "ilk-kurulum-parolasi-guvenlik";
 
 async function fixture(t, env = {}) {
-  const store = await openStore(":memory:", { env });
+  // Üretim kipinde kimlik şifreleme anahtarı zorunludur (server/pii.mjs).
+  const store = await openStore(":memory:", {
+    env: { PII_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64"), ...env },
+  });
   const app = createApp(store, {
     env: { ADMIN_PASSWORD: BOOT, ...env },
     reviewsService: { get: async () => ({ status: "not_configured", reviews: [] }) },

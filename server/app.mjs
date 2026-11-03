@@ -31,13 +31,15 @@ import { attachSeoRoutes } from "./seo.mjs";
 import { roleAllows, ROLES } from "./admin-auth.mjs";
 import { createStorage, MEDIA_LIMITS } from "./storage.mjs";
 import { vehicleModels, fleetVehicles } from "./operations.mjs";
+import { passengerDetail } from "./passenger-id.mjs";
+import { en } from "./catalog-en.mjs";
 import { attachSocialAuth, cookieValue } from "./social-auth.mjs";
 import { createTurnstile } from "./turnstile.mjs";
 import { fcmHint } from "./push.mjs";
 import { normalizeInstagramUrl, createInstagramFeed } from "./instagram.mjs";
 import { AppError, REQUEST_STATUS } from "./store.mjs";
 import { createReviewsService } from "./reviews.mjs";
-import { paymentStatus, createPayment, depositFor } from "./payments.mjs";
+import { createPayments, depositFor } from "./payments.mjs";
 const clean = z.string().trim().min(2).max(100),
   email = z.string().trim().email().max(254),
   phone = z
@@ -88,6 +90,17 @@ const bookingSchema = z.object({
   email,
   phone,
   passengers: z.array(clean).min(1).max(53),
+  // Her yolcu için kimlik bilgisi (yolcu adlarıyla aynı sırada). Üye, kayıtlı
+  // yol arkadaşını yalnız kimliğiyle (companionId) seçebilir; sunucu doldurur.
+  passengerDetails: z
+    .array(
+      z.union([
+        z.object({ companionId: z.string().uuid() }).strict(),
+        passengerDetail,
+      ]),
+    )
+    .min(1)
+    .max(53),
   paymentMode: z.enum(["deposit", "full"]),
   consent: z.literal(true),
   // İsteğe bağlı ticari elektronik ileti izni (varsayılan kapalı).
@@ -133,6 +146,12 @@ export function createApp(
     turnstile = createTurnstile(env),
   } = {},
 ) {
+  const payments = createPayments(store.db, {
+      clock: store.clock || Date.now,
+      workflow: store.workflow,
+      env,
+    }),
+    paymentStatus = payments.config;
   // Giriş denemesi sınırları: IP başına limite ek olarak hesap (e-posta) başına ve
   // IP'den bağımsız toplam sınır; sahte X-Forwarded-For ile dağıtık deneme işe yaramaz.
   const failures = new Map();
@@ -456,6 +475,35 @@ export function createApp(
       r.json({ ok: true, ...result });
     }),
   );
+  // Kayıtlı yol arkadaşları: numara maskeli döner.
+  app.get(
+    "/api/member/companions",
+    requireMember,
+    route(async (q, r) => r.json(await store.companions.list(q.member.id))),
+  );
+  app.post(
+    "/api/member/companions",
+    requireMember,
+    route(async (q, r) => {
+      const input = z
+        .object({ name: clean })
+        .and(passengerDetail)
+        .parse(q.body);
+      r.status(201).json(await store.companions.add(q.member.id, input));
+    }),
+  );
+  app.delete(
+    "/api/member/companions/:id",
+    requireMember,
+    route(async (q, r) =>
+      r.json(
+        await store.companions.remove(
+          q.member.id,
+          z.string().uuid().parse(q.params.id),
+        ),
+      ),
+    ),
+  );
   app.get(
     "/api/member/dashboard",
     requireMember,
@@ -607,6 +655,7 @@ export function createApp(
       fleet,
       cancellationPolicy,
       payment: paymentStatus,
+      translations: { en },
       preview: true,
       demo: env.DEMO_MODE === "1",
       turnstileSiteKey: turnstile.siteKey,
@@ -653,11 +702,13 @@ export function createApp(
           seats: z.array(z.number().int()).min(1).max(53),
         })
         .parse(q.body);
-      const guestMax = Number(env.GUEST_MAX_SEATS || 10);
-      if (!q.member && input.seats.length > guestMax)
+      // Tek rezervasyonda en fazla bu kadar koltuk (üyeler dahil); büyük
+      // gruplar acenteyle planlanır.
+      const guestMax = Number(env.GUEST_MAX_SEATS || 4);
+      if (input.seats.length > guestMax)
         throw new AppError(
           400,
-          `Online en fazla ${guestMax} koltuk seçebilirsiniz. Daha büyük gruplar için WhatsApp'tan yazın.`,
+          `Tek rezervasyonda en fazla ${guestMax} koltuk seçebilirsiniz. Daha büyük gruplar için WhatsApp'tan yazın.`,
         );
       // Aynı IP'nin eşzamanlı tuttuğu toplam koltuk sınırlıdır.
       const now = Date.now(),
@@ -716,8 +767,23 @@ export function createApp(
           400,
           "Üye rezervasyonunda hesabınızın e-posta adresini kullanın.",
         );
+      const passengers = [...input.passengers],
+        passengerDetails = [];
+      for (const [i, p] of input.passengerDetails.entries()) {
+        if (!("companionId" in p)) {
+          passengerDetails.push(p);
+          continue;
+        }
+        if (!q.member)
+          throw new AppError(401, "Kayıtlı yol arkadaşı için giriş yapın.");
+        const c = await store.companions.resolve(q.member.id, p.companionId);
+        passengers[i] = c.name;
+        passengerDetails.push(c.detail);
+      }
       const reservation = await store.reserve({
         ...input,
+        passengers,
+        passengerDetails,
         memberId: q.member?.id,
       });
       await store.privacy.recordConsent({ email: input.email, memberId: q.member?.id, type: "kvkk_notice", source: "booking" });
@@ -793,10 +859,50 @@ export function createApp(
     }),
   );
   app.get("/api/payment/status", (_q, r) => r.json(paymentStatus));
-  app.post("/api/payment/checkout", (_q, r) => {
-    const result = createPayment();
-    r.status(result.status).json(result.body);
-  });
+  // Eski uç: ödeme artık /api/payments/start ile başlar. Kapalıyken 503 kalır.
+  app.post("/api/payment/checkout", (_q, r) =>
+    r.status(paymentStatus.enabled ? 400 : 503).json({
+      code: paymentStatus.enabled ? "USE_PAYMENTS_START" : "PAYMENT_NOT_CONFIGURED",
+      message: paymentStatus.message,
+    }),
+  );
+  // Online ödeme başlatma: referans + e-posta ile; sağlayıcının sayfasına yönlendirir.
+  app.post(
+    "/api/payments/start",
+    route(async (q, r) => {
+      const input = z
+        .object({ reference: referenceInput, email })
+        .parse(q.body);
+      r.json(await payments.start(input.reference, input.email));
+    }),
+  );
+  app.get(
+    "/api/payments/sessions/:id",
+    route(async (q, r) =>
+      r.json(
+        await payments.session(
+          z.string().regex(/^[a-f0-9]{48}$/).parse(q.params.id),
+        ),
+      ),
+    ),
+  );
+  // Deneme sağlayıcısı: deneme sayfası sonucu, gerçek sağlayıcının imzalı
+  // sunucu bildirimi gibi işlenir. Yalnız PAYMENT_PROVIDER=test iken açıktır.
+  app.post(
+    "/api/payments/test/:id/result",
+    route(async (q, r) => {
+      if (!payments.config.test) throw new AppError(404, "Bulunamadı.");
+      const id = z.string().regex(/^[a-f0-9]{48}$/).parse(q.params.id),
+        result = z.enum(["paid", "failed"]).parse(q.body?.result);
+      r.json(
+        await payments.complete({
+          sessionId: id,
+          result,
+          signature: payments.provider.sign(id, result),
+        }),
+      );
+    }),
+  );
   app.get(
     "/api/reviews",
     route(async (q, r) => {

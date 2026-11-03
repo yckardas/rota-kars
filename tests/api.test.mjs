@@ -77,6 +77,7 @@ test("HTTP concurrent booking race locks a seat only once", async (t) => {
     email: "test@example.com",
     phone: "05550000000",
     passengers: ["Test Yolcu"],
+    passengerDetails: [{ nationality: "TR", idNumber: "10000000146", gender: "K" }],
     consent: true,
     paymentMode: "deposit",
     total: 1,

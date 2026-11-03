@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { responsive } from "../lib/images";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLang, useLocalNavigate } from "../lib/i18n";
 import {
   ArrowRight,
   Play,
@@ -61,18 +61,22 @@ export function Home({ catalog }: { catalog: Catalog }) {
   }, []);
   const previewTour = catalog.tours.find((t) => t.salesOpen),
     previewVehicle = previewTour?.vehicle || catalog.vehicle;
-  const guestLimit =
+  // Tek rezervasyonda en fazla 4 yolcu; büyük gruplar acenteyle planlanır.
+  const guestLimit = Math.min(
+    4,
     catalog.tours.find((t) => t.id === searchTour)?.vehicle.sellableSeats ||
-    Math.max(
-      ...catalog.tours
-        .filter((t) => t.salesOpen)
-        .map((t) => t.vehicle.sellableSeats),
-      1,
-    );
+      Math.max(
+        ...catalog.tours
+          .filter((t) => t.salesOpen)
+          .map((t) => t.vehicle.sellableSeats),
+        1,
+      ),
+  );
+  const { t, locale } = useLang();
   const heroCard = useRef<HTMLDivElement>(null);
   useClearOfLaunchers(heroCard);
   const insetTours = catalog.tours.filter((t) => !t.inquiryOnly).slice(0, 4);
-  const navigate = useNavigate();
+  const navigate = useLocalNavigate();
   function search(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget),
@@ -94,42 +98,49 @@ export function Home({ catalog }: { catalog: Catalog }) {
                   "/images/ani.webp",
                   "(max-width: 760px) 100vw, 62vw",
                 )}
-                alt="Ani Antik Kenti’nin kış manzarası"
+                alt={t("Ani Antik Kenti’nin kış manzarası")}
                 fetchPriority="high"
                 width="1280"
                 height="720"
               />
               <div className="kp-title">
-                <h1 id="kp-hero-title">Kars’tan selamlar.</h1>
+                <h1 id="kp-hero-title">{t("Kars’tan selamlar.")}</h1>
                 <p>
-                  Kendi VIP aracımızla, küçük gruplarla, rehberli günler. Bir
-                  manzara seçin, gerisini birlikte planlayalım.
+                  {t(
+                    "Kendi VIP aracımızla, küçük gruplarla, rehberli günler. Bir manzara seçin, gerisini birlikte planlayalım.",
+                  )}
                 </p>
               </div>
             </div>
-            <div className="kp-insets" role="group" aria-label="Rota seçin">
-              {insetTours.map((t, i) => (
+            <div
+              className="kp-insets"
+              role="group"
+              aria-label={t("Rota seçin")}
+            >
+              {insetTours.map((tour, i) => (
                 <button
-                  key={t.id}
+                  key={tour.id}
                   type="button"
                   className="kp-inset"
-                  aria-pressed={searchTour === t.id}
-                  onClick={() => setSearchTour(searchTour === t.id ? "" : t.id)}
+                  aria-pressed={searchTour === tour.id}
+                  onClick={() =>
+                    setSearchTour(searchTour === tour.id ? "" : tour.id)
+                  }
                 >
                   <img
                     {...responsive(
-                      i === 0 && t.gallery[1] ? t.gallery[1] : t.image,
+                      i === 0 && tour.gallery[1] ? tour.gallery[1] : tour.image,
                       "(max-width: 760px) 25vw, 16vw",
                     )}
                     alt=""
                     decoding="async"
                   />
                   <span className="kp-inset-label">
-                    {placeName(t.location)}
+                    {placeName(tour.location)}
                     <small>
-                      {t.salesOpen
-                        ? `${currency(t.price)}’den`
-                        : "Şu an satışa kapalı"}
+                      {tour.salesOpen
+                        ? t("{price}’den", { price: currency(tour.price) })
+                        : t("Şu an satışa kapalı")}
                     </small>
                   </span>
                   <span className="kp-inset-check" aria-hidden="true">
@@ -141,13 +152,13 @@ export function Home({ catalog }: { catalog: Catalog }) {
           </div>
           <form className="kp-strip" onSubmit={search}>
             <label className="kp-field kp-field-tour">
-              <span>Rota</span>
+              <span>{t("Rota")}</span>
               <select
                 name="tour"
                 value={searchTour}
                 onChange={(e) => setSearchTour(e.target.value)}
               >
-                <option value="">Nereye gitmek istersiniz?</option>
+                <option value="">{t("Nereye gitmek istersiniz?")}</option>
                 {catalog.tours
                   .filter((t) => !t.inquiryOnly)
                   .map((t) => (
@@ -158,34 +169,38 @@ export function Home({ catalog }: { catalog: Catalog }) {
               </select>
             </label>
             <label className="kp-field">
-              <span>Tarih</span>
+              <span>{t("Tarih")}</span>
               <input type="date" name="date" min={today()} />
             </label>
             <label className="kp-field">
-              <span>Yolcu</span>
+              <span>{t("Yolcu")}</span>
               <select name="guests">
                 {Array.from({ length: guestLimit }, (_, i) => (
                   <option key={i} value={i + 1}>
-                    {i + 1} kişi
+                    {t(i === 0 ? "1 kişi" : "{n} kişi", { n: i + 1 })}
                   </option>
                 ))}
               </select>
             </label>
             <button className="btn" type="submit">
-              Rotamı bul <ArrowRight size={18} />
+              {t("Rotamı bul")} <ArrowRight size={18} />
             </button>
           </form>
           <p className="kp-printed">
             <span>
-              Ani Antik Kenti, Kars · Rota Kars Turizm,{" "}
-              {catalog.business.founded}
-              ’dan beri Kars’ta · TÜRSAB A Grubu {catalog.business.tursabNo}
+              {t(
+                "Ani Antik Kenti, Kars · Rota Kars Turizm, {year}’dan beri Kars’ta · TÜRSAB A Grubu {no}",
+                {
+                  year: catalog.business.founded,
+                  no: catalog.business.tursabNo,
+                },
+              )}
             </span>
             {rating?.rating != null && (
               <a className="kp-rating" href="#yorumlar">
                 <GoogleMark size={16} />
                 <strong>
-                  {rating.rating.toLocaleString("tr-TR", {
+                  {rating.rating.toLocaleString(locale, {
                     minimumFractionDigits: 1,
                     maximumFractionDigits: 1,
                   })}
@@ -193,12 +208,18 @@ export function Home({ catalog }: { catalog: Catalog }) {
                 <Star size={13} fill="currentColor" />
                 <span>
                   {rating.total != null
-                    ? `${rating.total.toLocaleString("tr-TR")} Google yorumu`
-                    : "Google yorumları"}
+                    ? t("{n} Google yorumu", {
+                        n: rating.total.toLocaleString(locale),
+                      })
+                    : t("Google yorumları")}
                 </span>
               </a>
             )}
-            <span>Ödeme havale veya nakit; kart bilgisi istenmez.</span>
+            <span>
+              {catalog.payment.enabled
+                ? t("Kaporayı kartla güvenle ödeyin; rezervasyonunuz anında onaylanır.")
+                : t("Ödeme havale veya nakit; kart bilgisi istenmez.")}
+            </span>
           </p>
         </div>
       </section>
@@ -219,10 +240,10 @@ export function Home({ catalog }: { catalog: Catalog }) {
       <section className="container section tours-section" id="turlar">
         <div className="section-heading">
           <div>
-            <h2>Sizin için bir rota var.</h2>
+            <h2>{t("Sizin için bir rota var.")}</h2>
           </div>
           <Link to="/turlar" className="text-link">
-            Bütün turları görün <ArrowRight size={17} />
+            {t("Bütün turları görün")} <ArrowRight size={17} />
           </Link>
         </div>
         <div className="tour-filters">
@@ -233,17 +254,20 @@ export function Home({ catalog }: { catalog: Catalog }) {
                 className={filter === f ? "active" : ""}
                 onClick={() => setFilter(f)}
               >
-                {f}
+                {t(f)}
               </button>
             ),
           )}
         </div>
         <div className="tour-grid">
           {catalog.tours
-            .filter((t) => filter === "Tüm rotalar" || t.category === filter)
+            // Kategoriler /en altında katalogda İngilizce gelir.
+            .filter(
+              (tour) => filter === "Tüm rotalar" || tour.category === t(filter),
+            )
             .slice(0, 6)
-            .map((t) => (
-              <TourCard key={t.id} tour={t} />
+            .map((tour) => (
+              <TourCard key={tour.id} tour={tour} />
             ))}
         </div>
       </section>
@@ -251,16 +275,16 @@ export function Home({ catalog }: { catalog: Catalog }) {
         <div className="container">
           <div className="story-intro">
             <h2>
-              Yola çıkmadan <br />
-              küçük bir keşif.
+              {t("Yola çıkmadan")} <br />
+              {t("küçük bir keşif.")}
             </h2>
             <p>
-              Bir manzara, bir hikâye, bir sonraki yolculuğunuz.
+              {t("Bir manzara, bir hikâye, bir sonraki yolculuğunuz.")}
               <br />
-              Kars’ı yakından tanımaya buradan başlayın.
+              {t("Kars’ı yakından tanımaya buradan başlayın.")}
             </p>
             <span className="story-format">
-              Fotoğraflarla kısa rota hikâyeleri
+              {t("Fotoğraflarla kısa rota hikâyeleri")}
             </span>
           </div>
           <div className="story-grid">
@@ -282,7 +306,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
                 <span className="story-card-copy">
                   <strong>{s.title}</strong>
                   <span>
-                    Hikâyeyi keşfet <ChevronRight size={14} />
+                    {t("Hikâyeyi keşfet")} <ChevronRight size={14} />
                   </span>
                 </span>
               </button>
@@ -294,35 +318,40 @@ export function Home({ catalog }: { catalog: Catalog }) {
         <div className="container vip-inner">
           <div className="vip-copy">
             <h2>
-              Yolculuğunuza uygun,
+              {t("Yolculuğunuza uygun,")}
               <br />
-              size ayrılmış bir yer.
+              {t("size ayrılmış bir yer.")}
             </h2>
             <p>
-              Grubunuza uygun araçla yola çıkın. Araç ve koltuk düzenini tur
-              sayfasında inceleyin; şoför yanındaki ön koltuk rehberinize
-              ayrılmış olsun.
+              {t(
+                "Grubunuza uygun araçla yola çıkın. Araç ve koltuk düzenini tur sayfasında inceleyin; şoför yanındaki ön koltuk rehberinize ayrılmış olsun.",
+              )}
             </p>
             <p className="vip-caption">
-              {previewVehicle.passengerSeats}+1 {previewVehicle.name} ·{" "}
-              {previewVehicle.sellableSeats} misafir koltuğu · şoför yanı
-              rehbere ayrılır
+              {t(
+                "{seats}+1 {vehicle} · {guests} misafir koltuğu · şoför yanı rehbere ayrılır",
+                {
+                  seats: previewVehicle.passengerSeats,
+                  vehicle: previewVehicle.name,
+                  guests: previewVehicle.sellableSeats,
+                },
+              )}
             </p>
             <Link
               className="btn btn-white"
               to={previewTour ? "/rezervasyon/" + previewTour.id : "/turlar"}
             >
-              Yeriniz şimdiden belli olsun <ArrowRight size={17} />
+              {t("Yeriniz şimdiden belli olsun")} <ArrowRight size={17} />
             </Link>
           </div>
           <div className="vip-visual">
             <div className="vip-visual-label">
               <Armchair size={17} />
-              <span>Koltuk seçimi sizin elinizde.</span>
+              <span>{t("Koltuk seçimi sizin elinizde.")}</span>
             </div>
             <SeatMap vehicle={previewVehicle} interactive={false} />
             <span className="vip-visual-foot">
-              Şoför ve rehber koltukları satışa kapalıdır.
+              {t("Şoför ve rehber koltukları satışa kapalıdır.")}
             </span>
           </div>
         </div>
@@ -330,18 +359,18 @@ export function Home({ catalog }: { catalog: Catalog }) {
       <section className="container section services-section" id="hizmetler">
         <div className="section-heading">
           <div>
-            <h2>Hizmetlerimiz</h2>
+            <h2>{t("Hizmetlerimiz")}</h2>
           </div>
           <a
             className="text-link"
             href={whatsappLink(
               catalog.business.whatsapp,
-              "Merhaba, hizmetleriniz hakkında bilgi almak istiyorum.",
+              t("Merhaba, hizmetleriniz hakkında bilgi almak istiyorum."),
             )}
             target="_blank"
             rel="noreferrer"
           >
-            Teklif alın <ArrowRight size={17} />
+            {t("Teklif alın")} <ArrowRight size={17} />
           </a>
         </div>
         <div className="service-grid">
@@ -350,7 +379,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
               <h3>{s.title}</h3>
               <p>{s.text}</p>
               <span className="service-discover">
-                Hizmeti keşfet <ArrowRight size={15} />
+                {t("Hizmeti keşfet")} <ArrowRight size={15} />
               </span>
             </Link>
           ))}
@@ -364,17 +393,17 @@ export function Home({ catalog }: { catalog: Catalog }) {
                 "/images/rota-bus.webp",
                 "(max-width: 950px) 100vw, 55vw",
               )}
-              alt="Rota Kars Tur logolu turizm otobüsü"
+              alt={t("Rota Kars Tur logolu turizm otobüsü")}
               loading="lazy"
               decoding="async"
             />
           </div>
           <div className="fleet-copy">
-            <h2>Grubunuz kaç kişi olursa olsun, aracı bizde.</h2>
+            <h2>{t("Grubunuz kaç kişi olursa olsun, aracı bizde.")}</h2>
             <p>{catalog.fleet.note}</p>
             <div className="fleet-groups">
               <div>
-                <small>Turizm taşımacılığı</small>
+                <small>{t("Turizm taşımacılığı")}</small>
                 <div className="chips">
                   {catalog.fleet.tourism.map((c) => (
                     <span key={c}>{c}</span>
@@ -382,7 +411,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
                 </div>
               </div>
               <div>
-                <small>VIP taşımacılık</small>
+                <small>{t("VIP taşımacılık")}</small>
                 <div className="chips">
                   {catalog.fleet.vip.map((c) => (
                     <span key={c}>{c}</span>
@@ -401,12 +430,14 @@ export function Home({ catalog }: { catalog: Catalog }) {
               className="btn"
               href={whatsappLink(
                 catalog.business.whatsapp,
-                "Merhaba, şoförlü araç kiralama için teklif almak istiyorum.",
+                t(
+                  "Merhaba, şoförlü araç kiralama için teklif almak istiyorum.",
+                ),
               )}
               target="_blank"
               rel="noreferrer"
             >
-              <MessageCircle size={17} /> Araç için teklif alın
+              <MessageCircle size={17} /> {t("Araç için teklif alın")}
             </a>
           </div>
         </div>
@@ -418,36 +449,37 @@ export function Home({ catalog }: { catalog: Catalog }) {
               "/images/stay.webp",
               "(max-width: 950px) 100vw, 50vw",
             )}
-            alt="Konaklama planlaması için temsili otel odası"
+            alt={t("Konaklama planlaması için temsili otel odası")}
             loading="lazy"
             decoding="async"
           />
-          <span>Temsili konaklama görseli</span>
+          <span>{t("Temsili konaklama görseli")}</span>
         </div>
         <div className="stay-copy">
           <h2>
-            Bir gün daha
+            {t("Bir gün daha")}
             <br />
-            Kars’ta kalın.
+            {t("Kars’ta kalın.")}
           </h2>
           <p>
-            Anlaşmalı otellerimizde konaklamanızı planlayalım. Turunuzun
-            öncesinde veya sonrasında Kars’a biraz daha zaman ayırın.
+            {t(
+              "Anlaşmalı otellerimizde konaklamanızı planlayalım. Turunuzun öncesinde veya sonrasında Kars’a biraz daha zaman ayırın.",
+            )}
           </p>
           <div className="stay-detail">
             <BedDouble size={22} />
             <span>
-              Tercihinize göre konaklama seçenekleri
+              {t("Tercihinize göre konaklama seçenekleri")}
               <br />
-              <small>Müsaitlik ve fiyat için acente teyidi</small>
+              <small>{t("Müsaitlik ve fiyat için acente teyidi")}</small>
             </span>
           </div>
           <div className="button-row">
             <Link className="btn" to="/konaklama">
-              Konaklamayı planla <ArrowRight size={17} />
+              {t("Konaklamayı planla")} <ArrowRight size={17} />
             </Link>
             <button className="text-link" onClick={() => setRequest(true)}>
-              Talep bırakın
+              {t("Talep bırakın")}
             </button>
           </div>
         </div>
@@ -455,18 +487,18 @@ export function Home({ catalog }: { catalog: Catalog }) {
       <section className="private-journey">
         <div className="container">
           <div>
-            <h2>Yol arkadaşlarınızı alın, gerisini bize bırakın.</h2>
+            <h2>{t("Yol arkadaşlarınızı alın, gerisini bize bırakın.")}</h2>
           </div>
           <a
             className="btn btn-outline"
             href={whatsappLink(
               catalog.business.whatsapp,
-              "Merhaba, kişiye özel bir tur planlamak istiyorum.",
+              t("Merhaba, kişiye özel bir tur planlamak istiyorum."),
             )}
             target="_blank"
             rel="noreferrer"
           >
-            Özel turunuzu konuşalım <ExternalLink size={16} />
+            {t("Özel turunuzu konuşalım")} <ExternalLink size={16} />
           </a>
         </div>
       </section>

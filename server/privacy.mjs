@@ -20,7 +20,7 @@ const emailHash = (email) =>
 const ANON = "Anonim";
 const anonEmail = (id) => `anonim-${id.slice(0, 8)}@silindi.invalid`;
 
-export function createPrivacy(db, { clock = Date.now, env = process.env, tx }) {
+export function createPrivacy(db, { clock = Date.now, env = process.env, tx, pii, companions }) {
   const days = (name, fallback) => Math.max(1, Number(env[name]) || fallback);
   const retention = {
     unpaidReservationDays: days("RETENTION_UNPAID_DAYS", 365),
@@ -28,6 +28,8 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx }) {
     requestDays: days("RETENTION_REQUEST_DAYS", 730),
     notificationDays: days("RETENTION_NOTIFICATION_DAYS", 90),
     auditDays: days("RETENTION_AUDIT_DAYS", 730),
+    // Yolcu kimlik numaraları tur tarihinden bu kadar gün sonra silinir.
+    passengerIdDays: days("RETENTION_PASSENGER_ID_DAYS", 365),
   };
   const ledgerTotals = async (reservationIds) => {
     const rows = reservationIds.length
@@ -55,6 +57,7 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx }) {
         email: anonEmail(r.id),
         phone: "",
         passengers: (Array.isArray(r.passengers) ? r.passengers : []).map(() => ANON),
+        passenger_details: [],
         member_id: null,
         anonymized_at: clock(),
       },
@@ -113,6 +116,7 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx }) {
       email: r.email,
       phone: r.phone,
       passengers: r.passengers,
+      passengerDetails: pii ? pii.openDetails(r.passenger_details) : r.passenger_details || [],
       seats: r.seats,
       total: r.total / 100,
       createdAt: new Date(r.created_at).toISOString(),
@@ -180,10 +184,13 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx }) {
     async memberExport(memberId) {
       const member = await db.one("members", { _id: memberId });
       if (!member) throw new AppError(404, "Üyelik bulunamadı.");
-      return shapeExport(
-        await collect(member.email, member.id, { byEmail: Boolean(member.email_verified) }),
-        member,
-      );
+      return {
+        ...(await shapeExport(
+          await collect(member.email, member.id, { byEmail: Boolean(member.email_verified) }),
+          member,
+        )),
+        companions: companions ? await companions.exportFor(member.id) : [],
+      };
     },
     async memberDelete(memberId) {
       return tx(async () => {
@@ -193,6 +200,7 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx }) {
           await collect(member.email, member.id, { byEmail: Boolean(member.email_verified) }),
         );
         await db.remove("member_sessions", { member_id: memberId });
+        await db.remove("member_companions", { member_id: memberId });
         await db.remove("social_accounts", { member_id: memberId });
         await db.remove("account_tokens", { member_id: memberId });
         await db.remove("member_coupons", { member_id: memberId, used_reservation: null });
@@ -242,6 +250,28 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx }) {
           }
         }
       });
+      // Kimlik numaraları: tur tarihinden passengerIdDays gün sonra silinir; uyruk
+      // ve cinsiyet (tek başına kimlik belirtmez) istatistik için kalır.
+      const withIds = await db.find("reservations", {
+        "passenger_details.0": { $exists: true },
+        ids_purged_at: { $exists: false },
+      });
+      const dates = await departureDates(withIds),
+        cutoff = localDate(now - retention.passengerIdDays * DAY);
+      result.passengerIdsPurged = 0;
+      for (const r of withIds) {
+        const date = dates.get(r.departure_id);
+        if (!date || date >= cutoff) continue;
+        await db.update(
+          "reservations",
+          { _id: r.id },
+          {
+            passenger_details: r.passenger_details.map((p) => ({ ...p, idNumber: "" })),
+            ids_purged_at: now,
+          },
+        );
+        result.passengerIdsPurged++;
+      }
       result.requestsDeleted = await db.remove("requests", {
         created_at: { $lt: now - retention.requestDays * DAY },
       });

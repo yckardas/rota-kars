@@ -5,11 +5,14 @@ import { vehicleModels, fleetVehicles } from "./operations.mjs";
 import { tours } from "./catalog.mjs";
 import { localDate } from "./departures.mjs";
 import { siteBase as configuredBase } from "./seo.mjs";
+import { maskDetails } from "./passenger-id.mjs";
 export const siteBase = (q, env) => configuredBase(env, q);
 export async function receipt(reservation, q, env) {
   const ticketUrl = siteBase(q, env) + "/bilet/" + reservation.ticket_token;
   return {
     ...reservation,
+    // Müşteriye dönen belgede kimlik numaraları maskelenir.
+    passenger_details: maskDetails(reservation.passenger_details),
     ticketUrl,
     // Kart mürekkebiyle (lacivert) beyaz zemine, 4 modül sessiz bölgeyle ve tam
     // sayı ölçekle basılır: ekranda, baskıda ve paneldeki okuyucuda net okunur.
@@ -430,7 +433,59 @@ export function attachAdvancedApi(
   app.get(
     "/api/admin/departures/:id/passengers",
     requireAdmin,
-    route(async (q, r) => r.json(await store.workflow.passengerList(q.params.id))),
+    route(async (q, r) => {
+      const list = await store.workflow.passengerList(q.params.id);
+      // Rehber binişte kimliği eşleştirmek için yalnız son 4 haneyi görür.
+      if (q.admin?.role === "guide")
+        for (const b of list.bookings)
+          b.passengerDetails = b.passengerDetails.map((p) => ({
+            ...p,
+            idNumber: p.idNumber ? "•••" + p.idNumber.slice(-4) : "",
+          }));
+      r.json(list);
+    }),
+  );
+  // U-ETDS bildirimi (sahip ve operasyon).
+  const crewSchema = z
+    .object({
+      name: clean,
+      nationality: z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/),
+      idNumber: z.string().trim().min(5).max(20),
+      gender: z.enum(["K", "E"]),
+      phone: z.union([phone, z.literal("")]).default(""),
+    })
+    .nullable()
+    .optional();
+  app.get(
+    "/api/admin/departures/:id/uetds",
+    requireAdmin,
+    route(async (q, r) => r.json(await store.uetds.status(q.params.id))),
+  );
+  app.post(
+    "/api/admin/departures/:id/uetds/crew",
+    requireAdmin,
+    route(async (q, r) => {
+      const input = z
+        .object({ driver: crewSchema, guide: crewSchema })
+        .parse(q.body);
+      r.json(await store.uetds.saveCrew(q.params.id, input));
+    }),
+  );
+  app.post(
+    "/api/admin/departures/:id/uetds/report",
+    requireAdmin,
+    route(async (q, r) => r.json(await store.uetds.report(q.params.id))),
+  );
+  app.get(
+    "/api/admin/departures/:id/uetds/pdf",
+    requireAdmin,
+    route(async (q, r) => {
+      const pdf = await store.uetds.pdf(q.params.id);
+      r.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": 'attachment; filename="uetds-sefer.pdf"',
+      }).send(pdf);
+    }),
   );
   app.get(
     "/api/admin/departures/:id/passengers.csv",

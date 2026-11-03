@@ -1,14 +1,10 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useTurnstile } from "../components/Turnstile";
 import { placeName } from "../lib/place";
 import { useClearOfLaunchers } from "../lib/launchers";
 import { responsive } from "../lib/images";
-import {
-  Link,
-  useLocation,
-  useParams,
-  useSearchParams,
-} from "react-router-dom";
+import { useLocation, useParams, useSearchParams } from "react-router-dom";
+import { Link, useLang } from "../lib/i18n";
 import {
   ArrowLeft,
   ArrowRight,
@@ -39,7 +35,31 @@ import { useMember, type Coupon, type MemberDashboard } from "../lib/member";
 import { SeatMap } from "../components/SeatMap";
 import { telHref } from "../lib/phone";
 import { ReservationTicket } from "../components/ReservationTicket";
+import { PayDeposit } from "./Payment";
+import { tcknValid, maskId } from "../lib/tckn";
+import { countryName, countryOptions } from "../lib/countries";
+import type { Companion } from "../components/Companions";
+// Tek rezervasyonda en fazla bu kadar koltuk (sunucudaki GUEST_MAX_SEATS ile aynı).
+const MAX_SEATS = 4;
+type IdForm = {
+  // ISO 3166-1 alfa-2 ülke kodu
+  nationality: string;
+  idNumber: string;
+  gender: "" | "K" | "E";
+  // Üyenin kayıtlı yol arkadaşı seçildiyse; bilgiler sunucuda doldurulur.
+  companionId?: string;
+  // Üye bu yolcuyu yol arkadaşlarına kaydetmek istiyor.
+  save?: boolean;
+};
+const emptyId: IdForm = {
+  nationality: "TR",
+  idNumber: "",
+  gender: "",
+};
 export function Booking({ catalog }: { catalog: Catalog }) {
+  const { t, lang } = useLang();
+  // Uyruk adları sayfanın dilinde (Intl.DisplayNames).
+  const COUNTRIES = useMemo(() => countryOptions(lang), [lang]);
   const { tourId } = useParams(),
     [params] = useSearchParams(),
     tour = catalog.tours.find((t) => t.id === tourId),
@@ -48,6 +68,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     [count, setCount] = useState(
       Math.min(
         tour?.vehicle.sellableSeats || 17,
+        MAX_SEATS,
         Math.max(1, Number(params.get("guests")) || 1),
       ),
     ),
@@ -61,6 +82,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     [result, setResult] = useState<Reservation | null>(null),
     [mode, setMode] = useState("deposit"),
     [passengers, setPassengers] = useState<string[]>([]),
+    [ids, setIds] = useState<IdForm[]>([]),
     [contact, setContact] = useState({ name: "", email: "", phone: "" }),
     [consent, setConsent] = useState(false),
     [marketingConsent, setMarketingConsent] = useState(false),
@@ -87,6 +109,13 @@ export function Booking({ catalog }: { catalog: Catalog }) {
   const summaryRef = useRef<HTMLElement>(null);
   useClearOfLaunchers(summaryRef, "summaryVisible");
   const { member } = useMember();
+  const [companions, setCompanions] = useState<Companion[]>([]);
+  useEffect(() => {
+    if (member)
+      api<Companion[]>("/member/companions")
+        .then(setCompanions)
+        .catch(() => setCompanions([]));
+  }, [member]);
   const membershipHref =
     "/uyelik?next=" + encodeURIComponent(location.pathname + location.search);
   useEffect(() => {
@@ -98,7 +127,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
   }, [step]);
   const vehicle = activeVehicle || tour?.vehicle || catalog.vehicle;
   useEffect(() => {
-    setCount((current) => Math.min(current, vehicle.sellableSeats));
+    setCount((current) =>
+      Math.min(current, vehicle.sellableSeats, MAX_SEATS),
+    );
     setSelected([]);
   }, [vehicle.id]);
   useEffect(() => {
@@ -121,7 +152,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         )
         .catch(() =>
           setCouponError(
-            "Kuponlarınız şu an yüklenemedi. Rezervasyona kuponsuz devam edebilir veya sayfayı yenileyebilirsiniz.",
+            t(
+              "Kuponlarınız şu an yüklenemedi. Rezervasyona kuponsuz devam edebilir veya sayfayı yenileyebilirsiniz.",
+            ),
           ),
         );
     }
@@ -217,7 +250,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
       setHold(null);
       setStep(0);
       setSelected([]);
-      setError("Koltuk ayırma süreniz doldu. Yeniden koltuk seçebilirsiniz.");
+      setError(
+        t("Koltuk ayırma süreniz doldu. Yeniden koltuk seçebilirsiniz."),
+      );
     }
   }, [hold, now]);
   useEffect(
@@ -233,7 +268,11 @@ export function Booking({ catalog }: { catalog: Catalog }) {
   async function chooseSeats() {
     setError("");
     if (selected.length !== count) {
-      setError(`${count} yolcu için ${count} koltuk seçin.`);
+      setError(
+        count === 1
+          ? t("1 yolcu için 1 koltuk seçin.")
+          : t("{count} yolcu için {count} koltuk seçin.", { count }),
+      );
       return;
     }
     setBusy(true);
@@ -282,6 +321,15 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         holdToken: hold.token,
         ...contact,
         passengers: passengers.slice(0, count),
+        passengerDetails: selected.map((_, i) => {
+          const p = ids[i] || emptyId;
+          if (p.companionId) return { companionId: p.companionId };
+          return {
+            nationality: p.nationality,
+            idNumber: p.idNumber,
+            gender: p.gender,
+          };
+        }),
         paymentMode: mode,
         consent,
         marketingConsent,
@@ -291,6 +339,17 @@ export function Booking({ catalog }: { catalog: Catalog }) {
       holdRef.current = null;
       setHold(null);
       setResult(r);
+      // İşaretlenen yolcular üyenin yol arkadaşlarına kaydedilir (hata olursa
+      // rezervasyon etkilenmez).
+      if (member)
+        for (const [i, p] of ids.slice(0, selected.length).entries())
+          if (p?.save && !p.companionId)
+            post("/member/companions", {
+              name: passengers[i],
+              nationality: p.nationality,
+              idNumber: p.idNumber,
+              gender: p.gender,
+            }).catch(() => {});
       window.scrollTo({ top: 120, behavior: "smooth" });
     } catch (e) {
       setError((e as Error).message);
@@ -307,9 +366,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
   if (!tour || tour.inquiryOnly)
     return (
       <div className="container empty-state">
-        <h1>Bu rota için birlikte plan yapalım.</h1>
+        <h1>{t("Bu rota için birlikte plan yapalım.")}</h1>
         <Link className="btn" to="/turlar">
-          Tur seçeneklerine dön
+          {t("Tur seçeneklerine dön")}
         </Link>
       </div>
     );
@@ -319,22 +378,29 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         <div className="success-icon">
           <Check />
         </div>
-        <h1>Yolculuğunuzun ilk adımı tamam.</h1>
+        <h1>{t("Yolculuğunuzun ilk adımı tamam.")}</h1>
         <p>
-          Talebiniz kaydedildi. Kesin rezervasyon için acente teyidi gerekir.
+          {t(
+            "Talebiniz kaydedildi. Kesin rezervasyon için acente teyidi gerekir.",
+          )}
           <br />
-          Bu işlemde ödeme alınmadı.
+          {t("Bu işlemde ödeme alınmadı.")}
         </p>
+        <PayDeposit
+          catalog={catalog}
+          reservation={result}
+          email={contact.email}
+        />
         <ReservationTicket reservation={result} catalog={catalog} />
         <div className="button-row">
           <button className="btn" onClick={() => window.print()}>
-            <Printer size={16} /> Özeti yazdır
+            <Printer size={16} /> {t("Özeti yazdır")}
           </button>
           <Link
             className="btn btn-outline"
             to={"/rezervasyonum?ref=" + encodeURIComponent(result.reference)}
           >
-            Rezervasyonumu sorgula
+            {t("Rezervasyonumu sorgula")}
           </Link>
         </div>
       </div>
@@ -342,14 +408,19 @@ export function Booking({ catalog }: { catalog: Catalog }) {
   const seconds = hold
     ? Math.max(0, Math.floor((hold.expiresAt - now) / 1000))
     : 0;
+  // "Koltuk 3" ya da birden fazla koltukta "Koltuk 3, 4" (İngilizcede çoğul).
+  const seatList =
+    selected.length > 1
+      ? t("Koltuk {seats}", { seats: selected.join(", ") })
+      : t("Koltuk {n}", { n: selected.join(", ") });
   return (
     <div className="container booking-page">
       <Link className="back-link" to={"/turlar/" + tour.id}>
-        <ArrowLeft size={15} /> Tur detayına dön
+        <ArrowLeft size={15} /> {t("Tur detayına dön")}
       </Link>
       <div className="booking-page-title">
         <div>
-          <h1>Yolculuğunuzu planlayın.</h1>
+          <h1>{t("Yolculuğunuzu planlayın.")}</h1>
           <p className="booking-page-sub">
             {tour.name}
             {departure
@@ -360,8 +431,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         {hold && (
           <span className="hold-timer" role="timer" aria-live="off">
             <Clock3 size={17} />
-            Koltuklarınız {Math.floor(seconds / 60)}:
-            {String(seconds % 60).padStart(2, "0")} dakika ayrıldı
+            {t("Koltuklarınız {time} dakika ayrıldı", {
+              time: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`,
+            })}
           </span>
         )}
       </div>
@@ -370,8 +442,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         <div className="hold-warning" role="alert">
           <Clock3 size={18} />
           <span>
-            Koltuklarınızın ayrılma süresi 2 dakikadan az. Bilgilerinizi
-            tamamlamak için süreyi uzatabilirsiniz.
+            {t(
+              "Koltuklarınızın ayrılma süresi 2 dakikadan az. Bilgilerinizi tamamlamak için süreyi uzatabilirsiniz.",
+            )}
           </span>
           <button
             type="button"
@@ -393,7 +466,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
               }
             }}
           >
-            Süreyi 10 dakika uzat
+            {t("Süreyi 10 dakika uzat")}
           </button>
           {extendError && <small>{extendError}</small>}
         </div>
@@ -407,7 +480,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
               aria-current={step === i ? "step" : undefined}
             >
               <span>{step > i ? <Check size={14} /> : i + 1}</span>
-              {s}
+              {t(s)}
             </li>
           ),
         )}
@@ -419,8 +492,8 @@ export function Booking({ catalog }: { catalog: Catalog }) {
           <span>
             {departure
               ? `${dateLabel(departure.date)} · ${departure.start_time}`
-              : "Tarih seçin"}
-            {selected.length ? ` · Koltuk ${selected.join(", ")}` : ""}
+              : t("Tarih seçin")}
+            {selected.length ? ` · ${seatList}` : ""}
           </span>
         </div>
         <b>{currency(total)}</b>
@@ -430,15 +503,16 @@ export function Booking({ catalog }: { catalog: Catalog }) {
           {step === 0 ? (
             <>
               <h2 ref={stepHeading} tabIndex={-1}>
-                Ne zaman, hangi koltukta?
+                {t("Ne zaman, hangi koltukta?")}
               </h2>
               <p className="muted">
-                Önce tarihinizi seçin, sonra yol arkadaşlarınızın yerini
-                belirleyin.
+                {t(
+                  "Önce tarihinizi seçin, sonra yol arkadaşlarınızın yerini belirleyin.",
+                )}
               </p>
               <div className="form-grid">
                 <label className="field">
-                  Hareket tarihi
+                  {t("Hareket tarihi")}
                   <select
                     value={departureId}
                     onChange={(e) => {
@@ -447,10 +521,10 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                       setSelected([]);
                       setError("");
                     }}
-                    aria-label="Hareket tarihi"
+                    aria-label={t("Hareket tarihi")}
                   >
                     <option value="" disabled>
-                      {loaded ? "Uygun tarih seçin" : "Tarihler yükleniyor…"}
+                      {loaded ? t("Uygun tarih seçin") : t("Tarihler yükleniyor…")}
                     </option>
                     {departures.map((d) => (
                       <option key={d.id} value={d.id}>
@@ -461,20 +535,23 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   </select>
                 </label>
                 <label className="field">
-                  Yolcu sayısı
+                  {t("Yolcu sayısı")}
                   <select
                     value={count}
                     onChange={(e) => {
                       setCount(Number(e.target.value));
                       setSelected([]);
                     }}
-                    aria-label="Yolcu sayısı"
+                    aria-label={t("Yolcu sayısı")}
                   >
-                    {Array.from({ length: vehicle.sellableSeats }, (_, i) => (
-                      <option key={i} value={i + 1}>
-                        {i + 1} kişi
-                      </option>
-                    ))}
+                    {Array.from(
+                      { length: Math.min(vehicle.sellableSeats, MAX_SEATS) },
+                      (_, i) => (
+                        <option key={i} value={i + 1}>
+                          {i === 0 ? t("1 kişi") : t("{n} kişi", { n: i + 1 })}
+                        </option>
+                      ),
+                    )}
                   </select>
                 </label>
               </div>
@@ -482,7 +559,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                 <div className="info-note" role="status">
                   <Info size={18} />
                   <p>
-                    Seçtiğiniz tarihte sefer yok, en yakın sefer gösteriliyor.
+                    {t(
+                      "Seçtiğiniz tarihte sefer yok, en yakın sefer gösteriliyor.",
+                    )}
                   </p>
                 </div>
               )}
@@ -490,9 +569,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                 <div className="info-note">
                   <Info size={18} />
                   <p>
-                    Bu rota için açık bir tarih bulunmuyor.{" "}
+                    {t("Bu rota için açık bir tarih bulunmuyor.")}{" "}
                     <a href={telHref(catalog.business.mobile)}>
-                      Acente ile görüşün.
+                      {t("Acente ile görüşün.")}
                     </a>
                   </p>
                 </div>
@@ -508,56 +587,69 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                       setSelected(selected.filter((s) => s !== n));
                     else if (selected.length < count)
                       setSelected([...selected, n]);
-                    else
+                    // Yolcu sayısı dolduysa koltuk seçimi sayıyı 4'e kadar büyütür.
+                    else if (count < Math.min(MAX_SEATS, vehicle.sellableSeats)) {
+                      setCount(count + 1);
+                      setSelected([...selected, n]);
+                    } else
                       setError(
-                        `${count} yolcu için en fazla ${count} koltuk seçebilirsiniz.`,
+                        t(
+                          "Tek rezervasyonda en fazla {max} koltuk seçebilirsiniz. Daha büyük gruplar için bize WhatsApp'tan yazın.",
+                          { max: MAX_SEATS },
+                        ),
                       );
                   }}
                   interactive={Boolean(departureId)}
                 />
                 <div className="seat-selection-info">
                   <h3>
-                    İyi bir yolculuk, <br />
-                    iyi bir yerle başlar.
+                    {t("İyi bir yolculuk,")} <br />
+                    {t("iyi bir yerle başlar.")}
                   </h3>
                   <p className="muted">
-                    Şoförün yanındaki ön koltuk rehberinize ayrıldı. Diğer{" "}
-                    {vehicle.sellableSeats} koltuktan dilediğinizi seçin.
+                    {t(
+                      "Şoförün yanındaki ön koltuk rehberinize ayrıldı. Diğer {n} koltuktan dilediğinizi seçin.",
+                      { n: vehicle.sellableSeats },
+                    )}
                   </p>
                   <div className="seat-legend">
                     <span>
                       <i />
-                      Boş
+                      {t("Boş")}
                     </span>
                     <span>
                       <i className="chosen" />
-                      Seçili
+                      {t("Seçili")}
                     </span>
                     <span>
                       <i className="taken" />
-                      Dolu
+                      {t("Dolu")}
                     </span>
                     <span>
                       <i className="crew" />
-                      Rehber
+                      {t("Rehber")}
                     </span>
                   </div>
                   <div className="chosen-seats">
-                    <span>Seçiminiz</span>
+                    <span>{t("Seçiminiz")}</span>
                     <strong>
                       {selected.length
-                        ? selected.map((n) => `Koltuk ${n}`).join(", ")
-                        : "Henüz koltuk seçmediniz."}
+                        ? selected.map((n) => t("Koltuk {n}", { n })).join(", ")
+                        : t("Henüz koltuk seçmediniz.")}
                     </strong>
                     <small>
-                      {selected.length} / {count} koltuk
+                      {t("{selected} / {count} koltuk", {
+                        selected: selected.length,
+                        count,
+                      })}
                     </small>
                   </div>
                   <div className="inline-note">
                     <LockKeyhole size={16} />
                     <span>
-                      Devam ettiğinizde seçtiğiniz koltukları 10 dakika sizin
-                      için tutarız.
+                      {t(
+                        "Devam ettiğinizde seçtiğiniz koltukları 10 dakika sizin için tutarız.",
+                      )}
                     </span>
                   </div>
                 </div>
@@ -570,8 +662,8 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                 disabled={busy || !departureId}
                 onClick={chooseSeats}
               >
-                {busy ? <LoaderCircle className="spin" size={17} /> : null}Yolcu
-                bilgilerine geç <ArrowRight size={17} />
+                {busy ? <LoaderCircle className="spin" size={17} /> : null}
+                {t("Yolcu bilgilerine geç")} <ArrowRight size={17} />
               </button>
             </>
           ) : step === 1 ? (
@@ -579,40 +671,216 @@ export function Booking({ catalog }: { catalog: Catalog }) {
               onSubmit={(e) => {
                 e.preventDefault();
                 setError("");
+                const wrong = selected.findIndex((_, i) => {
+                  const p = ids[i] || emptyId;
+                  return (
+                    !p.companionId &&
+                    p.nationality === "TR" &&
+                    !tcknValid(p.idNumber)
+                  );
+                });
+                if (wrong >= 0) {
+                  setError(
+                    t(
+                      "{n}. yolcunun T.C. kimlik numarası geçerli görünmüyor. Lütfen kontrol edin.",
+                      { n: wrong + 1 },
+                    ),
+                  );
+                  return;
+                }
                 setStep(2);
                 window.scrollTo({ top: 120, behavior: "smooth" });
               }}
             >
               <h2 ref={stepHeading} tabIndex={-1}>
-                Yol arkadaşlarımızı tanıyalım.
+                {t("Yol arkadaşlarımızı tanıyalım.")}
               </h2>
               <p className="muted">
-                Yolcu adlarını ve sizinle iletişime geçebileceğimiz bilgileri
-                paylaşın.
+                {t(
+                  "Yolcu adlarını ve sizinle iletişime geçebileceğimiz bilgileri paylaşın.",
+                )}
               </p>
-              {selected.map((n, i) => (
-                <label className="field" key={n}>
-                  {i + 1}. yolcu · Koltuk {n}
-                  <input
-                    value={passengers[i] || ""}
-                    onChange={(e) =>
-                      setPassengers((v) => {
-                        const next = [...v];
-                        next[i] = e.target.value;
-                        return next;
-                      })
-                    }
-                    required
-                    minLength={2}
-                    maxLength={100}
-                    placeholder="Ad soyad"
-                    autoComplete="off"
-                  />
-                </label>
-              ))}
-              <h3 className="contact-heading">İletişim kişisi</h3>
+              {selected.map((n, i) => {
+                const p = ids[i] || emptyId,
+                  tr = p.nationality === "TR",
+                  set = (patch: Partial<IdForm>) =>
+                    setIds((v) => {
+                      const next = [...v];
+                      next[i] = { ...(next[i] || emptyId), ...patch };
+                      return next;
+                    });
+                return (
+                  <fieldset className="passenger-card" key={n}>
+                    <legend>
+                      {t("{n}. yolcu", { n: i + 1 })}{" "}
+                      <span>{t("Koltuk {n}", { n })}</span>
+                    </legend>
+                    {companions.length > 0 && (
+                      <label className="field">
+                        {t("Kayıtlı yol arkadaşım")}
+                        <select
+                          value={p.companionId || ""}
+                          onChange={(e) => {
+                            const c = companions.find(
+                              (c) => c.id === e.target.value,
+                            );
+                            set({ companionId: c?.id || "" });
+                            setPassengers((v) => {
+                              const next = [...v];
+                              next[i] = c?.name || "";
+                              return next;
+                            });
+                          }}
+                        >
+                          <option value="">
+                            {t("Yeni yolcu bilgisi gireceğim")}
+                          </option>
+                          {companions.map((c) => (
+                            <option
+                              key={c.id}
+                              value={c.id}
+                              disabled={ids.some(
+                                (x, k) => k !== i && x?.companionId === c.id,
+                              )}
+                            >
+                              {c.name} · {c.idMasked}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
+                    {p.companionId ? (
+                      (() => {
+                        const c = companions.find(
+                          (c) => c.id === p.companionId,
+                        );
+                        return (
+                          <p className="companion-chosen">
+                            <strong>{c?.name}</strong>
+                            <small>
+                              {c?.nationality === "TR"
+                                ? "T.C."
+                                : countryName(c?.nationality || "", lang)}{" "}
+                              · {c?.idMasked} ·{" "}
+                              {t("kayıtlı bilgileri kullanılacak")}
+                            </small>
+                          </p>
+                        );
+                      })()
+                    ) : (
+                      <>
+                    <label className="field">
+                      {t("Ad soyad")}
+                      <input
+                        value={passengers[i] || ""}
+                        onChange={(e) =>
+                          setPassengers((v) => {
+                            const next = [...v];
+                            next[i] = e.target.value;
+                            return next;
+                          })
+                        }
+                        required
+                        minLength={2}
+                        maxLength={100}
+                        placeholder={t("Kimlikteki gibi")}
+                        autoComplete="off"
+                      />
+                    </label>
+                    <div className="form-grid">
+                      <label className="field">
+                        {t("Uyruk")}
+                        <select
+                          value={p.nationality}
+                          onChange={(e) =>
+                            set({ nationality: e.target.value, idNumber: "" })
+                          }
+                        >
+                          <optgroup label={t("Sık seçilenler")}>
+                            {COUNTRIES.first.map((c) => (
+                              <option key={c.code} value={c.code}>
+                                {c.code === "TR" ? "Türkiye (T.C.)" : c.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label={t("Tüm ülkeler")}>
+                            {COUNTRIES.rest.map((c) => (
+                              <option key={c.code} value={c.code}>
+                                {c.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        </select>
+                      </label>
+                      <label className="field">
+                        {tr ? t("T.C. kimlik numarası") : t("Pasaport numarası")}
+                        <input
+                          value={p.idNumber}
+                          onChange={(e) =>
+                            set({
+                              idNumber: tr
+                                ? e.target.value.replace(/\D/g, "")
+                                : e.target.value.toUpperCase(),
+                            })
+                          }
+                          inputMode={tr ? "numeric" : "text"}
+                          maxLength={tr ? 11 : 20}
+                          minLength={tr ? 11 : 5}
+                          pattern={tr ? "[1-9][0-9]{10}" : "[A-Za-z0-9 ]{5,20}"}
+                          required
+                          autoComplete="off"
+                        />
+                      </label>
+                      <div className="field gender-field" role="radiogroup">
+                        <span>{t("Cinsiyet")}</span>
+                        <div className="choice-inline">
+                          {(
+                            [
+                              ["K", "Kadın"],
+                              ["E", "Erkek"],
+                            ] as const
+                          ).map(([value, label]) => (
+                            <label key={value}>
+                              <input
+                                type="radio"
+                                name={"gender-" + n}
+                                value={value}
+                                checked={p.gender === value}
+                                onChange={() => set({ gender: value })}
+                                required
+                              />
+                              {t(label)}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    {member && (
+                      <label className="checkbox-label companion-save">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(p.save)}
+                          onChange={(e) => set({ save: e.target.checked })}
+                        />
+                        <span>{t("Bu yolcuyu yol arkadaşlarıma kaydet")}</span>
+                      </label>
+                    )}
+                      </>
+                    )}
+                  </fieldset>
+                );
+              })}
+              <p className="id-note">
+                <ShieldCheck size={17} />
+                <span>
+                  {t(
+                    "Kimlik bilgileri, turizm taşımacılığında zorunlu olan yolcu listesi bildirimi (U-ETDS) için istenir. Bu bilgileri yalnız acentemiz görür; size gönderilen belgede numaranın yalnız son 3 hanesi yer alır.",
+                  )}
+                </span>
+              </p>
+              <h3 className="contact-heading">{t("İletişim kişisi")}</h3>
               <label className="field">
-                Adınız soyadınız
+                {t("Adınız soyadınız")}
                 <input
                   autoComplete="name"
                   required
@@ -626,7 +894,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
               </label>
               <div className="form-grid">
                 <label className="field">
-                  E-posta adresiniz
+                  {t("E-posta adresiniz")}
                   <input
                     type="email"
                     autoComplete="email"
@@ -640,7 +908,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   />
                 </label>
                 <label className="field">
-                  Telefon numaranız
+                  {t("Telefon numaranız")}
                   <input
                     type="tel"
                     autoComplete="tel"
@@ -654,29 +922,43 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   />
                 </label>
               </div>
+              <div className="flow-error" role="alert">
+                {error}
+              </div>
               <div className="flow-actions">
                 <button className="text-link" type="button" onClick={back}>
-                  <ArrowLeft size={15} /> Koltuk seçimine dön
+                  <ArrowLeft size={15} /> {t("Koltuk seçimine dön")}
                 </button>
                 <button className="btn">
-                  Özeti incele <ArrowRight size={17} />
+                  {t("Özeti incele")} <ArrowRight size={17} />
                 </button>
               </div>
             </form>
           ) : (
             <form onSubmit={submit}>
               <h2 ref={stepHeading} tabIndex={-1}>
-                Son bir kez göz atalım.
+                {t("Son bir kez göz atalım.")}
               </h2>
               <p className="muted">
-                Tercih ettiğiniz ödeme planını belirleyin. Bu adımda tahsilat
-                yapılmaz.
+                {t(
+                  "Tercih ettiğiniz ödeme planını belirleyin. Bu adımda tahsilat yapılmaz.",
+                )}
               </p>
               <div className="confirmation-passengers">
                 {selected.map((n, i) => (
                   <div key={n}>
-                    <span>Koltuk {n}</span>
+                    <span>{t("Koltuk {n}", { n })}</span>
                     <strong>{passengers[i]}</strong>
+                    <small>
+                      {(() => {
+                        const p = ids[i] || emptyId,
+                          c = companions.find((c) => c.id === p.companionId),
+                          nat = c?.nationality || p.nationality || "TR";
+                        return `${nat === "TR" ? "T.C." : countryName(nat, lang)} · ${
+                          c ? c.idMasked : maskId(p.idNumber)
+                        } · ${(c?.gender || p.gender) === "E" ? t("Erkek") : t("Kadın")}`;
+                      })()}
+                    </small>
                   </div>
                 ))}
               </div>
@@ -685,10 +967,10 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   // Kapora sunucuda hesaplanır; teklif gelmeden gösterilmez.
                   [
                     "deposit",
-                    "%30 kapora",
+                    t("%30 kapora"),
                     quote?.deposit ?? Math.round(total * 0.3),
                   ],
-                  ["full", "Tam ödeme", total],
+                  ["full", t("Tam ödeme"), total],
                 ].map(([value, title, amount]) => (
                   <label
                     className={
@@ -705,7 +987,11 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                     />
                     <span>
                       <strong>{title}</strong>
-                      <small>Acente onayından sonra</small>
+                      <small>
+                        {catalog.payment.enabled
+                          ? t("Kartla ödeyince anında onay")
+                          : t("Acente onayından sonra")}
+                      </small>
                     </span>
                     <strong>{currency(Number(amount))}</strong>
                   </label>
@@ -714,11 +1000,25 @@ export function Booking({ catalog }: { catalog: Catalog }) {
               <div className="info-note">
                 <Info size={20} />
                 <div>
-                  <strong>Online ödeme henüz aktif değil.</strong>
-                  <p>
-                    Ön rezervasyon talebinizi iletebilirsiniz. Ödeme seçenekleri
-                    ve kesin rezervasyon için acentemizle iletişime geçin.
-                  </p>
+                  {catalog.payment.enabled ? (
+                    <>
+                      <strong>{t("Ödemeyi bir sonraki adımda kartla yapın.")}</strong>
+                      <p>
+                        {t(
+                          "Ön rezervasyonunuz oluşunca seçtiğiniz tutarı ödeme kuruluşunun güvenli sayfasında kartla ödeyebilirsiniz; ödeme alınınca rezervasyonunuz anında onaylanır. Dilerseniz acentemizle havale veya nakit de ödeyebilirsiniz.",
+                        )}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <strong>{t("Online ödeme henüz aktif değil.")}</strong>
+                      <p>
+                        {t(
+                          "Ön rezervasyon talebinizi iletebilirsiniz. Ödeme seçenekleri ve kesin rezervasyon için acentemizle iletişime geçin.",
+                        )}
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
               <label className="checkbox-label">
@@ -729,15 +1029,24 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   required
                 />
                 <span>
-                  <Link to="/bilgilendirme#iptal" target="_blank">
-                    Ön rezervasyon koşullarını
-                  </Link>{" "}
-                  ve{" "}
-                  <Link to="/bilgilendirme#kvkk" target="_blank">
-                    aydınlatma metnini
-                  </Link>{" "}
-                  okudum. Bu talebin kesin bilet olmadığını ve ödeme
-                  alınmayacağını biliyorum.
+                  {/* Bağlantılar cümlenin içinde; sıra dile göre değişebilir. */}
+                  {t(
+                    "{terms} ve {notice} okudum. Bu talebin kesin bilet olmadığını ve ödeme alınmayacağını biliyorum.",
+                  )
+                    .split(/(\{terms\}|\{notice\})/)
+                    .map((part, k) =>
+                      part === "{terms}" ? (
+                        <Link key={k} to="/bilgilendirme#iptal" target="_blank">
+                          {t("Ön rezervasyon koşullarını")}
+                        </Link>
+                      ) : part === "{notice}" ? (
+                        <Link key={k} to="/bilgilendirme#kvkk" target="_blank">
+                          {t("aydınlatma metnini")}
+                        </Link>
+                      ) : (
+                        part
+                      ),
+                    )}
                 </span>
               </label>
               <label className="checkbox-label optional-consent">
@@ -747,8 +1056,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   onChange={(e) => setMarketingConsent(e.target.checked)}
                 />
                 <span>
-                  Kampanya ve yeni rotalardan e-posta/SMS ile haberdar olmak
-                  istiyorum (isteğe bağlı).
+                  {t(
+                    "Kampanya ve yeni rotalardan e-posta/SMS ile haberdar olmak istiyorum (isteğe bağlı).",
+                  )}
                 </span>
               </label>
               {human.widget}
@@ -757,7 +1067,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
               </div>
               <div className="flow-actions">
                 <button className="text-link" type="button" onClick={back}>
-                  <ArrowLeft size={15} /> Bilgileri düzenle
+                  <ArrowLeft size={15} /> {t("Bilgileri düzenle")}
                 </button>
                 <button
                   className="btn"
@@ -770,7 +1080,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   ) : (
                     <Ticket size={17} />
                   )}
-                  Ön rezervasyon oluştur
+                  {t("Ön rezervasyon oluştur")}
                 </button>
               </div>
             </form>
@@ -792,21 +1102,24 @@ export function Booking({ catalog }: { catalog: Catalog }) {
             <h3>{tour.name}</h3>
             <p>
               <CalendarDays size={15} />
-              {departure ? dateLabel(departure.date) : "Tarih seçin"}
+              {departure ? dateLabel(departure.date) : t("Tarih seçin")}
             </p>
             <p>
               <Clock3 size={15} />
-              {departure?.start_time || tour.departure} hareket
+              {t("{time} hareket", {
+                time: departure?.start_time || tour.departure,
+              })}
             </p>
             <p>
               <Armchair size={15} />
-              {count} yolcu · {vehicle.passengerSeats}+1{" "}
+              {count === 1 ? t("1 yolcu") : t("{n} yolcu", { n: count })} ·{" "}
+              {vehicle.passengerSeats}+1{" "}
               {vehicle.unit ? vehicle.unit.name : vehicle.name}
             </p>
             {selected.length > 0 && (
               <p>
                 <Ticket size={15} />
-                Koltuk {selected.join(", ")}
+                {seatList}
               </p>
             )}
             {departure?.pickup && (
@@ -823,29 +1136,31 @@ export function Booking({ catalog }: { catalog: Catalog }) {
               )}
               {member ? (
                 <label className="field">
-                  Üyelik kuponunuz
+                  {t("Üyelik kuponunuz")}
                   <select
-                    aria-label="İndirim kuponu"
+                    aria-label={t("İndirim kuponu")}
                     value={couponId}
                     disabled={busy}
                     onChange={(e) => setCouponId(e.target.value)}
                   >
-                    <option value="">Kupon kullanma</option>
+                    <option value="">{t("Kupon kullanma")}</option>
                     {coupons.map((c) => (
                       <option key={c.id} value={c.id}>
-                        %{c.percent} ·{" "}
-                        {c.source === "wheel" ? "Şans çarkı" : "Arkadaş daveti"}
+                        {t("%{p}", { p: c.percent })} ·{" "}
+                        {c.source === "wheel"
+                          ? t("Şans çarkı")
+                          : t("Arkadaş daveti")}
                       </option>
                     ))}
                   </select>
                 </label>
               ) : (
                 <p>
-                  <Link to={membershipHref}>Üye olun</Link>, çarkı çevirin ve
-                  tur indirimi kazanın.
+                  <Link to={membershipHref}>{t("Üye olun")}</Link>
+                  {t(", çarkı çevirin ve tur indirimi kazanın.")}
                 </p>
               )}
-              {quoteBusy && <small role="status">Fiyat hesaplanıyor…</small>}
+              {quoteBusy && <small role="status">{t("Fiyat hesaplanıyor…")}</small>}
               {quoteError && (
                 <p className="error" role="alert">
                   {quoteError}
@@ -853,8 +1168,16 @@ export function Booking({ catalog }: { catalog: Catalog }) {
               )}
               {quote && quote.discount > 0 && (
                 <div className="coupon-savings">
-                  <span>Tur bedeli {currency(quote.subtotal)}</span>
-                  <strong>Üyelik indirimi −{currency(quote.discount)}</strong>
+                  <span>
+                    {t("Tur bedeli {amount}", {
+                      amount: currency(quote.subtotal),
+                    })}
+                  </span>
+                  <strong>
+                    {t("Üyelik indirimi −{amount}", {
+                      amount: currency(quote.discount),
+                    })}
+                  </strong>
                 </div>
               )}
             </div>
@@ -862,20 +1185,24 @@ export function Booking({ catalog }: { catalog: Catalog }) {
               <span>
                 {quote && quote.discount > 0
                   ? catalog.demo
-                    ? "İndirim sonrası örnek tur bedeli"
-                    : "İndirim sonrası tur bedeli"
+                    ? t("İndirim sonrası örnek tur bedeli")
+                    : t("İndirim sonrası tur bedeli")
                   : catalog.demo
-                    ? "Örnek tur bedeli"
-                    : "Tur bedeli"}
+                    ? t("Örnek tur bedeli")
+                    : t("Tur bedeli")}
               </span>
               <strong>{currency(total)}</strong>
             </div>
             {catalog.demo && (
-              <small>Fiyatlar ve tarihler örnek demo verisidir.</small>
+              <small>{t("Fiyatlar ve tarihler örnek demo verisidir.")}</small>
             )}
             <div className="summary-payment">
               <ShieldCheck size={17} />
-              <span>Şimdi ödeme alınmaz.</span>
+              <span>
+                {catalog.payment.enabled
+                  ? t("Bu adımda ödeme alınmaz; kartla ödeme sonraki adımdadır.")
+                  : t("Şimdi ödeme alınmaz.")}
+              </span>
             </div>
           </div>
         </aside>

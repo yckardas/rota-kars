@@ -1,3 +1,4 @@
+import { localeOf } from "./i18n";
 export type Tour = {
   id: string;
   salesOpen: boolean;
@@ -101,7 +102,14 @@ export type Catalog = {
     source: string;
     changes: string;
   }[];
-  payment: { enabled: boolean; message: string };
+  // İngilizce sürüm metinleri (server/catalog-en.mjs).
+  translations?: { en: Record<string, any> };
+  payment: {
+    enabled: boolean;
+    message: string;
+    test?: boolean;
+    depositPercent?: number;
+  };
   preview: boolean;
   demo?: boolean;
   turnstileSiteKey?: string | null;
@@ -122,8 +130,14 @@ export type Departure = {
 };
 export type Seat = { number: number; status: "occupied" | "available" };
 export type Hold = { token: string; seats: number[]; expiresAt: number };
+export type PassengerDetail = {
+  nationality: string;
+  idNumber: string;
+  gender: "K" | "E";
+};
 export type Reservation = {
   ticket_token: string;
+  passenger_details?: PassengerDetail[];
   ticketUrl?: string;
   qrDataUrl?: string;
   net_paid?: number;
@@ -196,13 +210,14 @@ export type ReviewsResponse = {
   terms?: { term: string; exact: boolean }[];
 };
 export const currency = (value: number) =>
-  new Intl.NumberFormat("tr-TR", {
+  new Intl.NumberFormat(localeOf(), {
     style: "currency",
     currency: "TRY",
+    currencyDisplay: "narrowSymbol",
     maximumFractionDigits: 0,
   }).format(value / 100);
 export const dateLabel = (s: string) =>
-  new Date(s + "T12:00:00").toLocaleDateString("tr-TR", {
+  new Date(s + "T12:00:00").toLocaleDateString(localeOf(), {
     day: "numeric",
     month: "long",
     year: "numeric",

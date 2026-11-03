@@ -33,7 +33,7 @@ async function fixture(t) {
     const [d] = await store.listDepartures("ani-cildir");
     const hold = await call("/holds", { body: { departureId: d.id, seats: [seat] }, cookie });
     return (await call("/reservations", {
-      body: { holdToken: hold.json.token, name: "Ayşe Yılmaz", email, phone: "05551112233", passengers: ["Ayşe Yılmaz"], paymentMode: "deposit", consent: true, marketingConsent: marketing },
+      body: { holdToken: hold.json.token, name: "Ayşe Yılmaz", email, phone: "05551112233", passengers: ["Ayşe Yılmaz"], passengerDetails: [{ nationality: "TR", idNumber: "10000000146", gender: "K" }], paymentMode: "deposit", consent: true, marketingConsent: marketing },
       cookie,
     })).json;
   };

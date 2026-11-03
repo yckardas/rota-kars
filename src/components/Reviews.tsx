@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { ExternalLink, Quote, Star, MessageSquareText } from "lucide-react";
 import { api } from "../lib/api";
 import type { ReviewsResponse } from "../lib/types";
+import { useLang } from "../lib/i18n";
 export function Reviews({ tourId }: { tourId?: string }) {
   const step = tourId ? 6 : 9;
   const [data, setData] = useState<ReviewsResponse | null>(null),
     [failed, setFailed] = useState(false),
-    [visible, setVisible] = useState(step);
+    [visible, setVisible] = useState(step),
+    { t, lang, locale } = useLang();
   useEffect(() => {
     let alive = true;
     setData(null);
@@ -34,14 +36,14 @@ export function Reviews({ tourId }: { tourId?: string }) {
           <div>
             <h2>
               {!tourId
-                ? "Müşterilerimizin gözünden Rota Kars"
+                ? t("Müşterilerimizin gözünden Rota Kars")
                 : data?.scope === "agency"
-                  ? "Rota Kars ile yola çıkanların gözünden"
-                  : "Bu rotayı gezenlerin gözünden"}
+                  ? t("Rota Kars ile yola çıkanların gözünden")
+                  : t("Bu rotayı gezenlerin gözünden")}
             </h2>
           </div>
           <a className="text-link" href={url} target="_blank" rel="noreferrer">
-            Google’da yorumları okuyun <ExternalLink size={15} />
+            {t("Google’da yorumları okuyun")} <ExternalLink size={15} />
           </a>
         </div>
         {data?.rating != null && (
@@ -49,7 +51,7 @@ export function Reviews({ tourId }: { tourId?: string }) {
             <div className="google-summary">
               <GoogleMark />
               <strong>
-                {data.rating.toLocaleString("tr-TR", {
+                {data.rating.toLocaleString(locale, {
                   minimumFractionDigits: 1,
                   maximumFractionDigits: 1,
                 })}
@@ -57,8 +59,8 @@ export function Reviews({ tourId }: { tourId?: string }) {
               <span className="google-summary-meta">
                 <Stars rating={Math.round(data.rating)} size={18} />
                 <span>
-                  {data.total} Google değerlendirmesi
-                  {tourId ? " · Acente genel puanı" : ""}
+                  {t("{n} Google değerlendirmesi", { n: data.total ?? "" })}
+                  {tourId ? " · " + t("Acente genel puanı") : ""}
                 </span>
               </span>
               <a
@@ -67,7 +69,7 @@ export function Reviews({ tourId }: { tourId?: string }) {
                 target="_blank"
                 rel="noreferrer"
               >
-                Yorum yazın <ExternalLink size={14} />
+                {t("Yorum yazın")} <ExternalLink size={14} />
               </a>
             </div>
             {!tourId && (
@@ -82,13 +84,13 @@ export function Reviews({ tourId }: { tourId?: string }) {
                   <strong>Rota Kars Turizm</strong>
                   <span>Yeni Mah. Cumhuriyet Cad. No:26, Merkez / Kars</span>
                   <span className="text-link">
-                    Haritada açın <ExternalLink size={14} />
+                    {t("Haritada açın")} <ExternalLink size={14} />
                   </span>
                 </a>
                 <iframe
                   className="google-map"
-                  title="Rota Kars Turizm Google Haritalar konumu"
-                  src="https://www.google.com/maps?cid=1539703208462618989&hl=tr&output=embed"
+                  title={t("Rota Kars Turizm Google Haritalar konumu")}
+                  src={`https://www.google.com/maps?cid=1539703208462618989&hl=${lang}&output=embed`}
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
                 />
@@ -97,15 +99,20 @@ export function Reviews({ tourId }: { tourId?: string }) {
           </div>
         )}
         {!data && !failed ? (
-          <p className="quiet">Yorumlar yükleniyor…</p>
+          <p className="quiet">{t("Yorumlar yükleniyor…")}</p>
         ) : data?.reviews.length ? (
           <>
             <p className="review-order">
               {data.sort}{" "}
               {data.scope === "tour"
-                ? `Yorumunda ${termLabel(data.terms)} geçen ${data.reviews.length} misafirimiz.`
+                ? t("Yorumunda {terms} geçen {n} misafirimiz.", {
+                    terms: termLabel(t, data.terms),
+                    n: data.reviews.length,
+                  })
                 : data.scope === "agency"
-                  ? "Bu rotaya özel yorum henüz yok; acentemizin diğer turlarına gelen yorumlar gösteriliyor."
+                  ? t(
+                      "Bu rotaya özel yorum henüz yok; acentemizin diğer turlarına gelen yorumlar gösteriliyor.",
+                    )
                   : ""}
             </p>
             <div className="review-list">
@@ -132,7 +139,7 @@ export function Reviews({ tourId }: { tourId?: string }) {
                       )}
                       <small>
                         {r.relativeDate ||
-                          new Date(r.date).toLocaleDateString("tr-TR", {
+                          new Date(r.date).toLocaleDateString(locale, {
                             month: "long",
                             year: "numeric",
                           })}
@@ -151,7 +158,7 @@ export function Reviews({ tourId }: { tourId?: string }) {
                     rel="noreferrer"
                     className="review-source"
                   >
-                    Google Maps’te görüntüle <ExternalLink size={12} />
+                    {t("Google Maps’te görüntüle")} <ExternalLink size={12} />
                   </a>
                 </article>
               ))}
@@ -161,7 +168,9 @@ export function Reviews({ tourId }: { tourId?: string }) {
                 className="btn btn-outline review-load-more"
                 onClick={() => setVisible((v) => v + step)}
               >
-                Daha fazla yorum göster ({data.reviews.length - visible})
+                {t("Daha fazla yorum göster ({n})", {
+                  n: data.reviews.length - visible,
+                })}
               </button>
             )}
           </>
@@ -171,13 +180,17 @@ export function Reviews({ tourId }: { tourId?: string }) {
             <div>
               <h3>
                 {tourId
-                  ? "Bu rotanın deneyimlerini keşfedin."
-                  : "Bir yolculuğun en güzel hatırası, anlatılan hikâyesi."}
+                  ? t("Bu rotanın deneyimlerini keşfedin.")
+                  : t("Bir yolculuğun en güzel hatırası, anlatılan hikâyesi.")}
               </h3>
               <p>
                 {data?.status === "connected"
-                  ? "Bu rotayla eşleşen bir yorum henüz bulunmuyor. Diğer deneyimleri Google’da okuyabilirsiniz."
-                  : "Misafirlerimizin paylaştığı deneyimlere Google işletme sayfamızdan ulaşabilirsiniz."}
+                  ? t(
+                      "Bu rotayla eşleşen bir yorum henüz bulunmuyor. Diğer deneyimleri Google’da okuyabilirsiniz.",
+                    )
+                  : t(
+                      "Misafirlerimizin paylaştığı deneyimlere Google işletme sayfamızdan ulaşabilirsiniz.",
+                    )}
               </p>
             </div>
             <a
@@ -186,7 +199,7 @@ export function Reviews({ tourId }: { tourId?: string }) {
               target="_blank"
               rel="noreferrer"
             >
-              Google yorumları <ExternalLink size={15} />
+              {t("Google yorumları")} <ExternalLink size={15} />
             </a>
           </div>
         )}
@@ -219,11 +232,11 @@ const display: Record<string, string> = {
   tatvan: "Tatvan",
   bitlis: "Bitlis",
 };
-function termLabel(terms: Term[] = []) {
+function termLabel(tr: (text: string) => string, terms: Term[] = []) {
   const names = terms.slice(0, 3).map((t) => `“${display[t.term] || t.term}”`);
   return names.length > 1
-    ? names.slice(0, -1).join(", ") + " veya " + names.at(-1)
-    : names[0] || "bu rota";
+    ? names.slice(0, -1).join(", ") + " " + tr("veya") + " " + names.at(-1)
+    : names[0] || tr("bu rota");
 }
 // Sunucudaki eşleştirme kuralıyla aynı: tam kelime veya kelime başı.
 function highlight(text: string, terms?: Term[]) {
@@ -237,8 +250,9 @@ function highlight(text: string, terms?: Term[]) {
   });
 }
 function ReviewText({ text, terms }: { text: string; terms?: Term[] }) {
-  const [open, setOpen] = useState(false);
-  if (!text) return <p>Bu misafir yalnızca puan bırakmış.</p>;
+  const [open, setOpen] = useState(false),
+    { t } = useLang();
+  if (!text) return <p>{t("Bu misafir yalnızca puan bırakmış.")}</p>;
   const long = text.length > 260;
   return (
     <>
@@ -247,7 +261,7 @@ function ReviewText({ text, terms }: { text: string; terms?: Term[] }) {
       </p>
       {long && (
         <button className="review-more" onClick={() => setOpen(!open)}>
-          {open ? "Daha az göster" : "Devamını oku"}
+          {open ? t("Daha az göster") : t("Devamını oku")}
         </button>
       )}
     </>
@@ -282,8 +296,13 @@ export function Stars({
   rating: number;
   size?: number;
 }) {
+  const { t } = useLang();
   return (
-    <span className="stars" role="img" aria-label={`${rating} / 5 yıldız`}>
+    <span
+      className="stars"
+      role="img"
+      aria-label={t("{n} / 5 yıldız", { n: rating })}
+    >
       {Array.from({ length: 5 }, (_, i) => (
         <Star key={i} size={size} fill={i < rating ? "currentColor" : "none"} />
       ))}

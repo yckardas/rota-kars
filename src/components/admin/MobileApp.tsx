@@ -301,6 +301,7 @@ type PassengerData = {
     whatsapp: string | null;
     seats: number[];
     passengers: string[];
+    passengerDetails?: { nationality: string; idNumber: string; gender: "K" | "E" }[];
     notes: string;
     checkedIn: boolean;
     ticketToken: string | null;
@@ -325,6 +326,9 @@ function printManifest(data: PassengerData) {
         b.seats.map((seat, i) => ({
           seat,
           passenger: b.passengers[i] || b.name,
+          identity: b.passengerDetails?.[i]?.idNumber
+            ? `${b.passengerDetails[i].nationality === "TR" ? "T.C." : b.passengerDetails[i].nationality} ${b.passengerDetails[i].idNumber}`
+            : "",
           contact: i === 0 ? `${b.name} · ${b.phone}` : "",
           reference: b.reference,
           status: STATUS[b.status] || b.status,
@@ -337,8 +341,8 @@ function printManifest(data: PassengerData) {
 table{width:100%;border-collapse:collapse}th,td{border:1px solid #999;padding:6px 8px;text-align:left;vertical-align:top}
 th{background:#eee}td.sign{width:110px}@media print{body{margin:10mm}}</style></head><body>
 <h1>${esc(d.tourName)}</h1><p>${esc(dateLabel(d.date))} · ${esc(d.startTime)} · ${esc(d.pickup)} · Rehber: ${esc(d.guideName || "-")} · ${rows.length} yolcu</p>
-<table><thead><tr><th>Koltuk</th><th>Yolcu</th><th>İrtibat</th><th>Referans</th><th>Durum</th><th>Not</th><th>İmza</th></tr></thead><tbody>
-${rows.map((r) => `<tr><td>${r.seat}</td><td>${esc(r.passenger)}</td><td>${esc(r.contact)}</td><td>${esc(r.reference)}</td><td>${esc(r.status)}</td><td>${esc(r.notes)}</td><td class="sign"></td></tr>`).join("")}
+<table><thead><tr><th>Koltuk</th><th>Yolcu</th><th>Kimlik</th><th>İrtibat</th><th>Referans</th><th>Durum</th><th>Not</th><th>İmza</th></tr></thead><tbody>
+${rows.map((r) => `<tr><td>${r.seat}</td><td>${esc(r.passenger)}</td><td>${esc(r.identity)}</td><td>${esc(r.contact)}</td><td>${esc(r.reference)}</td><td>${esc(r.status)}</td><td>${esc(r.notes)}</td><td class="sign"></td></tr>`).join("")}
 </tbody></table></body></html>`);
   w.document.close();
   // Satır içi betik CSP'ye takılır: yazdırma bu pencereden başlatılır.
@@ -410,7 +414,27 @@ export function PassengerList({ departureId, onClose }: { departureId: string; o
                   </strong>
                   <span className={"status-tag status-" + b.status}>{STATUS[b.status] || b.status}</span>
                 </div>
-                {b.passengers.length > 1 && <p className="passenger-names">{b.passengers.join(" · ")}</p>}
+                {/* Binişte kimlik eşleştirme: her yolcu, uyruğu ve kimliğin son haneleri. */}
+                {b.passengerDetails?.length ? (
+                  <ul className="passenger-id-rows">
+                    {b.seats.map((seat, i) => {
+                      const p = b.passengerDetails?.[i];
+                      return (
+                        <li key={seat}>
+                          <span>{seat}</span>
+                          <strong>{b.passengers[i] || b.name}</strong>
+                          {p?.idNumber && (
+                            <small>
+                              {p.nationality === "TR" ? "T.C." : p.nationality} …{p.idNumber.slice(-4)}
+                            </small>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  b.passengers.length > 1 && <p className="passenger-names">{b.passengers.join(" · ")}</p>
+                )}
                 {b.notes && <p className="passenger-notes">Not: {b.notes}</p>}
                 <small>{b.reference}</small>
                 <div className="passenger-actions">

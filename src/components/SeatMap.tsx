@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, type CSSProperties } from "react";
 import type { Seat, Vehicle } from "../lib/types";
+import { useLang } from "../lib/i18n";
 // Ekranda görünen etkileşimli koltuk haritası sayısı: mobilde sohbet/WhatsApp
 // düğmeleri koltukların üstüne binmesin diye gövdeye işaret konur.
 let visibleMaps = 0;
@@ -28,6 +29,7 @@ export function SeatMap({
   onSelect?: (n: number) => void;
   interactive?: boolean;
 }) {
+  const { t } = useLang();
   const [cockpit, ...rows] = vehicle.layout,
     root = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -65,7 +67,7 @@ export function SeatMap({
     <div className={"seat-map shape-" + shape} ref={root}>
       <div className="vehicle-roof">
         <span>VIP</span>
-        <span>Ön taraf</span>
+        <span>{t("Ön taraf")}</span>
       </div>
       {/* Araç değişince gövde yeniden kurulur: giriş animasyonu baştan oynar. */}
       <div
@@ -89,7 +91,7 @@ export function SeatMap({
               <div className="crew-seat driver" key={i}>
                 <CircleGauge size={24} />
                 <i className="steering" aria-hidden="true" />
-                <span>Şoför</span>
+                <span>{t("Şoför")}</span>
               </div>
             ) : cell === "guide" ? (
               <button
@@ -97,11 +99,11 @@ export function SeatMap({
                 key={i}
                 className="crew-seat guide"
                 disabled
-                aria-label="Rehber koltuğu, seçilemez"
+                aria-label={t("Rehber koltuğu, seçilemez")}
               >
                 <UserRound size={22} />
-                <span>Rehber</span>
-                <small>Ayrılmış</small>
+                <span>{t("Rehber")}</span>
+                <small>{t("Ayrılmış")}</small>
               </button>
             ) : (
               <div key={i} className="cockpit-gap" />
@@ -109,7 +111,7 @@ export function SeatMap({
           )}
         </div>
         <div className="vehicle-divider">
-          <span>Yolcu bölümü</span>
+          <span>{t("Yolcu bölümü")}</span>
         </div>
         {rows.map((row, i) => (
           <div
@@ -128,11 +130,11 @@ export function SeatMap({
                   <div
                     key={"x" + j}
                     className="seat-door"
-                    aria-label="Kapı"
+                    aria-label={t("Kapı")}
                     style={span > 1 ? { gridColumn: "span 2" } : undefined}
                   >
                     <DoorOpen size={18} strokeWidth={1.4} />
-                    <small>Kapı</small>
+                    <small>{t("Kapı")}</small>
                   </div>
                 ) : (
                   <div key={"x" + j} className="seat-empty" />
@@ -145,7 +147,15 @@ export function SeatMap({
                   disabled={!interactive || st === "occupied"}
                   onClick={() => onSelect?.(cell)}
                   className={"vehicle-seat " + (st !== "available" ? st : "")}
-                  aria-label={`${cell} numaralı koltuk, ${st === "selected" ? "seçili" : st === "occupied" ? "dolu" : "boş"}`}
+                  aria-label={t("{n} numaralı koltuk, {state}", {
+                    n: cell,
+                    state:
+                      st === "selected"
+                        ? t("seçili")
+                        : st === "occupied"
+                          ? t("dolu")
+                          : t("boş"),
+                  })}
                   aria-pressed={st === "selected"}
                 >
                   <Armchair size={26} strokeWidth={1.3} />
@@ -166,8 +176,11 @@ export function SeatMap({
           ? `${vehicle.unit.name} (${vehicle.unit.year})`
           : vehicle.name}{" "}
         <span>
-          {vehicle.sellableSeats} misafir + {vehicle.guideSeats} rehber +{" "}
-          {vehicle.driverSeats} şoför
+          {t("{guests} misafir + {guides} rehber + {drivers} şoför", {
+            guests: vehicle.sellableSeats,
+            guides: vehicle.guideSeats,
+            drivers: vehicle.driverSeats,
+          })}
         </span>
       </div>
     </div>

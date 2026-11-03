@@ -6,6 +6,7 @@ import { useMember } from "../lib/member";
 import { useEffect } from "react";
 import { dateLabel } from "../lib/types";
 import { Postmark } from "../components/Postmark";
+import { useLang } from "../lib/i18n";
 import { StatusStamp } from "../components/ReservationTicket";
 export function AccountSecurity({
   mode,
@@ -150,7 +151,8 @@ export function TicketVerification() {
   const { token } = useParams(),
     [data, setData] = useState<TicketInfo | null>(null),
     [error, setError] = useState(""),
-    [admin, setAdmin] = useState(false);
+    [admin, setAdmin] = useState(false),
+    { t } = useLang();
   useEffect(() => {
     api<TicketInfo>("/tickets/" + token)
       .then(setData)
@@ -170,18 +172,21 @@ export function TicketVerification() {
             <Postmark
               date={data.date}
               time={data.startTime}
-              label={`Tur tarihi ${dateLabel(data.date)}, ${data.startTime}`}
+              label={t("Tur tarihi {date}, {time}", {
+                date: dateLabel(data.date),
+                time: data.startTime,
+              })}
             />
           )}
         </div>
         <h1>
           {data?.valid
-            ? "Rezervasyon doğrulandı."
+            ? t("Rezervasyon doğrulandı.")
             : data
-              ? "Kesinleşmiş bilet değil."
+              ? t("Kesinleşmiş bilet değil.")
               : error
-                ? "Belge doğrulanamadı."
-                : "Belgeniz kontrol ediliyor…"}
+                ? t("Belge doğrulanamadı.")
+                : t("Belgeniz kontrol ediliyor…")}
         </h1>
         {error && (
           <p className="error" role="alert">
@@ -192,31 +197,33 @@ export function TicketVerification() {
           <>
             <h2>{data.tourName}</h2>
             <div className="ticket-reference">
-              <span>Referans numarası</span>
+              <span>{t("Referans numarası")}</span>
               <strong>{data.reference}</strong>
             </div>
             <dl className="ticket-lines">
               <div>
-                <dt>Hareket</dt>
+                <dt>{t("Hareket")}</dt>
                 <dd>
                   {dateLabel(data.date)} · {data.startTime}
                 </dd>
               </div>
               <div>
-                <dt>Koltuklar</dt>
+                <dt>{t("Koltuklar")}</dt>
                 <dd>{data.seats.join(", ")}</dd>
               </div>
               <div>
-                <dt>Buluşma</dt>
+                <dt>{t("Buluşma")}</dt>
                 <dd>{data.pickup}</dd>
               </div>
             </dl>
             <p className="ticket-check-note">
               {data.checkedIn
-                ? "Katılım kaydedildi."
+                ? t("Katılım kaydedildi.")
                 : data.valid
-                  ? "Bu belge acente tarafından onaylanmış rezervasyona aittir."
-                  : "Ödeme ve acente onayı tamamlanmadan kesin bilet olarak kullanılamaz."}
+                  ? t("Bu belge acente tarafından onaylanmış rezervasyona aittir.")
+                  : t(
+                      "Ödeme ve acente onayı tamamlanmadan kesin bilet olarak kullanılamaz.",
+                    )}
             </p>
             {admin && data.status === "confirmed" && (
               <button
@@ -237,8 +244,8 @@ export function TicketVerification() {
                 }}
               >
                 {data.checkedIn
-                  ? "Katılım kaydedildi"
-                  : "Yönetici: katılımı kaydet"}
+                  ? t("Katılım kaydedildi")
+                  : t("Yönetici: katılımı kaydet")}
               </button>
             )}
           </>

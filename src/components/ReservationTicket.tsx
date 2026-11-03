@@ -4,6 +4,7 @@ import { Info } from "lucide-react";
 import { responsive } from "../lib/images";
 import { placeName } from "../lib/place";
 import { Postmark } from "./Postmark";
+import { useLang } from "../lib/i18n";
 import {
   currency,
   dateLabel,
@@ -20,6 +21,7 @@ const statusLabels: Record<string, string> = {
 // Kartın köşesine basılmış lastik damga: onaylıysa kırmızı, beklerken lacivert,
 // iptal ve süre dolumunda soluk mürekkep.
 export function StatusStamp({ status }: { status: string }) {
+  const { t } = useLang();
   const tone = ["confirmed", "completed"].includes(status)
     ? "is-ok"
     : status === "pending_agency"
@@ -27,7 +29,7 @@ export function StatusStamp({ status }: { status: string }) {
       : "is-void";
   return (
     <span className={"status-stamp " + tone}>
-      {statusLabels[status] || status}
+      {statusLabels[status] ? t(statusLabels[status]) : status}
     </span>
   );
 }
@@ -38,37 +40,40 @@ export function ReservationTicket({
   reservation: Reservation;
   catalog: Catalog;
 }) {
-  const t = catalog.tours.find((t) => t.id === r.tourId);
+  const { t } = useLang();
+  const tour = catalog.tours.find((x) => x.id === r.tourId);
   return (
     <article className="reservation-ticket">
       <div className="ticket-message">
         <StatusStamp status={r.status} />
-        <h2>{t?.name || r.tourId}</h2>
+        <h2>{tour?.name || r.tourId}</h2>
         <div className="ticket-reference">
-          <span>Referans numarası</span>
+          <span>{t("Referans numarası")}</span>
           <strong>{r.reference}</strong>
         </div>
         {Boolean(r.discount_amount) && (
           <p className="ticket-discount">
-            Üyelik indirimi: −{currency(r.discount_amount || 0)} · İndirim
-            sonrası {currency(r.total)}
+            {t("Üyelik indirimi: −{discount} · İndirim sonrası {total}", {
+              discount: currency(r.discount_amount || 0),
+              total: currency(r.total),
+            })}
           </p>
         )}
         <div className="ticket-data">
           <div>
-            <span>Toplam tur bedeli</span>
+            <span>{t("Toplam tur bedeli")}</span>
             <strong>{currency(r.total)}</strong>
           </div>
           <div>
-            <span>Tercih edilen ilk ödeme</span>
+            <span>{t("Tercih edilen ilk ödeme")}</span>
             <strong>{currency(r.deposit)}</strong>
           </div>
           <div>
-            <span>Net tahsilat</span>
+            <span>{t("Net tahsilat")}</span>
             <strong>{currency(r.net_paid || 0)}</strong>
           </div>
           <div>
-            <span>Kalan ödeme</span>
+            <span>{t("Kalan ödeme")}</span>
             <strong>{currency(r.balance_due ?? r.total)}</strong>
           </div>
         </div>
@@ -76,15 +81,16 @@ export function ReservationTicket({
           <div className="ticket-qr">
             <img
               src={r.qrDataUrl}
-              alt="Rezervasyon doğrulama QR kodu"
+              alt={t("Rezervasyon doğrulama QR kodu")}
               width="164"
               height="164"
             />
             <div>
-              <strong>Rezervasyon belgeniz</strong>
+              <strong>{t("Rezervasyon belgeniz")}</strong>
               <p>
-                Kodu okutan güncel onay durumunu görür. Binişte rehberimiz de bu
-                kodu okutur.
+                {t(
+                  "Kodu okutan güncel onay durumunu görür. Binişte rehberimiz de bu kodu okutur.",
+                )}
               </p>
               <a
                 className="text-link"
@@ -92,10 +98,10 @@ export function ReservationTicket({
                 target="_blank"
                 rel="noreferrer"
               >
-                Belgeyi doğrula
+                {t("Belgeyi doğrula")}
               </a>
               <button className="text-link" onClick={() => window.print()}>
-                Yazdır / PDF kaydet
+                {t("Yazdır / PDF kaydet")}
               </button>
             </div>
           </div>
@@ -104,12 +110,12 @@ export function ReservationTicket({
       <div className="ticket-divider" aria-hidden="true" />
       <div className="ticket-address">
         <div className="ticket-stamp-row">
-          {t && (
+          {tour && (
             <div className="kp-stamp ticket-stamp">
               <div className="ticket-stamp-face">
-                <img {...responsive(t.image, "160px")} alt="" />
+                <img {...responsive(tour.image, "160px")} alt="" />
                 <span>
-                  {placeName(t)}
+                  {placeName(tour)}
                   <b>{currency(r.total)}</b>
                 </span>
               </div>
@@ -118,26 +124,29 @@ export function ReservationTicket({
           <Postmark
             date={r.date}
             time={r.start_time}
-            label={`Tur tarihi ${dateLabel(r.date)}, ${r.start_time}`}
+            label={t("Tur tarihi {date}, {time}", {
+              date: dateLabel(r.date),
+              time: String(r.start_time),
+            })}
           />
         </div>
         <dl className="ticket-lines">
           <div>
-            <dt>Tur tarihi</dt>
+            <dt>{t("Tur tarihi")}</dt>
             <dd>
               {dateLabel(r.date)} · {r.start_time}
             </dd>
           </div>
           <div>
-            <dt>Yolcular</dt>
+            <dt>{t("Yolcular")}</dt>
             <dd>{r.passengers.join(", ")}</dd>
           </div>
           <div>
-            <dt>Koltuklar</dt>
+            <dt>{t("Koltuklar")}</dt>
             <dd>{r.seats.join(", ")}</dd>
           </div>
           <div>
-            <dt>Buluşma</dt>
+            <dt>{t("Buluşma")}</dt>
             <dd>{r.pickup}</dd>
           </div>
         </dl>
@@ -146,8 +155,12 @@ export function ReservationTicket({
         <Info size={16} />
         <p>
           {r.status === "confirmed" || r.status === "completed"
-            ? "Rezervasyonunuz acente tarafından onaylanmıştır. Güncel ödeme ve hareket bilgileri yukarıdadır."
-            : "Ön rezervasyon kesin bilet değildir. Tahsilat kaydedilmemiş ve onaylanmamış talepler 24 saat sonra serbest kalır. Referansınızı ve e-posta adresinizi saklayın."}
+            ? t(
+                "Rezervasyonunuz acente tarafından onaylanmıştır. Güncel ödeme ve hareket bilgileri yukarıdadır.",
+              )
+            : t(
+                "Ön rezervasyon kesin bilet değildir. Tahsilat kaydedilmemiş ve onaylanmamış talepler 24 saat sonra serbest kalır. Referansınızı ve e-posta adresinizi saklayın.",
+              )}
         </p>
       </div>
     </article>

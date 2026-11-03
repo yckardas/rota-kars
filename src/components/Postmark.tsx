@@ -1,14 +1,15 @@
+import { localeOf } from "../lib/i18n";
 // Hatıra kartı dünyasının posta damgası: iki halka, üstte yer, ortada tarih ve saat.
 // Tarih "2026-11-06" biçiminde gelir, damgada "06 KAS 26" olarak basılır.
 export const postmarkDate = (iso: string) =>
   new Date(iso + "T12:00:00")
-    .toLocaleDateString("tr-TR", {
+    .toLocaleDateString(localeOf(), {
       day: "2-digit",
       month: "short",
       year: "2-digit",
     })
     .replace(/\./g, "")
-    .toLocaleUpperCase("tr-TR");
+    .toLocaleUpperCase(localeOf());
 export function Postmark({
   date,
   time,
