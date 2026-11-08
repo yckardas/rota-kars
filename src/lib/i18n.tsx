@@ -1,4 +1,4 @@
-import { forwardRef, useMemo } from "react";
+import { forwardRef, useCallback, useMemo } from "react";
 import {
   Link as RouterLink,
   NavLink as RouterNavLink,
@@ -74,9 +74,13 @@ export const NavLink = forwardRef<HTMLAnchorElement, NavLinkProps>(
     return <RouterNavLink ref={ref} {...props} to={localTo(lang, props.to)} />;
   },
 );
+// Kimliği sabit kalır; etki (useEffect) bağımlılığı olarak güvenle kullanılır.
 export function useLocalNavigate() {
   const navigate = useNavigate(),
     { lang } = useLang();
-  return (to: string, options?: NavigateOptions) =>
-    navigate(localPath(lang, to), options);
+  return useCallback(
+    (to: string, options?: NavigateOptions) =>
+      navigate(localPath(lang, to), options),
+    [navigate, lang],
+  );
 }

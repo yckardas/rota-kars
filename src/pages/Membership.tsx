@@ -3,7 +3,8 @@ import { CompanionsSection } from "../components/Companions";
 import { useTurnstile } from "../components/Turnstile";
 import type { Campaign } from "../components/OperationsDesk";
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
+import { Link, useLang, useLocalNavigate } from "../lib/i18n";
 import {
   Gift,
   ArrowRight,
@@ -45,7 +46,8 @@ function GoogleMark() {
 }
 export function Membership() {
   const { member, loading, refresh } = useMember(),
-    navigate = useNavigate(),
+    navigate = useLocalNavigate(),
+    { lang, t, path } = useLang(),
     [params] = useSearchParams();
   const [mode, setMode] = useState<"register" | "login">(
       params.get("mode") === "login" ? "login" : "register",
@@ -70,10 +72,14 @@ export function Membership() {
     if (params.has("error"))
       setError(
         params.get("error") === "existing_account"
-          ? "Bu e-posta zaten kayıtlı. E-posta ve parolanızla giriş yapın, ardından sosyal hesabınızı bağlayın."
-          : "Sosyal giriş tamamlanamadı. Yeniden deneyebilir veya e-postayla giriş yapabilirsiniz.",
+          ? t(
+              "Bu e-posta zaten kayıtlı. E-posta ve parolanızla giriş yapın, ardından sosyal hesabınızı bağlayın.",
+            )
+          : t(
+              "Sosyal giriş tamamlanamadı. Yeniden deneyebilir veya e-postayla giriş yapabilirsiniz.",
+            ),
       );
-  }, [params]);
+  }, [params, t]);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
@@ -103,29 +109,32 @@ export function Membership() {
     }
   }
   if (loading)
-    return <div className="container empty-state">Üyelik hazırlanıyor…</div>;
+    return (
+      <div className="container empty-state">{t("Üyelik hazırlanıyor…")}</div>
+    );
   return (
     <section className="container membership-layout">
       <div className="membership-story">
-        <img src="/images/kars.webp" alt="Kars rotasından bir görünüm" />
+        <img src="/images/kars.webp" alt={t("Kars rotasından bir görünüm")} />
         <div>
-          <span className="section-note">Rota Kars yol arkadaşlığı</span>
+          <span className="section-note">{t("Rota Kars yol arkadaşlığı")}</span>
           <h1>
-            Güzel yolculuklar,
+            {t("Güzel yolculuklar,")}
             <br />
-            güzel ayrıcalıklar.
+            {t("güzel ayrıcalıklar.")}
           </h1>
           <p>
-            Birlikte keşfedelim. Size özel fırsatlar, yeni rotalar ve yol
-            arkadaşlarınızla paylaşacağınız anılar.
+            {t(
+              "Birlikte keşfedelim. Size özel fırsatlar, yeni rotalar ve yol arkadaşlarınızla paylaşacağınız anılar.",
+            )}
           </p>
           <div>
             <Gift />
-            Üyelere özel şans çarkı
+            {t("Üyelere özel şans çarkı")}
           </div>
           <div>
             <Users />
-            Arkadaşınla ikinize de %10 indirim
+            {t("Arkadaşınla ikinize de %10 indirim")}
           </div>
         </div>
       </div>
@@ -133,7 +142,7 @@ export function Membership() {
         <div
           className="membership-tabs"
           role="tablist"
-          aria-label="Üyelik"
+          aria-label={t("Üyelik")}
           onKeyDown={(e) => {
             // Sol/sağ ok tuşlarıyla sekmeler arasında geçiş.
             if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
@@ -164,19 +173,21 @@ export function Membership() {
                 setError("");
               }}
             >
-              {label}
+              {t(label)}
             </button>
           ))}
         </div>
         <h2>
           {mode === "register"
-            ? "Yol arkadaşımız olun."
-            : "Yeniden hoş geldiniz."}
+            ? t("Yol arkadaşımız olun.")
+            : t("Yeniden hoş geldiniz.")}
         </h2>
         <p className="muted">
           {mode === "register"
-            ? "Üyeliğiniz ücretsiz. Bir sonraki rotanız için avantajlarınızı keşfedin."
-            : "Kuponlarınız ve yolculuklarınız sizi bekliyor."}
+            ? t(
+                "Üyeliğiniz ücretsiz. Bir sonraki rotanız için avantajlarınızı keşfedin.",
+              )
+            : t("Kuponlarınız ve yolculuklarınız sizi bekliyor.")}
         </p>
         <div className="social-signins">
           {[
@@ -193,7 +204,7 @@ export function Membership() {
                 className="social-signin"
                 disabled={!ready}
                 title={
-                  ready ? undefined : "Firma hesabı bağlantısı hazırlanıyor"
+                  ready ? undefined : t("Firma hesabı bağlantısı hazırlanıyor")
                 }
                 onClick={() =>
                   window.location.assign(
@@ -202,31 +213,33 @@ export function Membership() {
                       "?" +
                       new URLSearchParams({
                         ...(ref ? { ref } : {}),
-                        ...(destination !== "/hesabim"
-                          ? { next: destination }
+                        ...(destination !== "/hesabim" || lang !== "tr"
+                          ? { next: path(destination) }
                           : {}),
                       }).toString(),
                   )
                 }
               >
                 <Mark />
-                {label as string} ile devam et{!ready && <small>Yakında</small>}
+                {t("{provider} ile devam et", { provider: label as string })}
+                {!ready && <small>{t("Yakında")}</small>}
               </button>
             );
           })}
         </div>
         {providers.some((p) => !p.enabled) && (
           <small className="social-setup-note">
-            Sosyal girişler hesap bağlantısı tamamlandığında açılacak. Şimdi
-            e-postanızla üye olabilirsiniz.
+            {t(
+              "Sosyal girişler hesap bağlantısı tamamlandığında açılacak. Şimdi e-postanızla üye olabilirsiniz.",
+            )}
           </small>
         )}
         <div className="auth-divider">
-          <span>veya e-postayla</span>
+          <span>{t("veya e-postayla")}</span>
         </div>
         {mode === "login" && (
           <Link className="text-link" to="/uyelik/parolami-unuttum">
-            Parolamı unuttum
+            {t("Parolamı unuttum")}
           </Link>
         )}
         <form
@@ -238,7 +251,7 @@ export function Membership() {
         >
           {mode === "register" && (
             <label className="field">
-              Adınız soyadınız
+              {t("Adınız soyadınız")}
               <input
                 name="name"
                 autoComplete="name"
@@ -249,7 +262,7 @@ export function Membership() {
             </label>
           )}
           <label className="field">
-            E-posta adresiniz
+            {t("E-posta adresiniz")}
             <input
               name="email"
               type="email"
@@ -259,7 +272,7 @@ export function Membership() {
             />
           </label>
           <label className="field">
-            Parolanız
+            {t("Parolanız")}
             <input
               name="password"
               type="password"
@@ -270,7 +283,7 @@ export function Membership() {
               }
               required
             />
-            {mode === "register" && <small>En az 10 karakter kullanın.</small>}
+            {mode === "register" && <small>{t("En az 10 karakter kullanın.")}</small>}
           </label>
           {mode === "register" && (
             <>
@@ -278,43 +291,52 @@ export function Membership() {
                 className="referral-field"
                 open={Boolean(params.get("ref"))}
               >
-                <summary>Davet kodunuz var mı?</summary>
+                <summary>{t("Davet kodunuz var mı?")}</summary>
                 <label className="field">
-                  Arkadaşınızın davet kodu
+                  {t("Arkadaşınızın davet kodu")}
                   <input
                     name="referralCode"
                     value={ref}
                     onChange={(e) => setRef(e.target.value.toUpperCase())}
                     maxLength={10}
-                    placeholder="İsteğe bağlı"
+                    placeholder={t("İsteğe bağlı")}
                   />
                 </label>
               </details>
               <label className="checkbox-label">
                 <input type="checkbox" name="consent" required />
                 <span>
-                  <Link to="/bilgilendirme#uyelik" target="_blank">
-                    Üyelik ve kampanya koşullarını
-                  </Link>{" "}
-                  ve{" "}
-                  <Link to="/bilgilendirme#kvkk" target="_blank">
-                    kişisel veri aydınlatma metnini
-                  </Link>{" "}
-                  okudum, kabul ediyorum.
+                  {/* Bağlantılar cümlenin içinde; sıra dile göre değişebilir. */}
+                  {t("{terms} ve {notice} okudum, kabul ediyorum.")
+                    .split(/(\{terms\}|\{notice\})/)
+                    .map((part, k) =>
+                      part === "{terms}" ? (
+                        <Link key={k} to="/bilgilendirme#uyelik" target="_blank">
+                          {t("Üyelik ve kampanya koşullarını")}
+                        </Link>
+                      ) : part === "{notice}" ? (
+                        <Link key={k} to="/bilgilendirme#kvkk" target="_blank">
+                          {t("kişisel veri aydınlatma metnini")}
+                        </Link>
+                      ) : (
+                        part
+                      ),
+                    )}
                 </span>
               </label>
               <label className="checkbox-label optional-consent">
                 <input type="checkbox" name="marketingConsent" />
                 <span>
-                  Kampanya ve yeni rotalardan e-posta/SMS ile haberdar olmak
-                  istiyorum (isteğe bağlı).
+                  {t(
+                    "Kampanya ve yeni rotalardan e-posta/SMS ile haberdar olmak istiyorum (isteğe bağlı).",
+                  )}
                 </span>
               </label>
             </>
           )}
           {error && (
             <p className="error" role="alert">
-              {error}
+              {t(error)}
             </p>
           )}
           {human.widget}
@@ -323,7 +345,9 @@ export function Membership() {
             disabled={busy || !human.ready}
           >
             {busy ? <LoaderCircle className="spin" size={17} /> : null}
-            {mode === "register" ? "Üye ol, ayrıcalıkları keşfet" : "Giriş yap"}
+            {mode === "register"
+              ? t("Üye ol, ayrıcalıkları keşfet")
+              : t("Giriş yap")}
             <ArrowRight size={17} />
           </button>
         </form>
@@ -333,7 +357,10 @@ export function Membership() {
 }
 export function Account() {
   const { member, loading, logout } = useMember(),
-    navigate = useNavigate(),
+    navigate = useLocalNavigate(),
+    { lang, t, path, locale } = useLang(),
+    // Yüzde işareti Türkçede önde, İngilizcede sonda yazılır.
+    pct = (n: number) => (lang === "en" ? `${n}%` : `%${n}`),
     [data, setData] = useState<MemberDashboard | null>(null),
     [error, setError] = useState(""),
     [spinning, setSpinning] = useState(false),
@@ -400,20 +427,23 @@ export function Account() {
   async function copy() {
     try {
       await navigator.clipboard.writeText(
-        location.origin + "/uyelik?ref=" + member!.referralCode,
+        location.origin + path("/uyelik") + "?ref=" + member!.referralCode,
       );
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
       setError(
-        "Bağlantıyı kopyalayamadık. Aşağıdaki davet bağlantısını seçip kopyalayabilirsiniz.",
+        t(
+          "Bağlantıyı kopyalayamadık. Aşağıdaki davet bağlantısını seçip kopyalayabilirsiniz.",
+        ),
       );
     }
   }
   if (!member || !data)
     return (
       <div className="container empty-state">
-        Hesabınız hazırlanıyor…{error && <p role="alert">{error}</p>}
+        {t("Hesabınız hazırlanıyor…")}
+        {error && <p role="alert">{t(error)}</p>}
       </div>
     );
   const usable = data.coupons.filter(
@@ -423,10 +453,10 @@ export function Account() {
     <div className="container account-page">
       <div className="account-heading">
         <div>
-          <span className="section-note">Rota Kars üyeliği</span>
-          <h1>Merhaba, {member.name.split(" ")[0]}.</h1>
+          <span className="section-note">{t("Rota Kars üyeliği")}</span>
+          <h1>{t("Merhaba, {name}.", { name: member.name.split(" ")[0] })}</h1>
           <p className="muted">
-            Yolculuklarınız ve size özel fırsatlar, tek bir yerde.
+            {t("Yolculuklarınız ve size özel fırsatlar, tek bir yerde.")}
           </p>
         </div>
         <button
@@ -441,22 +471,24 @@ export function Account() {
           }}
         >
           <LogOut size={16} />
-          Çıkış yap
+          {t("Çıkış yap")}
         </button>
       </div>
       {error && (
         <p className="error" role="alert">
-          {error}
+          {t(error)}
         </p>
       )}
       <ProfileSettings />
       <MemberPrivacy />
       <div className="member-perks-grid">
         <section className="wheel-panel">
-          <span className="section-note">İlk yolculuğa bir sürpriz</span>
-          <h2>Şansını rotana kat.</h2>
+          <span className="section-note">{t("İlk yolculuğa bir sürpriz")}</span>
+          <h2>{t("Şansını rotana kat.")}</h2>
           <p>
-            Çarkı bir kez çevir; aşağıdaki dilimlerden bir tur indirimi kazan.
+            {t(
+              "Çarkı bir kez çevir; aşağıdaki dilimlerden bir tur indirimi kazan.",
+            )}
           </p>
           <div className="wheel-wrap">
             <div className="wheel-pointer" />
@@ -471,7 +503,7 @@ export function Account() {
                     transform: `translate(-50%, -50%) rotate(${i * 60 + 30}deg) translateY(-91px) rotate(-${i * 60 + 30}deg)`,
                   }}
                 >
-                  %{n}
+                  {pct(n)}
                 </span>
               ))}
             </div>
@@ -487,69 +519,79 @@ export function Account() {
             {spinning ? (
               <>
                 <RotateCcw size={17} className="spin" />
-                Çark dönüyor…
+                {t("Çark dönüyor…")}
               </>
             ) : data.spin ? (
-              "Çark hakkınız kullanıldı"
+              t("Çark hakkınız kullanıldı")
             ) : (
-              "Çarkı çevir"
+              t("Çarkı çevir")
             )}
           </button>
           {prize && (
             <p className="wheel-result" role="status">
-              Tebrikler! %{prize.percent} indirim kuponunuz hesabınızda.
+              {t("Tebrikler! %{percent} indirim kuponunuz hesabınızda.", {
+                percent: prize.percent,
+              })}
             </p>
           )}
           <small>
-            Hesap başına bir hak. Yeni kuponlar {campaign?.validDays} gün
-            geçerli.{" "}
+            {t("Hesap başına bir hak. Yeni kuponlar {days} gün geçerli.", {
+              days: campaign?.validDays ?? "",
+            })}{" "}
             {campaign?.minTotal
-              ? `Minimum tur bedeli: ${currency(campaign.minTotal)}.`
+              ? t("Minimum tur bedeli: {amount}.", {
+                  amount: currency(campaign.minTotal),
+                })
               : ""}{" "}
             {campaign?.tourIds.length
-              ? "Yalnız kampanyaya dahil turlarda geçerli."
-              : "Bütün turlarda geçerli."}{" "}
-            {!campaign?.active && "Kampanya şu anda kapalı."}
+              ? t("Yalnız kampanyaya dahil turlarda geçerli.")
+              : t("Bütün turlarda geçerli.")}{" "}
+            {!campaign?.active && t("Kampanya şu anda kapalı.")}
           </small>
         </section>
         <section className="referral-panel">
           <Users size={34} />
-          <span className="section-note">Güzel rotalar paylaşınca çoğalır</span>
+          <span className="section-note">
+            {t("Güzel rotalar paylaşınca çoğalır")}
+          </span>
           <h2>
-            Arkadaşını getir,
+            {t("Arkadaşını getir,")}
             <br />
-            ikinize de %10.
+            {t("ikinize de %10.")}
           </h2>
           <p>
-            Davet bağlantını paylaş. Arkadaşın bu bağlantıyla üye olup{" "}
             {campaign?.referralTrigger === "paid"
-              ? "turunun tam ödemesi kaydedildiğinde"
-              : "turunu tamamladığında"}
-            , ikiniz de sonraki turunuz için %10 kupon kazanın. Aynı arkadaş
-            için bir kez ödül verilir.
+              ? t(
+                  "Davet bağlantını paylaş. Arkadaşın bu bağlantıyla üye olup turunun tam ödemesi kaydedildiğinde, ikiniz de sonraki turunuz için %10 kupon kazanın. Aynı arkadaş için bir kez ödül verilir.",
+                )
+              : t(
+                  "Davet bağlantını paylaş. Arkadaşın bu bağlantıyla üye olup turunu tamamladığında, ikiniz de sonraki turunuz için %10 kupon kazanın. Aynı arkadaş için bir kez ödül verilir.",
+                )}
           </p>
           <div className="referral-code">
-            <small>Davet kodunuz</small>
+            <small>{t("Davet kodunuz")}</small>
             <strong>{member.referralCode}</strong>
           </div>
           <label className="field">
-            Davet bağlantınız
+            {t("Davet bağlantınız")}
             <input
               readOnly
-              value={location.origin + "/uyelik?ref=" + member.referralCode}
+              value={
+                location.origin + path("/uyelik") + "?ref=" + member.referralCode
+              }
               onFocus={(e) => e.target.select()}
             />
           </label>
           <button className="btn btn-outline" onClick={copy}>
             {copied ? <Check size={16} /> : <Copy size={16} />}{" "}
-            {copied ? "Bağlantı kopyalandı" : "Davet bağlantısını kopyala"}
+            {copied ? t("Bağlantı kopyalandı") : t("Davet bağlantısını kopyala")}
           </button>
           <div className="referral-stats">
             <span>
-              <strong>{data.referrals.total}</strong> davetle katılan
+              <strong>{data.referrals.total}</strong> {t("davetle katılan")}
             </span>
             <span>
-              <strong>{data.referrals.rewarded}</strong> kazanılan ödül
+              <strong>{data.referrals.rewarded}</strong> {t("kazanılan ödül")}
             </span>
           </div>
         </section>
@@ -557,11 +599,13 @@ export function Account() {
       <section className="member-coupons">
         <div className="section-heading">
           <div>
-            <span className="section-note">Bir sonraki yolculuğunuz için</span>
-            <h2>İndirim kuponlarım</h2>
+            <span className="section-note">
+              {t("Bir sonraki yolculuğunuz için")}
+            </span>
+            <h2>{t("İndirim kuponlarım")}</h2>
           </div>
           <Link className="text-link" to="/turlar">
-            Rotanı seç <ArrowRight size={16} />
+            {t("Rotanı seç")} <ArrowRight size={16} />
           </Link>
         </div>
         {data.coupons.length ? (
@@ -574,19 +618,19 @@ export function Account() {
                 }
                 key={c.id}
               >
-                <strong>%{c.percent}</strong>
+                <strong>{pct(c.percent)}</strong>
                 <div>
                   <h3>
                     {c.source === "wheel"
-                      ? "Şans çarkı hediyeniz"
-                      : "Arkadaş daveti hediyeniz"}
+                      ? t("Şans çarkı hediyeniz")
+                      : t("Arkadaş daveti hediyeniz")}
                   </h3>
                   <p>
                     {c.used_reservation
-                      ? "Kullanıldı"
+                      ? t("Kullanıldı")
                       : c.expires_at <= Date.now()
-                        ? "Süresi doldu"
-                        : "Rezervasyonda seçebilirsiniz"}
+                        ? t("Süresi doldu")
+                        : t("Rezervasyonda seçebilirsiniz")}
                   </p>
                   {c.policy_json && (
                     <small>
@@ -594,18 +638,21 @@ export function Account() {
                         const p = JSON.parse(c.policy_json!);
                         return (
                           (p.minTotal
-                            ? `Minimum ${currency(p.minTotal)}. `
+                            ? t("Minimum {amount}.", {
+                                amount: currency(p.minTotal),
+                              }) + " "
                             : "") +
                           (p.tourIds?.length
-                            ? "Seçili turlarda geçerli."
-                            : "Tüm turlarda geçerli.")
+                            ? t("Seçili turlarda geçerli.")
+                            : t("Tüm turlarda geçerli."))
                         );
                       })()}
                     </small>
                   )}
                   <small>
-                    Son gün:{" "}
-                    {new Date(c.expires_at).toLocaleDateString("tr-TR")}
+                    {t("Son gün: {date}", {
+                      date: new Date(c.expires_at).toLocaleDateString(locale),
+                    })}
                   </small>
                 </div>
                 <Ticket size={23} />
@@ -614,22 +661,22 @@ export function Account() {
           </div>
         ) : (
           <p className="member-empty">
-            İlk kuponunuz için şans çarkını çevirin.
+            {t("İlk kuponunuz için şans çarkını çevirin.")}
           </p>
         )}
         <p className="campaign-terms">
-          Kuponlar üzerlerinde belirtilen tarihe kadar geçerli, tek kullanımlı
-          ve yalnız üye hesabınıza aittir. Aynı rezervasyonda bir kupon
-          kullanılabilir; indirimler birleştirilmez. Tur bedeline uygulanır;
-          ekstra hizmet ve konaklamayı kapsamaz.
+          {t(
+            "Kuponlar üzerlerinde belirtilen tarihe kadar geçerli, tek kullanımlı ve yalnız üye hesabınıza aittir. Aynı rezervasyonda bir kupon kullanılabilir; indirimler birleştirilmez. Tur bedeline uygulanır; ekstra hizmet ve konaklamayı kapsamaz.",
+          )}
         </p>
       </section>
       <CompanionsSection />
       <section className="member-social-links">
-        <h2>Giriş seçeneklerim</h2>
+        <h2>{t("Giriş seçeneklerim")}</h2>
         <p className="muted">
-          Aynı e-posta adresine sahip sosyal hesabınızı bağlayarak sonraki
-          girişlerinizi kolaylaştırabilirsiniz.
+          {t(
+            "Aynı e-posta adresine sahip sosyal hesabınızı bağlayarak sonraki girişlerinizi kolaylaştırabilirsiniz.",
+          )}
         </p>
         <div>
           {providers.map((p) => (
@@ -637,20 +684,34 @@ export function Account() {
               className="btn btn-outline btn-small"
               key={p.id}
               disabled={!p.enabled}
-              onClick={() => window.location.assign("/api/auth/start/" + p.id)}
+              onClick={() =>
+                window.location.assign(
+                  "/api/auth/start/" +
+                    p.id +
+                    "?" +
+                    new URLSearchParams({ next: path("/hesabim") }).toString(),
+                )
+              }
             >
-              {p.id === "google"
-                ? "Google"
-                : p.id === "apple"
-                  ? "Apple"
-                  : "Facebook"}{" "}
-              {p.enabled ? "hesabını bağla" : "· Bağlantı hazırlanıyor"}
+              {t(
+                p.enabled
+                  ? "{provider} hesabını bağla"
+                  : "{provider} · Bağlantı hazırlanıyor",
+                {
+                  provider:
+                    p.id === "google"
+                      ? "Google"
+                      : p.id === "apple"
+                        ? "Apple"
+                        : "Facebook",
+                },
+              )}
             </button>
           ))}
         </div>
       </section>
       <section className="member-reservations">
-        <h2>Ön rezervasyonlarım</h2>
+        <h2>{t("Ön rezervasyonlarım")}</h2>
         {data.reservations.length ? (
           data.reservations.map((r) => (
             <article key={r.reference}>
@@ -663,14 +724,14 @@ export function Account() {
                 className="text-link"
                 to={"/rezervasyonum?ref=" + r.reference}
               >
-                Sorgula <ArrowRight size={14} />
+                {t("Sorgula")} <ArrowRight size={14} />
               </Link>
             </article>
           ))
         ) : (
           <p className="member-empty">
-            İlk yolculuğunuz henüz burada değil.{" "}
-            <Link to="/turlar">Rotaları keşfedin.</Link>
+            {t("İlk yolculuğunuz henüz burada değil.")}{" "}
+            <Link to="/turlar">{t("Rotaları keşfedin.")}</Link>
           </p>
         )}
       </section>
