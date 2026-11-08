@@ -320,4 +320,8 @@ export const site: Record<string, string> = {
   "Şimdilik rotaları keşfedeyim": "I’ll explore the routes for now",
   "Çark üyelik başına bir kez. Güncel oran, süre ve davet koşullarını hesabınızdan inceleyebilirsiniz.":
     "One spin per membership. See current rates, validity and invite terms in your account.",
+  "Yükleniyor…": "Loading…",
+  "Rotanız hazırlanıyor…": "Preparing your route…",
+  "Bir bağlantı molası.": "A brief connection break.",
+  "Yeniden dene": "Try again",
 };

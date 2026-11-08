@@ -18,7 +18,7 @@ import "@fontsource/onest/latin-600.css";
 import "./styles.css";
 import "./postcard.css";
 import { api } from "./lib/api";
-import { langOf } from "./lib/i18n";
+import { langOf, translate, useLang } from "./lib/i18n";
 import { localizeCatalog } from "./lib/localize";
 import { usePageMeta } from "./lib/seo";
 import type { Catalog } from "./lib/types";
@@ -66,11 +66,14 @@ const TestPayment = lazy(() =>
 const PaymentResult = lazy(() =>
   import("./pages/Payment").then((m) => ({ default: m.PaymentResult })),
 );
-const PageLoading = () => (
-  <div className="app-loading" role="status">
-    <p>Yükleniyor…</p>
-  </div>
-);
+const PageLoading = () => {
+  const { t } = useLang();
+  return (
+    <div className="app-loading" role="status">
+      <p>{t("Yükleniyor…")}</p>
+    </div>
+  );
+};
 // Sunucu, katalog verisini HTML'e gömer; ilk boyama ek istek beklemez.
 const inlineCatalog = (): Catalog | null => {
   try {
@@ -108,10 +111,10 @@ function App() {
   if (error)
     return (
       <div className="app-loading">
-        <h1>Bir bağlantı molası.</h1>
+        <h1>{translate(lang, "Bir bağlantı molası.")}</h1>
         <p>{error}</p>
         <button className="btn" onClick={() => window.location.reload()}>
-          Yeniden dene
+          {translate(lang, "Yeniden dene")}
         </button>
       </div>
     );
@@ -119,7 +122,7 @@ function App() {
     return (
       <div className="app-loading">
         <img src="/images/logo.png" alt="Rota Kars" />
-        <p>Rotanız hazırlanıyor…</p>
+        <p>{translate(lang, "Rotanız hazırlanıyor…")}</p>
       </div>
     );
   if (location.pathname === "/yonetim")
