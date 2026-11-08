@@ -1,12 +1,12 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { ShieldCheck, LoaderCircle, Download, Trash2 } from "lucide-react";
 import { api, post } from "../lib/api";
 import { useMember } from "../lib/member";
 import { useEffect } from "react";
 import { dateLabel } from "../lib/types";
 import { Postmark } from "../components/Postmark";
-import { useLang } from "../lib/i18n";
+import { Link, useLang, useLocalNavigate } from "../lib/i18n";
 import { StatusStamp } from "../components/ReservationTicket";
 export function AccountSecurity({
   mode,
@@ -18,7 +18,8 @@ export function AccountSecurity({
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState(""),
     [error, setError] = useState(""),
-    [done, setDone] = useState(false);
+    [done, setDone] = useState(false),
+    { t } = useLang();
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
@@ -28,25 +29,27 @@ export function AccountSecurity({
       if (mode === "verify") {
         await post("/auth/verify", { token: params.get("token") });
         await refresh();
-        setNotice("E-posta adresiniz doğrulandı.");
+        setNotice(t("E-posta adresiniz doğrulandı."));
       } else if (mode === "forgot") {
         const r = await post<{ message: string }>("/auth/forgot-password", {
           email: f.get("email"),
         });
         setNotice(
-          r.message +
-            " E-posta gelmezse spam klasörünü kontrol edin veya acenteyle iletişime geçin.",
+          t(r.message) +
+            t(
+              " E-posta gelmezse spam klasörünü kontrol edin veya acenteyle iletişime geçin.",
+            ),
         );
       } else {
         if (f.get("password") !== f.get("confirm"))
-          throw new Error("Parolalar eşleşmiyor.");
+          throw new Error(t("Parolalar eşleşmiyor."));
         await post("/auth/reset-password", {
           token: params.get("token"),
           password: f.get("password"),
         });
         await refresh();
         setNotice(
-          "Parolanız yenilendi. Yeni parolanızla giriş yapabilirsiniz.",
+          t("Parolanız yenilendi. Yeni parolanızla giriş yapabilirsiniz."),
         );
       }
       setDone(true);
@@ -59,32 +62,34 @@ export function AccountSecurity({
   return (
     <section className="container security-page">
       <ShieldCheck size={34} />
-      <span className="section-note">Hesap güvenliği</span>
+      <span className="section-note">{t("Hesap güvenliği")}</span>
       <h1>
         {mode === "verify"
-          ? "E-postanızı doğrulayın."
+          ? t("E-postanızı doğrulayın.")
           : mode === "forgot"
-            ? "Parolanızı mı unuttunuz?"
-            : "Yeni bir parola belirleyin."}
+            ? t("Parolanızı mı unuttunuz?")
+            : t("Yeni bir parola belirleyin.")}
       </h1>
       <p className="muted">
         {mode === "verify"
-          ? "Bağlantınızı aşağıdaki düğmeyle onaylayın."
+          ? t("Bağlantınızı aşağıdaki düğmeyle onaylayın.")
           : mode === "forgot"
-            ? "Üyelik e-posta adresinize tek kullanımlık yenileme bağlantısı isteyin."
-            : "Bu bağlantı bir saat geçerlidir ve bir kez kullanılabilir."}
+            ? t(
+                "Üyelik e-posta adresinize tek kullanımlık yenileme bağlantısı isteyin.",
+              )
+            : t("Bu bağlantı bir saat geçerlidir ve bir kez kullanılabilir.")}
       </p>
       {!done && (
         <form onSubmit={submit}>
           {mode === "forgot" ? (
             <label className="field">
-              E-posta
+              {t("E-posta")}
               <input name="email" type="email" required autoComplete="email" />
             </label>
           ) : mode === "reset" ? (
             <>
               <label className="field">
-                Yeni parola
+                {t("Yeni parola")}
                 <input
                   type="password"
                   name="password"
@@ -95,7 +100,7 @@ export function AccountSecurity({
                 />
               </label>
               <label className="field">
-                Yeni parola tekrar
+                {t("Yeni parola tekrar")}
                 <input
                   type="password"
                   name="confirm"
@@ -110,16 +115,16 @@ export function AccountSecurity({
           <button className="btn" disabled={busy}>
             {busy && <LoaderCircle className="spin" size={16} />}
             {mode === "verify"
-              ? "E-postamı doğrula"
+              ? t("E-postamı doğrula")
               : mode === "forgot"
-                ? "Yenileme bağlantısı iste"
-                : "Parolamı yenile"}
+                ? t("Yenileme bağlantısı iste")
+                : t("Parolamı yenile")}
           </button>
         </form>
       )}
       {error && (
         <p className="error" role="alert">
-          {error}
+          {t(error)}
         </p>
       )}
       {notice && (
@@ -131,7 +136,7 @@ export function AccountSecurity({
         className="text-link"
         to={mode === "verify" ? "/hesabim" : "/uyelik?mode=login"}
       >
-        Hesabıma dön
+        {t("Hesabıma dön")}
       </Link>
     </section>
   );
@@ -190,7 +195,7 @@ export function TicketVerification() {
         </h1>
         {error && (
           <p className="error" role="alert">
-            {error}
+            {t(error)}
           </p>
         )}
         {data && (
@@ -258,7 +263,8 @@ export function ProfileSettings() {
   const { member, refresh } = useMember(),
     [notice, setNotice] = useState(""),
     [error, setError] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    { t } = useLang();
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
@@ -270,7 +276,7 @@ export function ProfileSettings() {
         phone: f.get("phone"),
       });
       await refresh();
-      setNotice("Profiliniz güncellendi.");
+      setNotice(t("Profiliniz güncellendi."));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -280,13 +286,13 @@ export function ProfileSettings() {
   return member ? (
     <section className="profile-settings">
       <div>
-        <span className="section-note">Size nasıl ulaşalım?</span>
-        <h2>Profil bilgilerim</h2>
+        <span className="section-note">{t("Size nasıl ulaşalım?")}</span>
+        <h2>{t("Profil bilgilerim")}</h2>
         <p>
           {member.email} ·{" "}
           {member.emailVerified
-            ? "Doğrulanmış e-posta"
-            : "E-posta doğrulaması bekliyor"}
+            ? t("Doğrulanmış e-posta")
+            : t("E-posta doğrulaması bekliyor")}
         </p>
         {!member.emailVerified && (
           <button
@@ -301,10 +307,12 @@ export function ProfileSettings() {
                 }>("/auth/verification/request", {});
                 setNotice(
                   r.verified
-                    ? "E-postanız zaten doğrulanmış."
+                    ? t("E-postanız zaten doğrulanmış.")
                     : r.deliveryConfigured
-                      ? "Doğrulama e-postası kuyruğa alındı."
-                      : "Doğrulama talebiniz kaydedildi. E-posta gönderimi acente tarafından etkinleştirildiğinde iletilecek.",
+                      ? t("Doğrulama e-postası kuyruğa alındı.")
+                      : t(
+                          "Doğrulama talebiniz kaydedildi. E-posta gönderimi acente tarafından etkinleştirildiğinde iletilecek.",
+                        ),
                 );
               } catch (e) {
                 setError((e as Error).message);
@@ -313,14 +321,14 @@ export function ProfileSettings() {
               }
             }}
           >
-            Doğrulama bağlantısı iste
+            {t("Doğrulama bağlantısı iste")}
           </button>
         )}
       </div>
       <form onSubmit={save}>
         <div className="form-grid">
           <label className="field">
-            Ad soyad
+            {t("Ad soyad")}
             <input
               name="name"
               defaultValue={member.name}
@@ -331,7 +339,7 @@ export function ProfileSettings() {
             />
           </label>
           <label className="field">
-            Telefon
+            {t("Telefon")}
             <input
               name="phone"
               type="tel"
@@ -341,10 +349,10 @@ export function ProfileSettings() {
           </label>
         </div>
         <button className="btn btn-outline btn-small" disabled={busy}>
-          Bilgilerimi kaydet
+          {t("Bilgilerimi kaydet")}
         </button>
         <Link className="text-link" to="/uyelik/parolami-unuttum">
-          Parolamı yenile
+          {t("Parolamı yenile")}
         </Link>
       </form>
       {notice && (
@@ -354,7 +362,7 @@ export function ProfileSettings() {
       )}
       {error && (
         <p className="error" role="alert">
-          {error}
+          {t(error)}
         </p>
       )}
     </section>
@@ -363,15 +371,18 @@ export function ProfileSettings() {
 
 export function MemberPrivacy() {
   const { member, refresh } = useMember(),
-    navigate = useNavigate(),
+    navigate = useLocalNavigate(),
+    { lang, t } = useLang(),
+    // Sunucu her dilde "SİL" bekler; İngilizcede kullanıcı DELETE yazar.
+    word = lang === "en" ? "DELETE" : "SİL",
     [confirming, setConfirming] = useState(false),
     [confirm, setConfirm] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   async function erase(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (confirm !== "SİL") {
-      setError("Onay için kutuya büyük harflerle SİL yazın.");
+    if (confirm !== word) {
+      setError(t("Onay için kutuya büyük harflerle SİL yazın."));
       return;
     }
     setBusy(true);
@@ -390,12 +401,13 @@ export function MemberPrivacy() {
   return (
     <section className="profile-settings member-privacy">
       <div>
-        <span className="section-note">KVKK md. 11</span>
-        <h2>Kişisel verilerim (KVKK)</h2>
+        <span className="section-note">{t("KVKK md. 11")}</span>
+        <h2>{t("Kişisel verilerim (KVKK)")}</h2>
         <p>
-          Hakkınızda tuttuğumuz verilerin bir kopyasını indirebilir veya
-          hesabınızın silinmesini isteyebilirsiniz.{" "}
-          <Link to="/bilgilendirme#haklar">Haklarınız</Link>
+          {t(
+            "Hakkınızda tuttuğumuz verilerin bir kopyasını indirebilir veya hesabınızın silinmesini isteyebilirsiniz.",
+          )}{" "}
+          <Link to="/bilgilendirme#haklar">{t("Haklarınız")}</Link>
         </p>
       </div>
       <div>
@@ -405,7 +417,7 @@ export function MemberPrivacy() {
           download="rota-kars-verilerim.json"
         >
           <Download size={15} />
-          Verilerimi indir (JSON)
+          {t("Verilerimi indir (JSON)")}
         </a>
         {!confirming ? (
           <button
@@ -417,21 +429,17 @@ export function MemberPrivacy() {
             }}
           >
             <Trash2 size={15} />
-            Hesabımı sil
+            {t("Hesabımı sil")}
           </button>
         ) : (
           <form className="danger-zone" onSubmit={erase}>
             <p>
-              Üyeliğiniz, kuponlarınız ve iletişim tercihleriniz silinir;
-              oturumunuz kapanır. Ödemesiz rezervasyonlarınızdaki kişisel
-              bilgiler anonimleştirilir. Ödemesi yapılmış rezervasyonlarınız
-              vergi ve ticari mevzuat gereği 10 yıl saklanır ve bu sürenin
-              sonunda anonimleştirilir.
-              Yaklaşan bir yolculuğunuz varsa önce rezervasyonunuzu
-              sonuçlandırmanız gerekir.
+              {t(
+                "Üyeliğiniz, kuponlarınız ve iletişim tercihleriniz silinir; oturumunuz kapanır. Ödemesiz rezervasyonlarınızdaki kişisel bilgiler anonimleştirilir. Ödemesi yapılmış rezervasyonlarınız vergi ve ticari mevzuat gereği 10 yıl saklanır ve bu sürenin sonunda anonimleştirilir. Yaklaşan bir yolculuğunuz varsa önce rezervasyonunuzu sonuçlandırmanız gerekir.",
+              )}
             </p>
             <label className="field">
-              Onaylamak için SİL yazın
+              {t("Onaylamak için {word} yazın", { word })}
               <input
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
@@ -443,10 +451,10 @@ export function MemberPrivacy() {
             <div className="danger-actions">
               <button
                 className="btn btn-danger btn-small"
-                disabled={busy || confirm !== "SİL"}
+                disabled={busy || confirm !== word}
               >
                 {busy ? <LoaderCircle size={15} className="spin" /> : null}
-                Hesabımı kalıcı olarak sil
+                {t("Hesabımı kalıcı olarak sil")}
               </button>
               <button
                 type="button"
@@ -457,14 +465,14 @@ export function MemberPrivacy() {
                   setError("");
                 }}
               >
-                Vazgeç
+                {t("Vazgeç")}
               </button>
             </div>
           </form>
         )}
         {error && (
           <p className="error" role="alert">
-            {error}
+            {t(error)}
           </p>
         )}
       </div>

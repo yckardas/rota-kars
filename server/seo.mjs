@@ -217,6 +217,8 @@ const EN_STATIC = {
 const EN_PRIVATE = {
   Rezervasyon: "Booking",
   Rezervasyonum: "My booking",
+  Üyelik: "Membership",
+  Hesabım: "My account",
   "Bilet doğrulama": "Ticket check",
 };
 const isEn = (p) => p === "/en" || p.startsWith("/en/");

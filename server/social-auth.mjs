@@ -334,8 +334,11 @@ export function attachSocialAuth(
       // Yalnız sitenin kendi sayfalarına dönülür (açık yönlendirme önlenir).
       r.redirect(entry.next || "/hesabim");
     } catch (error) {
+      // İngilizce sayfadan başlayan giriş hata sayfasına da /en altında döner.
+      const prefix = /^\/en(\/|$|\?)/.test(entry?.next || "") ? "/en" : "";
       r.redirect(
-        "/uyelik?error=" +
+        prefix +
+          "/uyelik?error=" +
           encodeURIComponent(
             error instanceof AppError && error.status === 409
               ? "existing_account"
