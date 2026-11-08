@@ -615,6 +615,24 @@
 .rk-admin .clickable-row:hover td {
   background: #eef0f1;
 }
+.rk-admin .passenger-ids {
+  list-style: none;
+  margin: 10px 0 4px;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+}
+.rk-admin .passenger-ids span {
+  display: inline-block;
+  min-width: 70px;
+  color: var(--muted);
+}
+.rk-admin .passenger-ids small {
+  margin-left: 8px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
 .rk-admin .row-note {
   color: var(--ochre) !important;
 }
@@ -1093,6 +1111,35 @@
   border-radius: 4px;
   background: var(--surface);
 }
+/* Rehber listesi: yolcu başına koltuk, ad ve kimliğin son haneleri */
+.rk-admin .passenger-list .passenger-id-rows {
+  margin: 8px 0 6px;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.rk-admin .passenger-list .passenger-id-rows li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: baseline;
+  padding: 3px 0;
+  border: 0;
+  background: none;
+  font-size: 14px;
+}
+.rk-admin .passenger-id-rows span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.rk-admin .passenger-id-rows strong {
+  font-weight: 500;
+}
+.rk-admin .passenger-id-rows small {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  font-weight: 600;
+}
 .rk-admin .passenger-list li.boarded {
   border-color: #b7c9ac;
   background: #f1f5ee;
@@ -1320,4 +1367,48 @@
   .rk-admin * {
     transition: none !important;
   }
+}
+
+/* ---------- U-ETDS bildirimi ---------- */
+.rk-admin .uetds-panel {
+  display: grid;
+  gap: 14px;
+}
+.rk-admin .uetds-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px 18px;
+  margin: 0;
+}
+.rk-admin .uetds-facts dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+.rk-admin .uetds-facts dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.rk-admin .uetds-crew {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 10px 14px 4px;
+  margin: 0 0 10px;
+}
+.rk-admin .uetds-crew legend {
+  padding: 0 6px;
+  font-weight: 600;
+}
+.rk-admin .uetds-crew-view p {
+  margin: 0 0 4px;
+}
+.rk-admin .uetds-preview pre {
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: 11px;
+  background: var(--sky);
+  padding: 8px;
+  border-radius: 3px;
 }

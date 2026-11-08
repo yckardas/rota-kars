@@ -12,6 +12,9 @@ import { createWorkflow } from "./workflow.mjs";
 import { createAccountSecurity } from "./account-security.mjs";
 import { createAdminAuth } from "./admin-auth.mjs";
 import { createPrivacy } from "./privacy.mjs";
+import { piiCipher } from "./pii.mjs";
+import { createCompanions } from "./companions.mjs";
+import { createUetds } from "./uetds.mjs";
 import { depositFor } from "./payments.mjs";
 import { createPush } from "./push.mjs";
 import { createContent } from "./content.mjs";
@@ -30,11 +33,18 @@ export const REQUEST_STATUS = {
 };
 export async function openStore(
   path = undefined,
-  { clock = Date.now, seed = true, env = process.env, pushFetch = fetch } = {},
+  {
+    clock = Date.now,
+    seed = true,
+    env = process.env,
+    pushFetch = fetch,
+    uetdsFetch = fetch,
+  } = {},
 ) {
   const db = await connectDatabase({ path, env });
   await Promise.all([
     db.index("departures", { tour_id: 1, date: 1 }),
+    db.index("member_companions", { member_id: 1 }),
     db.index("holds", { expires_at: 1 }),
     db.index("seat_locks", { owner: 1 }),
     db.index("seat_locks", { departure_id: 1, expires_at: 1 }),
@@ -97,7 +107,9 @@ export async function openStore(
   const instagramSettings = await createInstagramSettings(db, { clock });
   const adminAuth = await createAdminAuth(db, { clock, env });
   await db.index("consents", { email_hash: 1 });
-  const privacy = createPrivacy(db, { clock, env, tx: (fn) => db.transaction(fn) });
+  const pii = piiCipher(env);
+  const companions = createCompanions(db, { clock, pii });
+  const privacy = createPrivacy(db, { clock, env, pii, companions, tx: (fn) => db.transaction(fn) });
   members = await createMembers(db, {
     campaigns,
     clock,
@@ -184,12 +196,23 @@ export async function openStore(
     members,
     notifications,
     env,
+    pii,
+  });
+  const uetds = createUetds(db, {
+    env,
+    fetchImpl: uetdsFetch,
+    clock,
+    departures,
+    workflow,
+    pii,
   });
   const departure = (id) => departures.get(id);
   return {
     operations,
     departures,
     workflow,
+    companions,
+    uetds,
     campaigns,
     instagramSettings,
     adminAuth,
@@ -310,6 +333,7 @@ export async function openStore(
       email,
       phone,
       passengers,
+      passengerDetails = [],
       paymentMode,
       memberId = null,
       couponId = null,
@@ -335,6 +359,11 @@ export async function openStore(
           throw new AppError(
             400,
             "Her seçili koltuk için bir yolcu adı girin.",
+          );
+        if (passengerDetails.length && passengerDetails.length !== seats.length)
+          throw new AppError(
+            400,
+            "Her yolcu için kimlik bilgilerini girin.",
           );
         const id = randomUUID(),
           reference = "RK-" + randomBytes(5).toString("hex").toUpperCase(),
@@ -383,6 +412,7 @@ export async function openStore(
           name,
           phone,
           passengers,
+          passenger_details: pii.sealDetails(passengerDetails),
           seats,
           total,
           deposit,

@@ -1,10 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ShieldCheck, Ticket, LoaderCircle, Download, Trash2 } from "lucide-react";
+import { ShieldCheck, LoaderCircle, Download, Trash2 } from "lucide-react";
 import { api, post } from "../lib/api";
 import { useMember } from "../lib/member";
 import { useEffect } from "react";
 import { dateLabel } from "../lib/types";
+import { Postmark } from "../components/Postmark";
+import { useLang } from "../lib/i18n";
+import { StatusStamp } from "../components/ReservationTicket";
 export function AccountSecurity({
   mode,
 }: {
@@ -148,7 +151,8 @@ export function TicketVerification() {
   const { token } = useParams(),
     [data, setData] = useState<TicketInfo | null>(null),
     [error, setError] = useState(""),
-    [admin, setAdmin] = useState(false);
+    [admin, setAdmin] = useState(false),
+    { t } = useLang();
   useEffect(() => {
     api<TicketInfo>("/tickets/" + token)
       .then(setData)
@@ -157,90 +161,96 @@ export function TicketVerification() {
       .then(() => setAdmin(true))
       .catch(() => {});
   }, [token]);
+  // QR okutulunca açılan sayfa: hatıra kartının arka yüzü gibi damga, posta
+  // damgası ve çizgili satırlar. Sonuç (geçerli / değil) başlıkta okunur.
   return (
-    <section className="container security-page ticket-verification">
-      <Ticket size={34} />
-      <span className="section-note">Rota Kars belge doğrulama</span>
-      <h1>
-        {data?.valid
-          ? "Rezervasyon doğrulandı."
-          : data
-            ? "Kesinleşmiş bilet değil."
-            : "Belgeniz kontrol ediliyor…"}
-      </h1>
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
-      {data && (
-        <>
-          <h2>{data.tourName}</h2>
-          <p>{data.reference}</p>
-          <div className="ticket-data">
-            <div>
-              <span>Hareket</span>
-              <strong>
-                {dateLabel(data.date)} · {data.startTime}
-              </strong>
-            </div>
-            <div>
-              <span>Buluşma</span>
-              <strong>{data.pickup}</strong>
-            </div>
-            <div>
-              <span>Koltuklar</span>
-              <strong>{data.seats.join(", ")}</strong>
-            </div>
-            <div>
-              <span>Durum</span>
-              <strong>
-                {
-                  (
-                    {
-                      pending_agency: "Acente onayı bekliyor",
-                      confirmed: "Onaylı",
-                      completed: "Tur tamamlandı",
-                      cancelled: "İptal edildi",
-                      expired: "Süresi doldu",
-                    } as Record<string, string>
-                  )[data.status]
-                }
-              </strong>
-            </div>
-          </div>
-          <p className="muted">
-            {data.checkedIn
-              ? "Katılım kaydedildi."
-              : data.valid
-                ? "Bu belge acente tarafından onaylanmış rezervasyona aittir."
-                : "Ödeme ve acente onayı tamamlanmadan kesin bilet olarak kullanılamaz."}
-          </p>
-          {admin && data.status === "confirmed" && (
-            <button
-              className="btn"
-              disabled={data.checkedIn}
-              onClick={async () => {
-                try {
-                  setData(
-                    await post<TicketInfo>(
-                      "/admin/tickets/" + token + "/check-in",
-                      {},
-                    ),
-                  );
-                  setError("");
-                } catch (e) {
-                  setError((e as Error).message);
-                }
-              }}
-            >
-              {data.checkedIn
-                ? "Katılım kaydedildi"
-                : "Yönetici: katılımı kaydet"}
-            </button>
+    <section className="container ticket-verification">
+      <article className="ticket-check" aria-busy={!data && !error}>
+        <div className="ticket-check-head">
+          {data && <StatusStamp status={data.status} />}
+          {data && (
+            <Postmark
+              date={data.date}
+              time={data.startTime}
+              label={t("Tur tarihi {date}, {time}", {
+                date: dateLabel(data.date),
+                time: data.startTime,
+              })}
+            />
           )}
-        </>
-      )}
+        </div>
+        <h1>
+          {data?.valid
+            ? t("Rezervasyon doğrulandı.")
+            : data
+              ? t("Kesinleşmiş bilet değil.")
+              : error
+                ? t("Belge doğrulanamadı.")
+                : t("Belgeniz kontrol ediliyor…")}
+        </h1>
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
+        {data && (
+          <>
+            <h2>{data.tourName}</h2>
+            <div className="ticket-reference">
+              <span>{t("Referans numarası")}</span>
+              <strong>{data.reference}</strong>
+            </div>
+            <dl className="ticket-lines">
+              <div>
+                <dt>{t("Hareket")}</dt>
+                <dd>
+                  {dateLabel(data.date)} · {data.startTime}
+                </dd>
+              </div>
+              <div>
+                <dt>{t("Koltuklar")}</dt>
+                <dd>{data.seats.join(", ")}</dd>
+              </div>
+              <div>
+                <dt>{t("Buluşma")}</dt>
+                <dd>{data.pickup}</dd>
+              </div>
+            </dl>
+            <p className="ticket-check-note">
+              {data.checkedIn
+                ? t("Katılım kaydedildi.")
+                : data.valid
+                  ? t("Bu belge acente tarafından onaylanmış rezervasyona aittir.")
+                  : t(
+                      "Ödeme ve acente onayı tamamlanmadan kesin bilet olarak kullanılamaz.",
+                    )}
+            </p>
+            {admin && data.status === "confirmed" && (
+              <button
+                className="btn"
+                disabled={data.checkedIn}
+                onClick={async () => {
+                  try {
+                    setData(
+                      await post<TicketInfo>(
+                        "/admin/tickets/" + token + "/check-in",
+                        {},
+                      ),
+                    );
+                    setError("");
+                  } catch (e) {
+                    setError((e as Error).message);
+                  }
+                }}
+              >
+                {data.checkedIn
+                  ? t("Katılım kaydedildi")
+                  : t("Yönetici: katılımı kaydet")}
+              </button>
+            )}
+          </>
+        )}
+      </article>
     </section>
   );
 }

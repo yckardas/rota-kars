@@ -14,8 +14,10 @@ import {
   MessageCircle,
   UserX,
   Trash2,
+  Send,
 } from "lucide-react";
 import { TicketScanner } from "./admin/TicketScanner";
+import { UetdsPanel } from "./admin/UetdsPanel";
 import { useFeedback } from "./admin/feedback";
 import { SeatCourse } from "./admin/SeatCourse";
 import { Modal } from "./Modal";
@@ -29,6 +31,7 @@ import {
   today,
   type Catalog,
   type Departure,
+  type FleetVehicle,
   type Reservation,
 } from "../lib/types";
 import { SeatMap } from "./SeatMap";
@@ -36,6 +39,7 @@ import { PassengerList } from "./admin/MobileApp";
 import { NewReservation } from "./admin/NewReservation";
 import { DepartureCalendar } from "./admin/DepartureCalendar";
 import { isNativeApp } from "../lib/native";
+import { countryName } from "../lib/countries";
 export type Campaign = {
   active: boolean;
   sectors: number[];
@@ -67,6 +71,7 @@ export function DepartureManager({
     [busy, setBusy] = useState(false),
     [tourFilter, setTourFilter] = useState(""),
     [passengers, setPassengers] = useState(""),
+    [uetds, setUetds] = useState(""),
     [showPast, setShowPast] = useState(false),
     [view, setView] = useState<"calendar" | "list">("calendar");
   async function load() {
@@ -116,6 +121,7 @@ export function DepartureManager({
           guidePhone: f.get("guidePhone"),
           vehicleModel: f.get("vehicleModel"),
           passengerSeats: Number(f.get("passengerSeats")),
+          vehicleId: f.get("vehicleId") || "",
           active: f.get("active") === "on",
         });
         setEditing(false);
@@ -136,6 +142,7 @@ export function DepartureManager({
         guidePhone: f.get("guidePhone"),
         vehicleModel: f.get("vehicleModel"),
         passengerSeats: Number(f.get("passengerSeats")),
+        vehicleId: f.get("vehicleId") || "",
         active: f.get("active") === "on",
       });
       setEditing(false);
@@ -206,6 +213,7 @@ export function DepartureManager({
       {passengers && (
         <PassengerList departureId={passengers} onClose={() => setPassengers("")} />
       )}
+      {uetds && <UetdsPanel departureId={uetds} onClose={() => setUetds("")} />}
       {view === "calendar" && (
         <DepartureCalendar
           items={items}
@@ -240,7 +248,9 @@ export function DepartureManager({
                   </small>
                 </td>
                 <td>
-                  {d.vehicle?.passengerSeats}+1 · {d.vehicle?.name}
+                  {d.vehicle?.unit
+                    ? `${d.vehicle.unit.name} · ${d.vehicle.unit.plate}`
+                    : `${d.vehicle?.passengerSeats}+1 · ${d.vehicle?.name}`}
                   <SeatCourse sold={(d.vehicle?.sellableSeats || 0) - d.available} total={d.vehicle?.sellableSeats || 0} size="sm" />
                   <small>
                     {d.available} / {d.vehicle?.sellableSeats} koltuk boş
@@ -283,6 +293,10 @@ export function DepartureManager({
                       CSV
                     </a>
                   )}
+                  <button className="text-link" onClick={() => setUetds(d.id)}>
+                    <Send size={14} />
+                    U-ETDS
+                  </button>
                 </td>
               </tr>
             ))}
@@ -315,7 +329,23 @@ function DepartureEditor({
       d?.vehicle?.passengerSeats || catalog.vehicleModels[0].seats,
     ),
     m = catalog.vehicleModels.find((v) => v.id === model)!,
-    [repeat, setRepeat] = useState(false);
+    [repeat, setRepeat] = useState(false),
+    [fleet, setFleet] = useState<FleetVehicle[]>([]),
+    [unitId, setUnitId] = useState(d?.vehicle_id || "");
+  useEffect(() => {
+    api<FleetVehicle[]>("/admin/vehicles")
+      .then(setFleet)
+      .catch(() => setFleet([]));
+  }, []);
+  // Filodan araç seçilince sınıf ve kapasite o araca kilitlenir.
+  function pickUnit(id: string) {
+    setUnitId(id);
+    const unit = fleet.find((v) => v.id === id);
+    if (unit) {
+      setModel(unit.vehicleModel);
+      setCapacity(unit.passengerSeats);
+    }
+  }
   return (
     <form className="admin-editor departure-editor" onSubmit={save}>
       <h2>{d ? "Seferi düzenle" : "Yeni sefer"}</h2>
@@ -395,10 +425,32 @@ function DepartureEditor({
           />
         </label>
         <label className="field">
-          Araç sınıfı
+          Araç
           <select
-            name="vehicleModel"
+            name="vehicleId"
+            value={unitId}
+            onChange={(e) => pickUnit(e.target.value)}
+          >
+            <option value="">Henüz atanmadı (yalnız sınıf seç)</option>
+            {fleet.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.name} {v.passengerSeats}+1 · {v.year} · {v.plate}
+                {v.note ? " · " + v.note : ""}
+              </option>
+            ))}
+          </select>
+          <small>
+            Aynı araç aynı gün tek sefere atanabilir.
+          </small>
+        </label>
+        <label className="field">
+          Araç sınıfı
+          {/* Kilitli (disabled) alan gönderilmez; sınıf gizli alandan gider. */}
+          {unitId && <input type="hidden" name="vehicleModel" value={model} />}
+          <select
+            name={unitId ? undefined : "vehicleModel"}
             value={model}
+            disabled={Boolean(unitId)}
             onChange={(e) => {
               setModel(e.target.value);
               setCapacity(
@@ -422,6 +474,7 @@ function DepartureEditor({
             min={m.min}
             max={m.max}
             value={capacity}
+            readOnly={Boolean(unitId)}
             onChange={(e) => setCapacity(Number(e.target.value))}
             required
           />
@@ -845,6 +898,25 @@ function BookingControls({
             <p className="muted">
               {dateLabel(r.date)} · {r.start_time} · Koltuk {r.seats.join(", ")} · {r.passengers.length} kişi
             </p>
+            {/* Yolcu kimlikleri (U-ETDS bildirimi için); yalnız panelde tam görünür. */}
+            {Boolean(r.passenger_details?.length) && (
+              <ul className="passenger-ids">
+                {r.seats.map((seat, i) => {
+                  const p = r.passenger_details?.[i];
+                  return (
+                    <li key={seat}>
+                      <span>Koltuk {seat}</span> {r.passengers[i]}
+                      {p && (
+                        <small>
+                          {p.nationality === "TR" ? "T.C." : countryName(p.nationality)} {p.idNumber} ·{" "}
+                          {p.gender === "E" ? "Erkek" : "Kadın"}
+                        </small>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
             {r.notes && <p className="row-note">Not: {r.notes}</p>}
             {Boolean(r.cancellation_requested_at) && r.status !== "cancelled" && (
               <p className="error">Müşteri iptal talep etti ({stamp(r.cancellation_requested_at)}).</p>
@@ -1057,7 +1129,12 @@ function BookingControls({
             {r.ledger.map((p) => (
               <p key={p.id}>
                 {stamp(p.created_at)} · {p.kind === "refund" ? "İade" : "Tahsilat"} · {currency(p.amount)} ·{" "}
-                {p.method === "cash" ? "Nakit" : "Havale"} · {p.external_reference}
+                {p.method === "cash"
+                  ? "Nakit"
+                  : p.method.startsWith("online:")
+                    ? "Online kart"
+                    : "Havale"}{" "}
+                · {p.external_reference}
               </p>
             ))}
           </div>

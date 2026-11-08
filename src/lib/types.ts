@@ -1,3 +1,4 @@
+import { localeOf } from "./i18n";
 export type Tour = {
   id: string;
   salesOpen: boolean;
@@ -47,6 +48,19 @@ export type Vehicle = {
   sellableSeats: number;
   layout: (string | number | null)[][];
   description: string;
+  // Gövde çizimi: binek, minibüs, midibüs, turizm midibüsü, otobüs.
+  shape?: "car" | "van" | "midibus" | "bus" | "coach";
+  // Sefere filodan bir araç atanmışsa; plaka yalnız panel yanıtlarında gelir.
+  unit?: { id: string; name: string; year: number; plate?: string };
+};
+export type FleetVehicle = {
+  id: string;
+  plate: string;
+  name: string;
+  year: number;
+  vehicleModel: string;
+  passengerSeats: number;
+  note: string;
 };
 export type Catalog = {
   business: {
@@ -65,7 +79,13 @@ export type Catalog = {
     founded: number;
   };
   features: { icon: string; title: string; text: string }[];
-  services: { id: string; title: string; image: string; text: string }[];
+  services: {
+    id: string;
+    title: string;
+    image: string;
+    imageAlt?: string;
+    text: string;
+  }[];
   fleet: { note: string; tourism: string[]; vip: string[]; perks: string[] };
   cancellationPolicy: string;
   tours: Tour[];
@@ -82,7 +102,14 @@ export type Catalog = {
     source: string;
     changes: string;
   }[];
-  payment: { enabled: boolean; message: string };
+  // İngilizce sürüm metinleri (server/catalog-en.mjs).
+  translations?: { en: Record<string, any> };
+  payment: {
+    enabled: boolean;
+    message: string;
+    test?: boolean;
+    depositPercent?: number;
+  };
   preview: boolean;
   demo?: boolean;
   turnstileSiteKey?: string | null;
@@ -98,12 +125,19 @@ export type Departure = {
   pickup: string;
   guide_name: string;
   guide_phone: string;
+  vehicle_id?: string;
   vehicle: Vehicle;
 };
 export type Seat = { number: number; status: "occupied" | "available" };
 export type Hold = { token: string; seats: number[]; expiresAt: number };
+export type PassengerDetail = {
+  nationality: string;
+  idNumber: string;
+  gender: "K" | "E";
+};
 export type Reservation = {
   ticket_token: string;
+  passenger_details?: PassengerDetail[];
   ticketUrl?: string;
   qrDataUrl?: string;
   net_paid?: number;
@@ -176,13 +210,14 @@ export type ReviewsResponse = {
   terms?: { term: string; exact: boolean }[];
 };
 export const currency = (value: number) =>
-  new Intl.NumberFormat("tr-TR", {
+  new Intl.NumberFormat(localeOf(), {
     style: "currency",
     currency: "TRY",
+    currencyDisplay: "narrowSymbol",
     maximumFractionDigits: 0,
   }).format(value / 100);
 export const dateLabel = (s: string) =>
-  new Date(s + "T12:00:00").toLocaleDateString("tr-TR", {
+  new Date(s + "T12:00:00").toLocaleDateString(localeOf(), {
     day: "numeric",
     month: "long",
     year: "numeric",

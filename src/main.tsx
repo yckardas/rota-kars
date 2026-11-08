@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useState } from "react";
+import React, { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import ReactDOM from "react-dom/client";
 import {
   BrowserRouter,
@@ -16,7 +16,10 @@ import "@fontsource/onest/latin-500.css";
 import "@fontsource/onest/latin-ext-600.css";
 import "@fontsource/onest/latin-600.css";
 import "./styles.css";
+import "./postcard.css";
 import { api } from "./lib/api";
+import { langOf } from "./lib/i18n";
+import { localizeCatalog } from "./lib/localize";
 import { usePageMeta } from "./lib/seo";
 import type { Catalog } from "./lib/types";
 import { configureTurnstile } from "./components/Turnstile";
@@ -57,6 +60,12 @@ const TicketVerification = lazy(() =>
     default: m.TicketVerification,
   })),
 );
+const TestPayment = lazy(() =>
+  import("./pages/Payment").then((m) => ({ default: m.TestPayment })),
+);
+const PaymentResult = lazy(() =>
+  import("./pages/Payment").then((m) => ({ default: m.PaymentResult })),
+);
 const PageLoading = () => (
   <div className="app-loading" role="status">
     <p>Yükleniyor…</p>
@@ -86,6 +95,15 @@ function App() {
       );
   }, []);
   usePageMeta(location.pathname);
+  const lang = langOf(location.pathname);
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+  // İngilizce sürümde katalog metinleri çevrilir; yönetim her zaman Türkçe görür.
+  const shown = useMemo(
+    () => (catalog && lang === "en" ? localizeCatalog(catalog) : catalog),
+    [catalog, lang],
+  );
   configureTurnstile(catalog?.turnstileSiteKey);
   if (error)
     return (
@@ -113,15 +131,11 @@ function App() {
         />
       </Suspense>
     );
-  return (
+  const pages = (
     <>
-    <NativeReturnBar />
-    <Layout catalog={catalog}>
-      <Suspense fallback={<PageLoading />}>
-        <Routes>
-          <Route path="/" element={<Home catalog={catalog} />} />
+          <Route index element={<Home catalog={shown!} />} />
           <Route
-            path="/gorsel-kaynaklari"
+            path="gorsel-kaynaklari"
             element={
               <section className="container section photo-credits">
                 <h1>Rotanın fotoğrafçıları.</h1>
@@ -130,7 +144,7 @@ function App() {
                   Görseller web için boyutlandırılmıştır; kartlarda kırpılarak
                   gösterilir.
                 </p>
-                {catalog.photoCredits.map((photo) => (
+                {shown!.photoCredits.map((photo) => (
                   <article key={photo.id}>
                     <img src={photo.path} alt={photo.title} loading="lazy" />
                     <div>
@@ -153,42 +167,44 @@ function App() {
               </section>
             }
           />
-          <Route path="/hizmetler" element={<Services catalog={catalog} />} />
+          <Route path="hizmetler" element={<Services catalog={shown!} />} />
           <Route
-            path="/hizmetler/:id"
-            element={<Services catalog={catalog} />}
+            path="hizmetler/:id"
+            element={<Services catalog={shown!} />}
           />
-          <Route path="/uyelik" element={<Membership />} />
+          <Route path="uyelik" element={<Membership />} />
           <Route
-            path="/uyelik/eposta-dogrula"
+            path="uyelik/eposta-dogrula"
             element={<AccountSecurity mode="verify" />}
           />
           <Route
-            path="/uyelik/parola-yenile"
+            path="uyelik/parola-yenile"
             element={<AccountSecurity mode="reset" />}
           />
           <Route
-            path="/uyelik/parolami-unuttum"
+            path="uyelik/parolami-unuttum"
             element={<AccountSecurity mode="forgot" />}
           />
-          <Route path="/bilet/:token" element={<TicketVerification />} />
-          <Route path="/hesabim" element={<Account />} />
-          <Route path="/turlar" element={<Tours catalog={catalog} />} />
+          <Route path="bilet/:token" element={<TicketVerification />} />
+          <Route path="odeme/deneme/:id" element={<TestPayment />} />
+          <Route path="odeme/sonuc/:id" element={<PaymentResult />} />
+          <Route path="hesabim" element={<Account />} />
+          <Route path="turlar" element={<Tours catalog={shown!} />} />
           <Route
-            path="/turlar/:id"
-            element={<TourDetail catalog={catalog} />}
+            path="turlar/:id"
+            element={<TourDetail catalog={shown!} />}
           />
           <Route
-            path="/rezervasyon/:tourId"
-            element={<Booking catalog={catalog} />}
+            path="rezervasyon/:tourId"
+            element={<Booking catalog={shown!} />}
           />
-          <Route path="/rezervasyonum" element={<Lookup catalog={catalog} />} />
-          <Route path="/konaklama" element={<Hotels />} />
-          <Route path="/hakkimizda" element={<About />} />
-          <Route path="/iletisim" element={<Contact catalog={catalog} />} />
+          <Route path="rezervasyonum" element={<Lookup catalog={shown!} />} />
+          <Route path="konaklama" element={<Hotels />} />
+          <Route path="hakkimizda" element={<About />} />
+          <Route path="iletisim" element={<Contact catalog={shown!} />} />
           <Route
-            path="/bilgilendirme"
-            element={<Information catalog={catalog} />}
+            path="bilgilendirme"
+            element={<Information catalog={shown!} />}
           />
           <Route
             path="*"
@@ -202,6 +218,17 @@ function App() {
               </div>
             }
           />
+    </>
+  );
+  return (
+    <>
+    <NativeReturnBar />
+    <Layout catalog={shown!}>
+      <Suspense fallback={<PageLoading />}>
+        <Routes>
+          {/* Aynı sayfalar Türkçe kökte ve İngilizce /en altında. */}
+          <Route path="/en">{pages}</Route>
+          <Route path="/">{pages}</Route>
         </Routes>
       </Suspense>
     </Layout>

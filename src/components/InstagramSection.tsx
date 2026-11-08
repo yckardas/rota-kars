@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { api } from "../lib/api";
 import { Modal } from "./Modal";
+import { useLang } from "../lib/i18n";
 export type InstagramPost = {
   id: string;
   title: string;
@@ -39,7 +40,8 @@ function InstagramEmbed({ post }: { post: InstagramPost }) {
   const src = instagramEmbedUrl(post.permalink),
     [status, setStatus] = useState<"loading" | "ready" | "unavailable">(
       src ? "loading" : "unavailable",
-    );
+    ),
+    { t } = useLang();
   useEffect(() => {
     if (!src) return;
     setStatus("loading");
@@ -53,14 +55,14 @@ function InstagramEmbed({ post }: { post: InstagramPost }) {
     <div className="instagram-inline-player">
       {status === "loading" && (
         <p className="instagram-player-status" role="status">
-          <LoaderCircle size={17} className="spin" /> Instagram yükleniyor…
+          <LoaderCircle size={17} className="spin" /> {t("Instagram yükleniyor…")}
         </p>
       )}
       {status === "unavailable" && (
         <p className="instagram-player-status" role="status">
-          Oynatıcı yüklenemedi.{" "}
+          {t("Oynatıcı yüklenemedi.")}{" "}
           <a href={post.permalink} target="_blank" rel="noopener noreferrer">
-            Instagram’da görüntüle
+            {t("Instagram’da görüntüle")}
           </a>
         </p>
       )}
@@ -68,7 +70,7 @@ function InstagramEmbed({ post }: { post: InstagramPost }) {
         <div className="instagram-embed-host">
           <iframe
             src={src}
-            title={post.title || "Instagram gönderisi"}
+            title={post.title || t("Instagram gönderisi")}
             loading="lazy"
             allow="autoplay; encrypted-media; picture-in-picture; clipboard-write"
             referrerPolicy="strict-origin-when-cross-origin"
@@ -98,7 +100,8 @@ function VideoCard({
     video = useRef<HTMLVideoElement>(null),
     [muted, setMuted] = useState(true),
     [failed, setFailed] = useState(false),
-    [ready, setReady] = useState(false);
+    [ready, setReady] = useState(false),
+    { t } = useLang();
   useEffect(() => {
     const el = video.current;
     if (!el) return;
@@ -172,7 +175,7 @@ function VideoCard({
         {!failed && (
           <button
             className="instagram-sound"
-            aria-label={muted ? "Sesi aç" : "Sesi kapat"}
+            aria-label={muted ? t("Sesi aç") : t("Sesi kapat")}
             aria-pressed={!muted}
             onClick={() => {
               const el = video.current!;
@@ -187,14 +190,15 @@ function VideoCard({
         <span className="instagram-post-title">
           {post.title}
           <small>
-            {failed ? "Video şu an yüklenemedi" : "Üzerine gelin, izleyin"}
+            {failed
+              ? t("Video şu an yüklenemedi")
+              : t("Üzerine gelin, izleyin")}
           </small>
         </span>
       </div>
       <div className="instagram-card-caption">
-        <span>{post.title}</span>
         <a href={post.permalink} target="_blank" rel="noreferrer">
-          Instagram’da aç <ExternalLink size={12} />
+          {t("Instagram’da aç")} <ExternalLink size={12} />
         </a>
       </div>
     </article>
@@ -202,13 +206,14 @@ function VideoCard({
 }
 // Video dosyası olmayan paylaşım: tıklanınca Instagram'ın oynatıcısı pencerede açılır.
 function EmbedCard({ post, open }: { post: InstagramPost; open: () => void }) {
+  const { t } = useLang();
   return (
     <article className="instagram-post">
       <div className="instagram-card-media">
         <button
           className="instagram-cover"
           onClick={open}
-          aria-label={`${post.title} videosunu izle`}
+          aria-label={t("{title} videosunu izle", { title: post.title })}
         >
           <img
             {...responsive(post.cover, "(max-width: 760px) 80vw, 25vw")}
@@ -224,14 +229,13 @@ function EmbedCard({ post, open }: { post: InstagramPost; open: () => void }) {
           </span>
           <span className="instagram-post-title">
             {post.title}
-            <small>İzlemek için tıklayın</small>
+            <small>{t("İzlemek için tıklayın")}</small>
           </span>
         </button>
       </div>
       <div className="instagram-card-caption">
-        <span>{post.title}</span>
         <a href={post.permalink} target="_blank" rel="noreferrer">
-          Instagram’da aç <ExternalLink size={12} />
+          {t("Instagram’da aç")} <ExternalLink size={12} />
         </a>
       </div>
     </article>
@@ -242,7 +246,8 @@ export function InstagramSection({ profileUrl }: { profileUrl: string }) {
     // Aynı anda tek video oynar.
     [playing, setPlaying] = useState<string | null>(null),
     [embed, setEmbed] = useState<InstagramPost | null>(null),
-    rail = useRef<HTMLDivElement>(null);
+    rail = useRef<HTMLDivElement>(null),
+    { t } = useLang();
   useEffect(() => {
     let alive = true;
     api<{ posts: InstagramPost[] }>("/instagram")
@@ -259,12 +264,9 @@ export function InstagramSection({ profileUrl }: { profileUrl: string }) {
       <div className="container">
         <div className="section-heading">
           <div>
-            <span className="section-note">
-              <Instagram size={14} /> @rotakarstur
-            </span>
-            <h2>Instagram’da biz.</h2>
+            <h2>{t("Instagram’da biz.")}</h2>
             <p className="muted">
-              Yollardan, buluşmalardan, birlikte biriktirdiğimiz anlardan.
+              {t("Yollardan, buluşmalardan, birlikte biriktirdiğimiz anlardan.")}
             </p>
           </div>
           <a
@@ -273,7 +275,7 @@ export function InstagramSection({ profileUrl }: { profileUrl: string }) {
             target="_blank"
             rel="noreferrer"
           >
-            Bizi Instagram’da takip edin <ExternalLink size={15} />
+            {t("Bizi Instagram’da takip edin")} <ExternalLink size={15} />
           </a>
         </div>
         {posts.length ? (
@@ -303,8 +305,10 @@ export function InstagramSection({ profileUrl }: { profileUrl: string }) {
             <div className="instagram-rail-footer">
               <small>
                 {posts.some((p) => p.videoSrc)
-                  ? "Videolar üzerine gelince sessiz oynar; sesi kartın köşesinden açabilirsiniz."
-                  : "Videoyu izlemek için karta tıklayın."}
+                  ? t(
+                      "Videolar üzerine gelince sessiz oynar; sesi kartın köşesinden açabilirsiniz.",
+                    )
+                  : t("Videoyu izlemek için karta tıklayın.")}
               </small>
               <div>
                 <button
@@ -312,7 +316,7 @@ export function InstagramSection({ profileUrl }: { profileUrl: string }) {
                   onClick={() =>
                     rail.current?.scrollBy({ left: -350, behavior: "smooth" })
                   }
-                  aria-label="Önceki Instagram videoları"
+                  aria-label={t("Önceki Instagram videoları")}
                 >
                   <ChevronLeft size={18} />
                 </button>
@@ -321,7 +325,7 @@ export function InstagramSection({ profileUrl }: { profileUrl: string }) {
                   onClick={() =>
                     rail.current?.scrollBy({ left: 350, behavior: "smooth" })
                   }
-                  aria-label="Sonraki Instagram videoları"
+                  aria-label={t("Sonraki Instagram videoları")}
                 >
                   <ChevronRight size={18} />
                 </button>
@@ -332,10 +336,11 @@ export function InstagramSection({ profileUrl }: { profileUrl: string }) {
           <div className="instagram-empty">
             <Instagram size={35} />
             <div>
-              <h3>Yolculuğumuz Instagram’da da devam ediyor.</h3>
+              <h3>{t("Yolculuğumuz Instagram’da da devam ediyor.")}</h3>
               <p>
-                Rotalarımızdan videolar için @rotakarstur hesabımızı ziyaret
-                edin.
+                {t(
+                  "Rotalarımızdan videolar için @rotakarstur hesabımızı ziyaret edin.",
+                )}
               </p>
             </div>
             <a
@@ -344,7 +349,7 @@ export function InstagramSection({ profileUrl }: { profileUrl: string }) {
               target="_blank"
               rel="noreferrer"
             >
-              Reels’leri keşfedin <ExternalLink size={15} />
+              {t("Reels’leri keşfedin")} <ExternalLink size={15} />
             </a>
           </div>
         )}

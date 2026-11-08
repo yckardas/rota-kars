@@ -40,42 +40,41 @@ export const services = [
   {
     id: "turizm-tasimaciligi",
     title: "Turizm taşımacılığı",
-    image: "/images/service-tur.webp",
+    image: "/images/rota-bus.webp",
+    imageAlt: "Rota Kars Tur logolu turizm otobüsü",
     text: "Yerli ve yabancı misafirlerimizin transferlerinde zamanlama, konfor ve emniyeti ön planda tutan uzman bir kadro.",
   },
   {
     id: "vip-transfer",
     title: "VIP transfer",
-    image: "/images/service-vip.webp",
+    image: "/images/rota-bus.webp",
+    imageAlt: "Rota Kars Tur logolu turizm otobüsü",
     text: "Özel üretilmiş, prestijli ve konforlu VIP araç filomuzla dilediğiniz destinasyona eğitimli personelle ulaşım.",
   },
   {
     id: "kongre-toplanti",
     title: "Kongre ve toplantı",
-    image: "/images/service-kongre.webp",
+    image: "/images/rota-bus.webp",
+    imageAlt: "Rota Kars Tur logolu turizm otobüsü",
     text: "Fuar, seminer ve toplantı katılımcılarınızın transferleri için dakik ve güvenilir çözüm ortağı.",
   },
   {
     id: "express-tur",
     title: "Express tur",
-    image: "/images/service-express.webp",
+    image: "/images/tours/ani.webp",
+    imageAlt: "Ani’de katedral ve bozkır",
     text: "Gezi, eğitim, kültür, sanat ve eğlence etkinlikleri için size özel planlanan ulaşım.",
   },
 ];
 export const fleet = {
   note: "Araçlarımız şoförlü olarak kiralanır. Kaptanlarımız bölgeye hâkim, işinde profesyoneldir.",
-  tourism: [
-    "13+1",
-    "16+1",
-    "19+1",
-    "27+1",
-    "29+1",
-    "31+1",
-    "35+1",
-    "38+1",
-    "46+1",
+  tourism: ["31+1 Otokar Sultan", "46+1 Mercedes Travego"],
+  vip: [
+    "4+1 Fiat Egea",
+    "9+1 Mercedes Vito",
+    "19+1 Mercedes Sprinter",
+    "19+1 Volkswagen Crafter",
   ],
-  vip: ["4+1", "9+1", "11+1"],
   perks: ["D2 ve B2 belgeli", "Lüks ve klimalı", "Mikrofonlu", "Buzdolaplı"],
 };
 export const cancellationPolicy =

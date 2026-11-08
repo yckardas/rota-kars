@@ -88,6 +88,7 @@ test("HTTP member registration/session, owner-only coupons and double-spend race
           email: "http@example.com",
           phone: "05550000000",
           passengers: ["Test Yolcu"],
+          passengerDetails: [{ nationality: "TR", idNumber: "10000000146", gender: "K" }],
           paymentMode: "full",
           consent: true,
           couponId: prize.coupon.id,

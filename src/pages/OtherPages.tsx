@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { responsive } from "../lib/images";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
+import { Link, useLang } from "../lib/i18n";
 import { useMember } from "../lib/member";
 import {
   ArrowRight,
@@ -10,13 +11,12 @@ import {
   Instagram,
   ExternalLink,
   Check,
-  BedDouble,
   Search,
   LoaderCircle,
-  Compass,
 } from "lucide-react";
 import { RequestForm } from "../components/RequestForm";
 import { ReservationTicket } from "../components/ReservationTicket";
+import { PayDeposit } from "./Payment";
 import { api, post } from "../lib/api";
 import { telHref } from "../lib/phone";
 import type { Catalog, Hotel, Reservation } from "../lib/types";
@@ -34,14 +34,11 @@ export function Hotels() {
     <>
       <section className="hotel-hero">
         <img
-          {...responsive("/images/stay.webp", "(max-width: 950px) 100vw, 50vw")}
-          alt="Temsili konaklama görseli"
+          {...responsive("/images/tours/sarikamis.webp", "100vw")}
+          alt="Sarıkamış’ta karlı çam ormanı ve Allahuekber Dağları"
           decoding="async"
         />
         <div className="container">
-          <span className="section-note">
-            Yolculuğunuza bir gece daha ekleyin
-          </span>
           <h1>
             Kars’ta güzel
             <br />
@@ -56,14 +53,11 @@ export function Hotels() {
             Konaklama talebi oluştur <ArrowRight size={17} />
           </button>
         </div>
-        <small>Temsili oda görseli</small>
+        <small>Sarıkamış · Allahuekber Dağları</small>
       </section>
       <section className="container section">
         <div className="section-heading">
           <div>
-            <span className="section-note">
-              Sizin için birlikte planlıyoruz
-            </span>
             <h2>İyi bir yolculuğa, iyi bir konaklama.</h2>
           </div>
         </div>
@@ -101,20 +95,12 @@ export function Hotels() {
             ))}
           </div>
         ) : (
-          <div className="hotel-empty">
-            <BedDouble size={42} strokeWidth={1} />
-            <div>
-              <h3>Konaklamanızı size göre planlayalım.</h3>
-              <p>
-                {error
-                  ? "Otel listesine şu anda erişilemiyor. Talep bırakarak seçeneklerinizi sorabilirsiniz."
-                  : "Otel seçeneklerini tarihlerinize ve oda tercihinize göre acentemizle netleştirebilirsiniz."}
-              </p>
-            </div>
-            <button className="btn" onClick={() => setRequest(true)}>
-              Tarihlerimi paylaşayım
-            </button>
-          </div>
+          error && (
+            <p className="muted">
+              Otel listesine şu anda erişilemiyor. Talep bırakarak
+              seçeneklerinizi sorabilirsiniz.
+            </p>
+          )
         )}
         <div className="stay-process">
           <div>
@@ -146,7 +132,8 @@ export function Hotels() {
 }
 export function Lookup({ catalog }: { catalog: Catalog }) {
   const [params] = useSearchParams(),
-    { member } = useMember();
+    { member } = useMember(),
+    { t } = useLang();
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [result, setResult] = useState<Reservation | null>(null),
@@ -189,14 +176,13 @@ export function Lookup({ catalog }: { catalog: Catalog }) {
   }
   return (
     <div className="container lookup-page">
-      <span className="section-note">Yolculuğunuzun detayları</span>
-      <h1>Rezervasyonunuz burada.</h1>
+      <h1>{t("Rezervasyonunuz burada.")}</h1>
       <p className="muted">
-        Ön rezervasyon referansınız ve e-posta adresinizle sorgulayın.
+        {t("Ön rezervasyon referansınız ve e-posta adresinizle sorgulayın.")}
       </p>
       <form className="lookup-form" onSubmit={lookup}>
         <label className="field">
-          Referans numarası
+          {t("Referans numarası")}
           <input
             value={credentials.reference}
             onChange={(e) =>
@@ -208,7 +194,7 @@ export function Lookup({ catalog }: { catalog: Catalog }) {
           />
         </label>
         <label className="field">
-          E-posta adresiniz
+          {t("E-posta adresiniz")}
           <input
             type="email"
             value={credentials.email}
@@ -225,7 +211,7 @@ export function Lookup({ catalog }: { catalog: Catalog }) {
           ) : (
             <Search size={17} />
           )}
-          Sorgula
+          {t("Sorgula")}
         </button>
       </form>
       {error && (
@@ -235,11 +221,16 @@ export function Lookup({ catalog }: { catalog: Catalog }) {
       )}
       {result && (
         <>
+          <PayDeposit
+            catalog={catalog}
+            reservation={result}
+            email={credentials.email}
+          />
           <ReservationTicket reservation={result} catalog={catalog} />
           {Boolean(result.cancellation_requested_at) &&
             result.status !== "cancelled" && (
               <p className="notice-success">
-                İptal talebiniz acente değerlendirmesini bekliyor.
+                {t("İptal talebiniz acente değerlendirmesini bekliyor.")}
               </p>
             )}
           {["pending_agency", "confirmed"].includes(result.status) &&
@@ -248,8 +239,12 @@ export function Lookup({ catalog }: { catalog: Catalog }) {
               <div className="cancel-confirm">
                 <p>
                   {result.net_paid
-                    ? "İptal talebiniz acenteye iletilecek. Ödenen tutarların iadesi acente tarafından ayrıca değerlendirilir; otomatik iade yapılmaz."
-                    : "Ön rezervasyon iptal edilecek ve koltuklarınız serbest bırakılacak."}
+                    ? t(
+                        "İptal talebiniz acenteye iletilecek. Ödenen tutarların iadesi acente tarafından ayrıca değerlendirilir; otomatik iade yapılmaz.",
+                      )
+                    : t(
+                        "Ön rezervasyon iptal edilecek ve koltuklarınız serbest bırakılacak.",
+                      )}
                 </p>
                 <div className="button-row">
                   <button
@@ -257,19 +252,19 @@ export function Lookup({ catalog }: { catalog: Catalog }) {
                     onClick={cancel}
                     disabled={busy}
                   >
-                    İptali onayla
+                    {t("İptali onayla")}
                   </button>
                   <button
                     className="btn btn-outline"
                     onClick={() => setConfirm(false)}
                   >
-                    Vazgeç
+                    {t("Vazgeç")}
                   </button>
                 </div>
               </div>
             ) : (
               <button className="text-link" onClick={() => setConfirm(true)}>
-                İptal talebi oluşturmak istiyorum
+                {t("İptal talebi oluşturmak istiyorum")}
               </button>
             ))}
         </>
@@ -281,58 +276,59 @@ export function About() {
   const [request, setRequest] = useState<"private-tour" | "vehicle" | null>(
     null,
   );
+  const { t } = useLang();
   return (
     <>
       <section className="container about-layout section">
         <div>
-          <span className="section-note">Kars’ı tanıyanlarla yola çıkın.</span>
           <h1>
-            Bu coğrafyanın
+            {t("Bu coğrafyanın")}
             <br />
-            bir parçasıyız.
+            {t("bir parçasıyız.")}
           </h1>
           <p className="lead-copy">
-            Rota Kars Turizm olarak Kars merkezli turlar, özel grup programları
-            ve turizm taşımacılığı hizmetleri sunuyoruz.
+            {t(
+              "Rota Kars Turizm olarak Kars merkezli turlar, özel grup programları ve turizm taşımacılığı hizmetleri sunuyoruz.",
+            )}
           </p>
           <p>
-            Bir şehri tanımanın en güzel yolu, hikâyesini bilen insanlarla
-            yürümek. Ani’den Çıldır’a, Sarıkamış’tan komşu rotalara uzanan
-            programlarımızda bu yaklaşımı benimsiyoruz.
+            {t(
+              "Bir şehri tanımanın en güzel yolu, hikâyesini bilen insanlarla yürümek. Ani’den Çıldır’a, Sarıkamış’tan komşu rotalara uzanan programlarımızda bu yaklaşımı benimsiyoruz.",
+            )}
           </p>
           <p>
-            Küçük gruplar için VIP midibüslerle ulaşımı, rehberli geziyi ve
-            konaklama planlamasını bir arada ele alıyoruz.
+            {t(
+              "Küçük gruplar için VIP midibüslerle ulaşımı, rehberli geziyi ve konaklama planlamasını bir arada ele alıyoruz.",
+            )}
           </p>
           <div className="button-row">
             <button className="btn" onClick={() => setRequest("private-tour")}>
-              Özel tur planlayın
+              {t("Özel tur planlayın")}
             </button>
             <button
               className="btn btn-outline"
               onClick={() => setRequest("vehicle")}
             >
-              Araç kiralama talebi
+              {t("Araç kiralama talebi")}
             </button>
           </div>
         </div>
         <img
           src="/images/kars.webp"
-          alt="Ani’de kış manzarası"
+          alt={t("Ani’de kış manzarası")}
           loading="lazy"
           decoding="async"
         />
       </section>
       <section className="about-note">
         <div className="container">
-          <Compass size={35} strokeWidth={1} />
           <h2>
-            İyi bildiğimiz yollar,
+            {t("İyi bildiğimiz yollar,")}
             <br />
-            birlikte biriktireceğimiz anılar.
+            {t("birlikte biriktireceğimiz anılar.")}
           </h2>
           <Link to="/turlar" className="text-link">
-            Rotalarımızla tanışın <ArrowRight size={17} />
+            {t("Rotalarımızla tanışın")} <ArrowRight size={17} />
           </Link>
         </div>
       </section>
@@ -344,19 +340,19 @@ export function About() {
 }
 export function Contact({ catalog }: { catalog: Catalog }) {
   const b = catalog.business;
+  const { t } = useLang();
   return (
     <div className="container contact-page section">
       <div>
-        <span className="section-note">Bir telefon kadar yakınız.</span>
         <h1>
-          Yolculuğu
+          {t("Yolculuğu")}
           <br />
-          birlikte konuşalım.
+          {t("birlikte konuşalım.")}
         </h1>
         <p>
-          Tur, ulaşım ve konaklama planlarınız için
+          {t("Tur, ulaşım ve konaklama planlarınız için")}
           <br />
-          Kars’taki ekibimizle iletişime geçin.
+          {t("Kars’taki ekibimizle iletişime geçin.")}
         </p>
         <a href={telHref(b.mobile)} className="btn">
           <Phone size={17} />
@@ -367,24 +363,24 @@ export function Contact({ catalog }: { catalog: Catalog }) {
         <a href={b.mapsUrl} target="_blank" rel="noreferrer">
           <MapPin />
           <div>
-            <span>Ofisimiz</span>
+            <span>{t("Ofisimiz")}</span>
             <strong>{b.address}</strong>
             <small>
-              Google Haritalar’da yol tarifi <ExternalLink size={12} />
+              {t("Google Haritalar’da yol tarifi")} <ExternalLink size={12} />
             </small>
           </div>
         </a>
         <a href={telHref(b.phone)}>
           <Phone />
           <div>
-            <span>Sabit hat</span>
+            <span>{t("Sabit hat")}</span>
             <strong>{b.phone}</strong>
           </div>
         </a>
         <a href={"mailto:" + b.email}>
           <Mail />
           <div>
-            <span>E-posta</span>
+            <span>{t("E-posta")}</span>
             <strong>{b.email}</strong>
           </div>
         </a>
@@ -404,9 +400,6 @@ export function Information({ catalog }: { catalog: Catalog }) {
     b = catalog.business;
   return (
     <article className="container legal-page section">
-      <span className="section-note">
-        {demo ? "Demo sürümü" : "Bilgilendirme"}
-      </span>
       <h1>Kişisel Verilerin Korunması Aydınlatma Metni</h1>
       {demo && (
         <div className="info-note legal-review-note" role="note">

@@ -1,0 +1,3173 @@
+/* ==========================================================================
+   Halka açık site · Hatıra Kartı
+   Eski çok görüntülü Kars hatıra kartı: kar zemini, beyaz kart kartonu,
+   mavi-siyah mürekkep, kırmızı başlık şeridi (yalnız başlık ve eylem),
+   logo altını fiyat ve pullar için. Yalnız .kp içinde geçerlidir; yönetim
+   paneli (.rk-admin) etkilenmez. Önceki görünüm: yedek/mevcut-site-tasarimi.
+   ========================================================================== */
+.kp {
+  --kp-snow: #e9eef1;
+  --kp-card: #ffffff;
+  --kp-ink: #1a2846;
+  --kp-ink-2: #47536e;
+  --kp-rule: #c9d2dc;
+  --kp-hair: #e3e8ee;
+  --kp-red: #c2342b;
+  --kp-red-d: #9f271f;
+  --kp-gold: #8a6128;
+  --kp-shadow:
+    0 30px 60px -32px rgba(26, 40, 70, 0.42), 0 2px 6px rgba(26, 40, 70, 0.08);
+  --kp-shadow-sm:
+    0 18px 34px -24px rgba(26, 40, 70, 0.45), 0 1px 3px rgba(26, 40, 70, 0.08);
+  /* Mevcut bileşenler aynı dünyaya otursun diye site jetonları burada eşlenir. */
+  --navy: var(--kp-ink);
+  --ink: var(--kp-ink);
+  --muted: var(--kp-ink-2);
+  --line: var(--kp-hair);
+  --paper: #f3f6f8;
+  --sky: #e3e9ee;
+  --gold: #a87835;
+  --gold-text: var(--kp-gold);
+  background: var(--kp-snow);
+  color: var(--kp-ink);
+  min-height: 100vh;
+}
+body:has(.kp) {
+  background: var(--kp-snow);
+}
+.kp ::selection {
+  background: var(--kp-ink);
+  color: #fff;
+}
+/* Adım değişince odağa alınan başlıklar çerçeve göstermesin; klavye odağı kırmızı. */
+.kp [tabindex="-1"]:focus {
+  outline: none;
+}
+.kp :is(button, a, input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--kp-red);
+  outline-offset: 3px;
+}
+html:has(.kp) {
+  scrollbar-color: var(--kp-ink-2) var(--kp-snow);
+}
+
+/* Uçak postası kenarı */
+.kp::before {
+  content: "";
+  display: block;
+  height: 8px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--kp-red) 0 14px,
+    var(--kp-card) 14px 22px,
+    var(--kp-ink) 22px 36px,
+    var(--kp-card) 36px 44px
+  );
+}
+
+/* Üst bilgi şeridi ve menü */
+.kp .topbar {
+  background: transparent;
+  color: var(--kp-ink-2);
+  font-size: 12px;
+  height: 28px;
+}
+.kp .topbar a:hover {
+  color: var(--kp-ink);
+}
+.kp .site-header {
+  background: transparent;
+  border-bottom: 0;
+}
+.kp .header-inner {
+  height: 70px;
+}
+.kp .brand img {
+  width: 140px;
+  height: 51px;
+}
+.kp .main-nav {
+  font-size: 15px;
+  font-weight: 500;
+  gap: 30px;
+}
+.kp .main-nav a {
+  padding: 24px 0;
+}
+.kp .main-nav a.active {
+  color: var(--kp-ink);
+}
+.kp .main-nav a.active:after {
+  bottom: 16px;
+  width: 100%;
+  background: var(--kp-red);
+}
+.kp .reservation-link,
+.kp .member-header-link {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Düğmeler: kırmızı yalnız eylem için */
+.kp .btn {
+  background: var(--kp-red);
+  border-color: var(--kp-red);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 4px;
+  min-height: 52px;
+  padding: 14px 24px;
+  gap: 10px;
+}
+.kp .btn:hover {
+  background: var(--kp-red-d);
+  border-color: var(--kp-red-d);
+  box-shadow: none;
+}
+.kp .btn-small {
+  min-height: 42px;
+  padding: 10px 16px;
+  font-size: 14px;
+}
+.kp .btn-white {
+  background: var(--kp-card);
+  border-color: var(--kp-card);
+  color: var(--kp-ink);
+}
+.kp .btn-white:hover {
+  background: #eef2f5;
+  border-color: #eef2f5;
+}
+.kp .btn-outline,
+.kp .header-cta {
+  background: transparent;
+  color: var(--kp-ink);
+  border: 1.5px solid var(--kp-ink);
+}
+.kp .btn-outline:hover,
+.kp .header-cta:hover {
+  background: var(--kp-ink);
+  border-color: var(--kp-ink);
+  color: #fff;
+}
+.kp .text-link {
+  color: var(--kp-ink);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 5px;
+}
+.kp .text-link:hover {
+  color: var(--kp-red);
+}
+
+/* Başlık ölçeği: hatıra kartı başlığı Marcellus, gövde Onest */
+.kp h2 {
+  font-size: clamp(34px, 3.6vw, 50px);
+  letter-spacing: -0.5px;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+.kp .section-heading {
+  margin-bottom: 30px;
+}
+.kp p {
+  text-wrap: pretty;
+}
+
+/* ---------- Hatıra kartı: ana sayfa ve tur detayı ---------- */
+.kp-hero {
+  padding-top: 6px;
+}
+.kp-card {
+  background: var(--kp-card);
+  border-radius: 5px;
+  padding: 14px;
+  box-shadow: var(--kp-shadow);
+}
+.kp-views {
+  display: grid;
+  grid-template-columns: minmax(0, 1.85fr) minmax(0, 1fr);
+  gap: 10px;
+  height: clamp(420px, calc(100svh - 300px), 560px);
+}
+.kp-views-single {
+  grid-template-columns: 1fr;
+}
+.kp-main-view {
+  position: relative;
+  overflow: hidden;
+  background: var(--sky);
+}
+.kp-main-view > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 45%;
+}
+.kp-main-view::after {
+  content: "";
+  position: absolute;
+  inset: 45% 0 0;
+  background: linear-gradient(transparent, rgba(12, 20, 38, 0.6));
+  pointer-events: none;
+}
+.kp-title {
+  position: absolute;
+  left: 0;
+  bottom: 30px;
+  z-index: 1;
+  max-width: 92%;
+}
+.kp-title h1 {
+  display: inline-block;
+  background: var(--kp-red);
+  color: #fff;
+  font-size: clamp(40px, 5.2vw, 76px);
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  padding: 13px 28px 16px 30px;
+  box-shadow: 0 12px 26px -14px rgba(0, 0, 0, 0.55);
+  text-wrap: balance;
+}
+.kp-title p {
+  color: #fff;
+  font-size: 17px;
+  line-height: 1.5;
+  margin: 0;
+  padding: 14px 30px 0;
+  max-width: 48ch;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.55);
+}
+.kp-insets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 10px;
+  min-height: 0;
+}
+.kp-inset {
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  background: var(--sky);
+  border-radius: 0;
+  text-align: left;
+  min-height: 0;
+}
+.kp-inset > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.kp-inset:hover > img {
+  transform: scale(1.05);
+}
+.kp-inset::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 0 var(--kp-red);
+  transition: box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.kp-inset[aria-pressed="true"]::after {
+  box-shadow: inset 0 0 0 4px var(--kp-red);
+}
+.kp-inset-label {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  background: var(--kp-card);
+  color: var(--kp-ink);
+  font-family: var(--display);
+  font-size: 17px;
+  line-height: 1.05;
+  padding: 7px 10px 6px;
+  border-radius: 2px;
+  max-width: calc(100% - 20px);
+}
+.kp-inset-label small {
+  display: block;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--kp-gold);
+  margin-top: 4px;
+}
+.kp-inset-check {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--kp-red);
+  color: #fff;
+  display: none;
+  place-items: center;
+  z-index: 1;
+}
+.kp-inset[aria-pressed="true"] .kp-inset-check {
+  display: grid;
+}
+.kp-insets-stack {
+  grid-template-columns: 1fr;
+  grid-auto-rows: 1fr;
+  grid-template-rows: none;
+}
+.kp-insets-stack .kp-inset[aria-pressed="true"]::after {
+  box-shadow: inset 0 0 0 4px var(--kp-red);
+}
+
+/* Kartın alt beyaz bandı: arama veya tur bilgisi */
+.kp-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 0.8fr) auto;
+  align-items: end;
+  gap: 0 26px;
+  padding: 22px 10px 6px;
+}
+.kp-field {
+  display: block;
+  min-width: 0;
+}
+.kp-field > span {
+  display: block;
+  font-size: 12px;
+  color: var(--kp-ink-2);
+  margin-bottom: 2px;
+}
+.kp-field select,
+.kp-field input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--kp-ink-2);
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--display);
+  font-size: 20px;
+  line-height: 1.3;
+  color: var(--kp-ink);
+  padding: 4px 0 7px;
+  cursor: pointer;
+  min-height: 44px;
+}
+.kp-field select:focus-visible,
+.kp-field input:focus-visible {
+  outline: none;
+  border-bottom-color: var(--kp-red);
+  box-shadow: 0 1px 0 var(--kp-red);
+}
+.kp-strip > .btn {
+  white-space: nowrap;
+}
+.kp-printed {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px 20px;
+  flex-wrap: wrap;
+  margin: 18px 0 0;
+  padding: 12px 10px 2px;
+  border-top: 1px solid var(--kp-hair);
+  font-size: 13px;
+  color: var(--kp-ink-2);
+}
+.kp-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--kp-ink);
+}
+.kp-rating strong {
+  font-size: 14px;
+}
+.kp-rating svg[fill] {
+  color: #b9862f;
+}
+.kp-rating span {
+  color: var(--kp-ink-2);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Tur detayı bandı: bilgiler + eylem */
+.kp-detail-card {
+  padding-top: 18px;
+}
+.kp-detail-strip {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+.kp-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 34px;
+  margin: 0;
+}
+.kp-facts dt {
+  font-size: 12px;
+  color: var(--kp-ink-2);
+}
+.kp-facts dd {
+  margin: 2px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.kp-facts dd svg {
+  color: var(--kp-ink-2);
+}
+.kp-fact-price dd {
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--kp-gold);
+  line-height: 1.1;
+}
+.kp .kp-main-view .tour-sales-closed {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 1;
+}
+
+/* Breadcrumb */
+.kp .breadcrumb {
+  font-size: 13px;
+  padding-top: 14px;
+}
+
+/* ---------- Tur listesi ve kartlar ---------- */
+.kp .page-intro h1 {
+  font-size: clamp(40px, 5vw, 64px);
+}
+.kp .page-intro > p {
+  font-size: 18px;
+  color: var(--kp-ink-2);
+}
+.kp .tour-filters {
+  gap: 8px;
+}
+.kp .tour-filters > svg {
+  margin-right: 6px;
+  color: var(--kp-ink-2);
+}
+.kp .tour-filters button {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--kp-ink);
+  background: var(--kp-card);
+  border: 1px solid var(--kp-rule);
+  border-radius: 4px;
+  padding: 8px 14px;
+}
+.kp .tour-filters button:hover {
+  border-color: var(--kp-ink-2);
+}
+.kp .tour-filters button.active {
+  background: var(--kp-ink);
+  border-color: var(--kp-ink);
+  color: #fff;
+}
+.kp .search-input {
+  background: var(--kp-card);
+  border-color: var(--kp-rule);
+  border-radius: 4px;
+}
+.kp .result-count {
+  font-size: 14px;
+  color: var(--kp-ink-2);
+}
+.kp .tour-grid {
+  gap: 36px 30px;
+}
+.kp .tour-card {
+  background: var(--kp-card);
+  padding: 10px 10px 0;
+  border-radius: 4px;
+  box-shadow: var(--kp-shadow-sm);
+  transition:
+    transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.kp .tour-card:hover {
+  transform: translateY(-4px) rotate(-0.4deg);
+  box-shadow: var(--kp-shadow);
+}
+.kp .tour-card-image {
+  border-radius: 0;
+  height: auto;
+  aspect-ratio: 4 / 3;
+}
+.kp .tour-card:hover .tour-card-image > img {
+  transform: scale(1.03);
+}
+.kp .tour-card-inset {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  width: 30%;
+  aspect-ratio: 1;
+  border: 4px solid var(--kp-card);
+  box-shadow: 0 8px 16px -8px rgba(0, 0, 0, 0.55);
+  background: var(--sky);
+}
+.kp .tour-card-inset img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.kp .tour-card-ribbon {
+  position: absolute;
+  left: 0;
+  bottom: 16px;
+  background: var(--kp-red);
+  color: #fff;
+  font-family: var(--display);
+  font-size: 22px;
+  line-height: 1;
+  padding: 9px 14px 10px;
+}
+.kp .tour-sales-closed {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  right: auto;
+  bottom: auto;
+  width: auto;
+  height: auto;
+  line-height: 1.3;
+  background: var(--kp-card);
+  color: var(--kp-ink);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 2px;
+}
+.kp .tour-card-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 4px 14px;
+}
+.kp .tour-card h3 {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.3;
+}
+.kp .tour-card p {
+  margin: 3px 0 0;
+  font-size: 14px;
+  color: var(--kp-ink-2);
+}
+.kp .tour-card-info > strong {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--kp-gold);
+  white-space: nowrap;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.kp .tour-card-info > strong small {
+  display: block;
+  font-family: var(--font);
+  font-size: 12px;
+  color: var(--kp-ink-2);
+  margin-top: 4px;
+}
+
+/* ---------- Ana sayfa bölümleri ---------- */
+.kp .feature-strip {
+  margin-top: 30px;
+}
+.kp .feature strong {
+  font-size: 15px;
+}
+.kp .feature span {
+  font-size: 14px;
+  color: var(--kp-ink-2);
+}
+.kp .feature svg {
+  color: var(--kp-red);
+}
+.kp .story-section,
+.kp .stay-section {
+  background: transparent;
+}
+
+/* Güven satırı: tek beyaz şerit, sütunlar ince çizgiyle ayrılır */
+.kp .feature-strip {
+  background: var(--kp-card);
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow-sm);
+  padding: 22px 6px;
+  gap: 0;
+  margin-top: 30px;
+}
+.kp .feature {
+  padding: 4px 22px;
+}
+.kp .feature:not(:first-child) {
+  border-left: 1px solid var(--kp-hair);
+}
+
+/* Hikâyeler: kartpostal olarak */
+.kp .story-section {
+  padding: 70px 0;
+}
+.kp .story-intro > p {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--kp-ink-2);
+}
+.kp .story-format {
+  font-size: 13px;
+  color: var(--kp-ink-2);
+}
+.kp .story-card {
+  --gold-text: var(--kp-gold);
+  background: var(--kp-card);
+  padding: 8px;
+  border-radius: 4px;
+  box-shadow: var(--kp-shadow-sm);
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.kp .story-card:nth-child(3n + 1) {
+  transform: rotate(-1deg);
+}
+.kp .story-card:nth-child(3n + 2) {
+  transform: rotate(0.8deg) translateY(12px);
+}
+.kp .story-card:nth-child(3n) {
+  transform: rotate(-0.4deg);
+}
+.kp .story-card:hover {
+  transform: translateY(-4px);
+}
+.kp .story-card::after {
+  inset: 8px;
+  background: linear-gradient(0deg, rgba(12, 20, 38, 0.82), transparent 62%);
+}
+.kp .story-play {
+  top: 20px;
+  left: 20px;
+  background: var(--kp-card);
+  border: 0;
+  color: var(--kp-ink);
+  backdrop-filter: none;
+}
+.kp .story-card-copy {
+  left: 24px;
+  right: 24px;
+  bottom: 26px;
+}
+.kp .story-card-copy small,
+.kp .story-card-copy > span {
+  font-size: 13px;
+  color: #e9eef5;
+}
+
+/* Araç ve koltuk: kartın arka yüzü, sağda koltuk planı */
+.kp .vip-section {
+  --gold-text: var(--kp-gold);
+  background: transparent;
+  color: var(--kp-ink);
+  padding: 40px 0 70px;
+}
+.kp .vip-inner {
+  background: var(--kp-card);
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow);
+  padding: 52px 56px;
+  gap: 56px;
+  position: relative;
+}
+.kp .vip-copy > p {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--kp-ink-2);
+}
+.kp .vip-facts strong {
+  color: var(--kp-ink);
+}
+.kp .vip-facts span {
+  font-size: 13px;
+  color: var(--kp-ink-2);
+}
+.kp .vip-facts svg {
+  color: var(--kp-red);
+}
+.kp .vip-caption {
+  margin: 24px 0 28px;
+  padding: 12px 0;
+  border-top: 1px solid var(--kp-hair);
+  border-bottom: 1px solid var(--kp-hair);
+  font-size: 15px;
+  color: var(--kp-ink);
+}
+.kp .vip-copy .btn-white {
+  background: var(--kp-red);
+  border-color: var(--kp-red);
+  color: #fff;
+}
+.kp .vip-copy .btn-white:hover {
+  background: var(--kp-red-d);
+  border-color: var(--kp-red-d);
+}
+.kp .vip-visual {
+  background: var(--paper);
+  border: 0;
+}
+.kp .vip-visual-label,
+.kp .vip-visual-foot {
+  color: var(--kp-ink-2);
+  font-size: 13px;
+}
+.kp .vip-visual-label svg {
+  color: var(--kp-red);
+}
+
+/* Hizmetler: tek beyaz şerit, sütunlar ince çizgiyle ayrılır */
+.kp .service-grid {
+  background: var(--kp-card);
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow-sm);
+  padding: 8px;
+  gap: 0;
+}
+.kp .service-card {
+  display: flex;
+  flex-direction: column;
+  padding: 22px 22px 20px;
+  border-radius: 3px;
+  transition: background 0.25s ease;
+}
+.kp .service-card:not(:first-child) {
+  border-left: 1px solid var(--kp-hair);
+}
+.kp .service-card:hover {
+  background: var(--paper);
+}
+.kp .service-card h3 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 22px;
+  color: var(--kp-ink);
+}
+.kp .service-card p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--kp-ink-2);
+  flex: 1;
+}
+.kp .service-discover {
+  margin-top: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--kp-red);
+}
+
+/* Filo ve konaklama: beyaz çerçeveli fotoğraflar */
+.kp .fleet-section {
+  background: transparent;
+}
+.kp .fleet-photo,
+.kp .stay-photo {
+  background: var(--kp-card);
+  padding: 12px;
+  border-radius: 4px;
+  box-shadow: var(--kp-shadow);
+}
+.kp .fleet-photo {
+  transform: rotate(-1deg);
+}
+.kp .stay-photo {
+  transform: rotate(0.8deg);
+}
+.kp .fleet-photo img,
+.kp .stay-photo img {
+  border-radius: 0;
+}
+.kp .stay-photo > span {
+  left: 24px;
+  bottom: 22px;
+  font-size: 12px;
+}
+.kp .fleet-copy > p,
+.kp .stay-copy > p {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--kp-ink-2);
+}
+.kp .fleet-groups small {
+  font-size: 12px;
+}
+.kp .chips span {
+  border-color: var(--kp-rule);
+  font-size: 13px;
+  color: var(--kp-ink);
+}
+.kp .fleet-perks {
+  font-size: 15px;
+}
+.kp .fleet-perks svg,
+.kp .stay-detail svg {
+  color: var(--kp-red);
+}
+.kp .stay-detail {
+  font-size: 15px;
+}
+.kp .stay-detail small {
+  font-size: 13px;
+}
+
+/* Özel tur bandı: kırmızı başlık şeridi */
+.kp .private-journey {
+  background: transparent;
+  padding: 10px 0 50px;
+}
+.kp .private-journey > .container {
+  background: var(--kp-card);
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow-sm);
+  padding: 30px 34px 30px 0;
+  overflow: hidden;
+}
+.kp .private-journey h2 {
+  background: var(--kp-red);
+  color: #fff;
+  font-size: clamp(24px, 2.6vw, 34px);
+  padding: 12px 26px 14px 34px;
+  max-width: 34ch;
+}
+
+.kp .vip-visual .seat-caption,
+.kp .vip-visual .seat-caption span {
+  color: var(--kp-ink-2);
+}
+.kp .instagram-section {
+  background: transparent;
+}
+
+/* Sohbet düğmesi: yuvarlak simge; yazı üzerine gelince ya da odakta açılır,
+   böylece kartların fiyatlarını kapatmaz. */
+.kp .chat-fab {
+  background: var(--kp-ink);
+  gap: 0;
+  padding: 0 17px;
+}
+.kp .chat-fab-label {
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 14px;
+  transition:
+    max-width 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    margin 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.kp .chat-fab:hover .chat-fab-label,
+.kp .chat-fab:focus-visible .chat-fab-label {
+  max-width: 260px;
+  margin-left: 10px;
+}
+
+/* İlk ekran: kart masaya yerleşir, başlık şeridi kenardan oturur. Her şey
+   baştan görünürdür; yalnız konum değişir. */
+@keyframes kp-settle {
+  from {
+    transform: translateY(16px) rotate(-0.7deg);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes kp-band {
+  from {
+    transform: translateX(-14px);
+  }
+  to {
+    transform: none;
+  }
+}
+.kp-hero .kp-card,
+.kp-detail-card .kp-card {
+  animation: kp-settle 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.kp-title h1 {
+  animation: kp-band 0.8s 0.15s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ---------- Tur detayı: kartın arka yüzü ---------- */
+.kp .detail-layout {
+  padding-top: 44px;
+  gap: 40px;
+}
+.kp .detail-content {
+  background: var(--kp-card);
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow-sm);
+  padding: 44px 48px 30px;
+}
+.kp .detail-content h2 {
+  font-size: clamp(28px, 2.6vw, 34px);
+}
+.kp .detail-content .lead-copy {
+  font-size: 17px;
+  line-height: 1.75;
+  color: var(--kp-ink-2);
+  max-width: 62ch;
+}
+/* Program: tek kesintisiz kırmızı rota çizgisi */
+.kp .itinerary {
+  position: relative;
+}
+.kp .itinerary > div {
+  gap: 0;
+  padding: 0 0 26px 44px;
+  flex-direction: column;
+}
+.kp .itinerary > div:before {
+  left: 11px;
+  top: 14px;
+  bottom: -14px;
+  border-left: 2px solid var(--kp-red);
+}
+.kp .itinerary-time {
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--kp-red);
+  padding-top: 0;
+  font-variant-numeric: tabular-nums;
+  position: static;
+}
+.kp .itinerary-time:after {
+  left: 3px;
+  right: auto;
+  top: 3px;
+  width: 16px;
+  height: 16px;
+  background: var(--kp-card);
+  border: 2px solid var(--kp-red);
+  box-shadow: none;
+}
+.kp .itinerary > div:last-child .itinerary-time:after {
+  background: var(--kp-red);
+}
+.kp .itinerary > div {
+  position: relative;
+}
+.kp .itinerary > div > div {
+  padding-left: 0;
+}
+.kp .itinerary h3 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 21px;
+  margin-top: 2px;
+}
+.kp .itinerary p {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--kp-ink-2);
+  margin-top: 4px;
+  max-width: 60ch;
+}
+.kp .inclusions {
+  background: var(--paper);
+  border-radius: 4px;
+}
+.kp .inclusions h3 {
+  font-size: 15px;
+  font-weight: 600;
+}
+.kp .inclusions p {
+  font-size: 15px;
+  color: var(--kp-ink-2);
+}
+.kp .inclusions svg {
+  color: var(--kp-red);
+}
+.kp .info-note {
+  font-size: 14px;
+  color: var(--kp-ink-2);
+  background: var(--paper);
+}
+.kp .info-note > svg {
+  color: var(--kp-red);
+}
+.kp .tour-meeting svg {
+  color: var(--kp-red);
+}
+.kp .detail-content details {
+  border-color: var(--kp-hair);
+}
+.kp .detail-content summary {
+  font-size: 15px;
+}
+.kp .detail-content details p {
+  font-size: 15px;
+  color: var(--kp-ink-2);
+}
+/* Fiyat kartı: pul gibi */
+.kp .booking-aside {
+  background: var(--kp-card);
+  border: 0;
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow-sm);
+}
+.kp .booking-price strong {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 40px;
+  color: var(--kp-gold);
+}
+.kp .booking-price > span,
+.kp .aside-benefits > span,
+.kp .booking-aside > small {
+  font-size: 13px;
+}
+.kp .booking-aside > p {
+  font-size: 15px;
+  color: var(--kp-ink-2);
+}
+.kp .next-departures {
+  font-size: 14px;
+  background: var(--paper);
+}
+.kp .aside-benefits svg {
+  color: var(--kp-red);
+}
+.kp .tour-mobile-booking {
+  background: var(--kp-card);
+  box-shadow: 0 -10px 30px -18px rgba(26, 40, 70, 0.5);
+}
+.kp .tour-mobile-booking strong {
+  font-family: var(--display);
+  font-weight: 400;
+  color: var(--kp-gold);
+}
+
+/* ---------- Alt bilgi ---------- */
+.kp .footer {
+  background: var(--kp-card);
+  position: relative;
+}
+.kp .footer::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 6px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--kp-red) 0 14px,
+    var(--kp-card) 14px 22px,
+    var(--kp-ink) 22px 36px,
+    var(--kp-card) 36px 44px
+  );
+}
+.kp .footer-main h3 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 20px;
+}
+.kp .footer-main > div > a:not(.social-link),
+.kp .footer-contact > a,
+.kp .footer-brand p {
+  font-size: 14px;
+}
+.kp .footer-bottom {
+  font-size: 13px;
+  color: var(--kp-ink-2);
+}
+
+/* Menü orta genişliklerde sığsın; 700px altında mevcut açılır menü devreye girer. */
+@media (max-width: 1350px) {
+  .kp .main-nav {
+    font-size: 14px;
+    gap: 20px;
+  }
+}
+@media (max-width: 1100px) {
+  .kp .main-nav {
+    font-size: 13px;
+    gap: 14px;
+  }
+  .kp .reservation-link span {
+    display: none;
+  }
+}
+@media (max-width: 950px) {
+  .kp .main-nav {
+    font-size: 12px;
+    gap: 12px;
+  }
+  .kp .brand img {
+    width: 118px;
+    height: 43px;
+  }
+}
+@media (max-width: 700px) {
+  .kp .main-nav {
+    font-size: 16px;
+    gap: 0;
+    background: var(--kp-card);
+  }
+  .kp .main-nav a.active:after {
+    width: 18px;
+    bottom: 6px;
+  }
+}
+
+/* ---------- İnceleme düzeltmeleri ---------- */
+/* Üst etiket (eyebrow) bu dünyada kullanılmaz. */
+.kp .section-note {
+  display: none;
+}
+/* Kartın eylem bandı görünürken yüzen düğmeler geri çekilir. */
+.chat-launchers {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease,
+    visibility 0.25s;
+}
+/* Yalnız geniş ekranda: telefonda WhatsApp ve asistan her zaman görünür. */
+@media (min-width: 701px) {
+  body[data-cta-visible] .chat-launchers {
+    opacity: 0;
+    transform: translateY(24px);
+    pointer-events: none;
+    visibility: hidden;
+  }
+}
+/* Rezervasyon özeti masaüstünde sağ altta durur; düğmeler onun üstüne binmesin. */
+@media (min-width: 951px) {
+  body[data-summary-visible] .chat-launchers {
+    opacity: 0;
+    transform: translateY(24px);
+    pointer-events: none;
+    visibility: hidden;
+  }
+}
+/* Mobil sabit rezervasyon çubuğu, karttaki düğme görünürken saklı. */
+.kp .tour-mobile-booking {
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0.3s;
+}
+.kp .tour-mobile-booking.is-tucked {
+  transform: translateY(110%);
+  visibility: hidden;
+}
+/* Fiyat pulu ve ilk hareket damgası */
+.kp-stamp-row {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+.kp-stamp {
+  --h: 5px;
+  background: #e6ecf1;
+  padding: 9px;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    radial-gradient(circle 3.4px, #0000 96%, #000) calc(-1 * var(--h))
+      calc(-1 * var(--h)) / 10px 10px;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    radial-gradient(circle 3.4px, #0000 96%, #000) calc(-1 * var(--h))
+      calc(-1 * var(--h)) / 10px 10px;
+}
+.kp-stamp .booking-price {
+  border: 1px solid var(--kp-rule);
+  padding: 12px 16px 12px;
+  min-width: 190px;
+  background: var(--kp-card);
+}
+.kp-stamp-place {
+  display: block;
+  font-size: 11px !important;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--kp-ink) !important;
+  margin-bottom: 4px;
+}
+.kp-postmark {
+  position: absolute;
+  right: -6px;
+  top: 34px;
+  width: 112px;
+  height: 112px;
+  color: var(--kp-ink);
+  opacity: 0.82;
+  mix-blend-mode: multiply;
+  transform: rotate(-12deg);
+  pointer-events: none;
+}
+.kp-postmark circle {
+  fill: none;
+  stroke: currentColor;
+}
+.kp-postmark circle:first-of-type {
+  stroke-width: 2.6;
+}
+.kp-postmark circle + circle {
+  stroke-width: 1.4;
+}
+.kp-postmark text {
+  fill: currentColor;
+}
+.kp-pm-ring {
+  font: 600 10px var(--font);
+  letter-spacing: 2px;
+}
+.kp-pm-date {
+  font: 400 16px var(--display);
+}
+.kp-pm-time {
+  font: 600 13px var(--font);
+}
+/* Buluşma kartı ve sık sorulanlar */
+.kp .tour-meeting {
+  background: var(--paper);
+  border: 0;
+  border-radius: 4px;
+}
+.kp .tour-meeting > svg {
+  color: var(--kp-red);
+}
+.kp .detail-content summary {
+  list-style: none;
+  position: relative;
+  padding-left: 26px;
+  cursor: pointer;
+}
+.kp .detail-content summary::-webkit-details-marker {
+  display: none;
+}
+.kp .detail-content summary::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 0.62em;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--kp-red);
+  border-bottom: 2px solid var(--kp-red);
+  transform: rotate(-45deg);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.kp .detail-content details[open] > summary::before {
+  transform: rotate(45deg);
+}
+/* Alt bölümler: kart kartonu köşeleri, haplar yok */
+.kp .reviews-section {
+  background: transparent;
+}
+.kp
+  :is(
+    .story-card,
+    .vip-visual,
+    .service-card img,
+    .fleet-photo img,
+    .stay-photo img,
+    .google-map,
+    .google-summary,
+    .instagram-post,
+    .instagram-card-media,
+    .instagram-cover
+  ) {
+  border-radius: 4px;
+}
+.kp .chips span {
+  border-radius: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kp .story-card,
+  .kp .service-card,
+  .kp .story-card:hover {
+    transition: none;
+  }
+  .kp-hero .kp-card,
+  .kp-detail-card .kp-card,
+  .kp-title h1 {
+    animation: none;
+  }
+  .kp .chat-fab-label,
+  .chat-launchers,
+  .kp .tour-mobile-booking,
+  .kp .detail-content summary::before {
+    transition: none;
+  }
+}
+
+/* Google haritası: iframe yüklenene kadar altında adres ve bağlantı görünür. */
+.google-map-frame {
+  position: relative;
+  min-height: 170px;
+}
+.google-map-frame > .google-map {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+}
+.google-map-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px 28px;
+  background: var(--kp-card);
+  border-radius: 4px;
+  color: var(--kp-ink);
+  font-size: 14px;
+}
+.google-map-fallback strong {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 22px;
+}
+
+/* ---------- Rezervasyon akışı ---------- */
+.kp .booking-page {
+  padding-top: 18px;
+}
+.kp .back-link {
+  font-size: 14px;
+  color: var(--kp-ink-2);
+}
+.kp .back-link:hover {
+  color: var(--kp-ink);
+}
+.kp .booking-page-title {
+  margin: 22px 0 26px;
+  align-items: flex-end;
+}
+.kp .booking-page-title h1 {
+  font-size: clamp(38px, 4.4vw, 56px);
+}
+.kp .booking-page-sub {
+  margin: 8px 0 0;
+  font-size: 17px;
+  color: var(--kp-ink-2);
+}
+.kp .hold-timer,
+.kp .hold-warning {
+  background: var(--kp-card);
+  color: var(--kp-ink);
+  border: 1px solid var(--kp-rule);
+  border-radius: 4px;
+  font-size: 14px;
+}
+.kp .hold-timer svg,
+.kp .hold-warning > svg {
+  color: var(--kp-red);
+}
+/* Adımlar: rota çizgisi üstünde duraklar */
+.kp .booking-steps {
+  position: relative;
+  gap: 0;
+  border-bottom: 0;
+  padding: 0;
+  margin: 0 0 26px;
+}
+.kp .booking-steps li {
+  flex: 1;
+  position: relative;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--kp-ink-2);
+  gap: 10px;
+}
+.kp .booking-steps li:not(:last-child)::after {
+  content: "";
+  flex: 1;
+  height: 2px;
+  margin: 0 16px 0 6px;
+  background: var(--kp-rule);
+}
+.kp .booking-steps li.complete::after {
+  background: var(--kp-red);
+}
+.kp .booking-steps li > span {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+  border: 2px solid var(--kp-rule);
+  background: var(--kp-card);
+  color: var(--kp-ink-2);
+}
+.kp .booking-steps .current {
+  color: var(--kp-ink);
+}
+.kp .booking-steps .current > span {
+  border-color: var(--kp-red);
+  background: var(--kp-card);
+  color: var(--kp-red);
+}
+.kp .booking-steps .complete > span {
+  border-color: var(--kp-red);
+  background: var(--kp-red);
+  color: #fff;
+}
+/* Formun kendisi: kartın arka yüzü */
+.kp .booking-layout {
+  gap: 36px;
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+.kp .booking-main {
+  background: var(--kp-card);
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow-sm);
+  padding: 36px 40px 32px;
+}
+.kp .booking-main h2 {
+  font-size: clamp(28px, 2.8vw, 36px);
+  letter-spacing: -0.3px;
+}
+.kp .booking-main > .muted,
+.kp .booking-main form > .muted {
+  font-size: 15px;
+  color: var(--kp-ink-2);
+}
+.kp .field {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--kp-ink-2);
+}
+.kp .field input,
+.kp .field select,
+.kp .field textarea {
+  border: 1px solid var(--kp-rule);
+  border-radius: 4px;
+  font-size: 16px;
+  color: var(--kp-ink);
+  min-height: 48px;
+  background: var(--kp-card);
+}
+.kp .field input:hover,
+.kp .field select:hover,
+.kp .field textarea:hover {
+  border-color: var(--kp-ink-2);
+}
+.kp .field input:focus,
+.kp .field select:focus,
+.kp .field textarea:focus {
+  border-color: var(--kp-red);
+  box-shadow: 0 0 0 1px var(--kp-red);
+  outline: none;
+}
+.kp .checkbox-label {
+  font-size: 14px;
+}
+.kp .checkbox-label input {
+  accent-color: var(--kp-red);
+}
+.kp .info-note,
+.kp .inline-note {
+  font-size: 14px;
+}
+/* ---------- Koltuk planı: üstten görülen araç ----------
+   Gövde aracın tipine göre çizilir (binek, minibüs, midibüs, otobüs). Araç
+   aşağıdan yerine süzülür, sıralar önden arkaya belirir; seçilen koltuk
+   kırmızı mürekkebe döner. Ön taraf yukarıdadır, kapılar sağdadır. */
+/* Yan boşluk: ayna ve tekerlekler gövdeden taşar, kesilmesin */
+.kp .seat-map {
+  --seat-h: 46px;
+  --seat-gap: 7px;
+  width: 310px;
+  max-width: 100%;
+  padding-inline: 10px;
+}
+.kp .seat-map.shape-car {
+  width: 252px;
+}
+.kp .seat-map.shape-van {
+  width: 270px;
+}
+.kp .seat-map.shape-bus,
+.kp .seat-map.shape-coach {
+  --seat-h: 42px;
+  --seat-gap: 6px;
+  width: 352px;
+}
+.kp .vehicle-roof {
+  display: none;
+}
+.kp .vehicle-body {
+  position: relative;
+  background: var(--kp-card);
+  border: 1.5px solid var(--kp-rule);
+  border-radius: 34px 34px 12px 12px;
+  padding: 14px 20px 14px;
+  box-shadow: var(--kp-shadow-sm);
+  animation: kp-drive-in 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.kp .shape-car .vehicle-body {
+  border-radius: 48% 48% 36% 36% / 15% 15% 12% 12%;
+  padding: 24px 22px 30px;
+}
+.kp .shape-van .vehicle-body {
+  border-radius: 42px 42px 16px 16px / 34px 34px 16px 16px;
+}
+.kp .shape-bus .vehicle-body {
+  border-radius: 26px 26px 10px 10px;
+}
+.kp .shape-coach .vehicle-body {
+  border-radius: 22px 22px 10px 10px;
+  padding: 12px 16px 12px;
+}
+.kp .vehicle-body::before,
+.kp .vehicle-body::after {
+  display: none;
+}
+/* Aynalar ve tekerlekler: gövdenin dışına taşan küçük işaretler */
+.kp .vehicle-mirror {
+  position: absolute;
+  top: 42px;
+  width: 9px;
+  height: 15px;
+  border-radius: 4px;
+  background: var(--kp-rule);
+}
+.kp .vehicle-mirror.left {
+  left: -9px;
+  border-radius: 4px 0 0 4px;
+}
+.kp .vehicle-mirror.right {
+  right: -9px;
+  border-radius: 0 4px 4px 0;
+}
+.kp .shape-coach .vehicle-mirror,
+.kp .shape-bus .vehicle-mirror {
+  top: 30px;
+}
+.kp .shape-car .vehicle-mirror {
+  top: 27%;
+}
+.kp .vehicle-wheel {
+  position: absolute;
+  width: 6px;
+  height: 34px;
+  border-radius: 3px;
+  background: var(--kp-ink);
+  opacity: 0.85;
+}
+.kp .vehicle-wheel.left {
+  left: -5px;
+}
+.kp .vehicle-wheel.right {
+  right: -5px;
+}
+.kp .vehicle-wheel.front {
+  top: 76px;
+}
+.kp .vehicle-wheel.rear {
+  bottom: 13%;
+}
+.kp .shape-car .vehicle-wheel {
+  height: 26px;
+}
+.kp .shape-car .vehicle-wheel.front {
+  top: 22%;
+}
+.kp .shape-car .vehicle-wheel.rear {
+  bottom: 16%;
+}
+.kp .shape-coach .vehicle-wheel.rear {
+  bottom: 9%;
+  box-shadow: 0 -40px 0 var(--kp-ink);
+}
+.kp .windshield {
+  height: 16px;
+  margin: 0 4px 12px;
+  border: 0;
+  border-radius: 60% 60% 6px 6px / 100% 100% 6px 6px;
+  background: linear-gradient(180deg, var(--kp-rule), var(--kp-snow));
+}
+.kp .seat-row {
+  column-gap: var(--seat-gap);
+}
+.kp .cockpit {
+  margin: 0 0 6px;
+}
+.kp .crew-seat {
+  min-height: var(--seat-h);
+  font-size: 11px;
+  color: var(--kp-ink-2);
+}
+.kp .crew-seat > svg {
+  display: none;
+}
+.kp .crew-seat.guide {
+  min-height: var(--seat-h);
+  background: rgba(138, 97, 40, 0.1);
+  border: 1px solid rgba(138, 97, 40, 0.42);
+  border-radius: 9px 9px 6px 6px;
+  color: var(--kp-gold);
+  font-weight: 600;
+}
+.kp .crew-seat.guide small {
+  font-size: 11px;
+  font-weight: 500;
+}
+/* Direksiyon: halka, göbek ve üç kol; araç girerken çeyrek tur döner */
+.kp .steering {
+  width: 26px;
+  height: 26px;
+  border: 2.5px solid var(--kp-ink);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, var(--kp-ink) 0 3.5px, transparent 4px),
+    linear-gradient(var(--kp-ink), var(--kp-ink)) center / 100% 2px no-repeat,
+    linear-gradient(var(--kp-ink), var(--kp-ink)) 50% 100% / 2px 50% no-repeat;
+  animation: kp-steer 1.1s 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.kp .vehicle-divider {
+  margin: 10px 0 12px;
+  border-top: 1px dashed var(--kp-rule);
+  font-size: 11px;
+  color: var(--kp-ink-2);
+}
+.kp .vehicle-divider > span {
+  top: -9px;
+  background: var(--kp-card);
+}
+.kp .passenger-row {
+  margin-bottom: var(--seat-gap);
+  column-gap: var(--seat-gap);
+  animation: kp-row-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(260ms + var(--row, 0) * 45ms);
+}
+/* Koltuk: üstten görünüş; arkalık alttadır (yolcu öne bakar) */
+.kp .vehicle-seat {
+  min-height: var(--seat-h);
+  padding: 0 0 6px;
+  border: 1px solid var(--kp-rule);
+  border-bottom-width: 1px;
+  border-radius: 9px 9px 6px 6px;
+  background: var(--kp-card);
+  color: var(--kp-ink);
+  cursor: pointer;
+  transition:
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+.kp .vehicle-seat::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 3px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--kp-hair);
+  transition: background 0.2s ease;
+}
+.kp .vehicle-seat > svg:not(.seat-check) {
+  display: none;
+}
+.kp .vehicle-seat > span {
+  position: static;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--kp-ink);
+}
+.kp .vehicle-seat:not(.occupied):not(.selected):not(:disabled):hover {
+  transform: translateY(-2px);
+  border-color: var(--kp-ink-2);
+  box-shadow: 0 8px 14px -10px rgba(26, 40, 70, 0.55);
+}
+.kp .vehicle-seat:focus-visible {
+  outline: 2px solid var(--kp-red);
+  outline-offset: 2px;
+}
+.kp .vehicle-seat.selected {
+  background: var(--kp-red);
+  border-color: var(--kp-red-d);
+  animation: kp-seat-pick 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.kp .vehicle-seat.selected::after {
+  background: var(--kp-red-d);
+}
+.kp .vehicle-seat.selected > span {
+  color: #fff;
+}
+.kp .vehicle-seat .seat-check {
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  padding: 2px;
+  border-radius: 50%;
+  background: var(--kp-ink);
+  color: #fff;
+  animation: kp-pop 0.35s 0.08s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+/* Dolu koltuk: taranmış, numarası soluk */
+.kp .vehicle-seat.occupied {
+  cursor: not-allowed;
+  border-color: var(--kp-hair);
+  background: repeating-linear-gradient(
+    -45deg,
+    #f1f4f7 0 4px,
+    var(--kp-hair) 4px 5px
+  );
+}
+.kp .vehicle-seat.occupied > span {
+  color: var(--kp-ink-2);
+  opacity: 0.7;
+}
+/* Kapı: basamak çizgileri ve sağda kırmızı açıklık */
+.kp .seat-door {
+  min-height: var(--seat-h);
+  border: 0;
+  border-right: 3px solid var(--kp-red);
+  border-radius: 4px;
+  background: repeating-linear-gradient(
+    180deg,
+    transparent 0 6px,
+    var(--kp-hair) 6px 8px
+  );
+  color: var(--kp-ink-2);
+  font-size: 11px;
+}
+.kp .seat-door > svg {
+  display: none;
+}
+.kp .vehicle-rear {
+  margin: 8px 10px 0;
+  border-top: 2px solid var(--kp-hair);
+}
+.kp .seat-caption {
+  margin-top: 14px;
+  color: var(--kp-ink);
+  font-weight: 500;
+}
+.kp .seat-caption span {
+  color: var(--kp-ink-2);
+  font-weight: 400;
+}
+.kp .seat-legend .taken {
+  background: repeating-linear-gradient(
+    -45deg,
+    #f1f4f7 0 3px,
+    var(--kp-rule) 3px 4px
+  );
+  border-color: var(--kp-rule);
+}
+.kp .seat-legend .crew {
+  background: rgba(138, 97, 40, 0.1);
+  border-color: rgba(138, 97, 40, 0.42);
+}
+@keyframes kp-drive-in {
+  from {
+    opacity: 0;
+    transform: translateY(36px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes kp-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes kp-steer {
+  from {
+    transform: rotate(-90deg);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes kp-seat-pick {
+  0% {
+    transform: scale(0.86);
+  }
+  55% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes kp-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kp .vehicle-body,
+  .kp .passenger-row,
+  .kp .steering,
+  .kp .vehicle-seat.selected,
+  .kp .vehicle-seat .seat-check {
+    animation: none;
+  }
+  .kp .vehicle-seat {
+    transition: none;
+  }
+}
+.kp .seat-legend {
+  font-size: 13px;
+  gap: 14px;
+}
+.kp .seat-legend i {
+  width: 14px;
+  height: 14px;
+}
+.kp .seat-legend .chosen {
+  background: var(--kp-red);
+  border-color: var(--kp-red);
+}
+.kp .seat-selection-info h3 {
+  font-size: 28px;
+}
+.kp .seat-selection-info > .muted {
+  font-size: 15px;
+  line-height: 1.6;
+}
+.kp .chosen-seats span,
+.kp .chosen-seats small {
+  font-size: 13px;
+}
+.kp .chosen-seats strong {
+  font-size: 16px;
+}
+.kp .seat-caption,
+.kp .seat-caption span {
+  font-size: 13px;
+}
+/* Özet: tek görüntülü hatıra kartı */
+.kp .booking-summary {
+  background: var(--kp-card);
+  border: 0;
+  border-radius: 4px;
+  box-shadow: var(--kp-shadow-sm);
+  padding: 10px;
+  overflow: visible;
+}
+.kp .booking-summary > .booking-summary-photo {
+  position: relative;
+  padding: 0;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--sky);
+}
+.kp .booking-summary-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.kp .booking-summary-ribbon {
+  position: absolute;
+  left: 0;
+  bottom: 14px;
+  background: var(--kp-red);
+  color: #fff;
+  font-family: var(--display);
+  font-size: 20px;
+  line-height: 1;
+  padding: 8px 12px 9px;
+}
+.kp .booking-summary > div:not(.booking-summary-photo) {
+  padding: 18px 10px 12px;
+}
+.kp .booking-summary h3 {
+  font-size: 24px;
+  margin-bottom: 14px;
+}
+.kp .booking-summary p {
+  font-size: 14px;
+  color: var(--kp-ink);
+  margin: 9px 0;
+}
+.kp .booking-summary p svg {
+  color: var(--kp-ink-2);
+  flex: none;
+}
+.kp .booking-summary small {
+  font-size: 12px;
+}
+.kp .summary-total {
+  border-top: 1px solid var(--kp-ink-2);
+}
+.kp .summary-total span {
+  font-size: 13px;
+  color: var(--kp-ink-2);
+}
+.kp .summary-total strong {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 36px;
+  color: var(--kp-gold);
+}
+.kp .summary-payment {
+  font-size: 14px;
+  color: var(--kp-ink);
+}
+.kp .summary-payment svg {
+  color: var(--kp-red);
+}
+.kp .booking-coupon p {
+  display: block;
+  line-height: 1.5;
+}
+.kp .summary-total > span {
+  max-width: none;
+}
+.kp .booking-coupon a {
+  color: var(--kp-red);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 1200px) {
+  .kp .booking-layout {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 28px;
+  }
+}
+@media (max-width: 950px) {
+  .kp .booking-layout {
+    grid-template-columns: 1fr;
+  }
+  .kp .booking-summary {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 6px;
+    align-items: start;
+  }
+  .kp .booking-summary > .booking-summary-photo {
+    display: block;
+  }
+  .kp .booking-summary > div:not(.booking-summary-photo) {
+    display: block;
+    padding: 6px 10px 6px 14px;
+  }
+  .kp .booking-summary h3 {
+    font-size: 22px;
+    margin-bottom: 6px;
+  }
+  .kp .booking-summary p {
+    margin: 5px 0;
+  }
+  .kp .summary-total {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--kp-ink-2);
+  }
+  .kp .summary-total strong {
+    font-size: 30px;
+  }
+}
+@media (max-width: 560px) {
+  .kp .booking-summary {
+    grid-template-columns: 1fr;
+  }
+  .kp .booking-summary > .booking-summary-photo {
+    aspect-ratio: 16 / 9;
+  }
+  .kp .booking-summary > div:not(.booking-summary-photo) {
+    padding: 12px 6px 6px;
+  }
+}
+
+@media (min-width: 701px) and (max-width: 950px) {
+  .kp .feature:nth-child(3) {
+    border-left: 0;
+  }
+  .kp .feature:nth-child(n + 3) {
+    border-top: 1px solid var(--kp-hair);
+    padding-top: 16px;
+    margin-top: 12px;
+  }
+}
+
+/* 3. adım: yolcu listesi ve ödeme tercihi */
+.kp .confirmation-passengers {
+  border-top: 1px solid var(--kp-ink-2);
+  border-bottom: 1px solid var(--kp-hair);
+}
+.kp .confirmation-passengers > div {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 2px 12px;
+  align-items: baseline;
+  font-size: 15px;
+  padding: 10px 0;
+}
+.kp .confirmation-passengers > div + div {
+  border-top: 1px solid var(--kp-hair);
+}
+.kp .confirmation-passengers span {
+  color: var(--kp-ink-2);
+}
+.kp .confirmation-passengers small {
+  grid-column: 2;
+  font-size: 13px;
+  color: var(--kp-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+/* 2. adım: her yolcu bir kart; üstte kırmızı ince çizgi, koltuk numarası sağda */
+.kp .passenger-card {
+  margin: 0 0 16px;
+  padding: 18px 20px 6px;
+  border: 1px solid var(--kp-hair);
+  border-top: 2px solid var(--kp-red);
+  border-radius: 0 0 4px 4px;
+  background: var(--kp-card);
+}
+.kp .passenger-card legend {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 0 6px;
+  margin-left: -6px;
+  font-family: var(--display);
+  font-size: 20px;
+  color: var(--kp-ink);
+}
+.kp .passenger-card legend span {
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--kp-red);
+}
+.kp .passenger-card .form-grid {
+  gap: 0 16px;
+}
+.kp .gender-field > span {
+  display: block;
+  margin-bottom: 8px;
+}
+.kp .choice-inline {
+  display: flex;
+  gap: 18px;
+  min-height: 44px;
+  align-items: center;
+}
+.kp .choice-inline label {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.kp .choice-inline input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--kp-red);
+}
+.kp .companion-chosen {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-left: 2px solid var(--kp-red);
+  background: var(--kp-snow);
+}
+.kp .companion-chosen strong {
+  font-size: 16px;
+}
+.kp .companion-chosen small {
+  font-size: 13px;
+  color: var(--kp-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.kp .companion-save {
+  margin: 4px 0 14px;
+  font-size: 14px;
+}
+/* Hesabım: yol arkadaşlarım */
+.kp .member-companions {
+  margin-top: 56px;
+}
+.kp .member-companions .section-heading p {
+  font-size: 15px;
+  margin-top: 6px;
+}
+.kp .companion-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.kp .companion-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 18px;
+  background: var(--kp-card);
+  border-top: 2px solid var(--kp-red);
+  border-radius: 0 0 4px 4px;
+  box-shadow: var(--kp-shadow-sm);
+}
+.kp .companion-list li > svg {
+  color: var(--kp-ink-2);
+}
+.kp .companion-list strong {
+  display: block;
+  font-size: 16px;
+}
+.kp .companion-list small {
+  font-size: 13px;
+  color: var(--kp-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.kp .companion-form {
+  margin-top: 16px;
+  padding: 20px 22px 8px;
+  background: var(--kp-card);
+  border-radius: 4px;
+  box-shadow: var(--kp-shadow-sm);
+}
+.kp .id-note {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 4px 0 26px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--kp-ink-2);
+}
+.kp .id-note svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--kp-ink);
+}
+.kp .payment-choice {
+  border: 1px solid var(--kp-rule);
+  border-radius: 4px;
+  padding: 16px 18px;
+  font-size: 15px;
+  background: var(--kp-card);
+  transition: border-color 0.2s ease;
+}
+.kp .payment-choice:hover {
+  border-color: var(--kp-ink-2);
+}
+.kp .payment-choice.active {
+  border-color: var(--kp-red);
+  box-shadow: inset 0 0 0 1px var(--kp-red);
+  background: var(--kp-card);
+}
+.kp .payment-choice > input {
+  accent-color: var(--kp-red);
+}
+.kp .payment-choice small {
+  font-size: 13px;
+  color: var(--kp-ink-2);
+}
+.kp .payment-choice > strong {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 22px;
+  color: var(--kp-gold);
+}
+
+/* Başarı sayfası ve ön rezervasyon belgesi: kartın arka yüzü */
+.kp .booking-success {
+  padding-top: 40px;
+}
+.kp .success-icon {
+  background: var(--kp-red);
+  color: #fff;
+}
+.kp .booking-success h1 {
+  font-size: clamp(38px, 4.4vw, 56px);
+}
+.kp .booking-success > p {
+  font-size: 17px;
+  color: var(--kp-ink-2);
+}
+.kp .reservation-ticket {
+  max-width: 980px;
+  border: 0;
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow);
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) 1px minmax(0, 1fr);
+  gap: 0 40px;
+  padding: 36px 40px 0;
+  overflow: visible;
+}
+.kp .ticket-divider {
+  background: var(--kp-rule);
+  margin-bottom: 30px;
+}
+/* Lastik damga: çift çizgili mürekkep çerçeve, hafif eğik basılmış */
+.kp .status-stamp {
+  display: inline-block;
+  padding: 5px 10px 4px;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+  box-shadow:
+    inset 0 0 0 2px var(--kp-card),
+    inset 0 0 0 3px currentColor;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transform: rotate(-2deg);
+  transform-origin: left center;
+}
+.kp .status-stamp.is-ok {
+  color: var(--kp-red);
+}
+.kp .status-stamp.is-pending {
+  color: var(--kp-ink);
+}
+.kp .status-stamp.is-void {
+  color: var(--kp-ink-2);
+  border-style: dashed;
+  box-shadow: none;
+}
+.kp .reservation-ticket h2 {
+  font-size: clamp(28px, 2.8vw, 36px);
+  margin: 16px 0 18px;
+}
+.kp .ticket-reference span,
+.kp .ticket-data span,
+.kp .ticket-lines dt {
+  display: block;
+  font-size: 13px;
+  color: var(--kp-ink-2);
+  margin-bottom: 3px;
+}
+/* Referans elle yazılabilsin diye Onest'te: O ile 0 karışmaz */
+.kp .ticket-reference strong {
+  display: block;
+  font-family: var(--font);
+  font-weight: 600;
+  font-size: 24px;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+}
+.kp .ticket-discount {
+  font-size: 14px;
+  color: var(--kp-ink-2);
+}
+.kp .ticket-data {
+  padding: 18px 0 22px;
+  margin-top: 18px;
+  border-top: 1px solid var(--kp-hair);
+  gap: 16px 24px;
+}
+.kp .ticket-data strong {
+  font-family: var(--display);
+  font-size: 21px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.kp .ticket-data > div:first-child strong {
+  color: var(--kp-gold);
+}
+.kp .ticket-qr {
+  background: none;
+  border-radius: 0;
+  margin: 0;
+  border-top: 1px solid var(--kp-hair);
+  padding: 20px 0 28px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+/* QR kendi beyaz sessiz bölgesiyle gelir; çerçeve yalnız kartı ondan ayırır.
+   Renk ve filtre verilmez: karşıtlık her koşulda kodun kendisinindir. */
+.kp .ticket-qr img {
+  flex: none;
+  width: 164px;
+  height: 164px;
+  padding: 0;
+  margin: 0;
+  background: #fff;
+  border: 1px solid var(--kp-rule);
+  border-radius: 2px;
+}
+.kp .ticket-qr strong {
+  font-size: 16px;
+}
+.kp .ticket-qr p {
+  font-size: 14px;
+  color: var(--kp-ink-2);
+  margin: 4px 0 8px;
+}
+.kp .ticket-qr .text-link {
+  margin-right: 16px;
+}
+.kp .ticket-address {
+  padding-bottom: 26px;
+}
+.kp .ticket-stamp-row {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  min-height: 190px;
+}
+.kp .ticket-stamp {
+  width: 150px;
+  transform: rotate(1.5deg);
+}
+.kp .ticket-stamp-face {
+  border: 1px solid var(--kp-rule);
+  background: var(--kp-card);
+  padding: 5px 5px 7px;
+}
+.kp .ticket-stamp-face img {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+}
+.kp .ticket-stamp-face span {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.kp .ticket-stamp-face b {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 15px;
+  letter-spacing: 0;
+  color: var(--kp-gold);
+}
+.kp .ticket-stamp-row .kp-postmark {
+  right: 104px;
+  top: 40px;
+  transform: rotate(-10deg);
+}
+.kp .ticket-lines {
+  margin: 22px 0 0;
+}
+.kp .ticket-lines > div {
+  border-bottom: 1px solid var(--kp-ink-2);
+  padding: 10px 0 8px;
+}
+.kp .ticket-lines dd {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 20px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.kp .ticket-bottom {
+  grid-column: 1 / -1;
+  margin: 0 -40px;
+  padding: 16px 40px;
+  background: var(--paper);
+  border-radius: 0 0 5px 5px;
+}
+.kp .ticket-bottom p {
+  font-size: 14px;
+  color: var(--kp-ink-2);
+}
+.kp .ticket-bottom svg {
+  color: var(--kp-red);
+}
+@media (max-width: 760px) {
+  .kp .reservation-ticket {
+    grid-template-columns: 1fr;
+    padding: 24px 20px 0;
+  }
+  .kp .ticket-divider {
+    height: 1px;
+    margin: 4px 0 18px;
+  }
+  .kp .ticket-stamp-row {
+    min-height: 150px;
+  }
+  .kp .ticket-stamp {
+    width: 116px;
+  }
+  .kp .ticket-stamp-row .kp-postmark {
+    right: 84px;
+    top: 24px;
+  }
+  .kp .ticket-bottom {
+    margin: 0 -20px;
+    padding: 14px 20px;
+  }
+  .kp .ticket-qr {
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .kp .ticket-qr img {
+    width: 148px;
+    height: 148px;
+  }
+  .kp .ticket-qr .text-link {
+    display: table;
+    margin: 0 0 8px;
+  }
+  .kp .ticket-reference strong {
+    font-size: 22px;
+  }
+}
+@media print {
+  .kp .reservation-ticket {
+    box-shadow: none;
+    border: 1px solid var(--kp-rule);
+  }
+  .kp .ticket-qr button,
+  .kp .ticket-qr .text-link {
+    display: none;
+  }
+  .kp .status-stamp,
+  .kp .ticket-stamp,
+  .kp .ticket-qr img {
+    print-color-adjust: exact;
+  }
+  .kp::before,
+  .chat-launchers {
+    display: none;
+  }
+}
+
+/* ---------- Bilet doğrulama (/bilet/:token) ---------- */
+.kp .ticket-verification {
+  max-width: 720px;
+  min-height: 65vh;
+  padding: 64px 0 90px;
+}
+.kp .ticket-check {
+  position: relative;
+  background: var(--kp-card);
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow);
+  padding: 36px 40px 30px;
+}
+.kp .ticket-check-head .kp-postmark {
+  right: 34px;
+  top: 30px;
+}
+/* Sonuç cümlesi damganın yanından akar; posta damgasına sağdan yer bırakır */
+.kp .ticket-check h1 {
+  font-size: clamp(34px, 3.6vw, 50px);
+  margin: 26px 0 10px;
+  padding-right: 120px;
+}
+.kp .ticket-check h2 {
+  font-size: clamp(22px, 2.4vw, 28px);
+  color: var(--kp-ink-2);
+  margin: 0 0 22px;
+}
+.kp .ticket-check .ticket-lines {
+  margin: 20px 0 0;
+}
+.kp .ticket-check-note {
+  margin: 20px 0 0;
+  font-size: 15px;
+  color: var(--kp-ink-2);
+}
+.kp .ticket-check .btn {
+  margin-top: 22px;
+}
+@media (max-width: 700px) {
+  .kp .ticket-verification {
+    padding: 28px 0 70px;
+  }
+  .kp .ticket-check {
+    padding: 26px 20px 24px;
+  }
+  .kp .ticket-check h1 {
+    margin-top: 22px;
+    padding-right: 92px;
+  }
+  .kp .ticket-check-head .kp-postmark {
+    width: 92px;
+    height: 92px;
+    right: 12px;
+    top: 44px;
+  }
+}
+
+/* ---------- Online kapora ödemesi ---------- */
+.kp .pay-deposit {
+  max-width: 980px;
+  margin: 0 auto 28px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px 28px;
+  align-items: center;
+  padding: 24px 28px;
+  background: var(--kp-card);
+  border-top: 2px solid var(--kp-red);
+  border-radius: 0 0 5px 5px;
+  box-shadow: var(--kp-shadow-sm);
+  text-align: left;
+}
+.kp .pay-deposit h2 {
+  font-size: clamp(28px, 2.8vw, 36px);
+  margin: 0 0 6px;
+}
+.kp .pay-deposit p {
+  margin: 0;
+  font-size: 16px;
+  color: var(--kp-ink-2);
+}
+.kp .pay-deposit strong {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 22px;
+  color: var(--kp-gold);
+}
+.kp .pay-deposit small {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--kp-ink-2);
+}
+.kp .payment-page {
+  max-width: 620px;
+  min-height: 60vh;
+  padding: 64px 0 90px;
+}
+.kp .payment-card h1 {
+  padding-right: 0;
+  font-size: clamp(34px, 3.6vw, 50px);
+}
+.kp .payment-card .button-row {
+  margin-top: 22px;
+}
+.kp .payment-test-flag {
+  display: inline-block;
+  margin: 0 0 10px;
+  padding: 4px 10px;
+  border: 1px dashed var(--kp-ink-2);
+  border-radius: 3px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--kp-ink-2);
+}
+@media (max-width: 700px) {
+  .kp .pay-deposit {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
+  .kp .pay-deposit .btn {
+    width: 100%;
+  }
+  .kp .payment-page {
+    padding: 28px 0 70px;
+  }
+}
+
+/* ---------- Diğer sayfalar ---------- */
+.kp .page-intro > p,
+.kp .lookup-page > .muted,
+.kp .contact-page p {
+  font-size: 17px;
+  color: var(--kp-ink-2);
+}
+/* Konaklama girişi: tek görüntülü hatıra kartı */
+.kp .hotel-hero {
+  width: min(1280px, calc(100% - 112px));
+  margin: 6px auto 0;
+  height: 460px;
+  border: 14px solid var(--kp-card);
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow);
+}
+/* Sarıkamış fotoğrafı dikey; bant ormanla dağların buluştuğu yerden kesilir */
+.kp .hotel-hero > img {
+  object-position: 50% 44%;
+}
+.kp .hotel-hero::after {
+  background: linear-gradient(90deg, rgba(12, 20, 38, 0.72), transparent 70%);
+}
+.kp .hotel-hero > .container {
+  width: auto;
+  padding: 56px 0 0;
+}
+.kp .hotel-hero h1 {
+  display: inline-block;
+  background: var(--kp-red);
+  color: #fff;
+  font-size: clamp(40px, 5.2vw, 64px);
+  padding: 12px 28px 16px 30px;
+  box-shadow: 0 12px 26px -14px rgba(0, 0, 0, 0.55);
+}
+.kp .hotel-hero p {
+  font-size: 17px;
+  line-height: 1.6;
+  color: #fff;
+  padding-left: 30px;
+  max-width: 46ch;
+}
+.kp .hotel-hero .btn {
+  margin-left: 30px;
+}
+/* Fotoğraf künyesi karın üstüne düşer: kendi koyu zemininde */
+.kp .hotel-hero > small {
+  font-size: 12px;
+  background: rgba(12, 20, 38, 0.6);
+  padding: 3px 8px;
+  border-radius: 2px;
+}
+.kp .contact-details,
+.kp .lookup-form {
+  background: var(--kp-card);
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow-sm);
+}
+.kp .lookup-form {
+  padding: 24px 26px;
+}
+.kp .stay-process p,
+.kp .hotel-card p {
+  font-size: 15px;
+  color: var(--kp-ink-2);
+}
+.kp .contact-details svg {
+  color: var(--kp-red);
+}
+.kp .hotel-card {
+  background: var(--kp-card);
+  border: 0;
+  border-radius: 4px;
+  padding: 10px;
+  box-shadow: var(--kp-shadow-sm);
+}
+.kp .hotel-card .muted,
+.kp .hotel-amenities {
+  font-size: 13px;
+}
+.kp .stay-process > div {
+  border-top: 2px solid var(--kp-red);
+}
+.kp .stay-process > div > span {
+  color: var(--kp-red);
+}
+.kp .stay-process h3 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 22px;
+}
+.kp .contact-details span,
+.kp .contact-details small {
+  font-size: 13px;
+  color: var(--kp-ink-2);
+}
+.kp .contact-details strong {
+  font-size: 16px;
+}
+.kp .cancel-confirm {
+  background: var(--kp-card);
+  border: 1px solid var(--kp-red);
+  border-radius: 4px;
+  font-size: 15px;
+}
+/* Hakkımızda: fotoğraf beyaz çerçevede, masaya bırakılmış */
+.kp .about-layout > img {
+  border: 12px solid var(--kp-card);
+  border-radius: 4px;
+  box-shadow: var(--kp-shadow);
+  transform: rotate(0.8deg);
+}
+.kp .about-layout p {
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--kp-ink-2);
+}
+.kp .about-layout .lead-copy {
+  font-size: 20px;
+  color: var(--kp-ink);
+}
+.kp .about-note {
+  background: transparent;
+}
+/* Hizmetler: başta filodan gerçek bir kart, altında kartpostal sırtı gibi
+   görselsiz hizmet kartları; kırmızı ince üst çizgi uçak postası kenarıdır. */
+@media (min-width: 951px) {
+  .kp .services-hero .kp-views,
+  .kp .service-hero .kp-views {
+    height: clamp(360px, calc(100svh - 340px), 500px);
+  }
+}
+/* Otobüsün üstündeki ROTA yazısı kırmızı bandın üstünde kalsın */
+.kp .services-hero .kp-main-view > img,
+.kp .service-hero .kp-main-view > img[src*="rota-bus"] {
+  object-position: 50% 100%;
+}
+.kp .services-directory {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 0;
+  padding-top: 44px;
+}
+.kp .service-directory-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 30px 32px 26px;
+  background: var(--kp-card);
+  border: 0;
+  border-top: 2px solid var(--kp-red);
+  border-radius: 0 0 4px 4px;
+  box-shadow: var(--kp-shadow-sm);
+  transition:
+    transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.kp .service-directory-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--kp-shadow);
+}
+.kp .service-directory-card h2 {
+  font-size: clamp(28px, 2.8vw, 36px);
+  margin: 0 0 12px;
+}
+.kp .service-directory-card p {
+  flex: 1;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--kp-ink-2);
+  margin: 0;
+}
+.kp .service-directory-card span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 22px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--kp-red);
+}
+.kp .service-detail-points {
+  list-style: none;
+  padding: 0;
+}
+.kp .service-detail-points li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.kp .service-detail-points svg,
+.kp .service-benefits svg {
+  color: var(--kp-red);
+}
+.kp .service-benefits p {
+  font-size: 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--kp-hair);
+}
+.kp .service-detail-body .muted {
+  font-size: 14px;
+  color: var(--kp-ink-2);
+}
+/* Süreç: tur detayındaki güzergâh gibi kırmızı ince çizgi ve Marcellus sıra */
+.kp .service-process article {
+  gap: 20px;
+  padding: 18px 0 20px;
+  border-bottom: 0;
+  border-top: 1px solid var(--kp-red);
+}
+.kp .service-process article > span {
+  display: block;
+  width: 28px;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  font-family: var(--display);
+  font-size: 28px;
+  line-height: 1;
+  color: var(--kp-red);
+}
+.kp .service-process h3 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 22px;
+  margin-bottom: 6px;
+}
+.kp .service-process p {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--kp-ink-2);
+}
+.kp .service-detail-cta {
+  background: var(--kp-card);
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow-sm);
+  padding: 34px 40px;
+}
+.kp .service-detail-cta h2 {
+  font-size: clamp(28px, 2.8vw, 36px);
+}
+.kp .service-detail-cta p {
+  font-size: 16px;
+  color: var(--kp-ink-2);
+}
+.kp .legal-toc a {
+  font-size: 14px;
+}
+@media (max-width: 700px) {
+  .kp .hotel-hero {
+    width: calc(100% - 24px);
+    height: 420px;
+    border-width: 8px;
+  }
+  .kp .hotel-hero > .container {
+    padding-top: 30px;
+  }
+  /* Dar ekranda metin karın üstüne düşer: perde dikey ve daha koyu */
+  .kp .hotel-hero::after {
+    background: linear-gradient(
+      180deg,
+      rgba(12, 20, 38, 0.5),
+      rgba(12, 20, 38, 0.78) 70%
+    );
+  }
+  .kp .hotel-hero h1 {
+    font-size: 36px;
+    padding: 10px 16px 12px 18px;
+  }
+  .kp .hotel-hero p {
+    font-size: 15px;
+    padding: 0 18px;
+  }
+  .kp .hotel-hero .btn {
+    margin-left: 18px;
+  }
+  .kp .about-layout > img {
+    transform: none;
+    border-width: 8px;
+  }
+  .kp .services-directory {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding-top: 28px;
+  }
+  .kp .service-directory-card {
+    padding: 24px 22px 22px;
+  }
+  .kp .service-detail-cta {
+    padding: 24px 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kp .service-directory-card {
+    transition: none;
+  }
+}
+
+/* Telefonda rezervasyon: önce küçük özet şeridi ve form, tam özet en sonda. */
+.kp .booking-mini {
+  display: none;
+}
+@media (max-width: 950px) {
+  .kp .booking-mini {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    background: var(--kp-card);
+    border-radius: 4px;
+    box-shadow: var(--kp-shadow-sm);
+    padding: 8px 14px 8px 8px;
+    margin-bottom: 14px;
+  }
+  .kp .booking-mini img {
+    width: 64px;
+    height: 48px;
+    object-fit: cover;
+  }
+  .kp .booking-mini strong {
+    display: block;
+    font-size: 15px;
+    line-height: 1.3;
+  }
+  .kp .booking-mini span {
+    display: block;
+    font-size: 13px;
+    color: var(--kp-ink-2);
+  }
+  .kp .booking-mini b {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 22px;
+    color: var(--kp-gold);
+    white-space: nowrap;
+  }
+  .kp .booking-summary {
+    order: 1;
+  }
+}
+@media (min-width: 701px) and (max-width: 950px) {
+  .kp .service-card:nth-child(3) {
+    border-left: 0;
+  }
+  .kp .service-card:nth-child(n + 3) {
+    border-top: 1px solid var(--kp-hair);
+  }
+}
+
+/* ---------- Telefon ---------- */
+@media (max-width: 950px) {
+  .kp-views {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) auto;
+    height: auto;
+  }
+  .kp-main-view {
+    height: 56vw;
+    min-height: 320px;
+    max-height: 520px;
+  }
+  .kp-insets {
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: none;
+    height: 170px;
+  }
+  .kp-insets-stack {
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    grid-auto-flow: column;
+    grid-auto-rows: auto;
+    height: 110px;
+  }
+  .kp-strip {
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .kp-field-tour {
+    grid-column: 1 / -1;
+  }
+  .kp-strip > .btn {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+  .kp-detail-strip {
+    grid-template-columns: 1fr;
+  }
+  .kp .detail-content {
+    padding: 30px 26px 20px;
+  }
+}
+@media (max-width: 700px) {
+  .kp .header-inner {
+    height: 66px;
+  }
+  .kp .brand img {
+    width: 118px;
+    height: 43px;
+  }
+  .kp .topbar {
+    display: none;
+  }
+  .kp-hero {
+    padding-top: 0;
+    width: calc(100% - 24px);
+  }
+  .kp-card {
+    padding: 8px;
+  }
+  .kp-main-view {
+    height: 280px;
+    min-height: 0;
+  }
+  .kp-insets {
+    gap: 6px;
+    height: 124px;
+  }
+  .kp-views {
+    gap: 6px;
+  }
+  .kp-inset-label {
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+    font-size: 13px;
+    padding: 5px 5px 4px;
+    text-align: center;
+    max-width: none;
+  }
+  .kp-inset-label small {
+    font-size: 11px;
+  }
+  .kp-inset-check {
+    right: 5px;
+    top: 5px;
+    width: 22px;
+    height: 22px;
+  }
+  .kp-title {
+    bottom: 18px;
+  }
+  .kp-title h1 {
+    font-size: 38px;
+    padding: 10px 16px 12px 18px;
+  }
+  .kp-title p {
+    font-size: 14px;
+    padding: 10px 18px 0;
+  }
+  .kp-strip {
+    padding: 16px 8px 4px;
+  }
+  .kp-printed {
+    flex-direction: column;
+    align-items: flex-start;
+    margin-top: 14px;
+  }
+  .kp-detail-card {
+    width: calc(100% - 24px);
+    padding-top: 10px;
+  }
+  .kp-insets-stack {
+    height: 88px;
+  }
+  .kp-facts {
+    gap: 12px 22px;
+  }
+  .kp .tour-grid {
+    gap: 26px;
+  }
+  .kp .detail-content {
+    padding: 26px 18px 14px;
+  }
+  .kp .itinerary > div {
+    padding-left: 38px;
+  }
+  .kp .booking-main {
+    padding: 24px 18px 22px;
+  }
+  .kp .feature:not(:first-child) {
+    border-left: 0;
+    border-top: 1px solid var(--kp-hair);
+  }
+  .kp .service-card:not(:first-child) {
+    border-left: 0;
+    border-top: 1px solid var(--kp-hair);
+  }
+  .kp .feature {
+    padding: 14px 16px;
+  }
+  .kp .vip-inner {
+    padding: 28px 20px;
+  }
+  .kp .story-card:nth-child(n) {
+    transform: none;
+  }
+  .kp .private-journey > .container {
+    padding: 0 0 22px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .kp .private-journey h2 {
+    padding: 14px 18px;
+    max-width: none;
+  }
+  .kp .private-journey .btn {
+    margin-left: 18px;
+  }
+  .kp .booking-steps li {
+    font-size: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .kp .booking-steps li:not(:last-child)::after {
+    position: absolute;
+    left: 34px;
+    right: 8px;
+    top: 13px;
+    margin: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kp-inset > img,
+  .kp-inset::after,
+  .kp .tour-card {
+    transition: none;
+  }
+}
+
+/* ---------- Dil seçici (TR / EN) ----------
+   Üst menüdeki metin bağlantılarıyla aynı ölçü ve mürekkep; etkin dil koyu ve
+   altı çizili. Masaüstünde başlıkta, 700px altında açılır menünün sonunda. */
+.kp .lang-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.kp .lang-switch a {
+  color: var(--kp-ink-2);
+  text-underline-offset: 5px;
+  text-decoration-thickness: 1px;
+}
+.kp .lang-switch a:hover,
+.kp .lang-switch a[aria-current] {
+  color: var(--kp-ink);
+}
+.kp .lang-switch a[aria-current] {
+  font-weight: 600;
+  text-decoration: underline;
+}
+.kp .lang-switch-menu {
+  display: none;
+}
+@media (max-width: 700px) {
+  .kp .lang-switch-header {
+    display: none;
+  }
+  .kp .lang-switch-menu {
+    display: flex;
+    gap: 22px;
+    margin-top: 6px;
+    border-top: 1px solid var(--kp-hair);
+    font-size: 15px;
+  }
+}

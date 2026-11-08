@@ -1,4 +1,5 @@
 import { ProfileSettings, MemberPrivacy } from "./AccountSecurity";
+import { CompanionsSection } from "../components/Companions";
 import { useTurnstile } from "../components/Turnstile";
 import type { Campaign } from "../components/OperationsDesk";
 import { useEffect, useState, type FormEvent } from "react";
@@ -623,6 +624,7 @@ export function Account() {
           ekstra hizmet ve konaklamayı kapsamaz.
         </p>
       </section>
+      <CompanionsSection />
       <section className="member-social-links">
         <h2>Giriş seçeneklerim</h2>
         <p className="muted">

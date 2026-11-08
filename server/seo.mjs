@@ -2,6 +2,7 @@
 // JSON-LD, robots.txt ve sitemap.xml. SPA olduğu için arama motorları ilk
 // HTML'de doğru meta etiketlerini görsün diye şablona enjekte edilir.
 import { business, tours, services } from "./catalog.mjs";
+import { en } from "./catalog-en.mjs";
 
 const SITE = "Rota Kars Turizm";
 const DEFAULT_DESCRIPTION =
@@ -192,8 +193,60 @@ const PRIVATE = [
   [/^\/yonetim$/, "Yönetim"],
 ];
 
+// İngilizce sürüm (/en): başlık ve açıklamalar; turlar catalog-en.mjs'ten.
+const EN_STATIC = {
+  "/": {
+    title: `${SITE} | Kars tours: Ani, Lake Çıldır and VIP transfers`,
+    description:
+      "Licensed travel agency in Kars since 2010. Day tours to Ani and Lake Çıldır, Sarıkamış, Batumi and Van with online seat selection in VIP minibuses.",
+  },
+  "/turlar": {
+    title: `Kars, Ani, Sarıkamış, Batumi and Van tours | ${SITE}`,
+    description:
+      "Day trips and overnight tours from Kars: Ani and Lake Çıldır, Sarıkamış skiing, Batumi, Van and the Van basin. Prices, itineraries and online seat selection.",
+  },
+  "/hakkimizda": {
+    title: `About us | ${SITE}`,
+    description: `Rota Kars Turizm, a TÜRSAB-licensed (No. ${business.tursabNo}) group A travel agency serving Kars since ${business.founded}.`,
+  },
+  "/iletisim": {
+    title: `Contact and address | ${SITE}`,
+    description: `Rota Kars Turizm office: ${business.address}. Phone ${business.phone}.`,
+  },
+};
+const EN_PRIVATE = {
+  Rezervasyon: "Booking",
+  Rezervasyonum: "My booking",
+  "Bilet doğrulama": "Ticket check",
+};
+const isEn = (p) => p === "/en" || p.startsWith("/en/");
+const stripEn = (p) => (p === "/en" ? "/" : p.slice(3));
 // Bir yol için meta bilgisi. status 404 ise sayfa yoktur.
 export function pageMeta(path, base) {
+  if (isEn(path)) {
+    const inner = pageMeta(stripEn(path), base);
+    if (inner.status !== 200) return { ...inner, path: path };
+    const tr = inner.path,
+      tourId = tr.match(/^\/turlar\/([^/]+)$/)?.[1],
+      tour = tourId && en.tours[tourId],
+      fixed = EN_STATIC[tr];
+    return {
+      ...inner,
+      lang: "en",
+      path: tr === "/" ? "/en" : "/en" + tr,
+      alternate: tr,
+      // Çevrilmemiş sayfalar İngilizce dizine girmez.
+      index: inner.index && Boolean(fixed || tour),
+      title:
+        fixed?.title ||
+        (tour
+          ? `${tour.name}: ${tour.subtitle} | ${SITE}`
+          : EN_PRIVATE[inner.title.split(" | ")[0]]
+            ? `${EN_PRIVATE[inner.title.split(" | ")[0]]} | ${SITE}`
+            : inner.title),
+      description: fixed?.description || (tour ? clip(tour.summary) : inner.description),
+    };
+  }
   let end = Math.min(path.length, 512);
   while (end > 1 && path[end - 1] === "/") end--;
   const p = path.slice(0, end) || "/";
@@ -236,6 +289,7 @@ export function pageMeta(path, base) {
       status: 200,
       index: true,
       path: p,
+      alternate: EN_STATIC[p] ? "/en" + (p === "/" ? "" : p) : null,
       title: m.title,
       description: m.description,
       image: DEFAULT_IMAGE,
@@ -257,6 +311,7 @@ export function pageMeta(path, base) {
       status: 200,
       index: true,
       path: p,
+      alternate: "/en" + p,
       type: "product",
       title: tourTitle(tour),
       description: clip(
@@ -333,8 +388,17 @@ export function headTags(meta, base) {
     `<meta name="description" content="${attr(meta.description)}">`,
     `<meta name="robots" content="${meta.index ? "index, follow, max-image-preview:large" : "noindex, follow"}">`,
     meta.index ? `<link rel="canonical" href="${attr(url)}">` : "",
+    // Türkçe ve İngilizce sürümler birbirini gösterir.
+    meta.index && meta.alternate
+      ? (meta.lang === "en"
+          ? [["tr", meta.alternate], ["en", meta.path]]
+          : [["tr", meta.path], ["en", meta.alternate]]
+        )
+          .map(([l, p]) => `<link rel="alternate" hreflang="${l}" href="${attr(base + p)}">`)
+          .join("")
+      : "",
     `<meta property="og:site_name" content="${SITE}">`,
-    `<meta property="og:locale" content="tr_TR">`,
+    `<meta property="og:locale" content="${meta.lang === "en" ? "en_GB" : "tr_TR"}">`,
     `<meta property="og:type" content="${meta.type === "product" ? "product" : "website"}">`,
     `<meta property="og:title" content="${attr(meta.title)}">`,
     `<meta property="og:description" content="${attr(meta.description)}">`,
@@ -380,6 +444,11 @@ export function robotsTxt(base, env) {
     "Disallow: /bilet/",
     "Disallow: /rezervasyon/",
     "Disallow: /rezervasyonum",
+    "Disallow: /en/bilet/",
+    "Disallow: /en/rezervasyon/",
+    "Disallow: /en/rezervasyonum",
+    "Disallow: /en/hesabim",
+    "Disallow: /en/uyelik",
     "",
     `Sitemap: ${base}/sitemap.xml`,
     "",
@@ -391,9 +460,12 @@ export function sitemapXml(base) {
     ...Object.keys(STATIC),
     ...tours.map((t) => `/turlar/${t.id}`),
     ...services.map((s) => `/hizmetler/${s.id}`),
+    // İngilizce sürüm: çevrilmiş sayfalar.
+    ...Object.keys(EN_STATIC).map((p) => (p === "/" ? "/en" : "/en" + p)),
+    ...tours.map((t) => `/en/turlar/${t.id}`),
   ];
   const images = (p) => {
-    const t = tours.find((x) => `/turlar/${x.id}` === p);
+    const t = tours.find((x) => `/turlar/${x.id}` === p.replace(/^\/en/, ""));
     return t
       ? [...new Set([t.image, ...(t.gallery || [])])]
           .map(

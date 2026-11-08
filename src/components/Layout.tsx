@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link as RouterLink, useLocation } from "react-router-dom";
 import {
   Phone,
   Instagram,
@@ -19,6 +19,41 @@ import { useMember } from "../lib/member";
 import { ChatBot } from "./ChatBot";
 import { whatsappLink } from "../lib/whatsapp";
 import { telHref } from "../lib/phone";
+import {
+  Link,
+  NavLink,
+  localPath,
+  stripLang,
+  useLang,
+  type Lang,
+} from "../lib/i18n";
+// Aynı sayfanın öbür dildeki karşılığına giden TR / EN bağlantıları.
+function LangSwitch({ className }: { className: string }) {
+  const { lang, t } = useLang(),
+    { pathname, search, hash } = useLocation(),
+    base = stripLang(pathname);
+  const item = (code: Lang, label: string, name: string) => (
+    <RouterLink
+      to={{ pathname: localPath(code, base), search, hash }}
+      lang={code}
+      hrefLang={code}
+      title={name}
+      aria-current={lang === code ? "true" : undefined}
+    >
+      {label}
+    </RouterLink>
+  );
+  return (
+    <div
+      className={"lang-switch " + className}
+      role="group"
+      aria-label={t("Dil")}
+    >
+      {item("tr", "TR", "Türkçe")}
+      {item("en", "EN", "English")}
+    </div>
+  );
+}
 export function Layout({
   catalog,
   children,
@@ -74,18 +109,19 @@ export function Layout({
   }, [open]);
   const b = catalog.business;
   const { member } = useMember();
+  const { t } = useLang();
   return (
-    <>
+    <div className="kp">
       <a href="#main" className="skip-link">
-        İçeriğe geç
+        {t("İçeriğe geç")}
       </a>
       <div className="topbar">
         <div className="container">
           <span>
             <MapPin size={12} />{" "}
             {catalog.demo
-              ? "Canlı demo · Örnek tarihler ve fiyatlar"
-              : "Kars’tan başlayan güzel hikâyeler"}
+              ? t("Canlı demo · Örnek tarihler ve fiyatlar")
+              : t("Kars’tan başlayan güzel hikâyeler")}
           </span>
           <div>
             <a href={telHref(b.phone)}>
@@ -101,7 +137,7 @@ export function Layout({
       </div>
       <header className="site-header">
         <div className="container header-inner">
-          <Link className="brand" to="/" aria-label="Rota Kars ana sayfa">
+          <Link className="brand" to="/" aria-label={t("Rota Kars ana sayfa")}>
             <img
               src="/images/logo.png"
               width="154"
@@ -112,43 +148,45 @@ export function Layout({
           <nav
             id="main-nav"
             className={"main-nav " + (open ? "is-open" : "")}
-            aria-label="Ana menü"
+            aria-label={t("Ana menü")}
           >
             <NavLink to="/" end>
-              Ana sayfa
+              {t("Ana sayfa")}
             </NavLink>
-            <NavLink to="/turlar">Turlarımız</NavLink>
-            <NavLink to="/hizmetler">Hizmetler</NavLink>
-            <NavLink to="/konaklama">Konaklama</NavLink>
-            <NavLink to="/hakkimizda">Hakkımızda</NavLink>
-            <NavLink to="/iletisim">İletişim</NavLink>
+            <NavLink to="/turlar">{t("Turlarımız")}</NavLink>
+            <NavLink to="/hizmetler">{t("Hizmetler")}</NavLink>
+            <NavLink to="/konaklama">{t("Konaklama")}</NavLink>
+            <NavLink to="/hakkimizda">{t("Hakkımızda")}</NavLink>
+            <NavLink to="/iletisim">{t("İletişim")}</NavLink>
+            <LangSwitch className="lang-switch-menu" />
           </nav>
           <div className="header-actions">
+            <LangSwitch className="lang-switch-header" />
             <Link
               to={member ? "/hesabim" : "/uyelik"}
               className="member-header-link"
-              aria-label={member ? "Hesabım" : "Üye ol / Giriş"}
+              aria-label={member ? t("Hesabım") : t("Üye ol / Giriş")}
             >
               <UserRound size={18} />
-              <span>{member ? "Hesabım" : "Üye ol / Giriş"}</span>
+              <span>{member ? t("Hesabım") : t("Üye ol / Giriş")}</span>
             </Link>
             <Link to="/rezervasyonum" className="reservation-link">
               <Ticket size={18} />
-              <span>Rezervasyonum</span>
+              <span>{t("Rezervasyonum")}</span>
             </Link>
             <a
               className="btn btn-small header-cta"
               href={whatsappLink(
                 b.whatsapp,
-                "Merhaba, rotakarsturizm.com sitesinden yazıyorum.",
+                t("Merhaba, rotakarsturizm.com sitesinden yazıyorum."),
               )}
               target="_blank"
               rel="noreferrer"
             >
-              Birlikte planlayalım
+              {t("Birlikte planlayalım")}
             </a>
             <button
-              aria-label={open ? "Menüyü kapat" : "Menüyü aç"}
+              aria-label={open ? t("Menüyü kapat") : t("Menüyü aç")}
               aria-expanded={open}
               aria-controls="main-nav"
               className="icon-btn mobile-menu"
@@ -174,9 +212,9 @@ export function Layout({
               />
             </Link>
             <p>
-              Rotayı biz biliyoruz.
+              {t("Rotayı biz biliyoruz.")}
               <br />
-              Hikâyeyi birlikte yazıyoruz.
+              {t("Hikâyeyi birlikte yazıyoruz.")}
             </p>
             <a
               href={b.instagram}
@@ -185,7 +223,7 @@ export function Layout({
               className="social-link"
             >
               <Instagram size={18} />
-              <span>Yolculuğumuza katılın</span>
+              <span>{t("Yolculuğumuza katılın")}</span>
             </a>
             <a
               href={b.facebook}
@@ -206,13 +244,13 @@ export function Layout({
                 src="/images/tursab.png"
                 width="145"
                 height="66"
-                alt={`TÜRSAB üyesi, belge no ${b.tursabNo}`}
+                alt={t("TÜRSAB üyesi, belge no {no}", { no: b.tursabNo })}
                 loading="lazy"
               />
             </a>
           </div>
           <div>
-            <h3>Bir rota seçin</h3>
+            <h3>{t("Bir rota seçin")}</h3>
             {catalog.tours.map((t) => (
               <Link key={t.id} to={"/turlar/" + t.id}>
                 {t.name}
@@ -220,16 +258,16 @@ export function Layout({
             ))}
           </div>
           <div>
-            <h3>Yolculuğunuz için</h3>
-            <Link to="/konaklama">Konaklama seçenekleri</Link>
-            <Link to="/hakkimizda">Rota Kars hakkında</Link>
-            <Link to="/rezervasyonum">Ön rezervasyon sorgulama</Link>
-            <Link to="/bilgilendirme#iptal">Tur iptali</Link>
-            <Link to="/bilgilendirme">Bilgilendirme ve gizlilik</Link>
-            <Link to="/gorsel-kaynaklari">Fotoğraf kaynakları</Link>
+            <h3>{t("Yolculuğunuz için")}</h3>
+            <Link to="/konaklama">{t("Konaklama seçenekleri")}</Link>
+            <Link to="/hakkimizda">{t("Rota Kars hakkında")}</Link>
+            <Link to="/rezervasyonum">{t("Ön rezervasyon sorgulama")}</Link>
+            <Link to="/bilgilendirme#iptal">{t("Tur iptali")}</Link>
+            <Link to="/bilgilendirme">{t("Bilgilendirme ve gizlilik")}</Link>
+            <Link to="/gorsel-kaynaklari">{t("Fotoğraf kaynakları")}</Link>
           </div>
           <div className="footer-contact">
-            <h3>Kars’tayız, bekleriz.</h3>
+            <h3>{t("Kars’tayız, bekleriz.")}</h3>
             <a href={b.mapsUrl} target="_blank" rel="noreferrer">
               <MapPin size={17} />
               <span>{b.address}</span>
@@ -251,17 +289,20 @@ export function Layout({
               {b.email}
             </a>
             <a href={b.mapsUrl} target="_blank" rel="noreferrer">
-              Yol tarifi alın <ExternalLink size={13} />
+              {t("Yol tarifi alın")} <ExternalLink size={13} />
             </a>
           </div>
         </div>
         <div className="container footer-bottom">
           <span>© {new Date().getFullYear()} Rota Kars Turizm</span>
           <span>
-            TÜRSAB A Grubu · Belge No {b.tursabNo} · {b.founded}’dan beri
+            {t("TÜRSAB A Grubu · Belge No {no} · {year}’dan beri", {
+              no: b.tursabNo,
+              year: b.founded,
+            })}
           </span>
         </div>
       </footer>
-    </>
+    </div>
   );
 }

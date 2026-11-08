@@ -40,7 +40,7 @@ Local operator with its own VIP minibuses/midibuses and real seat maps per depar
 ## Brand Commitments
 
 - Name: Rota Kars Turizm; gold "ROTA" logotype at `public/images/logo.png`.
-- Public site palette and type (snow white, basalt navy, logo gold; Marcellus + Onest) are recorded in `docs/DESIGN.md` for the public site. The user chose a new visual world for the agency panel (2026-10-21); the public site is out of that scope.
+- Public site: the user chose the "Hatıra Kartı" world on 2026-11-03 (multi-view Kars souvenir postcard: snow ground, white card stock, blue-black ink, airmail red only for the title band and actions, logo gold for prices; Marcellus + Onest stay pinned). Recorded in `docs/DESIGN.md`; the previous public look is kept on branch `yedek/mevcut-site-tasarimi`. The agency panel has its own world (`docs/DESIGN-PANEL.md`, chosen 2026-10-21).
 
 ## Evidence on Hand
 

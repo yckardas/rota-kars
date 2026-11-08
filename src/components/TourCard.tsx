@@ -1,8 +1,11 @@
-import { Link } from "react-router-dom";
+import { Link, useLang } from "../lib/i18n";
 import { responsive } from "../lib/images";
-import { Clock3, MoveUpRight, MapPin } from "lucide-react";
 import { currency, type Tour } from "../lib/types";
+import { placeName } from "../lib/place";
+// Tek görüntülü hatıra kartı: büyük manzara, köşede ikinci görüntü, kırmızı yer şeridi.
 export function TourCard({ tour }: { tour: Tour }) {
+  const inset = tour.gallery.find((g) => g !== tour.image);
+  const { t } = useLang();
   return (
     <Link className="tour-card" to={"/turlar/" + tour.id}>
       <div className="tour-card-image">
@@ -14,34 +17,33 @@ export function TourCard({ tour }: { tour: Tour }) {
           width="600"
           height="450"
         />
-        <span className="tour-category">{tour.category}</span>
-        {!tour.salesOpen && (
-          <span className="tour-sales-closed">Şu an satışa kapalı</span>
+        {inset && (
+          <span className="tour-card-inset">
+            <img
+              {...responsive(inset, "120px")}
+              alt=""
+              loading="lazy"
+              decoding="async"
+            />
+          </span>
         )}
-        <span className="tour-open">
-          <MoveUpRight size={21} />
-        </span>
+        <span className="tour-card-ribbon">{placeName(tour)}</span>
+        {!tour.salesOpen && (
+          <span className="tour-sales-closed">{t("Şu an satışa kapalı")}</span>
+        )}
       </div>
       <div className="tour-card-info">
-        <div className="tour-card-meta">
-          <span>
-            <Clock3 size={13} />
-            {tour.duration}
-          </span>
-          <span>Kars çıkışlı</span>
+        <div>
+          <h3>{tour.name}</h3>
+          <p>
+            {tour.duration} · {t("Kars çıkışlı")}
+            {tour.inquiryOnly ? " · " + t("tarih için arayın") : ""}
+          </p>
         </div>
-        <h3>{tour.name}</h3>
-        <p>{tour.subtitle}</p>
-        <div className="tour-card-bottom">
-          <span>
-            <MapPin size={13} />
-            {tour.location.split(" · ").slice(0, 2).join(", ")}
-          </span>
-          <div>
-            <strong>{currency(tour.price)}</strong>
-            <small>kişi başı</small>
-          </div>
-        </div>
+        <strong>
+          {currency(tour.price)}
+          <small>{t("kişi başı")}</small>
+        </strong>
       </div>
     </Link>
   );

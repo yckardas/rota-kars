@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useLocation, Link } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { Link, stripLang, useLang } from "../lib/i18n";
 import { Gift, ArrowRight, Check } from "lucide-react";
 import { Modal } from "./Modal";
 import { useMember } from "../lib/member";
@@ -8,12 +9,15 @@ const INVITE_PAGES = ["/", "/turlar", "/hizmetler", "/hakkimizda"];
 export function MembershipInvite() {
   const { member, loading } = useMember(),
     location = useLocation(),
-    [open, setOpen] = useState(false);
+    [open, setOpen] = useState(false),
+    { t } = useLang();
   useEffect(() => {
     if (
       loading ||
       member ||
-      !INVITE_PAGES.includes(location.pathname.replace(/\/+$/, "") || "/")
+      !INVITE_PAGES.includes(
+        stripLang(location.pathname.replace(/\/+$/, "") || "/"),
+      )
     )
       return;
     let seen = false;
@@ -48,34 +52,35 @@ export function MembershipInvite() {
     };
   }, [loading, member, location.pathname]);
   return open && !member ? (
-    <Modal title="Rota Kars’a hoş geldiniz" onClose={() => setOpen(false)}>
+    <Modal title={t("Rota Kars’a hoş geldiniz")} onClose={() => setOpen(false)}>
       <div className="membership-invite">
         <div className="member-gift">
           <Gift size={32} />
         </div>
-        <span className="section-note">Yol arkadaşlarımıza özel</span>
         <h2>
-          Bir sonraki rotanız
+          {t("Bir sonraki rotanız")}
           <br />
-          bir sürprizle başlasın.
+          {t("bir sürprizle başlasın.")}
         </h2>
         <p>
-          Ücretsiz üye olun, şans çarkında %5, %10 veya %15 tur indirimi
-          kazanın.
+          {t(
+            "Ücretsiz üye olun, şans çarkında %5, %10 veya %15 tur indirimi kazanın.",
+          )}
         </p>
         <div className="invite-benefit">
           <Check size={17} />
-          Arkadaşını davet et, ikinize de %10 indirim gelsin.
+          {t("Arkadaşını davet et, ikinize de %10 indirim gelsin.")}
         </div>
         <Link className="btn block" to="/uyelik" onClick={() => setOpen(false)}>
-          Üye ol, çarkını çevir <ArrowRight size={17} />
+          {t("Üye ol, çarkını çevir")} <ArrowRight size={17} />
         </Link>
         <button className="text-link" onClick={() => setOpen(false)}>
-          Şimdilik rotaları keşfedeyim
+          {t("Şimdilik rotaları keşfedeyim")}
         </button>
         <small>
-          Çark üyelik başına bir kez. Güncel oran, süre ve davet koşullarını
-          hesabınızdan inceleyebilirsiniz.
+          {t(
+            "Çark üyelik başına bir kez. Güncel oran, süre ve davet koşullarını hesabınızdan inceleyebilirsiniz.",
+          )}
         </small>
       </div>
     </Modal>

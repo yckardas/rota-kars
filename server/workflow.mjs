@@ -4,10 +4,11 @@ import { fromJson } from "./database.mjs";
 import { depositFor } from "./payments.mjs";
 import { localDate } from "./departures.mjs";
 import { tours, business } from "./catalog.mjs";
+import { countryName } from "./passenger-id.mjs";
 const longExpiry = (now) => now + 365 * 86400000;
 export async function createWorkflow(
   db,
-  { clock, tx, departures, members, notifications, env, cleanup },
+  { clock, tx, departures, members, notifications, env, cleanup, pii },
 ) {
   await Promise.all([
     db.index(
@@ -40,6 +41,9 @@ export async function createWorkflow(
       ...r,
       seats: fromJson(r.seats, []),
       passengers: fromJson(r.passengers, []),
+      passenger_details: pii
+        ? pii.openDetails(fromJson(r.passenger_details, []))
+        : fromJson(r.passenger_details, []),
       vehicle: fromJson(r.vehicle_json, null) || d.vehicle,
       date: d.date,
       tourId: d.tour_id,
@@ -664,6 +668,7 @@ export async function createWorkflow(
           whatsapp: waLink(r.phone) || null,
           seats: r.seats,
           passengers: r.passengers,
+          passengerDetails: r.passenger_details,
           notes: r.notes || "",
           checkedIn: Boolean(r.checked_in_at),
           ticketToken: r.status === "confirmed" ? r.ticket_token : null,
@@ -688,6 +693,9 @@ export async function createWorkflow(
           "Tur",
           "Koltuk",
           "Yolcu",
+          "Uyruk",
+          "T.C. kimlik / pasaport no",
+          "Cinsiyet",
           "İletişim kişisi",
           "Telefon",
           "Durum",
@@ -702,6 +710,11 @@ export async function createWorkflow(
             tours.find((t) => t.id === r.tourId)?.name,
             seat,
             r.passengers[i],
+            r.passenger_details[i]?.nationality
+              ? `${countryName(r.passenger_details[i].nationality)} (${r.passenger_details[i].nationality})`
+              : "",
+            r.passenger_details[i]?.idNumber || "",
+            r.passenger_details[i]?.gender || "",
             r.name,
             r.phone,
             r.status,
