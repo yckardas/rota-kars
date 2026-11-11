@@ -3902,3 +3902,106 @@ html:has(.kp) {
 .kp .review-order {
   font-size: 12px;
 }
+
+/* ---------- Rezervasyon: durum hep görünür (inceleme 2026-11-11) ---------- */
+/* Koltuk planındaki sessiz değişikliklerin duyurusu */
+.kp .seat-notice {
+  margin: 8px 0 0;
+  min-height: 1.4em;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--kp-red);
+}
+.kp .seat-notice:empty {
+  display: none;
+}
+/* Süre uyarısı sayfanın tepesine değil, kullanıcının baktığı yere: altta sabit. */
+.kp .hold-warning {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  z-index: 70;
+  width: min(560px, calc(100% - 24px));
+  margin: 0;
+  transform: translateX(-50%);
+  border-color: var(--kp-red);
+  box-shadow: 0 14px 34px -14px rgba(26, 40, 70, 0.45);
+}
+.kp .hold-warning small {
+  color: var(--kp-red);
+}
+.kp .booking-mini-end {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+}
+.kp .mini-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--kp-ink-2);
+}
+.kp .mini-timer.is-low {
+  color: var(--kp-red);
+  font-weight: 600;
+}
+.kp .booking-continue-bar {
+  display: none;
+}
+@media (max-width: 950px) {
+  /* Telefonda özet şeridi (tur, tarih, koltuk, tutar, kalan süre) kaydırırken üstte kalır. */
+  .kp .booking-mini {
+    position: sticky;
+    top: 8px;
+    z-index: 20;
+  }
+}
+@media (max-width: 700px) {
+  .kp .booking-continue-bar {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    background: var(--kp-card);
+    box-shadow: 0 -10px 30px -18px rgba(26, 40, 70, 0.5);
+    transition:
+      transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+      visibility 0.3s;
+  }
+  .kp .booking-continue-bar.is-tucked {
+    transform: translateY(110%);
+    visibility: hidden;
+  }
+  .kp .booking-continue-bar strong {
+    display: block;
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 22px;
+    color: var(--kp-gold);
+  }
+  .kp .booking-continue-bar span {
+    display: block;
+    font-size: 13px;
+    color: var(--kp-ink-2);
+  }
+  body[data-continue-bar] .chat-launchers {
+    opacity: 0;
+    transform: translateY(24px);
+    pointer-events: none;
+    visibility: hidden;
+  }
+  .kp .hold-warning {
+    bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kp .booking-continue-bar {
+    transition: none;
+  }
+}

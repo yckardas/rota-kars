@@ -317,4 +317,13 @@ export const booking: Record<string, string> = {
     "Your booking is confirmed. Current payment and departure details are above.",
   "Bu bir ön rezervasyondur; kapora ödenip onaylanınca biletiniz geçerli olur. Ödemesi kaydedilmeyen ön rezervasyonlar 24 saat sonra düşer. Referansınızı ve e-posta adresinizi saklayın.":
     "This is a pre-booking; your ticket becomes valid once the deposit is paid and confirmed. Pre-bookings without a recorded payment lapse after 24 hours. Keep your reference and e-mail address.",
+  // Rezervasyon durumu
+  "Koltuk {n} az önce doldu; başka bir koltuk seçin.":
+    "Seat {n} was just taken; please choose another seat.",
+  "Yolcu sayısı {n} oldu · {total}":
+    "Passengers now {n} · {total}",
+  "{selected} / {count} koltuk seçildi":
+    "{selected} of {count} seats chosen",
+  "Devam":
+    "Continue",
 };
