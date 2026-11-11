@@ -5,7 +5,8 @@ import type { Catalog } from "../lib/types";
 import { useLang } from "../lib/i18n";
 export function Tours({ catalog }: { catalog: Catalog }) {
   const [q, setQ] = useState(""),
-    [category, setCategory] = useState("Tümü");
+    [category, setCategory] = useState("Tümü"),
+    [filtered, setFiltered] = useState(false);
   const { t } = useLang();
   // Kategoriler /en altında katalogda İngilizce gelir.
   const tours = catalog.tours.filter(
@@ -42,7 +43,10 @@ export function Tours({ catalog }: { catalog: Catalog }) {
               <button
                 key={c}
                 className={category === c ? "active" : ""}
-                onClick={() => setCategory(c)}
+                onClick={() => {
+                  setFiltered(true);
+                  setCategory(c);
+                }}
               >
                 {t(c)}
               </button>
@@ -57,7 +61,10 @@ export function Tours({ catalog }: { catalog: Catalog }) {
             { n: tours.length },
           )}
         </p>
-        <div className="tour-grid">
+        <div
+          className={"tour-grid" + (filtered ? " is-refiltered" : "")}
+          key={category}
+        >
           {tours.map((tour) => (
             <TourCard key={tour.id} tour={tour} />
           ))}

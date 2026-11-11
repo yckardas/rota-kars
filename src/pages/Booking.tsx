@@ -230,6 +230,15 @@ export function Booking({ catalog }: { catalog: Catalog }) {
       active = false;
     };
   }, [step, departureId, mode, couponId]);
+  // Yön yalnız adım değişince güncellenir; süre sayacının her saniyelik
+  // yeniden çizimi animasyonu baştan başlatmasın.
+  const prevStep = useRef(step),
+    stepDirRef = useRef<"forward" | "back">("forward");
+  if (prevStep.current !== step) {
+    stepDirRef.current = step > prevStep.current ? "forward" : "back";
+    prevStep.current = step;
+  }
+  const stepDir = stepDirRef.current;
   const holdRef = useRef<Hold | null>(null);
   holdRef.current = hold;
   const selectedRef = useRef<number[]>([]);
@@ -516,7 +525,11 @@ export function Booking({ catalog }: { catalog: Catalog }) {
           </p>
         </div>
         {hold && (
-          <span className="hold-timer" role="timer" aria-live="off">
+          <span
+            className={"hold-timer" + (seconds > 0 && seconds <= 120 ? " is-low" : "")}
+            role="timer"
+            aria-live="off"
+          >
             <Clock3 size={17} />
             {t("Koltuklarınız {time} dakika ayrıldı", {
               time: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`,
@@ -584,7 +597,10 @@ export function Booking({ catalog }: { catalog: Catalog }) {
           </span>
         </div>
         <div className="booking-mini-end">
-          <b>{currency(total)}</b>
+          {/* Tutar değişince rakam yerine kayar (kp-tick); key yeni değeri yeniden çizer. */}
+          <b key={total} className="kp-tick">
+            {currency(total)}
+          </b>
           {hold && seconds > 0 && (
             <small className={"mini-timer" + (seconds <= 120 ? " is-low" : "")}>
               <Clock3 size={13} />
@@ -594,7 +610,8 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         </div>
       </div>
       <div className="booking-layout">
-        <div className="booking-main">
+        {/* Adım değişince içerik ilerlerken sağdan, geri dönerken soldan gelir. */}
+        <div className="booking-main" data-dir={stepDir}>
           {step === 0 ? (
             <>
               <h2 ref={stepHeading} tabIndex={-1}>
@@ -780,7 +797,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   aria-hidden={continueInView || undefined}
                 >
                   <div>
-                    <strong>{currency(total)}</strong>
+                    <strong key={total} className="kp-tick">
+                      {currency(total)}
+                    </strong>
                     <span>
                       {selected.length === count
                         ? seatList
@@ -1406,7 +1425,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                     ? t("Örnek tur bedeli")
                     : t("Tur bedeli")}
               </span>
-              <strong>{currency(total)}</strong>
+              <strong key={total} className="kp-tick">
+                {currency(total)}
+              </strong>
             </div>
             {catalog.demo && (
               <small>{t("Fiyatlar ve tarihler örnek demo verisidir.")}</small>

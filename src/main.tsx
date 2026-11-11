@@ -245,6 +245,8 @@ function App() {
     </>
   );
 }
+// Ekrana girince oynayan hareketler yalnız betik çalışıyorsa bekletilir (src/lib/reveal.ts).
+document.documentElement.classList.add("js-motion");
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>
