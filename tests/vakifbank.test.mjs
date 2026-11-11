@@ -421,3 +421,30 @@ test("yayında 3D sayfası bankanın https adresine form gönderebilir, diğer s
     /form-action 'self' https:\/\/appleid\.apple\.com;/,
   );
 });
+
+test("önizleme modu: kart ekranı açılır ama kart işlenmez, rezervasyon beklemede kalır", async (t) => {
+  assert.equal(paymentConfig({ PAYMENT_PREVIEW: "1" }).preview, true);
+  assert.equal(paymentConfig({ PAYMENT_PREVIEW: "1" }).enabled, false);
+  assert.equal(
+    paymentConfig({ PAYMENT_PREVIEW: "1", NODE_ENV: "production" }).preview,
+    true,
+  );
+  // Gerçek sağlayıcı açıksa önizleme devre dışıdır.
+  assert.equal(
+    paymentConfig({ ...SIM_ENV, PAYMENT_PREVIEW: "1" }).preview,
+    false,
+  );
+  const { store, api, r, start, card } = await fixture(t, {
+    PAYMENT_PREVIEW: "1",
+  });
+  const id = await start();
+  assert.equal((await sessionOf(api, id)).provider, "preview");
+  const res = await card(id);
+  assert.equal(res.status, 503);
+  assert.match((await res.json()).message, /banka onayının ardından/);
+  assert.equal(
+    (await store.workflow.get(r.reference)).status,
+    "pending_agency",
+  );
+  assert.equal((await store.db.find("payment_attempts")).length, 0);
+});

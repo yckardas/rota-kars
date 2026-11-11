@@ -110,6 +110,8 @@ export type Catalog = {
     test?: boolean;
     // Vakıfbank: kart sitenin formunda alınır, 3D Secure ile bankada doğrulanır.
     cardForm?: boolean;
+    // Ödeme kapalıyken kart ekranının önizlemesi (PAYMENT_PREVIEW=1).
+    preview?: boolean;
     simulator?: boolean;
     depositPercent?: number;
   };
