@@ -8,6 +8,7 @@ import {
 import { useEffect, useRef, type CSSProperties } from "react";
 import type { Seat, Vehicle } from "../lib/types";
 import { useLang } from "../lib/i18n";
+import { watchReveal } from "../lib/reveal";
 // Ekranda görünen etkileşimli koltuk haritası sayısı: mobilde sohbet/WhatsApp
 // düğmeleri koltukların üstüne binmesin diye gövdeye işaret konur.
 let visibleMaps = 0;
@@ -48,6 +49,8 @@ export function SeatMap({
       if (shown) markVisible(-1);
     };
   }, [interactive]);
+  // Araç ekrana girince "gelir": telefonda planın girişi görünmeden oynayıp bitmesin.
+  useEffect(() => watchReveal(root.current), []);
   const status = (n: number) =>
     selected.includes(n)
       ? "selected"
@@ -64,7 +67,7 @@ export function SeatMap({
         : [{ cell, j, span: cell === "door" && row[j + 1] === "door" ? 2 : 1 }],
     );
   return (
-    <div className={"seat-map shape-" + shape} ref={root}>
+    <div className={"seat-map kp-await shape-" + shape} ref={root}>
       <div className="vehicle-roof">
         <span>VIP</span>
         <span>{t("Ön taraf")}</span>

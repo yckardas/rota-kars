@@ -24,6 +24,7 @@ import { useClearOfLaunchers } from "../lib/launchers";
 import { api } from "../lib/api";
 import { today } from "../lib/types";
 import { TourCard } from "../components/TourCard";
+import { develop } from "../lib/reveal";
 import { Reviews, GoogleMark } from "../components/Reviews";
 import { whatsappLink } from "../lib/whatsapp";
 import { SeatMap } from "../components/SeatMap";
@@ -41,6 +42,7 @@ const placeName = (location: string) =>
   location.split(" · ").filter(Boolean).pop() || location;
 export function Home({ catalog }: { catalog: Catalog }) {
   const [filter, setFilter] = useState("Tüm rotalar"),
+    [filtered, setFiltered] = useState(false),
     [story, setStory] = useState<Story | null>(null),
     [request, setRequest] = useState(false),
     [searchTour, setSearchTour] = useState(""),
@@ -132,6 +134,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
                       i === 0 && tour.gallery[1] ? tour.gallery[1] : tour.image,
                       "(max-width: 760px) 25vw, 16vw",
                     )}
+                    {...develop}
                     alt=""
                     decoding="async"
                   />
@@ -252,14 +255,21 @@ export function Home({ catalog }: { catalog: Catalog }) {
               <button
                 key={f}
                 className={filter === f ? "active" : ""}
-                onClick={() => setFilter(f)}
+                onClick={() => {
+                  setFiltered(true);
+                  setFilter(f);
+                }}
               >
                 {t(f)}
               </button>
             ),
           )}
         </div>
-        <div className="tour-grid">
+        {/* Filtre değişince kartlar sırayla yerine "oturur" (ilk yüklemede değil). */}
+        <div
+          className={"tour-grid" + (filtered ? " is-refiltered" : "")}
+          key={filter}
+        >
           {catalog.tours
             // Kategoriler /en altında katalogda İngilizce gelir.
             .filter(

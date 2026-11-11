@@ -1217,7 +1217,8 @@ html:has(.kp) {
   color: var(--kp-ink);
   opacity: 0.82;
   mix-blend-mode: multiply;
-  transform: rotate(-12deg);
+  --pm-rot: -12deg;
+  transform: rotate(var(--pm-rot));
   pointer-events: none;
 }
 .kp-postmark circle {
@@ -2380,7 +2381,7 @@ html:has(.kp) {
 .kp .ticket-stamp-row .kp-postmark {
   right: 104px;
   top: 40px;
-  transform: rotate(-10deg);
+  --pm-rot: -10deg;
 }
 .kp .ticket-lines {
   margin: 22px 0 0;
@@ -3709,7 +3710,10 @@ html:has(.kp) {
 .wheel-face {
   transform-origin: 150px 150px;
 }
-.wheel-face.moving {
+.wheel-face.winding {
+  transition: transform 0.15s cubic-bezier(0.3, 0, 0.6, 1);
+}
+.wheel-face.spinning {
   transition: transform 4.2s cubic-bezier(0.12, 0.6, 0.08, 1);
 }
 .wheel-slice {
@@ -3772,7 +3776,8 @@ html:has(.kp) {
   filter: drop-shadow(0 2px 2px rgba(26, 40, 70, 0.25));
 }
 @media (prefers-reduced-motion: reduce) {
-  .wheel-face.moving {
+  .wheel-face.winding,
+  .wheel-face.spinning {
     transition: none;
   }
 }
@@ -3955,5 +3960,343 @@ html:has(.kp) {
 @media (prefers-reduced-motion: reduce) {
   .kp .booking-continue-bar {
     transition: none;
+  }
+}
+
+/* ======================================================================
+   Hareket katmanı (inceleme 2026-11-11, "daha canlı" doz)
+   İmza: damga vurma. Pul, posta damgası ve bilet aynı vuruşla basılır.
+   Ekrana girince oynayanlar yalnız <html class="js-motion"> varken bekler
+   (src/lib/reveal.ts); betik çalışmazsa içerik hep görünür kalır.
+   ====================================================================== */
+@keyframes kp-strike {
+  0% {
+    opacity: 0;
+    transform: rotate(calc(var(--pm-rot, -12deg) - 7deg)) scale(1.35);
+  }
+  62% {
+    opacity: 0.9;
+    transform: rotate(var(--pm-rot, -12deg)) scale(0.95);
+  }
+  100% {
+    opacity: 0.82;
+    transform: rotate(var(--pm-rot, -12deg)) scale(1);
+  }
+}
+@keyframes kp-thud {
+  0% {
+    opacity: 0;
+    transform: rotate(-9deg) scale(1.45);
+  }
+  70% {
+    opacity: 1;
+    transform: rotate(-2deg) scale(0.96);
+  }
+  100% {
+    transform: rotate(-2deg) scale(1);
+  }
+}
+@keyframes kp-draw-down {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes kp-stop-fill {
+  0% {
+    transform: scale(0.4);
+  }
+  60% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes kp-step-forward {
+  from {
+    opacity: 0;
+    transform: translateX(22px);
+  }
+}
+@keyframes kp-step-back {
+  from {
+    opacity: 0;
+    transform: translateX(-22px);
+  }
+}
+@keyframes kp-tick {
+  from {
+    opacity: 0;
+    transform: translateY(45%);
+  }
+}
+@keyframes kp-urgent {
+  0%,
+  100% {
+    color: var(--kp-ink-2);
+  }
+  50% {
+    color: var(--kp-red);
+  }
+}
+@keyframes kp-rise {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+}
+@keyframes kp-sheet {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes kp-scrim {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes kp-flick {
+  0%, 3.5%, 7.5%, 12.5%, 18.5%, 25.5%, 34%, 44%, 56%, 70%, 86%, 100% {
+    transform: rotate(0);
+  }
+  2%, 6%, 10.5%, 16%, 22.5%, 30%, 39.5%, 50.5%, 63%, 78% {
+    transform: rotate(-11deg);
+  }
+}
+@keyframes kp-refilter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) rotate(-0.4deg);
+  }
+}
+@keyframes kp-swap {
+  from {
+    opacity: 0.35;
+    transform: scale(1.03);
+  }
+}
+
+/* --- Koltuk planı: araç ekrana girince gelir --- */
+.js-motion .seat-map.kp-await:not(.is-in) .vehicle-body,
+.js-motion .seat-map.kp-await:not(.is-in) .passenger-row,
+.js-motion .seat-map.kp-await:not(.is-in) .vehicle-seat.driver::before,
+.js-motion .seat-map.kp-await:not(.is-in) * {
+  animation-play-state: paused !important;
+}
+
+/* --- Dokunuş: basınca hafifçe çöker (telefonda hover yok) --- */
+.kp .btn,
+.kp .kp-inset,
+.kp .tour-card,
+.kp .vehicle-seat {
+  transition-property: background, border-color, box-shadow, transform, color;
+}
+.kp .btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+  transition-duration: 80ms;
+}
+.kp .kp-inset:active {
+  transform: scale(0.97);
+  transition-duration: 80ms;
+}
+.kp .tour-card:active {
+  transform: translateY(-1px) scale(0.99);
+  transition-duration: 90ms;
+}
+
+/* --- Fotoğraf yüklenirken kar zemininde "banyo olur" --- */
+.kp .tour-card-image,
+.kp .kp-inset,
+.kp .tour-card-inset {
+  background-color: #dde5eb;
+}
+.js-motion .kp img.kp-develop {
+  transition:
+    opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.js-motion .kp img.kp-develop:not(.is-loaded) {
+  opacity: 0;
+  filter: saturate(0.4) brightness(1.08);
+}
+
+/* --- Tur kartından tur sayfasına: fotoğraf akar --- */
+::view-transition-group(*) {
+  animation-duration: 0.42s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+::view-transition-old(root) {
+  animation-duration: 0.2s;
+}
+:root:active-view-transition .kp-detail-card .kp-card,
+:root:active-view-transition .kp-detail-card .kp-title {
+  animation: none;
+}
+.kp .kp-main-view img.kp-swap {
+  animation: kp-swap 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* --- Tur sayfası: ilk hareket damgası vurulur, rota çizgisi çizilir --- */
+.js-motion .kp-stamp-row.kp-await:not(.is-in) .kp-postmark {
+  opacity: 0;
+}
+.kp-stamp-row.kp-await.is-in .kp-postmark {
+  animation: kp-strike 0.32s 0.15s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+.js-motion .kp .itinerary.kp-await:not(.is-in) > div::before {
+  transform: scaleY(0);
+}
+.kp .itinerary.kp-await.is-in > div::before {
+  transform-origin: top;
+  animation: kp-draw-down 0.55s calc(var(--i, 0) * 0.22s) cubic-bezier(0.45, 0, 0.2, 1) both;
+}
+.kp .itinerary.kp-await.is-in .itinerary-time::after {
+  animation: kp-stop-fill 0.4s calc(var(--i, 0) * 0.22s) cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+
+/* --- Filtre değişince kartlar sırayla yerine oturur (en çok 6) --- */
+.kp .tour-grid.is-refiltered > * {
+  animation: kp-refilter 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.kp .tour-grid.is-refiltered > :nth-child(2) { animation-delay: 45ms; }
+.kp .tour-grid.is-refiltered > :nth-child(3) { animation-delay: 90ms; }
+.kp .tour-grid.is-refiltered > :nth-child(4) { animation-delay: 135ms; }
+.kp .tour-grid.is-refiltered > :nth-child(5) { animation-delay: 180ms; }
+.kp .tour-grid.is-refiltered > :nth-child(n + 6) { animation-delay: 225ms; }
+
+/* --- Rezervasyon: adımlar akar, çizgi dolar, tutar kayar, süre uyarır --- */
+.kp .booking-main[data-dir="forward"] > :not(.booking-continue-bar) {
+  animation: kp-step-forward 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.kp .booking-main[data-dir="back"] > :not(.booking-continue-bar) {
+  animation: kp-step-back 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.kp .booking-steps li:not(:last-child)::after {
+  background: linear-gradient(var(--kp-red), var(--kp-red)) left / 0% 100% no-repeat,
+    var(--kp-rule);
+  transition: background-size 0.45s cubic-bezier(0.65, 0, 0.35, 1);
+}
+.kp .booking-steps li.complete::after {
+  background: linear-gradient(var(--kp-red), var(--kp-red)) left / 100% 100% no-repeat,
+    var(--kp-rule);
+}
+.kp .booking-steps .complete > span > svg {
+  animation: kp-pop 0.3s 0.25s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+.kp .kp-tick {
+  display: inline-block;
+  animation: kp-tick 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.kp .hold-timer.is-low,
+.kp .hold-timer.is-low svg,
+.kp .mini-timer.is-low,
+.kp .mini-timer.is-low svg {
+  animation: kp-urgent 1.2s ease-in-out infinite;
+}
+.kp .hold-warning {
+  animation: kp-rise 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.kp .seat-notice:not(:empty) {
+  animation: kp-rise 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* --- Başarı: bilet yerine oturur, "onay" damgası ve posta damgası vurulur --- */
+.kp .booking-success .reservation-ticket {
+  animation: kp-settle 0.7s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.kp .booking-success .status-stamp {
+  animation: kp-thud 0.3s 0.65s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+.kp .booking-success .ticket-stamp-row .kp-postmark {
+  animation: kp-strike 0.3s 0.85s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+
+/* --- Pencereler: Hatıra Kartı malzemesi ve alttan gelen açılış --- */
+.kp .modal {
+  border-radius: 6px;
+  box-shadow: 0 30px 80px -20px rgba(26, 40, 70, 0.45);
+  animation: kp-rise 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.kp .modal::backdrop {
+  background: rgba(26, 40, 70, 0.55);
+  backdrop-filter: none;
+  animation: kp-scrim 0.2s ease-out;
+}
+@media (max-width: 700px) {
+  .kp .modal {
+    border-radius: 6px 6px 0 0;
+    animation: kp-sheet 0.36s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+/* --- Çark: ibre dilimlere takılır, kazanılan dilime damga vurulur --- */
+.wheel-pointer-svg {
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+}
+.wheel-pointer-svg.flicking {
+  animation: kp-flick 4.2s linear;
+}
+.wheel-stamp-ink circle {
+  fill: none;
+  stroke: var(--kp-red, #c2342b);
+}
+.wheel-stamp-ink circle:first-child {
+  fill: rgba(255, 255, 255, 0.9);
+  stroke-width: 2.4;
+}
+.wheel-stamp-ink circle + circle {
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+}
+.wheel-stamp-place {
+  font: 600 8.5px var(--font);
+  letter-spacing: 1.5px;
+  fill: var(--kp-red, #c2342b);
+}
+.wheel-stamp-prize {
+  font-family: var(--display);
+  font-size: 19px;
+  fill: var(--kp-red, #c2342b);
+}
+.wheel-stamp-ink {
+  --pm-rot: -12deg;
+  transform: rotate(-12deg);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.wheel-stamp.struck .wheel-stamp-ink {
+  animation: kp-strike 0.34s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+
+/* --- Hareketi azalt: yer değiştirme yok; renk ve opaklık anlamı korunur --- */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+  .js-motion .kp-stamp-row.kp-await:not(.is-in) .kp-postmark,
+  .js-motion .kp img.kp-develop:not(.is-loaded) {
+    opacity: 1;
+    filter: none;
+  }
+  .js-motion .kp .itinerary.kp-await:not(.is-in) > div::before {
+    transform: none;
+  }
+  .kp .btn:active:not(:disabled),
+  .kp .kp-inset:active,
+  .kp .tour-card:active {
+    transform: none;
+  }
+  /* Süre uyarısı yanıp sönmez; kırmızı kalır. */
+  .kp .hold-timer.is-low,
+  .kp .hold-timer.is-low svg,
+  .kp .mini-timer.is-low,
+  .kp .mini-timer.is-low svg {
+    color: var(--kp-red);
   }
 }

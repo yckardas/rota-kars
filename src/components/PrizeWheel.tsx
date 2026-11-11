@@ -64,7 +64,9 @@ export function PrizeWheel({
   const n = Math.max(1, sectors.length),
     slice = 360 / n,
     [rotation, setRotation] = useState(0),
-    [moving, setMoving] = useState(false),
+    // idle → winding (kısa geri çekilme) → spinning → landed (damga vurulur)
+    [phase, setPhase] = useState<"idle" | "winding" | "spinning" | "landed">("idle"),
+    [struck, setStruck] = useState(false),
     settled = useRef(onSettled);
   settled.current = onSettled;
   useEffect(() => {
@@ -72,22 +74,32 @@ export function PrizeWheel({
     // Seçilen dilimin ortası en üstteki işaretin altına gelir.
     const target = (360 - (landOn * slice + slice / 2)) % 360;
     if (!animate || reducedMotion()) {
-      setMoving(false);
+      setPhase("landed");
+      setStruck(false);
       setRotation(target);
       settled.current?.();
       return;
     }
-    setMoving(true);
-    setRotation((prev) => {
-      const base = prev - (prev % 360);
-      return base + 360 * 5 + target;
-    });
+    // Atış öncesi kısa geri çekilme, sonra uzun yavaşlamayla dönüş.
+    setPhase("winding");
+    setRotation((prev) => prev - 8);
+    const spin = window.setTimeout(() => {
+      setPhase("spinning");
+      setRotation((prev) => {
+        const base = prev - (((prev % 360) + 360) % 360);
+        return base + 360 * 5 + target;
+      });
+    }, 160);
     // transitionend her zaman gelmeyebilir (sekme arka planda); süre dolunca da biter.
-    const timer = window.setTimeout(() => {
-      setMoving(false);
+    const done = window.setTimeout(() => {
+      setPhase("landed");
+      setStruck(true);
       settled.current?.();
-    }, 4300);
-    return () => clearTimeout(timer);
+    }, 160 + 4300);
+    return () => {
+      clearTimeout(spin);
+      clearTimeout(done);
+    };
   }, [landOn, animate, slice]);
   const R = 140,
     C = 150,
@@ -108,7 +120,7 @@ export function PrizeWheel({
         <circle className="wheel-rim-red" cx={C} cy={C} r={R + 6} />
         <circle className="wheel-rim-ink" cx={C} cy={C} r={R + 6} />
         <g
-          className={"wheel-face" + (moving ? " moving" : "")}
+          className={"wheel-face" + (phase === "winding" || phase === "spinning" ? " " + phase : "")}
           style={{ transform: `rotate(${rotation}deg)` }}
         >
           {sectors.map((s, i) => {
@@ -116,7 +128,8 @@ export function PrizeWheel({
               [x2, y2] = point((i + 1) * slice, R),
               mid = i * slice + slice / 2,
               [tx, ty] = point(mid, R * 0.64),
-              fill = FILLS[i % 3];
+              // Dilim sayısı 3'ün katı değilse son dilim ilk dilimle aynı renge düşmesin.
+              fill = n % 3 === 1 && i === n - 1 ? "card" : FILLS[i % 3];
             return (
               <g key={i}>
                 <path
@@ -147,8 +160,26 @@ export function PrizeWheel({
         >
           ROTA
         </text>
+        {/* Kazanılan dilime posta damgası: "KARS · ödül" */}
+        {phase === "landed" && landOn != null && sectors[landOn] && (
+          <g
+            className={"wheel-stamp" + (struck ? " struck" : "")}
+            transform={`translate(${C} 74)`}
+          >
+            <g className="wheel-stamp-ink">
+              <circle r="37" />
+              <circle r="30" />
+              <text y="-15" textAnchor="middle" className="wheel-stamp-place">
+                KARS
+              </text>
+              <text y="9" textAnchor="middle" className="wheel-stamp-prize">
+                {prizeLabel(sectors[landOn], lang)}
+              </text>
+            </g>
+          </g>
+        )}
         <path
-          className="wheel-pointer-svg"
+          className={"wheel-pointer-svg" + (phase === "spinning" ? " flicking" : "")}
           d={`M${C - 11},4 L${C + 11},4 L${C},30 Z`}
         />
       </svg>

@@ -1,6 +1,7 @@
 import { InstagramSection } from "../components/InstagramSection";
 import { responsive } from "../lib/images";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { develop, useReveal } from "../lib/reveal";
 import { useParams } from "react-router-dom";
 import { Link, useLang } from "../lib/i18n";
 import {
@@ -33,7 +34,12 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
   const { t: tx } = useLang();
   const [request, setRequest] = useState(false),
     [departures, setDepartures] = useState<Departure[]>([]),
-    [activeImage, setActiveImage] = useState(0);
+    [activeImage, setActiveImage] = useState(0),
+    // Galeride görüntü değişince yeni fotoğraf yerine "oturur" (ilk açılışta değil).
+    [swapped, setSwapped] = useState(false);
+  // Rota çizgisi ve ilk hareket damgası ekrana girince canlanır.
+  const routeLine = useReveal<HTMLDivElement>(),
+    stampRow = useReveal<HTMLDivElement>();
   const strip = useRef<HTMLDivElement>(null),
     stripVisible = useClearOfLaunchers(strip);
   useEffect(() => {
@@ -82,6 +88,9 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
           >
             <div className="kp-main-view">
               <img
+                key={activeImage}
+                className={swapped ? "kp-swap" : undefined}
+                style={{ viewTransitionName: "tour-" + t.id }}
                 {...responsive(
                   t.gallery[activeImage] || t.image,
                   "(max-width: 760px) 100vw, 62vw",
@@ -107,12 +116,16 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
                     key={img}
                     type="button"
                     className="kp-inset"
-                    onClick={() => setActiveImage(i)}
+                    onClick={() => {
+                      setSwapped(true);
+                      setActiveImage(i);
+                    }}
                     aria-label={tx("{n}. fotoğrafı göster", { n: i + 1 })}
                     aria-pressed={activeImage === i}
                   >
                     <img
                       {...responsive(img, "(max-width: 760px) 33vw, 20vw")}
+                      {...develop}
                       alt=""
                       loading="lazy"
                       decoding="async"
@@ -184,9 +197,9 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
           {t.itinerary.length > 0 && (
             <section id="program">
               <h2>{tx("Günün akışı")}</h2>
-              <div className="itinerary">
-                {t.itinerary.map((s) => (
-                  <div key={s.title}>
+              <div className="itinerary kp-await" ref={routeLine}>
+                {t.itinerary.map((s, i) => (
+                  <div key={s.title} style={{ "--i": i } as CSSProperties}>
                     <span className="itinerary-time">{s.time}</span>
                     <div>
                       <h3>{s.title}</h3>
@@ -304,7 +317,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
           </section>
         </div>
         <aside className="booking-aside">
-          <div className="kp-stamp-row">
+          <div className="kp-stamp-row kp-await" ref={stampRow}>
             <div className="kp-stamp">
               <div className="booking-price">
                 <span className="kp-stamp-place">{t.name}</span>
