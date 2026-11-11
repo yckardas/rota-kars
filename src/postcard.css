@@ -4413,3 +4413,60 @@ html:has(.kp) {
     align-items: center;
   }
 }
+
+/* ---------- Renk kuralları (yeniden inceleme 2026-11-11) ----------
+   Kırmızı: başlık bandı, eylem düğmeleri, rota çizgisi ve aciliyet/uyarı.
+   Altın: yalnız para (fiyat, kapora, tutar). Süs simgeleri mürekkep tonunda. */
+.kp .feature svg,
+.kp .vip-facts svg,
+.kp .vip-visual-label svg,
+.kp .fleet-perks svg,
+.kp .stay-detail svg,
+.kp .inclusions svg,
+.kp .info-note > svg,
+.kp .tour-meeting svg,
+.kp .tour-meeting > svg,
+.kp .aside-benefits svg,
+.kp .summary-payment svg,
+.kp .ticket-bottom svg,
+.kp .contact-details svg,
+.kp .service-detail-points svg,
+.kp .service-benefits svg,
+.kp .pre-info-head > svg,
+.kp .wheel-pending-note > svg {
+  color: var(--kp-ink-2);
+}
+/* Uyarı taşıyan notlar kırmızı simgeyi korur. */
+.kp .pre-info-late > svg {
+  color: var(--kp-red);
+}
+/* Yolcu kartı: kırmızı üst çizgi yerine ince çizgi; koltuk etiketi mürekkep. */
+.kp .passenger-card {
+  border-top: 1px solid var(--kp-rule);
+}
+.kp .passenger-card legend span {
+  color: var(--kp-ink-2);
+}
+/* Koltuk duyurusu: bilgi mürekkep, sorun kırmızı. */
+.kp .seat-notice.is-info {
+  color: var(--kp-ink);
+}
+.kp .seat-notice.is-warn {
+  color: var(--kp-red);
+}
+/* Altın para içindir: koltuk sayısı ve rehber koltuğu mürekkep tonunda. */
+.kp .chosen-seats small {
+  color: var(--kp-ink-2);
+}
+.kp .crew-seat.guide {
+  background: rgba(26, 40, 70, 0.06);
+  border-color: var(--kp-rule);
+  color: var(--kp-ink-2);
+}
+.kp .seat-legend .crew {
+  background: rgba(26, 40, 70, 0.06);
+  border-color: var(--kp-rule);
+}
+.kp .inline-note > svg {
+  color: var(--kp-ink-2);
+}
