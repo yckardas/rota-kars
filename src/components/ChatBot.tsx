@@ -391,14 +391,23 @@ export function ChatBot({ whatsapp }: { whatsapp: string }) {
                 {m.consentNeeded && !abroadConsent && (
                   <div className="chat-consent" role="note">
                     <p>
-                      Bu soruyu yapay zekâ asistanımız (Anthropic, ABD)
-                      yanıtlayabilir. Bunun için mesajınızın yurt dışına
-                      aktarılmasına onay vermeniz gerekir.{" "}
+                      Bu soruyu yerel asistanımız yanıtlayamadı. Dilerseniz
+                      yapay zekâ asistanına (Anthropic PBC, ABD) iletebiliriz.
+                    </p>
+                    <p>
+                      Onay verirseniz yazdığınız mesajlar yanıt üretilmesi
+                      için ABD’deki sunuculara aktarılır. ABD için Kişisel
+                      Verileri Koruma Kurulu’nun yeterlilik kararı yoktur;
+                      verileriniz Türkiye’deki koruma düzeyine eşdeğer bir
+                      güvenceye sahip olmayabilir. Mesajlarınıza ad, kimlik,
+                      telefon veya ödeme bilgisi yazmayın. Onayınızı bu
+                      penceredeki “Onayı geri al” bağlantısıyla dilediğiniz
+                      zaman geri alabilirsiniz.{" "}
                       <Link
-                        to="/bilgilendirme#kvkk"
+                        to="/bilgilendirme#asistan"
                         onClick={() => setOpen(false)}
                       >
-                        Ayrıntılar
+                        Aydınlatma metni
                       </Link>
                     </p>
                     <div>

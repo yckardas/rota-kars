@@ -307,7 +307,7 @@ export function Membership() {
                 <input type="checkbox" name="consent" required />
                 <span>
                   {/* Bağlantılar cümlenin içinde; sıra dile göre değişebilir. */}
-                  {t("{terms} ve {notice} okudum, kabul ediyorum.")
+                  {t("{terms} okudum, kabul ediyorum. {notice} okudum.")
                     .split(/(\{terms\}|\{notice\})/)
                     .map((part, k) =>
                       part === "{terms}" ? (
@@ -316,7 +316,7 @@ export function Membership() {
                         </Link>
                       ) : part === "{notice}" ? (
                         <Link key={k} to="/bilgilendirme#kvkk" target="_blank">
-                          {t("kişisel veri aydınlatma metnini")}
+                          {t("Kişisel veri aydınlatma metnini")}
                         </Link>
                       ) : (
                         part
@@ -328,7 +328,7 @@ export function Membership() {
                 <input type="checkbox" name="marketingConsent" />
                 <span>
                   {t(
-                    "Kampanya ve yeni rotalardan e-posta/SMS ile haberdar olmak istiyorum (isteğe bağlı).",
+                    "İsteğe bağlı: Kampanya, indirim ve yeni rotalar hakkında bana e-posta ve SMS ile ticari elektronik ileti gönderilmesine ve bu amaçla ad, e-posta ve telefon bilgilerimin işlenmesine onay veriyorum. Onayımı dilediğim zaman ücretsiz geri alabilirim.",
                   )}
                 </span>
               </label>

@@ -59,6 +59,7 @@ const booking = (token, extra) => ({
   passengerDetails: [TR, DE],
   paymentMode: "deposit",
   consent: true,
+  othersDeclaration: true,
   ...extra,
 });
 test("T.C. kimlik numarası sağlama kuralı", () => {
@@ -168,15 +169,21 @@ test("üye yol arkadaşını kaydeder; rezervasyonda kimliğiyle seçer, numara 
     d = (await store.listDepartures("ani-cildir"))[0];
   assert.equal((await req("/member/companions")).status, 401);
   await member("ayse@example.com");
+  // Kişinin bilgisi dahilinde kaydedildiği beyanı olmadan kayıt yapılmaz.
+  assert.equal(
+    (await req("/member/companions", { name: "Mehmet Yılmaz", ...TR })).status,
+    400,
+  );
   const saved = await req("/member/companions", {
     name: "Mehmet Yılmaz",
     ...TR,
+    declaration: true,
   });
   assert.equal(saved.status, 201);
   const companion = await saved.json();
   assert.equal(companion.idMasked.slice(-3), "146");
   // Aynı numara ikinci kez kaydedilmez, güncellenir.
-  await req("/member/companions", { name: "Mehmet Y.", ...TR });
+  await req("/member/companions", { name: "Mehmet Y.", ...TR, declaration: true });
   const list = await (await req("/member/companions")).json();
   assert.equal(list.length, 1);
   assert.ok(!JSON.stringify(list).includes("10000000146"));

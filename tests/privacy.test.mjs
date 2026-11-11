@@ -44,7 +44,7 @@ test("consents are recorded per type with version, email is stored only as a has
   const { store, book } = await fixture(t);
   await book("ayse@example.com", { marketing: true });
   const consents = await store.db.find("consents");
-  assert.deepEqual(consents.map((c) => c.type).sort(), ["kvkk_notice", "marketing"]);
+  assert.deepEqual(consents.map((c) => c.type).sort(), ["kvkk_notice", "marketing", "pre_info"]);
   assert.ok(consents.every((c) => c.version && c.source === "booking" && c.email_hash));
   assert.ok(!JSON.stringify(consents).includes("ayse@example.com"));
 });

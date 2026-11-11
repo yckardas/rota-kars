@@ -10,7 +10,7 @@ export const en = {
       text: "Fresh routes to Kars, Van, Batumi and the Caucasus each season.",
     },
     {
-      title: "No-questions-asked cancellation",
+      title: "Free cancellation",
       text: "Full refund up to 3 days before domestic tours and up to 5 days before tours abroad.",
     },
     {
@@ -54,7 +54,7 @@ export const en = {
     ],
   },
   cancellationPolicy:
-    "You can cancel your tour without any conditions up to 5 days before departure on our international package tours, and up to 3 days before departure on our domestic packages. On domestic packages, the cancellation protection package gives you the right to cancel unconditionally up to 72 hours before departure (not valid for packages that include flights). You get back the full amount you paid, with no deductions.",
+    "You can cancel an unpaid pre-booking free of charge at any time. For confirmed bookings, if you cancel up to 3 days before departure on domestic tours or 5 days before departure on international tours, the full amount you paid, including the deposit, is refunded. After that, the deposit is not refunded and anything paid above it is refunded; if you do not show up without notice, the amount paid is not refunded. If we cancel the tour, you get the full amount back or move to another date.",
   vehicle: {
     name: "VIP minibus",
     description:

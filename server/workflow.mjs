@@ -4,6 +4,7 @@ import { fromJson } from "./database.mjs";
 import { depositFor } from "./payments.mjs";
 import { localDate } from "./departures.mjs";
 import { tours, business } from "./catalog.mjs";
+import { LEGAL_VERSION, contractText, legalDataFromReservation, preInfoText } from "./legal.mjs";
 import { countryName } from "./passenger-id.mjs";
 const longExpiry = (now) => now + 365 * 86400000;
 export async function createWorkflow(
@@ -79,12 +80,15 @@ export async function createWorkflow(
     });
   };
   // Telefonla alınan kayıtlarda e-posta olmayabilir: o zaman müşteriye e-posta gitmez.
-  const notify = async (r, event, text, dedupeKey = event + ":" + r.reference) =>
+  // extra: e-postanın sonuna eklenen belge (ön bilgilendirme formu, sözleşme).
+  const notify = async (r, event, text, dedupeKey = event + ":" + r.reference, extra = "") =>
     r.email &&
     notifications.enqueue({
       email: r.email,
       subject: "Rota Kars · " + text,
-      body: `Merhaba ${r.name},\n${r.reference} · ${tours.find((t) => t.id === r.tourId)?.name || r.tourId}\nTarih: ${r.date} · Saat: ${r.start_time}\nBuluşma: ${r.pickup}\n${text}\nKoltuklar: ${r.seats.join(", ")}.`,
+      body:
+        `Merhaba ${r.name},\n${r.reference} · ${tours.find((t) => t.id === r.tourId)?.name || r.tourId}\nTarih: ${r.date} · Saat: ${r.start_time}\nBuluşma: ${r.pickup}\n${text}\nKoltuklar: ${r.seats.join(", ")}.` +
+        (extra ? "\n\n" + "—".repeat(24) + "\n\n" + extra : ""),
       actionUrl: (env.PUBLIC_BASE_URL || "") + "/bilet/" + r.ticket_token,
       kind: event,
       dedupeKey,
@@ -165,18 +169,40 @@ export async function createWorkflow(
       );
       return flag === "balance" ? list.filter((r) => r.balance_due > 0) : list;
     },
-    async created(reference, { byAgency = false } = {}) {
-      const r = await api.get(reference);
+    // legal: siteden gelen kayıtta müşterinin onayladığı ön bilgilendirme formu
+    // ({ onlinePayment, depositPercent, othersDeclared }). Metin onay anındaki
+    // hâliyle kayda yazılır ve e-postaya eklenir.
+    async created(reference, { byAgency = false, legal = null } = {}) {
+      let r = await api.get(reference);
+      let extra = "";
+      if (legal) {
+        const tour = tours.find((t) => t.id === r.tourId);
+        extra = preInfoText(legalDataFromReservation(r, tour, legal));
+        await db.update(
+          "reservations",
+          { _id: r.id },
+          {
+            legal_version: LEGAL_VERSION,
+            pre_info_accepted_at: r.created_at,
+            pre_info_text: extra,
+            others_declared: Boolean(legal.othersDeclared),
+          },
+        );
+        r = await api.get(reference, { fresh: false });
+      }
       await notify(
         r,
         "reservation_created",
         "Ön rezervasyon talebiniz alındı; henüz kesin bilet veya ödeme değildir.",
+        undefined,
+        extra,
       );
       // Acentenin kendi eklediği kayıt için ekibe "yeni rezervasyon" bildirimi gitmez.
       if (!byAgency) await agencyAlert(r, "reservation_created", "Yeni ön rezervasyon");
       return r;
     },
-    async confirm(reference) {
+    // via: "online" (kartla ödeme sonrası otomatik) | "agency" (panelden onay).
+    async confirm(reference, { via = "agency", depositPercent } = {}) {
       return tx(async () => {
         await cleanup();
         const r = await api.get(reference);
@@ -205,12 +231,34 @@ export async function createWorkflow(
           { owner: r.reference },
           { expires_at: longExpiry(clock()) },
         );
-        await audit(r, "confirmed", {});
-        const updated = await api.get(reference);
+        await audit(r, "confirmed", { via });
+        let updated = await api.get(reference);
+        // Sözleşme onay anında kurulur; metni kayda yazılır ve onay e-postasıyla gider.
+        const tour = tours.find((t) => t.id === updated.tourId);
+        const contract = tour
+          ? contractText({
+              ...legalDataFromReservation(updated, tour, { depositPercent, onlinePayment: via === "online" }),
+              confirmedAt: updated.confirmed_at,
+              via,
+            })
+          : "";
+        if (contract) {
+          await db.update(
+            "reservations",
+            { _id: r.id },
+            { contract_text: contract, contract_version: LEGAL_VERSION, contract_at: updated.confirmed_at },
+          );
+          updated = await api.get(reference, { fresh: false });
+        }
+        const extra = [contract, updated.pre_info_text].filter(Boolean).join("\n\n" + "—".repeat(24) + "\n\n");
         await notify(
           updated,
           "reservation_confirmed",
-          "Rezervasyonunuz acente tarafından onaylandı.",
+          via === "online"
+            ? "Ödemeniz alındı, rezervasyonunuz onaylandı."
+            : "Rezervasyonunuz acente tarafından onaylandı.",
+          undefined,
+          extra,
         );
         return updated;
       });

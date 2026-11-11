@@ -77,8 +77,6 @@ export const booking: Record<string, string> = {
   Cinsiyet: "Gender",
   Kadın: "Female",
   Erkek: "Male",
-  "Bu yolcuyu yol arkadaşlarıma kaydet":
-    "Save this passenger to my travel companions",
   "Kimlik bilgileri, turizm taşımacılığında zorunlu olan yolcu listesi bildirimi (U-ETDS) için istenir. Bu bilgileri yalnız acentemiz görür; size gönderilen belgede numaranın yalnız son 3 hanesi yer alır.":
     "ID details are required for the passenger list that Turkish law requires for tour transport (U-ETDS). Only our agency sees them; your booking document shows just the last 3 digits.",
   "İletişim kişisi": "Contact person",
@@ -102,12 +100,6 @@ export const booking: Record<string, string> = {
   "Online ödeme henüz aktif değil.": "Online payment isn't available yet.",
   "Ön rezervasyon talebinizi iletebilirsiniz. Ödeme seçenekleri ve kesin rezervasyon için acentemizle iletişime geçin.":
     "You can send your pre-booking request now. Contact our agency for payment options and to confirm your booking.",
-  "{terms} ve {notice} okudum. Bu talebin kesin bilet olmadığını ve ödeme alınmayacağını biliyorum.":
-    "I have read the {terms} and the {notice}. I understand this request is not a confirmed ticket and that no payment will be taken.",
-  "Ön rezervasyon koşullarını": "pre-booking terms",
-  "aydınlatma metnini": "privacy notice",
-  "Kampanya ve yeni rotalardan e-posta/SMS ile haberdar olmak istiyorum (isteğe bağlı).":
-    "Send me offers and new routes by email/SMS (optional).",
   "Bilgileri düzenle": "Edit details",
   "Ön rezervasyon oluştur": "Request pre-booking",
   "{time} hareket": "Departs {time}",
@@ -271,4 +263,37 @@ export const booking: Record<string, string> = {
   "Kartın üzerindeki ismi yazın.": "Enter the name as it appears on the card.",
   "Kart numarasını kontrol edin (16 hane).": "Check the card number (16 digits).",
   "Kartın arkasındaki 3 haneli kodu girin.": "Enter the 3-digit code on the back of the card.",
+  // Yasal metinler (ön bilgilendirme, onaylar, künye)
+  "Ön Bilgilendirme Formu":
+    "Pre-information form",
+  "Göndermeden önce okuyun. Onayladığınız metin rezervasyonunuza kaydedilir ve e-postanıza gönderilir.":
+    "Please read it before you send. The text you approve is saved with your booking and e-mailed to you.",
+  "Bu formun bağlayıcı metni Türkçedir. Temel koşullar: {policy}":
+    "The binding text of this form is in Turkish. Key terms: {policy}",
+  "Son dakika rezervasyonu: tur hareketine {days} günden az kaldı. Ödeme yaptıktan sonra iptal ederseniz kapora iade edilmez.":
+    "Last-minute booking: departure is less than {days} days away. If you cancel after paying, the deposit is not refunded.",
+  "Ön Bilgilendirme Formu metni":
+    "Pre-information form text",
+  "Form hazırlanıyor…":
+    "Preparing the form…",
+  "Ön Bilgilendirme Formu'nu, {contract} ve {cancel} okudum, onaylıyorum. Online ödeme yaparsam rezervasyonun ödemeyle birlikte kesinleşeceğini, havale veya nakit ödemede sözleşmenin acente onayıyla kurulacağını biliyorum.":
+    "I have read and accept the pre-information form, the {contract} and the {cancel}. I understand that if I pay online the booking is confirmed with the payment, and that with bank transfer or cash the contract is formed when the agency confirms.",
+  "Tur Hizmet Sözleşmesi'ni":
+    "tour service contract",
+  "İptal ve İade Koşulları'nı":
+    "cancellation and refund terms",
+  "Diğer yolcuların bilgilerini onların bilgisi dahilinde girdiğimi, kimlik bilgilerinin kimlik belgeleriyle aynı olduğunu ve bu kişileri aydınlatma metni hakkında bilgilendireceğimi beyan ederim.":
+    "I confirm that I entered the other passengers' details with their knowledge, that their ID details match their documents, and that I will inform them of the privacy notice.",
+  "İsteğe bağlı: Kampanya, indirim ve yeni rotalar hakkında bana e-posta ve SMS ile ticari elektronik ileti gönderilmesine ve bu amaçla ad, e-posta ve telefon bilgilerimin işlenmesine onay veriyorum. Onayımı dilediğim zaman ücretsiz geri alabilirim.":
+    "Optional: I agree to receive marketing messages about offers, discounts and new routes by e-mail and SMS, and to the processing of my name, e-mail and phone for this purpose. I can withdraw this consent at any time, free of charge.",
+  "Kişisel verileriniz {notice} kapsamında işlenir.":
+    "Your personal data is processed as described in the {notice}.",
+  "Aydınlatma Metni":
+    "privacy notice",
+  "Bu yolcuyu yol arkadaşlarıma kaydet. Bilgilerini onun bilgisi dahilinde, sonraki rezervasyonlarımda kullanmak üzere kaydettiğimi ve kendisini aydınlatma metni hakkında bilgilendireceğimi beyan ederim.":
+    "Save this passenger to my travel companions. I confirm that I am saving their details with their knowledge for my future bookings and that I will inform them of the privacy notice.",
+  "Tur Hizmet Sözleşmesi":
+    "Tour service contract",
+  "Belgeleriniz":
+    "Your documents",
 };

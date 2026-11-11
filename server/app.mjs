@@ -32,6 +32,7 @@ import { roleAllows, ROLES } from "./admin-auth.mjs";
 import { createStorage, MEDIA_LIMITS } from "./storage.mjs";
 import { vehicleModels, fleetVehicles } from "./operations.mjs";
 import { passengerDetail } from "./passenger-id.mjs";
+import { preInfoText, isLateBooking, freeCancelDays } from "./legal.mjs";
 import { en } from "./catalog-en.mjs";
 import { attachSocialAuth, cookieValue } from "./social-auth.mjs";
 import { createTurnstile } from "./turnstile.mjs";
@@ -103,7 +104,10 @@ const bookingSchema = z.object({
     .min(1)
     .max(53),
   paymentMode: z.enum(["deposit", "full"]),
+  // Ön bilgilendirme formu, tur hizmet sözleşmesi ve iptal-iade koşulları onayı.
   consent: z.literal(true),
+  // Birden çok yolcuda zorunlu: diğer yolcular adına bilgi girme beyanı.
+  othersDeclaration: z.boolean().optional(),
   // İsteğe bağlı ticari elektronik ileti izni (varsayılan kapalı).
   marketingConsent: z.boolean().optional(),
   couponId: z
@@ -502,11 +506,20 @@ export function createApp(
     "/api/member/companions",
     requireMember,
     route(async (q, r) => {
-      const input = z
-        .object({ name: clean })
+      const { declaration, ...input } = z
+        .object({
+          name: clean,
+          // Kişinin bilgisi dahilinde kaydedildiği ve aydınlatıldığı beyanı.
+          declaration: z.literal(true, {
+            error: "Bu kişiyi bilgilendirdiğinize dair beyan kutusunu işaretleyin.",
+          }),
+        })
         .and(passengerDetail)
         .parse(q.body);
-      r.status(201).json(await store.companions.add(q.member.id, input));
+      const added = await store.companions.add(q.member.id, input);
+      if (declaration)
+        await store.privacy.recordConsent({ email: q.member.email, memberId: q.member.id, type: "others_declaration", source: "companion" });
+      r.status(201).json(added);
     }),
   );
   app.delete(
@@ -563,6 +576,68 @@ export function createApp(
         total: quote.total,
         deposit: depositFor(quote.total),
         depositPercent: paymentStatus.depositPercent,
+      });
+    }),
+  );
+  // Rezervasyonun 3. adımında gösterilen ön bilgilendirme formu. Kayıt anında aynı
+  // üretici (server/legal.mjs) rezervasyonun kendi verisiyle metni yeniden yazar.
+  app.post(
+    "/api/reservations/pre-info",
+    route(async (q, r) => {
+      const input = z
+        .object({
+          departureId: z.string().min(1).max(100),
+          seats: z.array(z.number().int().min(1).max(99)).min(1).max(53),
+          name: z.string().trim().max(120).default(""),
+          email: z.string().trim().max(200).default(""),
+          phone: z.string().trim().max(40).default(""),
+          passengers: z
+            .array(
+              z.object({
+                name: z.string().trim().max(120).default(""),
+                nationality: z.string().trim().max(3).default(""),
+              }),
+            )
+            .max(53),
+          paymentMode: z.enum(["deposit", "full"]),
+          couponId: z
+            .string()
+            .regex(/^[a-f0-9]{32}$/)
+            .optional(),
+        })
+        .parse(q.body);
+      const { departure: d } = await store.availability(input.departureId);
+      const tour = tours.find((t) => t.id === d.tour_id);
+      if (!tour) throw new AppError(404, "Tur bulunamadı.");
+      const count = input.seats.length,
+        subtotal = d.price * count,
+        priced = await store.members.priceCoupon(q.member?.id, input.couponId, subtotal, d.tour_id),
+        total = priced.total,
+        deposit = input.paymentMode === "deposit" ? depositFor(total) : total;
+      r.json({
+        lateBooking: isLateBooking(tour, d.date, d.start_time),
+        freeCancelDays: freeCancelDays(tour),
+        text: preInfoText({
+          tour,
+          date: d.date,
+          startTime: d.start_time,
+          pickup: d.pickup,
+          vehicleName: d.vehicle?.name || "",
+          customer: { name: input.name, email: input.email, phone: input.phone },
+          passengers: input.seats.map((seat, i) => ({
+            name: input.passengers[i]?.name || `${i + 1}. yolcu`,
+            nationality: input.passengers[i]?.nationality || "",
+            seat,
+          })),
+          unitPrice: d.price,
+          count,
+          discount: priced.discount,
+          total,
+          deposit,
+          paymentMode: input.paymentMode,
+          onlinePayment: Boolean(paymentStatus.enabled),
+          depositPercent: paymentStatus.depositPercent,
+        }),
       });
     }),
   );
@@ -778,6 +853,11 @@ export function createApp(
     "/api/reservations",
     route(async (q, r) => {
       const input = bookingSchema.parse(q.body);
+      if (input.passengers.length > 1 && input.othersDeclaration !== true)
+        throw new AppError(
+          400,
+          "Diğer yolcular adına bilgi girdiğinize dair beyan kutusunu işaretleyin.",
+        );
       await human(q, "booking");
       if (q.member && input.email.toLowerCase() !== q.member.email)
         throw new AppError(
@@ -802,8 +882,16 @@ export function createApp(
         passengers,
         passengerDetails,
         memberId: q.member?.id,
+        legal: {
+          onlinePayment: Boolean(paymentStatus.enabled),
+          depositPercent: paymentStatus.depositPercent,
+          othersDeclared: input.othersDeclaration === true,
+        },
       });
       await store.privacy.recordConsent({ email: input.email, memberId: q.member?.id, type: "kvkk_notice", source: "booking" });
+      await store.privacy.recordConsent({ email: input.email, memberId: q.member?.id, type: "pre_info", source: "booking" });
+      if (input.othersDeclaration)
+        await store.privacy.recordConsent({ email: input.email, memberId: q.member?.id, type: "others_declaration", source: "booking" });
       if (input.marketingConsent)
         await store.privacy.recordConsent({ email: input.email, memberId: q.member?.id, type: "marketing", source: "booking" });
       r.status(201).json(await receipt(reservation, q, env));

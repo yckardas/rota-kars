@@ -19,6 +19,7 @@ import {
   CalendarDays,
   Armchair,
   ShieldCheck,
+  FileText,
 } from "lucide-react";
 import { api, post, ApiError } from "../lib/api";
 import {
@@ -85,7 +86,10 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     [ids, setIds] = useState<IdForm[]>([]),
     [contact, setContact] = useState({ name: "", email: "", phone: "" }),
     [consent, setConsent] = useState(false),
+    [othersDeclaration, setOthersDeclaration] = useState(false),
     [marketingConsent, setMarketingConsent] = useState(false),
+    [preInfo, setPreInfo] = useState<{ text: string; lateBooking: boolean; freeCancelDays: number } | null>(null),
+    [preInfoError, setPreInfoError] = useState(""),
     human = useTurnstile("booking"),
     [loaded, setLoaded] = useState(false),
     [activeVehicle, setActiveVehicle] = useState<Vehicle | null>(null),
@@ -188,6 +192,42 @@ export function Booking({ catalog }: { catalog: Catalog }) {
       active = false;
     };
   }, [departureId, count, couponId, member]);
+  // 3. adım: sunucunun ürettiği ön bilgilendirme formu (kayıtta aynı metin saklanır).
+  useEffect(() => {
+    if (step !== 2 || !departureId) return;
+    let active = true;
+    setPreInfoError("");
+    post<{ text: string; lateBooking: boolean; freeCancelDays: number }>(
+      "/reservations/pre-info",
+      {
+        departureId,
+        seats: selected,
+        ...contact,
+        passengers: selected.map((_, i) => {
+          const p = ids[i] || emptyId,
+            c = companions.find((c) => c.id === p.companionId);
+          return {
+            name: passengers[i] || "",
+            nationality: c?.nationality || p.nationality || "",
+          };
+        }),
+        paymentMode: mode,
+        ...(couponId ? { couponId } : {}),
+      },
+    )
+      .then((data) => {
+        if (active) setPreInfo(data);
+      })
+      .catch((e) => {
+        if (active) {
+          setPreInfo(null);
+          setPreInfoError((e as Error).message);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [step, departureId, mode, couponId]);
   const holdRef = useRef<Hold | null>(null);
   holdRef.current = hold;
   const departure = departures.find((d) => d.id === departureId),
@@ -332,6 +372,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         }),
         paymentMode: mode,
         consent,
+        ...(count > 1 ? { othersDeclaration } : {}),
         marketingConsent,
         ...(couponId ? { couponId } : {}),
         turnstileToken: human.token,
@@ -349,6 +390,8 @@ export function Booking({ catalog }: { catalog: Catalog }) {
               nationality: p.nationality,
               idNumber: p.idNumber,
               gender: p.gender,
+              // Kaydet kutusu, kişinin bilgisi dahilinde kaydedildiği beyanını içerir.
+              declaration: true,
             }).catch(() => {});
       window.scrollTo({ top: 120, behavior: "smooth" });
     } catch (e) {
@@ -862,7 +905,11 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                           checked={Boolean(p.save)}
                           onChange={(e) => set({ save: e.target.checked })}
                         />
-                        <span>{t("Bu yolcuyu yol arkadaşlarıma kaydet")}</span>
+                        <span>
+                          {t(
+                            "Bu yolcuyu yol arkadaşlarıma kaydet. Bilgilerini onun bilgisi dahilinde, sonraki rezervasyonlarımda kullanmak üzere kaydettiğimi ve kendisini aydınlatma metni hakkında bilgilendireceğimi beyan ederim.",
+                          )}
+                        </span>
                       </label>
                     )}
                       </>
@@ -1021,6 +1068,49 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   )}
                 </div>
               </div>
+              <section className="pre-info" aria-labelledby="pre-info-title">
+                <div className="pre-info-head">
+                  <FileText size={18} aria-hidden="true" />
+                  <div>
+                    <h3 id="pre-info-title">{t("Ön Bilgilendirme Formu")}</h3>
+                    <p>
+                      {t(
+                        "Göndermeden önce okuyun. Onayladığınız metin rezervasyonunuza kaydedilir ve e-postanıza gönderilir.",
+                      )}
+                    </p>
+                  </div>
+                </div>
+                {lang === "en" && (
+                  <p className="pre-info-lang">
+                    {t(
+                      "Bu formun bağlayıcı metni Türkçedir. Temel koşullar: {policy}",
+                      { policy: catalog.cancellationPolicy },
+                    )}
+                  </p>
+                )}
+                {preInfo?.lateBooking && catalog.payment.enabled && (
+                  <div className="info-note pre-info-late" role="note">
+                    <Info size={18} />
+                    <p>
+                      {t(
+                        "Son dakika rezervasyonu: tur hareketine {days} günden az kaldı. Ödeme yaptıktan sonra iptal ederseniz kapora iade edilmez.",
+                        { days: preInfo.freeCancelDays },
+                      )}
+                    </p>
+                  </div>
+                )}
+                <div
+                  className="pre-info-text"
+                  tabIndex={0}
+                  role="region"
+                  aria-label={t("Ön Bilgilendirme Formu metni")}
+                  lang="tr"
+                >
+                  {preInfo
+                    ? preInfo.text
+                    : preInfoError || t("Form hazırlanıyor…")}
+                </div>
+              </section>
               <label className="checkbox-label">
                 <input
                   type="checkbox"
@@ -1031,17 +1121,17 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                 <span>
                   {/* Bağlantılar cümlenin içinde; sıra dile göre değişebilir. */}
                   {t(
-                    "{terms} ve {notice} okudum. Bu talebin kesin bilet olmadığını ve ödeme alınmayacağını biliyorum.",
+                    "Ön Bilgilendirme Formu'nu, {contract} ve {cancel} okudum, onaylıyorum. Online ödeme yaparsam rezervasyonun ödemeyle birlikte kesinleşeceğini, havale veya nakit ödemede sözleşmenin acente onayıyla kurulacağını biliyorum.",
                   )
-                    .split(/(\{terms\}|\{notice\})/)
+                    .split(/(\{contract\}|\{cancel\})/)
                     .map((part, k) =>
-                      part === "{terms}" ? (
-                        <Link key={k} to="/bilgilendirme#iptal" target="_blank">
-                          {t("Ön rezervasyon koşullarını")}
+                      part === "{contract}" ? (
+                        <Link key={k} to="/bilgilendirme#sozlesme" target="_blank">
+                          {t("Tur Hizmet Sözleşmesi'ni")}
                         </Link>
-                      ) : part === "{notice}" ? (
-                        <Link key={k} to="/bilgilendirme#kvkk" target="_blank">
-                          {t("aydınlatma metnini")}
+                      ) : part === "{cancel}" ? (
+                        <Link key={k} to="/bilgilendirme#iptal" target="_blank">
+                          {t("İptal ve İade Koşulları'nı")}
                         </Link>
                       ) : (
                         part
@@ -1049,6 +1139,21 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                     )}
                 </span>
               </label>
+              {count > 1 && (
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={othersDeclaration}
+                    onChange={(e) => setOthersDeclaration(e.target.checked)}
+                    required
+                  />
+                  <span>
+                    {t(
+                      "Diğer yolcuların bilgilerini onların bilgisi dahilinde girdiğimi, kimlik bilgilerinin kimlik belgeleriyle aynı olduğunu ve bu kişileri aydınlatma metni hakkında bilgilendireceğimi beyan ederim.",
+                    )}
+                  </span>
+                </label>
+              )}
               <label className="checkbox-label optional-consent">
                 <input
                   type="checkbox"
@@ -1057,10 +1162,23 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                 />
                 <span>
                   {t(
-                    "Kampanya ve yeni rotalardan e-posta/SMS ile haberdar olmak istiyorum (isteğe bağlı).",
+                    "İsteğe bağlı: Kampanya, indirim ve yeni rotalar hakkında bana e-posta ve SMS ile ticari elektronik ileti gönderilmesine ve bu amaçla ad, e-posta ve telefon bilgilerimin işlenmesine onay veriyorum. Onayımı dilediğim zaman ücretsiz geri alabilirim.",
                   )}
                 </span>
               </label>
+              <p className="legal-notice-line">
+                {t("Kişisel verileriniz {notice} kapsamında işlenir.")
+                  .split(/(\{notice\})/)
+                  .map((part, k) =>
+                    part === "{notice}" ? (
+                      <Link key={k} to="/bilgilendirme#kvkk" target="_blank">
+                        {t("Aydınlatma Metni")}
+                      </Link>
+                    ) : (
+                      part
+                    ),
+                  )}
+              </p>
               {human.widget}
               <div className="flow-error" role="alert">
                 {error}

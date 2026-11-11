@@ -38,9 +38,6 @@ export const member: Record<string, string> = {
   "Arkadaşınızın davet kodu": "Your friend’s invite code",
   "İsteğe bağlı": "Optional",
   "Üyelik ve kampanya koşullarını": "membership and campaign terms",
-  "kişisel veri aydınlatma metnini": "personal data privacy notice",
-  "{terms} ve {notice} okudum, kabul ediyorum.":
-    "I have read and accept the {terms} and the {notice}.",
   "Üye ol, ayrıcalıkları keşfet": "Sign up and discover your perks",
 
   // Hesabım
@@ -210,4 +207,11 @@ export const member: Record<string, string> = {
     "The security check isn’t available right now. Please try again shortly.",
   "Güvenlik doğrulaması geçersiz veya süresi doldu. Tekrar deneyin.":
     "The security check is invalid or has expired. Please try again.",
+  // Yasal metinler (ön bilgilendirme, onaylar, künye)
+  "Bu kişinin bilgilerini onun bilgisi dahilinde, sonraki rezervasyonlarımda kullanmak üzere kaydettiğimi ve kendisini {notice} hakkında bilgilendireceğimi beyan ederim. Kaydı dilediğim zaman silebilirim.":
+    "I confirm that I am saving this person's details with their knowledge for my future bookings and that I will inform them of the {notice}. I can delete this record at any time.",
+  "{terms} okudum, kabul ediyorum. {notice} okudum.":
+    "I have read and accept the {terms}. I have read the {notice}.",
+  "Kişisel veri aydınlatma metnini":
+    "privacy notice",
 };
