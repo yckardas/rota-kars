@@ -17,7 +17,7 @@ export const booking: Record<string, string> = {
   "Koltuk {n}": "Seat {n}",
   "Tur detayına dön": "Back to tour details",
   "Yolculuğunuzu planlayın.": "Plan your trip.",
-  "Koltuklarınız {time} dakika ayrıldı": "Your seats are held for {time}",
+  "Koltuklarınız için kalan süre: {time}": "Time left on your seats: {time}",
   "Koltuklarınızın ayrılma süresi 2 dakikadan az. Bilgilerinizi tamamlamak için süreyi uzatabilirsiniz.":
     "Less than 2 minutes left on your seat hold. Extend it if you need more time to finish.",
   "Süreyi 10 dakika uzat": "Add 10 more minutes",

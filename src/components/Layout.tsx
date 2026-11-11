@@ -170,7 +170,11 @@ export function Layout({
               <UserRound size={18} />
               <span>{member ? t("Hesabım") : t("Üye ol / Giriş")}</span>
             </Link>
-            <Link to="/rezervasyonum" className="reservation-link">
+            <Link
+              to="/rezervasyonum"
+              className="reservation-link"
+              aria-label={t("Rezervasyonum")}
+            >
               <Ticket size={18} />
               <span>{t("Rezervasyonum")}</span>
             </Link>
