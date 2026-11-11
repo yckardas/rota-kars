@@ -95,8 +95,8 @@ export const booking: Record<string, string> = {
   "Acente onayından sonra": "After agency confirmation",
   "Kartla ödeyince anında onay": "Confirmed instantly when paid by card",
   "Ödemeyi bir sonraki adımda kartla yapın.": "Pay by card in the next step.",
-  "Ön rezervasyonunuz oluşunca seçtiğiniz tutarı ödeme kuruluşunun güvenli sayfasında kartla ödeyebilirsiniz; ödeme alınınca rezervasyonunuz anında onaylanır. Dilerseniz acentemizle havale veya nakit de ödeyebilirsiniz.":
-    "Once your pre-booking is created, you can pay the chosen amount by card on the payment provider's secure page; your booking is confirmed as soon as the payment goes through. You can also pay our agency by bank transfer or cash.",
+  "Ön rezervasyonunuz oluşunca seçtiğiniz tutarı kartla, 3D Secure (SMS onayı) ile ödeyebilirsiniz; ödeme alınınca rezervasyonunuz anında onaylanır. Dilerseniz acentemizle havale veya nakit de ödeyebilirsiniz.":
+    "Once your pre-booking is created, you can pay the chosen amount by card with 3D Secure (SMS verification); your booking is confirmed as soon as the payment goes through. You can also pay our agency by bank transfer or cash.",
   "Bu adımda ödeme alınmaz; kartla ödeme sonraki adımdadır.":
     "No payment at this step; card payment comes next.",
   "Online ödeme henüz aktif değil.": "Online payment isn't available yet.",
@@ -203,4 +203,57 @@ export const booking: Record<string, string> = {
     "Your booking has been confirmed by our agency. Current payment and departure details are shown above.",
   "Ön rezervasyon kesin bilet değildir. Tahsilat kaydedilmemiş ve onaylanmamış talepler 24 saat sonra serbest kalır. Referansınızı ve e-posta adresinizi saklayın.":
     "A pre-booking is not a confirmed ticket. Unpaid, unconfirmed requests are released after 24 hours. Keep your reference number and email address.",
+  // Vakıfbank kart ödemesi
+  "Ödeme Vakıfbank sanal POS ile alınır; kartınız 3D Secure (SMS onayı) ile doğrulanır ve kart bilgileriniz saklanmaz.":
+    "Payment is taken through VakıfBank's virtual POS; your card is verified with 3D Secure (SMS) and your card details are not stored.",
+  "Banka simülasyonu · gerçek para çekilmez": "Bank simulation · no real money is charged",
+  "{reference} numaralı rezervasyonun ödemesi": "Payment for booking {reference}",
+  "Kart üzerindeki isim": "Name on card",
+  "Kart numarası": "Card number",
+  "Son kullanma (AA/YY)": "Expiry (MM/YY)",
+  "AA/YY": "MM/YY",
+  "Güvenlik kodu (CVV)": "Security code (CVV)",
+  "{amount} öde": "Pay {amount}",
+  "Bir sonraki adımda bankanızın 3D Secure sayfasında SMS koduyla onaylayacaksınız. Visa, Mastercard ve Troy kabul edilir. Kart bilgileriniz saklanmaz.":
+    "Next, you will confirm with an SMS code on your bank's 3D Secure page. Visa, Mastercard and Troy are accepted. Your card details are not stored.",
+  "Simülasyon kartı: 4111 1111 1111 1111, ileri bir tarih, herhangi bir CVV. 0002 ile biten kart reddedilir.":
+    "Simulation card: 4111 1111 1111 1111, any future date, any CVV. A card ending in 0002 is declined.",
+  "Bu ödeme bağlantısının süresi doldu. Rezervasyonum sayfasından yeniden ödeme başlatabilirsiniz.":
+    "This payment link has expired. You can start a new payment from the My booking page.",
+  "Ödemeniz kontrol ediliyor.": "We are checking your payment.",
+  "Bankadan ödemenizin sonucu alınamadı. Kartınızdan çekim yapıldıysa rezervasyonunuz korunuyor; ekibimiz kontrol edip sizi arayacak.":
+    "We could not get the payment result from the bank. If your card was charged, your booking is safe; our team will check and call you.",
+  // Sunucudan gelen kart ödemesi mesajları
+  "Kart numarası geçerli değil.": "The card number is not valid.",
+  "Visa, Mastercard veya Troy kartı kullanın.": "Please use a Visa, Mastercard or Troy card.",
+  "Son kullanma tarihini AA/YY biçiminde girin.": "Enter the expiry date as MM/YY.",
+  "Son kullanma ayı geçerli değil.": "The expiry month is not valid.",
+  "Kartın son kullanma tarihi geçmiş.": "This card has expired.",
+  "Güvenlik kodu (CVV) geçerli değil.": "The security code (CVV) is not valid.",
+  "Kart üzerindeki ismi girin.": "Enter the name on the card.",
+  "Ödeme süresi doldu. Rezervasyonum sayfasından yeniden başlatın.":
+    "The payment time has run out. Start again from the My booking page.",
+  "Bu rezervasyonun ödeme durumu değişti. Rezervasyonum sayfasından yeniden başlatın.":
+    "This booking's payment status has changed. Start again from the My booking page.",
+  "Çok fazla ödeme denemesi yapıldı. Bir süre sonra yeniden deneyin.":
+    "Too many payment attempts. Please try again later.",
+  "Bu rezervasyon için bir ödeme şu anda bankada sonuçlanıyor. Birkaç dakika sonra sayfayı yenileyin.":
+    "A payment for this booking is being completed at the bank. Refresh the page in a few minutes.",
+  "Bankaya şu anda ulaşılamıyor. Birkaç dakika sonra yeniden deneyin.":
+    "The bank cannot be reached right now. Please try again in a few minutes.",
+  "Kartınız 3D Secure (SMS onayı) ile kullanıma açık değil. Bankanızdan açtırın veya başka bir kart deneyin.":
+    "Your card is not enabled for 3D Secure (SMS verification). Ask your bank to enable it or try another card.",
+  "Kartınız 3D Secure ile doğrulanamadı. Başka bir kart deneyin.":
+    "Your card could not be verified with 3D Secure. Please try another card.",
+  "Banka yanıtı geçersiz.": "The bank's response was invalid.",
+  "Banka yanıtı ödemeyle eşleşmedi. Kartınızdan çekim yapılmadı.":
+    "The bank's response did not match the payment. Your card was not charged.",
+  "3D Secure doğrulaması tamamlanmadı. Kartınızdan çekim yapılmadı; yeniden deneyebilirsiniz.":
+    "3D Secure verification was not completed. Your card was not charged; you can try again.",
+  "Ödeme oturumunun süresi doldu. Kart bilgilerinizi yeniden girin.":
+    "The payment session has expired. Please enter your card details again.",
+  "Bu rezervasyon artık bu ödemeyi beklemiyor (iptal edilmiş, süresi dolmuş veya başka bir ödemeyle tamamlanmış). Kartınızdan çekim yapılmadı.":
+    "This booking is no longer waiting for this payment (cancelled, expired or already paid). Your card was not charged.",
+  "Ödeme bankanız tarafından onaylanmadı.": "Your bank did not approve the payment.",
+  "Bu ödeme zaten alındı.": "This payment has already been received.",
 };

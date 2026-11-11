@@ -2587,6 +2587,52 @@ html:has(.kp) {
   font-weight: 600;
   color: var(--kp-ink-2);
 }
+.kp .card-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 26px;
+  text-align: left;
+}
+.kp .card-form .field {
+  display: grid;
+  gap: 6px;
+}
+.kp .card-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.kp .card-number-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.kp .card-number-label em {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--kp-red);
+}
+.kp .card-form input[name="cardnumber"] {
+  letter-spacing: 1.5px;
+  font-variant-numeric: tabular-nums;
+}
+.kp .card-form .btn {
+  justify-content: center;
+  margin-top: 4px;
+}
+.kp .card-form-note {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--kp-ink-2);
+}
+.kp .card-form-note svg {
+  flex: none;
+  margin-top: 2px;
+}
 @media (max-width: 700px) {
   .kp .pay-deposit {
     grid-template-columns: 1fr;
