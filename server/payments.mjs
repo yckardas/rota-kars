@@ -162,7 +162,7 @@ export function createPayments(
     });
     const r = await workflow.get(s.reference);
     if (r.status === "pending_agency" && r.net_paid >= r.deposit)
-      await workflow.confirm(s.reference);
+      await workflow.confirm(s.reference, { via: "online", depositPercent: DEPOSIT_PERCENT });
     await db.update(
       "payment_sessions",
       { _id: s.id },

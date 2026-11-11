@@ -7,6 +7,8 @@ export function Reviews({ tourId }: { tourId?: string }) {
   const step = tourId ? 6 : 9;
   const [data, setData] = useState<ReviewsResponse | null>(null),
     [failed, setFailed] = useState(false),
+    // Google Haritalar yalnız ziyaretçi isteyince yüklenir (üçüncü taraf çerez).
+    [showMap, setShowMap] = useState(false),
     [visible, setVisible] = useState(step),
     { t, lang, locale } = useLang();
   useEffect(() => {
@@ -74,26 +76,34 @@ export function Reviews({ tourId }: { tourId?: string }) {
             </div>
             {!tourId && (
               <div className="google-map-frame">
-                {/* Harita yüklenmezse (engelleyici, yavaş bağlantı) alan boş kalmasın. */}
-                <a
-                  className="google-map-fallback"
-                  href={url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
+                {/* Harita tıklayınca yüklenir: Google çerez yerleştirebilir ve IP adresini alır. */}
+                <div className="google-map-fallback">
                   <strong>Rota Kars Turizm</strong>
                   <span>Yeni Mah. Cumhuriyet Cad. No:26, Merkez / Kars</span>
-                  <span className="text-link">
-                    {t("Haritada açın")} <ExternalLink size={14} />
+                  <span className="google-map-actions">
+                    <button
+                      type="button"
+                      className="text-link"
+                      onClick={() => setShowMap(true)}
+                    >
+                      {t("Haritayı göster")}
+                    </button>
+                    <a className="text-link" href={url} target="_blank" rel="noreferrer">
+                      {t("Haritada açın")} <ExternalLink size={14} />
+                    </a>
                   </span>
-                </a>
-                <iframe
-                  className="google-map"
-                  title={t("Rota Kars Turizm Google Haritalar konumu")}
-                  src={`https://www.google.com/maps?cid=1539703208462618989&hl=${lang}&output=embed`}
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
+                  <small>
+                    {t("Harita Google’dan yüklenir; Google çerez kullanabilir.")}
+                  </small>
+                </div>
+                {showMap && (
+                  <iframe
+                    className="google-map"
+                    title={t("Rota Kars Turizm Google Haritalar konumu")}
+                    src={`https://www.google.com/maps?cid=1539703208462618989&hl=${lang}&output=embed`}
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                )}
               </div>
             )}
           </div>

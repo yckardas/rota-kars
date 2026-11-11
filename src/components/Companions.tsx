@@ -3,7 +3,7 @@ import { LoaderCircle, Plus, Trash2, UsersRound } from "lucide-react";
 import { api, post } from "../lib/api";
 import { countryName, countryOptions } from "../lib/countries";
 import { tcknValid } from "../lib/tckn";
-import { useLang } from "../lib/i18n";
+import { Link, useLang } from "../lib/i18n";
 export type Companion = {
   id: string;
   name: string;
@@ -44,6 +44,7 @@ export function CompanionsSection() {
         nationality,
         idNumber,
         gender: f.get("gender"),
+        declaration: f.get("declaration") === "on",
       });
       setOpen(false);
       await load();
@@ -184,6 +185,24 @@ export function CompanionsSection() {
               </div>
             </div>
           </div>
+          <label className="checkbox-label">
+            <input type="checkbox" name="declaration" required />
+            <span>
+              {t(
+                "Bu kişinin bilgilerini onun bilgisi dahilinde, sonraki rezervasyonlarımda kullanmak üzere kaydettiğimi ve kendisini {notice} hakkında bilgilendireceğimi beyan ederim. Kaydı dilediğim zaman silebilirim.",
+              )
+                .split(/(\{notice\})/)
+                .map((part, k) =>
+                  part === "{notice}" ? (
+                    <Link key={k} to="/bilgilendirme#kvkk" target="_blank">
+                      {t("Aydınlatma Metni")}
+                    </Link>
+                  ) : (
+                    part
+                  ),
+                )}
+            </span>
+          </label>
           <div className="button-row">
             <button className="btn btn-small" disabled={busy}>
               {busy && <LoaderCircle className="spin" size={15} />}

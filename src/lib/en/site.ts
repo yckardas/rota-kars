@@ -32,13 +32,9 @@ export const site: Record<string, string> = {
   "Konaklama seçenekleri": "Places to stay",
   "Rota Kars hakkında": "About Rota Kars",
   "Ön rezervasyon sorgulama": "Look up a pre-booking",
-  "Tur iptali": "Tour cancellation",
-  "Bilgilendirme ve gizlilik": "Information and privacy",
   "Fotoğraf kaynakları": "Photo credits",
   "Kars’tayız, bekleriz.": "We’re in Kars. Come say hello.",
   "Yol tarifi alın": "Get directions",
-  "TÜRSAB A Grubu · Belge No {no} · {year}’dan beri":
-    "TÜRSAB Group A · License No. {no} · Since {year}",
   // Ana sayfa
   "Ani Antik Kenti’nin kış manzarası": "Winter view of the ancient city of Ani",
   "Kars’tan selamlar.": "Greetings from Kars.",
@@ -324,4 +320,55 @@ export const site: Record<string, string> = {
   "Rotanız hazırlanıyor…": "Preparing your route…",
   "Bir bağlantı molası.": "A brief connection break.",
   "Yeniden dene": "Try again",
+  // Yasal metinler (ön bilgilendirme, onaylar, künye)
+  "T.C. Kültür ve Turizm Bakanlığı {group} Grubu Seyahat Acentası · Belge No {no} · TÜRSAB üyesidir · {year}’dan beri":
+    "Group {group} travel agency licensed by the Ministry of Culture and Tourism · Licence No {no} · TÜRSAB member · since {year}",
+  "{office} V.D.":
+    "{office} Tax Office",
+  "Kars Ticaret Sicili":
+    "Kars Trade Registry",
+  "Yasal bilgiler":
+    "Legal information",
+  "İptal ve iade koşulları":
+    "Cancellation and refunds",
+  "Ön bilgilendirme ve sözleşme":
+    "Pre-information and contract",
+  "Aydınlatma metni":
+    "Privacy notice",
+  "Çerez politikası":
+    "Cookie policy",
+  "Ticaret unvanı":
+    "Trade name",
+  "Acenta unvanı":
+    "Agency name",
+  "Seyahat acentası belgesi":
+    "Travel agency licence",
+  "T.C. Kültür ve Turizm Bakanlığı, {group} Grubu, Belge No {no}":
+    "Ministry of Culture and Tourism, Group {group}, Licence No {no}",
+  "Meslek birliği":
+    "Professional association",
+  "TÜRSAB (Türkiye Seyahat Acentaları Birliği) üyesi":
+    "Member of TÜRSAB (Association of Turkish Travel Agencies)",
+  "Merkez adresi":
+    "Registered address",
+  "MERSİS no":
+    "MERSİS no",
+  "Ticaret sicili":
+    "Trade registry",
+  "Sicil No":
+    "Registry No",
+  "Meslek odası":
+    "Chamber",
+  "Oda Sicil No":
+    "Chamber Reg. No",
+  "Vergi dairesi / no":
+    "Tax office / number",
+  "{office} Vergi Dairesi":
+    "{office} Tax Office",
+  "Telefon":
+    "Phone",
+  "Haritayı göster":
+    "Show map",
+  "Harita Google’dan yüklenir; Google çerez kullanabilir.":
+    "The map loads from Google; Google may set cookies.",
 };

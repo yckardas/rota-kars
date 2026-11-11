@@ -3448,3 +3448,246 @@ html:has(.kp) {
     font-size: 15px;
   }
 }
+
+/* ---------- Yasal metinler ----------
+   Ön bilgilendirme formu kartın içinde ince çizgili bir "ek kâğıt" gibi durur:
+   kaydırılabilir, düz metin, ekranda da baskıda da okunur. */
+.kp .pre-info {
+  margin: 26px 0 8px;
+  border: 1px solid var(--kp-rule);
+  border-radius: 4px;
+  background: var(--kp-card);
+}
+.kp .pre-info-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--kp-hair);
+}
+.kp .pre-info-head > svg {
+  color: var(--kp-red);
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+.kp .pre-info-head h3 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 20px;
+  margin: 0 0 2px;
+}
+.kp .pre-info-head p,
+.kp .pre-info-lang {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--kp-ink-2);
+}
+.kp .pre-info-lang {
+  padding: 12px 18px 0;
+}
+.kp .pre-info-late {
+  margin: 12px 18px 0;
+  padding: 12px 14px;
+}
+.kp .pre-info-late p {
+  margin: 0;
+  color: var(--kp-ink);
+}
+.kp .pre-info-text {
+  max-height: 260px;
+  overflow: auto;
+  margin: 0;
+  padding: 14px 18px 18px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--kp-ink);
+}
+.kp .pre-info-text:focus-visible {
+  outline: 2px solid var(--kp-red);
+  outline-offset: -2px;
+}
+.kp .legal-notice-line {
+  margin: -6px 0 18px;
+  font-size: 14px;
+  color: var(--kp-ink-2);
+}
+.kp .legal-notice-line a,
+.kp .legal-imprint a {
+  color: var(--kp-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Yasal bilgilendirme sayfası */
+.kp .legal-page h3 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 20px;
+  margin: 26px 0 6px;
+}
+.kp .legal-page h3[id],
+.kp .legal-page h2[id] {
+  scroll-margin-top: 90px;
+}
+.kp .legal-page p,
+.kp .legal-page .legal-list {
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--kp-ink-2);
+}
+.kp .legal-updated {
+  margin-top: -6px;
+}
+.kp .legal-part {
+  margin-top: 44px;
+  padding-top: 8px;
+  border-top: 1px solid var(--kp-rule);
+}
+.kp .legal-table-wrap {
+  overflow-x: auto;
+  margin: 14px 0 18px;
+  border: 1px solid var(--kp-hair);
+  border-radius: 4px;
+  background: var(--kp-card);
+}
+.kp .legal-table {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--kp-ink-2);
+}
+.kp .legal-table th,
+.kp .legal-table td {
+  padding: 10px 14px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--kp-hair);
+}
+.kp .legal-table th {
+  font-weight: 600;
+  color: var(--kp-ink);
+  background: var(--kp-snow);
+}
+.kp .legal-table tr:last-child td {
+  border-bottom: 0;
+}
+.kp .legal-summary-en {
+  margin: 18px 0 6px;
+  padding: 16px 20px;
+  border-left: 3px solid var(--kp-red);
+  background: var(--kp-card);
+  border-radius: 0 4px 4px 0;
+}
+.kp .legal-summary-en p {
+  margin-top: 0;
+}
+
+/* İletişim: künye */
+.kp .legal-imprint {
+  grid-column: 1 / -1;
+  padding-top: 26px;
+  border-top: 1px solid var(--kp-rule);
+}
+.kp .legal-imprint h2 {
+  font-size: clamp(24px, 2.4vw, 30px);
+  margin-bottom: 12px;
+  scroll-margin-top: 90px;
+}
+.kp .legal-imprint dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 40px;
+  margin: 0;
+}
+.kp .legal-imprint dl > div {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--kp-hair);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.kp .legal-imprint dt {
+  color: var(--kp-ink-2);
+}
+.kp .legal-imprint dd {
+  margin: 0;
+  color: var(--kp-ink);
+  overflow-wrap: anywhere;
+}
+#kunye {
+  scroll-margin-top: 90px;
+}
+
+/* Altbilgi: künye satırları */
+.kp .footer-legal {
+  display: block;
+}
+.kp .footer-legal p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--kp-ink-2);
+}
+.kp .footer-legal a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Rezervasyonum: kayıtlı belgeler */
+.kp .reservation-documents {
+  margin: 28px 0;
+}
+.kp .reservation-documents h2 {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+.kp .reservation-documents details {
+  border: 1px solid var(--kp-rule);
+  border-radius: 4px;
+  background: var(--kp-card);
+  margin-bottom: 10px;
+}
+.kp .reservation-documents summary {
+  cursor: pointer;
+  padding: 12px 16px;
+  font-weight: 600;
+  color: var(--kp-ink);
+}
+
+/* Harita tıklayınca yüklenir */
+.google-map-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+}
+.google-map-actions button.text-link {
+  font: inherit;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.google-map-fallback small {
+  font-size: 12px;
+  color: var(--kp-ink-2);
+}
+
+@media (max-width: 700px) {
+  .kp .legal-imprint dl {
+    grid-template-columns: 1fr;
+  }
+  .kp .legal-imprint dl > div {
+    grid-template-columns: 130px 1fr;
+  }
+  .kp .pre-info-text {
+    max-height: 220px;
+  }
+}

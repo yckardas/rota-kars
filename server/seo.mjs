@@ -171,9 +171,9 @@ const STATIC = {
     crumb: "İletişim",
   },
   "/bilgilendirme": {
-    title: `Tur iptali ve bilgilendirme | ${SITE}`,
+    title: `Yasal bilgilendirme: KVKK, çerez, iptal ve sözleşme | ${SITE}`,
     description:
-      "Koşulsuz iptal hakkı, ön rezervasyon süreci, kişisel verilerin işlenmesi ve yapay zekâ asistanı hakkında bilgilendirme.",
+      "Aydınlatma metni, çerez politikası, iptal ve iade koşulları, ön bilgilendirme formu ve tur hizmet sözleşmesi.",
     crumb: "Bilgilendirme",
   },
   "/gorsel-kaynaklari": {

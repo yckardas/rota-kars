@@ -77,6 +77,17 @@ export type Catalog = {
     hours: string;
     tursabNo: string;
     founded: number;
+    legalName: string;
+    legalNameShort: string;
+    licenseGroup: string;
+    mersis: string;
+    taxOffice: string;
+    taxNo: string;
+    tradeRegistry: string;
+    tradeRegistryNo: string;
+    chamber: string;
+    chamberNo: string;
+    kep: string;
   };
   features: { icon: string; title: string; text: string }[];
   services: {
@@ -142,6 +153,9 @@ export type PassengerDetail = {
 };
 export type Reservation = {
   ticket_token: string;
+  // Onaylanan yasal belgeler (server/legal.mjs); Türkçe düz metin.
+  pre_info_text?: string | null;
+  contract_text?: string | null;
   passenger_details?: PassengerDetail[];
   ticketUrl?: string;
   qrDataUrl?: string;

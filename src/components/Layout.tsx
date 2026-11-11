@@ -262,8 +262,12 @@ export function Layout({
             <Link to="/konaklama">{t("Konaklama seçenekleri")}</Link>
             <Link to="/hakkimizda">{t("Rota Kars hakkında")}</Link>
             <Link to="/rezervasyonum">{t("Ön rezervasyon sorgulama")}</Link>
-            <Link to="/bilgilendirme#iptal">{t("Tur iptali")}</Link>
-            <Link to="/bilgilendirme">{t("Bilgilendirme ve gizlilik")}</Link>
+            <Link to="/bilgilendirme#iptal">{t("İptal ve iade koşulları")}</Link>
+            <Link to="/bilgilendirme#sozlesme">
+              {t("Ön bilgilendirme ve sözleşme")}
+            </Link>
+            <Link to="/bilgilendirme#kvkk">{t("Aydınlatma metni")}</Link>
+            <Link to="/bilgilendirme#cerez">{t("Çerez politikası")}</Link>
             <Link to="/gorsel-kaynaklari">{t("Fotoğraf kaynakları")}</Link>
           </div>
           <div className="footer-contact">
@@ -293,14 +297,19 @@ export function Layout({
             </a>
           </div>
         </div>
-        <div className="container footer-bottom">
-          <span>© {new Date().getFullYear()} Rota Kars Turizm</span>
-          <span>
-            {t("TÜRSAB A Grubu · Belge No {no} · {year}’dan beri", {
-              no: b.tursabNo,
-              year: b.founded,
-            })}
-          </span>
+        <div className="container footer-bottom footer-legal">
+          <p>
+            © {new Date().getFullYear()} {b.legalNameShort} ·{" "}
+            {t(
+              "T.C. Kültür ve Turizm Bakanlığı {group} Grubu Seyahat Acentası · Belge No {no} · TÜRSAB üyesidir · {year}’dan beri",
+              { group: b.licenseGroup, no: b.tursabNo, year: b.founded },
+            )}
+          </p>
+          <p>
+            MERSİS {b.mersis} · {t("{office} V.D.", { office: b.taxOffice })}{" "}
+            {b.taxNo} · {t("Kars Ticaret Sicili")} {b.tradeRegistryNo} · KEP{" "}
+            {b.kep} · <Link to="/iletisim#kunye">{t("Yasal bilgiler")}</Link>
+          </p>
         </div>
       </footer>
     </div>

@@ -166,11 +166,11 @@ export function RequestForm({
           <label className="checkbox-label">
             <input type="checkbox" name="consent" required />
             <span>
-              <a href="/bilgilendirme" target="_blank">
+              <a href="/bilgilendirme#kvkk" target="_blank">
                 Aydınlatma metnini
               </a>{" "}
-              okudum. Talebimin değerlendirilmesi için bilgilerimin işlenmesini
-              kabul ediyorum.
+              okudum. Bilgilerimin talebimin değerlendirilmesi ve size dönüş
+              yapılması için işleneceğini biliyorum.
             </span>
           </label>
           <div className="inline-note">

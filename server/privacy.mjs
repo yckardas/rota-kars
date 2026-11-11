@@ -12,8 +12,16 @@ import { randomUUID, createHash } from "node:crypto";
 import { AppError } from "./store.mjs";
 import { localDate } from "./departures.mjs";
 
-export const KVKK_NOTICE_VERSION = "2026-10";
-export const CONSENT_TYPES = ["kvkk_notice", "marketing", "abroad_transfer"];
+export const KVKK_NOTICE_VERSION = "2026-11";
+export const CONSENT_TYPES = [
+  "kvkk_notice",
+  "marketing",
+  "abroad_transfer",
+  // Ön bilgilendirme formu, tur hizmet sözleşmesi ve iptal-iade koşullarının onayı.
+  "pre_info",
+  // Başkası adına bilgi girme beyanı (rezervasyondaki diğer yolcular, yol arkadaşları).
+  "others_declaration",
+];
 const DAY = 86400000;
 const emailHash = (email) =>
   createHash("sha256").update("rota-kvkk:" + String(email).trim().toLowerCase()).digest("hex");
@@ -59,6 +67,10 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx, pii
         passengers: (Array.isArray(r.passengers) ? r.passengers : []).map(() => ANON),
         passenger_details: [],
         member_id: null,
+        // Onaylanan belge metinleri ad, e-posta ve telefon içerir; onay zamanı ve
+        // sürümü (legal_version, pre_info_accepted_at, contract_at) kalır.
+        pre_info_text: null,
+        contract_text: null,
         anonymized_at: clock(),
       },
     );

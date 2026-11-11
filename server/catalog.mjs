@@ -13,6 +13,19 @@ export const business = {
   hours: "Her gün · 22:00'ye kadar",
   tursabNo: "13948",
   founded: 2010,
+  // Yasal künye (vergi levhası, işletme belgesi, faaliyet belgesi, oda kaydı ve
+  // Ticaret Sicili Gazetesi ile doğrulandı; bkz. docs/yasal/00-sirket-bilgileri.md).
+  legalName: "Rota Kars Turizm Taşımacılık Seyahat Acentası Limited Şirketi",
+  legalNameShort: "Rota Kars Turizm Taşımacılık Seyahat Acentası Ltd. Şti.",
+  licenseGroup: "A",
+  mersis: "0735187296600001",
+  taxOffice: "Kars",
+  taxNo: "7351872966",
+  tradeRegistry: "Kars Ticaret Sicili Müdürlüğü",
+  tradeRegistryNo: "8625",
+  chamber: "Kars Ticaret ve Sanayi Odası",
+  chamberNo: "8625",
+  kep: "rotakarsturizm@hs01.kep.tr",
 };
 export const features = [
   {
@@ -22,7 +35,7 @@ export const features = [
   },
   {
     icon: "shield",
-    title: "Koşulsuz iptal",
+    title: "Kesintisiz iptal",
     text: "Yurt içinde son 3 güne, yurt dışında son 5 güne kadar kesintisiz iade.",
   },
   {
@@ -78,7 +91,7 @@ export const fleet = {
   perks: ["D2 ve B2 belgeli", "Lüks ve klimalı", "Mikrofonlu", "Buzdolaplı"],
 };
 export const cancellationPolicy =
-  "Yurt dışı paket turlarımızda son 5 güne, yurt içi paketlerimizde son 3 güne kadar hiçbir koşul aranmadan turunuzu iptal edebilirsiniz. Yurt içi paketlerde iptal güvence paketi ile 72 saate kadar koşulsuz iptal hakkı bulunur (uçaklı paketlerde geçerli değildir). Ödediğiniz ücreti kesintisiz geri alırsınız.";
+  "Ödeme yapılmamış ön rezervasyonları istediğiniz zaman ücretsiz iptal edebilirsiniz. Onaylanmış rezervasyonlarda yurt içi turlarda hareketten 3 gün, yurt dışı turlarda 5 gün öncesine kadar iptal ederseniz kapora dahil ödediğiniz tutarın tamamı iade edilir. Bu süreden sonraki iptallerde kapora iade edilmez, fazlası iade edilir; haber vermeden katılmamada ödenen tutar iade edilmez. Turu biz iptal edersek tutarın tamamını geri alırsınız ya da başka bir tarihe geçersiniz.";
 export const vehicle = {
   id: "vip-18-plus-1",
   name: "VIP midibüs",
@@ -212,6 +225,8 @@ export const tours = [
     name: "Günübirlik Batum",
     subtitle: "Sınırın ötesinde yeni bir rota.",
     category: "Yurt dışı",
+    // Yurt dışı tur: kesintisiz iptal süresi 5 gün (server/legal.mjs).
+    abroad: true,
     duration: "Günübirlik",
     location: "Kars · Artvin · Batum",
     image: "/images/tours/batum.webp",

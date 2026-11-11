@@ -339,6 +339,7 @@ export async function openStore(
       couponId = null,
       agent = null,
       notes = "",
+      legal = null,
     }) {
       return tx(async () => {
         await cleanup();
@@ -438,7 +439,7 @@ export async function openStore(
           { owner: reference, expires_at: expires },
         );
         await db.remove("holds", { _id: holdToken });
-        return workflow.created(reference, { byAgency: Boolean(agent) });
+        return workflow.created(reference, { byAgency: Boolean(agent), legal: agent ? null : legal });
       });
     },
     // Telefon/WhatsApp ile gelen müşteriyi acente panelden kaydeder: koltuk, kayıt,
