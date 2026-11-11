@@ -40,9 +40,12 @@ import { NewReservation } from "./admin/NewReservation";
 import { DepartureCalendar } from "./admin/DepartureCalendar";
 import { isNativeApp } from "../lib/native";
 import { countryName } from "../lib/countries";
+import { sectorOdds, toSectors, type WheelSector } from "./PrizeWheel";
 export type Campaign = {
   active: boolean;
-  sectors: number[];
+  sectors: WheelSector[];
+  // Sabit tutarlı kuponların geçerli olduğu en düşük tur bedeli (kuruş).
+  amountMinTotal: number;
   validDays: number;
   minTotal: number;
   tourIds: string[];
@@ -1146,10 +1149,19 @@ function BookingControls({
 export function CampaignManager({ catalog }: { catalog: Catalog }) {
   const feedback = useFeedback();
   const [data, setData] = useState<Campaign | null>(null),
+    [sectors, setSectors] = useState<WheelSector[]>([]),
     [busy, setBusy] = useState(false);
   useEffect(() => {
-    api<Campaign>("/campaigns").then(setData).catch(feedback.error);
+    api<Campaign>("/campaigns")
+      .then((c) => {
+        setData(c);
+        setSectors(toSectors(c.sectors));
+      })
+      .catch(feedback.error);
   }, []);
+  const odds = sectorOdds(sectors),
+    setSector = (i: number, patch: Partial<WheelSector>) =>
+      setSectors(sectors.map((s, k) => (k === i ? { ...s, ...patch } : s)));
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!data) return;
@@ -1158,7 +1170,8 @@ export function CampaignManager({ catalog }: { catalog: Catalog }) {
     try {
       const updated = await post<Campaign>("/admin/campaigns", {
         active: f.get("active") === "on",
-        sectors: f.getAll("sector").map(Number),
+        sectors,
+        amountMinTotal: Math.round(Number(f.get("amountMinTotal")) * 100),
         validDays: Number(f.get("validDays")),
         minTotal: Math.round(Number(f.get("minTotal")) * 100),
         tourIds: f.getAll("tourIds"),
@@ -1166,6 +1179,7 @@ export function CampaignManager({ catalog }: { catalog: Catalog }) {
         requireVerified: f.get("requireVerified") === "on",
       });
       setData(updated);
+      setSectors(toSectors(updated.sectors));
       feedback.ok("Kampanya ayarları kaydedildi. Yeni kuponlar bu koşullarla oluşturulur.");
     } catch (e) {
       feedback.error(e);
@@ -1184,23 +1198,83 @@ export function CampaignManager({ catalog }: { catalog: Catalog }) {
           </label>
           <h2>Çark dilimleri</h2>
           <p className="muted">
-            Her dilim eşit olasılıklıdır. Aynı oranı birden çok dilime koyarak
-            kazanma ağırlığını değiştirebilirsiniz.
+            Her dilim bir indirimdir. Şans, dilimin ağırlığının toplama oranıdır;
+            çarkta bütün dilimler eşit genişlikte görünür, şanslar sitede yazılı
+            olarak gösterilir. 4 ile 8 dilim arası.
           </p>
           <div className="campaign-sectors">
-            {data.sectors.map((n, i) => (
-              <label className="field" key={i}>
-                {i + 1}. dilim
-                <select name="sector" defaultValue={n}>
-                  {[5, 10, 15].map((p) => (
-                    <option key={p} value={p}>
-                      %{p}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            {sectors.map((sec, i) => (
+              <fieldset className="campaign-sector" key={i}>
+                <legend>
+                  {i + 1}. dilim · %{odds[i]} şans
+                </legend>
+                <label className="field">
+                  Tür
+                  <select
+                    value={sec.kind}
+                    onChange={(e) =>
+                      setSector(i, {
+                        kind: e.target.value as WheelSector["kind"],
+                        value: e.target.value === "amount" ? 10000 : 5,
+                      })
+                    }
+                  >
+                    <option value="percent">Yüzde (%)</option>
+                    <option value="amount">Tutar (TL)</option>
+                  </select>
+                </label>
+                <label className="field">
+                  {sec.kind === "amount" ? "İndirim (TL)" : "İndirim (%)"}
+                  <input
+                    type="number"
+                    required
+                    min={sec.kind === "amount" ? 10 : 1}
+                    max={sec.kind === "amount" ? 1000 : 50}
+                    value={sec.kind === "amount" ? sec.value / 100 : sec.value}
+                    onChange={(e) =>
+                      setSector(i, {
+                        value:
+                          sec.kind === "amount"
+                            ? Math.round(Number(e.target.value) * 100)
+                            : Number(e.target.value),
+                      })
+                    }
+                  />
+                </label>
+                <label className="field">
+                  Ağırlık
+                  <input
+                    type="number"
+                    required
+                    min={1}
+                    max={1000}
+                    value={sec.weight}
+                    onChange={(e) => setSector(i, { weight: Number(e.target.value) })}
+                  />
+                </label>
+                {sectors.length > 4 && (
+                  <button
+                    type="button"
+                    className="text-link danger-text"
+                    onClick={() => setSectors(sectors.filter((_, k) => k !== i))}
+                  >
+                    Dilimi kaldır
+                  </button>
+                )}
+              </fieldset>
             ))}
           </div>
+          {sectors.length < 8 && (
+            <button
+              type="button"
+              className="btn btn-outline btn-small"
+              onClick={() =>
+                setSectors([...sectors, { kind: "percent", value: 5, weight: 10 }])
+              }
+            >
+              <Plus size={15} /> Dilim ekle
+            </button>
+          )}
           <div className="form-grid">
             <label className="field">
               Kupon süresi (gün)
@@ -1219,6 +1293,17 @@ export function CampaignManager({ catalog }: { catalog: Catalog }) {
                 type="number"
                 name="minTotal"
                 defaultValue={data.minTotal / 100}
+                min={0}
+                step="0.01"
+                required
+              />
+            </label>
+            <label className="field">
+              TL indirimleri için en düşük tur bedeli (TL)
+              <input
+                type="number"
+                name="amountMinTotal"
+                defaultValue={data.amountMinTotal / 100}
                 min={0}
                 step="0.01"
                 required

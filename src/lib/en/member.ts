@@ -51,13 +51,9 @@ export const member: Record<string, string> = {
   "Çıkış yap": "Log out",
   "İlk yolculuğa bir sürpriz": "A surprise for your first trip",
   "Şansını rotana kat.": "Spin for your route.",
-  "Çarkı bir kez çevir; aşağıdaki dilimlerden bir tur indirimi kazan.":
-    "Spin the wheel once and win a tour discount from one of the slices below.",
   "Çark dönüyor…": "Spinning…",
   "Çark hakkınız kullanıldı": "You’ve used your spin",
   "Çarkı çevir": "Spin the wheel",
-  "Tebrikler! %{percent} indirim kuponunuz hesabınızda.":
-    "Congratulations! Your {percent}% discount coupon is in your account.",
   "Hesap başına bir hak. Yeni kuponlar {days} gün geçerli.":
     "One spin per account. New coupons are valid for {days} days.",
   "Minimum tur bedeli: {amount}.": "Minimum tour price: {amount}.",
@@ -214,4 +210,15 @@ export const member: Record<string, string> = {
     "I have read and accept the {terms}. I have read the {notice}.",
   "Kişisel veri aydınlatma metnini":
     "privacy notice",
+  // Şans çarkı
+  "Çark hediyeniz bekliyor: {prize} indirim.":
+    "Your wheel prize is waiting: {prize} off.",
+  "Bu tarayıcıdan üye olun veya giriş yapın; e-postanızı doğrulayınca kuponunuz hesabınıza tanımlanır.":
+    "Sign up or log in from this browser; your coupon is added once you verify your e-mail.",
+  "Çarkı bir kez çevir; her dilim bir tur indirimi.":
+    "Spin the wheel once; every slice is a tour discount.",
+  "Tebrikler! {prize} indirim kuponunuz hesabınızda.":
+    "Congratulations! Your {prize} discount coupon is in your account.",
+  "Çark hediyeniz ({prize}) hesabınıza bağlandı. E-postanızı doğrulayınca kuponunuz aktifleşir.":
+    "Your wheel prize ({prize}) is linked to your account. Verify your e-mail to activate the coupon.",
 };

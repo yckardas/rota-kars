@@ -306,16 +306,7 @@ export const site: Record<string, string> = {
   "Reels’leri keşfedin": "Explore our Reels",
   // Üyelik daveti
   "Rota Kars’a hoş geldiniz": "Welcome to Rota Kars",
-  "Bir sonraki rotanız": "Let your next route",
-  "bir sürprizle başlasın.": "start with a surprise.",
-  "Ücretsiz üye olun, şans çarkında %5, %10 veya %15 tur indirimi kazanın.":
-    "Sign up for free and spin the wheel to win 5%, 10% or 15% off a tour.",
-  "Arkadaşını davet et, ikinize de %10 indirim gelsin.":
-    "Invite a friend and you both get 10% off.",
-  "Üye ol, çarkını çevir": "Sign up and spin",
   "Şimdilik rotaları keşfedeyim": "I’ll explore the routes for now",
-  "Çark üyelik başına bir kez. Güncel oran, süre ve davet koşullarını hesabınızdan inceleyebilirsiniz.":
-    "One spin per membership. See current rates, validity and invite terms in your account.",
   "Yükleniyor…": "Loading…",
   "Rotanız hazırlanıyor…": "Preparing your route…",
   "Bir bağlantı molası.": "A brief connection break.",
@@ -371,4 +362,37 @@ export const site: Record<string, string> = {
     "Show map",
   "Harita Google’dan yüklenir; Google çerez kullanabilir.":
     "The map loads from Google; Google may set cookies.",
+  // Şans çarkı
+  "Çark şu an yüklenemedi.":
+    "The wheel couldn't load right now.",
+  "Tebrikler!":
+    "Congratulations!",
+  "{prize} indirim kazandınız.":
+    "You won {prize} off.",
+  "Çarkı çevirin,":
+    "Spin the wheel,",
+  "ilk rotanıza indirim kazanın.":
+    "win a discount on your first route.",
+  "Şans çarkı: {list}":
+    "Prize wheel: {list}",
+  "Ücretsiz üye olup e-postanızı doğrulayın; hediyeniz kupon olarak hesabınıza tanımlansın. Hediyeniz 7 gün boyunca sizin için ayrılır.":
+    "Sign up for free and verify your e-mail to get your prize as a coupon in your account. We'll keep it for you for 7 days.",
+  "Çark dönüyor…":
+    "The wheel is spinning…",
+  "Her dilim bir indirim. Sonuç hemen belli olur; kullanmak için üye olmanız yeterli.":
+    "Every slice is a discount. You'll see your prize right away; sign up to use it.",
+  "Üye olun, hediyenizi alın":
+    "Sign up and claim your prize",
+  "Kampanya şu anda kapalı":
+    "The campaign is closed right now",
+  "Çarkı çevir":
+    "Spin the wheel",
+  "Şanslar ve koşullar":
+    "Odds and terms",
+  "%{p} şans":
+    "{p}% chance",
+  "Hesap başına bir hediye. Kupon, e-posta doğrulandığında {days} gün geçerli olarak tanımlanır. TL indirimleri {min} ve üzeri rezervasyonlarda geçer; indirim tur bedelini aşmaz.":
+    "One prize per account. The coupon is issued when your e-mail is verified and is valid for {days} days. Lira discounts apply to bookings of {min} or more and never exceed the tour price.",
+  "Kampanya koşulları":
+    "Campaign terms",
 };

@@ -403,8 +403,32 @@ export function createApp(
     path: "/",
     maxAge: 7 * 86400000,
   };
-  const setSession = async (r, id) =>
+  // Misafirin çevirdiği çark hediyesi (rota_wheel) oturum açılınca üyeye bağlanır.
+  const wheelCookie = { ...memberCookie };
+  const setSession = async (r, id) => {
     r.cookie("rota_member", await store.members.session(id), memberCookie);
+    const wheel = cookieValue(r.req, "rota_wheel");
+    if (wheel) {
+      await store.members.claimWheel(id, wheel).catch(() => null);
+      r.clearCookie("rota_wheel", { ...wheelCookie, maxAge: 0 });
+    }
+  };
+  // Davet penceresindeki çark: üye olmadan çevrilir, hediye üyelikle sahiplenilir.
+  app.post(
+    "/api/wheel/spin",
+    route(async (q, r) => {
+      if (q.member)
+        throw new AppError(409, "Üyesiniz; çarkı Hesabım sayfasında çevirebilirsiniz.");
+      await human(q, "wheel");
+      const result = await store.members.guestSpin({
+        token: cookieValue(q, "rota_wheel"),
+        ip: clientKey(q),
+      });
+      r.cookie("rota_wheel", result.token, { ...wheelCookie, maxAge: Math.max(0, result.expiresAt - Date.now()) });
+      const { token, ...rest } = result;
+      r.json(rest);
+    }),
+  );
   app.get("/api/auth/me", (q, r) =>
     r.json({
       member: q.member,

@@ -1264,7 +1264,10 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                     <option value="">{t("Kupon kullanma")}</option>
                     {coupons.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {t("%{p}", { p: c.percent })} ·{" "}
+                        {c.kind === "amount"
+                          ? currency(c.amount || 0)
+                          : t("%{p}", { p: c.percent })}{" "}
+                        ·{" "}
                         {c.source === "wheel"
                           ? t("Şans çarkı")
                           : t("Arkadaş daveti")}

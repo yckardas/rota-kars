@@ -1,6 +1,13 @@
 import { ProfileSettings, MemberPrivacy } from "./AccountSecurity";
 import { CompanionsSection } from "../components/Companions";
 import { useTurnstile } from "../components/Turnstile";
+import {
+  PrizeWheel,
+  prizeLabel,
+  toSectors,
+  type WheelSector,
+} from "../components/PrizeWheel";
+import { readStoredPrize, WHEEL_PRIZE_KEY } from "../components/MembershipInvite";
 import type { Campaign } from "../components/OperationsDesk";
 import { useEffect, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -59,7 +66,8 @@ export function Membership() {
     ),
     [ref, setRef] = useState(params.get("ref") || ""),
     human = useTurnstile(mode === "register" ? "register" : "login"),
-    destination = safeNextPath(params.get("next")) || "/hesabim";
+    destination = safeNextPath(params.get("next")) || "/hesabim",
+    [pendingPrize] = useState(readStoredPrize);
   useEffect(() => {
     api<{ id: string; enabled: boolean }[]>("/auth/providers")
       .then(setProviders)
@@ -99,6 +107,10 @@ export function Membership() {
           : {}),
         turnstileToken: human.token,
       });
+      // Hediye sunucuda hesaba bağlandı; tarayıcıdaki özet artık gerekmez.
+      try {
+        localStorage.removeItem(WHEEL_PRIZE_KEY);
+      } catch {}
       await refresh();
       navigate(destination, { replace: true });
     } catch (e) {
@@ -139,6 +151,21 @@ export function Membership() {
         </div>
       </div>
       <div className="membership-form-panel">
+        {pendingPrize && (
+          <div className="wheel-pending-note" role="note">
+            <Gift size={20} />
+            <p>
+              <strong>
+                {t("Çark hediyeniz bekliyor: {prize} indirim.", {
+                  prize: prizeLabel(pendingPrize, lang),
+                })}
+              </strong>{" "}
+              {t(
+                "Bu tarayıcıdan üye olun veya giriş yapın; e-postanızı doğrulayınca kuponunuz hesabınıza tanımlanır.",
+              )}
+            </p>
+          </div>
+        )}
         <div
           className="membership-tabs"
           role="tablist"
@@ -364,10 +391,11 @@ export function Account() {
     [data, setData] = useState<MemberDashboard | null>(null),
     [error, setError] = useState(""),
     [spinning, setSpinning] = useState(false),
-    [angle, setAngle] = useState(0),
     [campaign, setCampaign] = useState<Campaign | null>(null),
-    [sectors, setSectors] = useState([5, 10, 5, 15, 10, 5]),
-    [prize, setPrize] = useState<Coupon | null>(null),
+    [sectors, setSectors] = useState<WheelSector[]>([]),
+    [landOn, setLandOn] = useState<number | null>(null),
+    [animateWheel, setAnimateWheel] = useState(false),
+    [prize, setPrize] = useState<WheelSector | null>(null),
     [copied, setCopied] = useState(false),
     [providers, setProviders] = useState<{ id: string; enabled: boolean }[]>(
       [],
@@ -377,8 +405,6 @@ export function Account() {
       .then(setProviders)
       .catch(() => {});
   }, []);
-  const reduceMotion = () =>
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   async function load() {
     const [dashboard, c] = await Promise.all([
       api<MemberDashboard>("/member/dashboard"),
@@ -387,18 +413,19 @@ export function Account() {
     setData(dashboard);
     setCampaign(c);
     setSectors(
-      dashboard.spin?.sectors_json
-        ? JSON.parse(dashboard.spin.sectors_json)
-        : c.sectors,
+      toSectors(dashboard.spin?.sectors_json || c.sectors),
     );
   }
   useEffect(() => {
     if (!loading && !member) navigate("/uyelik?mode=login", { replace: true });
     if (member) load().catch((e) => setError(e.message));
   }, [member, loading, navigate]);
+  // Daha önce çevrilmiş çark kazanılan dilimde durur (animasyonsuz).
   useEffect(() => {
-    if (data?.spin && !spinning)
-      setAngle(360 - ((data.spin.prize_index * 60 + 30) % 360));
+    if (data?.spin && !spinning) {
+      setAnimateWheel(false);
+      setLandOn(data.spin.prize_index);
+    }
   }, [data?.spin]);
   async function spin() {
     if (spinning) return;
@@ -408,19 +435,17 @@ export function Account() {
       const r = await post<{
         index: number;
         coupon: Coupon;
-        sectors: number[];
+        prize: WheelSector;
+        sectors: unknown;
       }>("/member/spin", {});
-      setSectors(r.sectors);
-      setAngle(360 * 6 + 360 - (r.index * 60 + 30));
-      await new Promise((resolve) =>
-        setTimeout(resolve, reduceMotion() ? 0 : 4200),
-      );
-      setPrize(r.coupon);
-      await load();
+      setSectors(toSectors(r.sectors));
+      setAnimateWheel(true);
+      setLandOn(r.index);
+      // Sonuç çark durunca yazılır (PrizeWheel onSettled).
+      setPrize(r.prize);
     } catch (e) {
       setError((e as Error).message);
       await load().catch(() => {});
-    } finally {
       setSpinning(false);
     }
   }
@@ -487,30 +512,25 @@ export function Account() {
           <h2>{t("Şansını rotana kat.")}</h2>
           <p>
             {t(
-              "Çarkı bir kez çevir; aşağıdaki dilimlerden bir tur indirimi kazan.",
+              "Çarkı bir kez çevir; her dilim bir tur indirimi.",
             )}
           </p>
-          <div className="wheel-wrap">
-            <div className="wheel-pointer" />
-            <div
-              className="prize-wheel"
-              style={{ transform: `rotate(${angle}deg)` }}
-            >
-              {sectors.map((n, i) => (
-                <span
-                  key={i}
-                  style={{
-                    transform: `translate(-50%, -50%) rotate(${i * 60 + 30}deg) translateY(-91px) rotate(-${i * 60 + 30}deg)`,
-                  }}
-                >
-                  {pct(n)}
-                </span>
-              ))}
-            </div>
-            <div className="wheel-center">
-              <Gift size={24} />
-            </div>
-          </div>
+          {sectors.length > 0 && (
+            <PrizeWheel
+              sectors={sectors}
+              landOn={landOn}
+              animate={animateWheel}
+              onSettled={() => {
+                if (!spinning) return;
+                setSpinning(false);
+                load().catch(() => {});
+              }}
+              lang={lang}
+              label={t("Şans çarkı: {list}", {
+                list: sectors.map((s) => prizeLabel(s, lang)).join(", "),
+              })}
+            />
+          )}
           <button
             className="btn"
             disabled={spinning || Boolean(data.spin) || !campaign?.active}
@@ -527,11 +547,19 @@ export function Account() {
               t("Çarkı çevir")
             )}
           </button>
-          {prize && (
+          {prize && !spinning && (
             <p className="wheel-result" role="status">
-              {t("Tebrikler! %{percent} indirim kuponunuz hesabınızda.", {
-                percent: prize.percent,
+              {t("Tebrikler! {prize} indirim kuponunuz hesabınızda.", {
+                prize: prizeLabel(prize, lang),
               })}
+            </p>
+          )}
+          {data.spin && !data.spin.coupon_id && data.spin.prize_json && (
+            <p className="wheel-result" role="status">
+              {t(
+                "Çark hediyeniz ({prize}) hesabınıza bağlandı. E-postanızı doğrulayınca kuponunuz aktifleşir.",
+                { prize: prizeLabel(data.spin.prize_json, lang) },
+              )}
             </p>
           )}
           <small>
@@ -618,7 +646,11 @@ export function Account() {
                 }
                 key={c.id}
               >
-                <strong>{pct(c.percent)}</strong>
+                <strong>
+                  {c.kind === "amount"
+                    ? currency(c.amount || 0)
+                    : pct(c.percent)}
+                </strong>
                 <div>
                   <h3>
                     {c.source === "wheel"

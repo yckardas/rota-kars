@@ -107,6 +107,8 @@ export async function openStore(
   const instagramSettings = await createInstagramSettings(db, { clock });
   const adminAuth = await createAdminAuth(db, { clock, env });
   await db.index("consents", { email_hash: 1 });
+  await db.index("wheel_prizes", { token_hash: 1 });
+  await db.index("wheel_prizes", { ip_hash: 1, created_at: 1 });
   const pii = piiCipher(env);
   const companions = createCompanions(db, { clock, pii });
   const privacy = createPrivacy(db, { clock, env, pii, companions, tx: (fn) => db.transaction(fn) });

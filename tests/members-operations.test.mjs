@@ -78,7 +78,12 @@ test("wheel is single-use, prices are server calculated, coupons cannot be share
     const m = await register(s),
       other = await register(s, "other@example.com"),
       spin = await s.members.spin(m.id);
-    assert.ok([5, 10, 15].includes(spin.coupon.percent));
+    // Ödül yüzde ya da sabit tutar olabilir; beklenen indirim türüne göre hesaplanır.
+    const expected =
+      spin.coupon.kind === "amount"
+        ? Math.min(spin.coupon.amount, 100000)
+        : 1000 * spin.coupon.percent;
+    assert.ok(expected > 0);
     await assert.rejects(
       async () => await s.members.spin(m.id),
       (e) => e.status === 409,
@@ -89,7 +94,7 @@ test("wheel is single-use, prices are server calculated, coupons cannot be share
     );
     const r = await reserve(s, m, spin.coupon.id);
     assert.equal(r.subtotal, 100000);
-    assert.equal(r.total, 100000 - 1000 * spin.coupon.percent);
+    assert.equal(r.total, 100000 - expected);
     assert.equal(r.deposit, Math.round(r.total * 0.3));
     await assert.rejects(
       async () => await reserve(s, m, spin.coupon.id, 2),
@@ -98,7 +103,7 @@ test("wheel is single-use, prices are server calculated, coupons cannot be share
     await s.cancel(r.reference, m.email);
     assert.equal(
       (await s.members.priceCoupon(m.id, spin.coupon.id, 100000)).discount,
-      1000 * spin.coupon.percent,
+      expected,
     );
   } finally {
     await s.db.close();

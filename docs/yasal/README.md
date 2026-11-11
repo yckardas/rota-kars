@@ -28,6 +28,7 @@
 9. **Online ödeme ile otomatik onay:** sözleşmenin kurulma anı, son dakika rezervasyonlarında iptal hakkı, ödeme kuruluşunun veri sorumlusu/veri işleyen rolü.
 10. **Şoför ve rehber verileri:** U-ETDS'ye bildirilen T.C. no, ad, cinsiyet ve telefon için müşteri aydınlatma metni değil, ayrı bir **çalışan aydınlatma metni** gerekir (bu klasörde yok).
 11. **İngilizce sürüm (/en):** yabancı turistler için aydınlatma metni, çerez politikası ve iptal koşullarının İngilizce özeti; hangi dilin bağlayıcı olduğu.
+12. **Şans çarkı:** Her dilim bir indirim (boş dilim yok), nakit veya eşya ödülü yok, katılım ücretsiz ve satın alma şartı yok; çevirmek için üyelik de gerekmiyor, kullanmak için gerekiyor. Bunun Milli Piyango İdaresi iznine tabi bir "çekiliş / ikramiyeli kampanya" değil, indirim kampanyası sayıldığını teyit edin. Ağırlıklı şanslar sitede yazılı.
 
 ## Acenteden beklenen bilgiler
 

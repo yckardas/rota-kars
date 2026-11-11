@@ -719,6 +719,10 @@ export function Information({ catalog }: { catalog: Catalog }) {
           <li>Gönderilmiş bildirimler: 90 gün.</li>
           <li>Güvenlik ve denetim kayıtları: 2 yıl.</li>
           <li>
+            Sahiplenilmeyen şans çarkı hediyeleri (IP adresinin geri
+            döndürülemez özeti dahil): hediyenin süresi dolduktan 30 gün sonra.
+          </li>
+          <li>
             Üyelik hesabı ve yol arkadaşı kayıtları: siz silene veya hesabınız
             silinene kadar (yasal saklama gerektiren kayıtlar hariç).
           </li>
@@ -809,6 +813,21 @@ export function Information({ catalog }: { catalog: Catalog }) {
                 <td>Çerez, birinci taraf</td>
                 <td>Yalnız acente personelinin yönetim paneli oturumu</td>
                 <td>8 saat (cihazı hatırla seçilirse daha uzun)</td>
+              </tr>
+              <tr>
+                <td>rota_wheel</td>
+                <td>Çerez, birinci taraf</td>
+                <td>
+                  Üye olmadan çevirdiğiniz şans çarkı hediyesini üyeliğinizle
+                  eşleştirmek
+                </td>
+                <td>7 gün (üye olunca silinir)</td>
+              </tr>
+              <tr>
+                <td>rota-wheel-prize-v1</td>
+                <td>localStorage</td>
+                <td>Kazandığınız çark hediyesini üyelik sayfasında göstermek</td>
+                <td>7 gün (üye olunca silinir)</td>
               </tr>
               <tr>
                 <td>rota-membership-invite-v1</td>
@@ -1086,12 +1105,20 @@ export function Information({ catalog }: { catalog: Catalog }) {
           SMS’i yalnız isteğe bağlı onay kutusunu işaretlediyseniz gönderilir.
         </p>
         <p>
-          Şans çarkı hesap başına bir kez çevrilebilir. %5, %10 veya %15
-          sonuçları yönetici tarafından belirlenen altı eşit olasılıklı dilimden
-          sunucuda seçilir. Kuponlar üzerlerinde belirtilen son tarihe kadar
-          geçerlidir, tek kullanımlıdır ve devredilemez. Aynı rezervasyonda
-          yalnız bir kupon uygulanır. Konaklama ve ekstra hizmetler kapsam
-          dışındadır.
+          <strong>Şans çarkı:</strong> Her dilim bir tur indirimidir; boş dilim
+          yoktur. Sonuç sunucuda, dilimlerin kampanya ayarındaki şanslarına
+          göre seçilir; güncel ödüller ve şansları çarkın altında “Şanslar ve
+          koşullar” bölümünde yazılıdır. Çark üye olmadan çevrilebilir; kazanılan
+          hediye 7 gün boyunca o tarayıcı için ayrılır ve aynı tarayıcıdan üye
+          olunduğunda veya giriş yapıldığında hesaba bağlanır. Hediye, e-posta
+          adresi doğrulandığında kupon olarak tanımlanır. Her hesap yalnız bir
+          çark hediyesi alabilir; aynı IP adresinden günde en çok 3 kez
+          çevrilebilir. Sabit tutarlı (TL) indirimler kampanya ayarında
+          belirtilen en düşük tur bedeli (şu an 1.000 TL) ve üzerindeki
+          rezervasyonlarda geçerlidir ve indirim tur bedelini aşmaz. Kuponlar
+          üzerlerinde belirtilen son tarihe kadar geçerlidir, tek kullanımlıdır,
+          nakde çevrilemez ve devredilemez. Aynı rezervasyonda yalnız bir kupon
+          uygulanır. Konaklama ve ekstra hizmetler kapsam dışındadır.
         </p>
         <p>
           Davet koduyla üye olan arkadaş turunu tamamladığında veya kampanya
