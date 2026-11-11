@@ -4470,3 +4470,136 @@ html:has(.kp) {
 .kp .inline-note > svg {
   color: var(--kp-ink-2);
 }
+
+/* ---------- Ana sayfa sadeleşme (yeniden inceleme 2026-11-11) ---------- */
+/* Kartta ilk hareket ve boş koltuk: koltuk bilgisi bu acentenin farkı. */
+.kp .tour-card-next {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--kp-ink);
+  font-variant-numeric: tabular-nums;
+}
+.kp .tour-card-next.is-few {
+  color: var(--kp-red);
+}
+/* "Kars'ta başka neler var?": üç küçük kartpostal, her biri bir sayfaya. */
+.kp .kp-more h2 {
+  font-size: clamp(30px, 3.4vw, 44px);
+  margin: 0 0 22px;
+}
+.kp .kp-more-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 26px;
+}
+.kp .kp-more-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 10px 16px;
+  background: var(--kp-card);
+  border-radius: 4px;
+  box-shadow: var(--kp-shadow-sm);
+  color: var(--kp-ink);
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.45s;
+}
+.kp .kp-more-card:hover {
+  transform: translateY(-3px) rotate(-0.3deg);
+  box-shadow: var(--kp-shadow);
+}
+.kp .kp-more-card:active {
+  transform: translateY(-1px) scale(0.99);
+  transition-duration: 90ms;
+}
+.kp .kp-more-photo {
+  display: block;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 2px;
+  background-color: #dde5eb;
+  margin-bottom: 8px;
+}
+.kp .kp-more-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.kp .kp-more-card h3 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 22px;
+  margin: 0 6px;
+}
+.kp .kp-more-card p {
+  margin: 0 6px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--kp-ink-2);
+}
+.kp .kp-more-link {
+  margin: auto 6px 0;
+  padding-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--kp-red);
+}
+.kp .tours-all-link {
+  display: none;
+}
+@media (max-width: 950px) {
+  .kp .kp-more-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .kp .kp-more-card {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    column-gap: 14px;
+    row-gap: 4px;
+  }
+  .kp .kp-more-photo {
+    grid-row: 1 / 4;
+    aspect-ratio: 1;
+    margin: 0;
+  }
+  .kp .kp-more-card h3,
+  .kp .kp-more-card p,
+  .kp .kp-more-link {
+    margin: 0;
+  }
+  .kp .kp-more-card h3 {
+    font-size: 20px;
+  }
+  .kp .kp-more-card p {
+    font-size: 14px;
+  }
+}
+@media (max-width: 700px) {
+  .kp .tours-section .tour-grid > :nth-child(n + 4) {
+    display: none;
+  }
+  .kp .tours-all-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 48px;
+    margin-top: 18px;
+    border: 1px solid var(--kp-ink);
+    border-radius: 4px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--kp-ink);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kp .kp-more-card:hover,
+  .kp .kp-more-card:active {
+    transform: none;
+  }
+}

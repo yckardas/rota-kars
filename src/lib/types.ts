@@ -1,5 +1,7 @@
 import { localeOf } from "./i18n";
 export type Tour = {
+  // Satışı açık turun ilk seferi (katalogda sunucu ekler).
+  next?: { date: string; startTime: string; available: number };
   id: string;
   salesOpen: boolean;
   vehicle: Vehicle;

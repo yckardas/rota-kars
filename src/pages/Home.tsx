@@ -8,14 +8,11 @@ import {
   ShieldCheck,
   Armchair,
   ExternalLink,
-  BedDouble,
   ChevronRight,
   Sparkles,
   Banknote,
   HeartHandshake,
-  Bus,
   Star,
-  MessageCircle,
   Check,
 } from "lucide-react";
 import type { Catalog, ReviewsResponse, Story } from "../lib/types";
@@ -24,12 +21,12 @@ import { useClearOfLaunchers } from "../lib/launchers";
 import { api } from "../lib/api";
 import { today } from "../lib/types";
 import { TourCard } from "../components/TourCard";
+import { placeName } from "../lib/place";
 import { develop } from "../lib/reveal";
 import { Reviews, GoogleMark } from "../components/Reviews";
 import { whatsappLink } from "../lib/whatsapp";
 import { SeatMap } from "../components/SeatMap";
 import { StoryPlayer } from "../components/StoryPlayer";
-import { RequestForm } from "../components/RequestForm";
 import { InstagramSection } from "../components/InstagramSection";
 const featureIcons: Record<string, typeof Compass> = {
   sparkles: Sparkles,
@@ -37,14 +34,10 @@ const featureIcons: Record<string, typeof Compass> = {
   lira: Banknote,
   heart: HeartHandshake,
 };
-// "Kars · Ani · Çıldır" -> "Çıldır": hatıra kartındaki küçük manzaranın adı.
-const placeName = (location: string) =>
-  location.split(" · ").filter(Boolean).pop() || location;
 export function Home({ catalog }: { catalog: Catalog }) {
   const [filter, setFilter] = useState("Tüm rotalar"),
     [filtered, setFiltered] = useState(false),
     [story, setStory] = useState<Story | null>(null),
-    [request, setRequest] = useState(false),
     [searchTour, setSearchTour] = useState(""),
     [rating, setRating] = useState<{
       rating: number | null;
@@ -139,7 +132,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
                     decoding="async"
                   />
                   <span className="kp-inset-label">
-                    {placeName(tour.location)}
+                    {placeName(tour)}
                     <small>
                       {tour.salesOpen
                         ? t("{price}’den", { price: currency(tour.price) })
@@ -280,6 +273,11 @@ export function Home({ catalog }: { catalog: Catalog }) {
               <TourCard key={tour.id} tour={tour} />
             ))}
         </div>
+        {/* Telefonda ana sayfa 3 turla kısa kalır; gerisi tur listesinde. */}
+        <Link className="tours-all-link" to="/turlar">
+          {t("Bütün turları görün ({n})", { n: catalog.tours.length })}{" "}
+          <ArrowRight size={16} />
+        </Link>
       </section>
       <section className="story-section">
         <div className="container">
@@ -366,133 +364,51 @@ export function Home({ catalog }: { catalog: Catalog }) {
           </div>
         </div>
       </section>
-      <section className="container section services-section" id="hizmetler">
-        <div className="section-heading">
-          <div>
-            <h2>{t("Hizmetlerimiz")}</h2>
-          </div>
-          <a
-            className="text-link"
-            href={whatsappLink(
-              catalog.business.whatsapp,
-              t("Merhaba, hizmetleriniz hakkında bilgi almak istiyorum."),
-            )}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {t("Teklif alın")} <ArrowRight size={17} />
-          </a>
-        </div>
-        <div className="service-grid">
-          {catalog.services.map((s) => (
-            <Link className="service-card" key={s.id} to={"/hizmetler/" + s.id}>
-              <h3>{s.title}</h3>
-              <p>{s.text}</p>
-              <span className="service-discover">
-                {t("Hizmeti keşfet")} <ArrowRight size={15} />
+      {/* Yan hizmetler tek bantta: tur seçme ve koltuk görme işini bölmeden
+          hizmetler, araç kiralama ve konaklamaya kısa yollar. */}
+      <section className="container section kp-more" aria-labelledby="kp-more-title">
+        <h2 id="kp-more-title">{t("Kars’ta başka neler var?")}</h2>
+        <div className="kp-more-grid">
+          {[
+            {
+              to: "/hizmetler",
+              image: "/images/kars.webp",
+              title: t("Transfer ve özel ulaşım"),
+              text: t("Havalimanı transferi, VIP araç, kongre ve gezi ulaşımı."),
+              cta: t("Hizmetlerimiz"),
+            },
+            {
+              to: "/hizmetler#filo",
+              image: "/images/rota-bus.webp",
+              title: t("Şoförlü araç kiralama"),
+              text: t("4+1’den 46+1’e araç; D2 ve B2 belgeli, deneyimli kaptanlarla."),
+              cta: t("Filoyu görün"),
+            },
+            {
+              to: "/konaklama",
+              image: "/images/stay.webp",
+              title: t("Bir gün daha kalın"),
+              text: t("Turunuzun öncesinde veya sonrasında anlaşmalı otellerde konaklama."),
+              cta: t("Konaklamayı planla"),
+            },
+          ].map((m) => (
+            <Link className="kp-more-card" key={m.to} to={m.to}>
+              <span className="kp-more-photo">
+                <img
+                  {...responsive(m.image, "(max-width: 760px) 90vw, 30vw")}
+                  {...develop}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                />
+              </span>
+              <h3>{m.title}</h3>
+              <p>{m.text}</p>
+              <span className="kp-more-link">
+                {m.cta} <ArrowRight size={15} />
               </span>
             </Link>
           ))}
-        </div>
-      </section>
-      <section className="fleet-section">
-        <div className="container fleet-inner">
-          <div className="fleet-photo">
-            <img
-              {...responsive(
-                "/images/rota-bus.webp",
-                "(max-width: 950px) 100vw, 55vw",
-              )}
-              alt={t("Rota Kars Tur logolu turizm otobüsü")}
-              loading="lazy"
-              decoding="async"
-            />
-          </div>
-          <div className="fleet-copy">
-            <h2>{t("Grubunuz kaç kişi olursa olsun, aracı bizde.")}</h2>
-            <p>{catalog.fleet.note}</p>
-            <div className="fleet-groups">
-              <div>
-                <small>{t("Turizm taşımacılığı")}</small>
-                <div className="chips">
-                  {catalog.fleet.tourism.map((c) => (
-                    <span key={c}>{c}</span>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <small>{t("VIP taşımacılık")}</small>
-                <div className="chips">
-                  {catalog.fleet.vip.map((c) => (
-                    <span key={c}>{c}</span>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <ul className="fleet-perks">
-              {catalog.fleet.perks.map((p) => (
-                <li key={p}>
-                  <Bus size={15} /> {p}
-                </li>
-              ))}
-            </ul>
-            {/* Kırmızı yalnız tur rezervasyonu için; yan hizmetler çerçeveli düğme. */}
-            <a
-              className="btn btn-outline"
-              href={whatsappLink(
-                catalog.business.whatsapp,
-                t(
-                  "Merhaba, şoförlü araç kiralama için teklif almak istiyorum.",
-                ),
-              )}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <MessageCircle size={17} /> {t("Araç için teklif alın")}
-            </a>
-          </div>
-        </div>
-      </section>
-      <section className="container stay-section section">
-        <div className="stay-photo">
-          <img
-            {...responsive(
-              "/images/stay.webp",
-              "(max-width: 950px) 100vw, 50vw",
-            )}
-            alt={t("Konaklama planlaması için temsili otel odası")}
-            loading="lazy"
-            decoding="async"
-          />
-          <span>{t("Temsili konaklama görseli")}</span>
-        </div>
-        <div className="stay-copy">
-          <h2>
-            {t("Bir gün daha")}
-            <br />
-            {t("Kars’ta kalın.")}
-          </h2>
-          <p>
-            {t(
-              "Anlaşmalı otellerimizde konaklamanızı planlayalım. Turunuzun öncesinde veya sonrasında Kars’a biraz daha zaman ayırın.",
-            )}
-          </p>
-          <div className="stay-detail">
-            <BedDouble size={22} />
-            <span>
-              {t("Tercihinize göre konaklama seçenekleri")}
-              <br />
-              <small>{t("Müsaitlik ve fiyat için acente teyidi")}</small>
-            </span>
-          </div>
-          <div className="button-row">
-            <Link className="btn btn-outline" to="/konaklama">
-              {t("Konaklamayı planla")} <ArrowRight size={17} />
-            </Link>
-            <button className="text-link" onClick={() => setRequest(true)}>
-              {t("Talep bırakın")}
-            </button>
-          </div>
         </div>
       </section>
       <section className="private-journey">
@@ -518,7 +434,6 @@ export function Home({ catalog }: { catalog: Catalog }) {
       {story && (
         <StoryPlayer story={story} onClose={() => setStory(null)} />
       )}{" "}
-      {request && <RequestForm onClose={() => setRequest(false)} />}
     </>
   );
 }

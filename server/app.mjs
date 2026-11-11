@@ -759,9 +759,20 @@ export function createApp(
   );
   attachSeoRoutes(app, env);
   // Aynı veri HTML'e de gömülür (app.locals.catalog): ilk boyamada ek istek gerekmez.
+  // Kartlarda ilk hareket ve boş koltuk: bu acentenin rakiplerde olmayan bilgisi.
+  const withNextDeparture = (list) =>
+    Promise.all(
+      list.map(async (t) => {
+        if (t.inquiryOnly) return t;
+        const [d] = await store.listDepartures(t.id).catch(() => []);
+        return d
+          ? { ...t, next: { date: d.date, startTime: d.start_time, available: Math.max(0, d.available) } }
+          : t;
+      }),
+    );
   const catalogData = async () => ({
       business,
-      tours: await store.operations.list(),
+      tours: await withNextDeparture(await store.operations.list()),
       vehicleModels,
       photoCredits,
       stories,

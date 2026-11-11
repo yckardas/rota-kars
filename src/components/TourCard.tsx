@@ -1,5 +1,5 @@
 import { flushSync } from "react-dom";
-import { Link, useLang, useLocalNavigate } from "../lib/i18n";
+import { Link, localeOf, useLang, useLocalNavigate } from "../lib/i18n";
 import { responsive } from "../lib/images";
 import { currency, type Tour } from "../lib/types";
 import { placeName } from "../lib/place";
@@ -67,6 +67,21 @@ export function TourCard({ tour }: { tour: Tour }) {
             {tour.duration} · {t("Kars çıkışlı")}
             {tour.inquiryOnly ? " · " + t("tarih için arayın") : ""}
           </p>
+          {tour.next && (
+            <p className={"tour-card-next" + (tour.next.available <= 3 ? " is-few" : "")}>
+              {t("İlk hareket {date}", {
+                date: new Date(tour.next.date + "T12:00:00").toLocaleDateString(localeOf(), {
+                  day: "numeric",
+                  month: "short",
+                }),
+              })} ·{" "}
+              {tour.next.available === 0
+                ? t("dolu")
+                : tour.next.available <= 3
+                  ? t("son {n} koltuk", { n: tour.next.available })
+                  : t("{n} boş koltuk", { n: tour.next.available })}
+            </p>
+          )}
         </div>
         <strong>
           {currency(tour.price)}
