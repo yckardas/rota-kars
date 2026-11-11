@@ -77,6 +77,8 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     [selected, setSelected] = useState<number[]>([]),
     // Koltuk planındaki sessiz değişiklikler (yolcu sayısı arttı, koltuk doldu) burada duyurulur.
     [seatNotice, setSeatNotice] = useState(""),
+    // "info": bilgi (yolcu sayısı arttı), "warn": sorun (koltuk başkasına geçti).
+    [seatNoticeTone, setSeatNoticeTone] = useState<"info" | "warn">("info"),
     [step, setStep] = useState(0),
     [hold, setHold] = useState<Hold | null>(null),
     [busy, setBusy] = useState(false),
@@ -307,6 +309,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
             );
             if (lost.length) {
               setSelected((cur) => cur.filter((n) => !lost.includes(n)));
+              setSeatNoticeTone("warn");
               setSeatNotice(
                 t("Koltuk {n} az önce doldu; başka bir koltuk seçin.", {
                   n: lost.join(", "),
@@ -489,7 +492,8 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         />
         <ReservationTicket reservation={result} catalog={catalog} />
         <div className="button-row">
-          <button className="btn" onClick={() => window.print()}>
+          {/* Başarı sayfasında kırmızı yalnız ödeme eylemine: yazdır çerçeveli. */}
+          <button className="btn btn-outline" onClick={() => window.print()}>
             <Printer size={16} /> {t("Özeti yazdır")}
           </button>
           <Link
@@ -703,6 +707,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                     else if (count < Math.min(MAX_SEATS, vehicle.sellableSeats)) {
                       setCount(count + 1);
                       setSelected([...selected, n]);
+                      setSeatNoticeTone("info");
                       setSeatNotice(
                         t("Yolcu sayısı {n} oldu · {total}", {
                           n: count + 1,
@@ -761,7 +766,11 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                         count,
                       })}
                     </small>
-                    <p className="seat-notice" role="status" aria-live="polite">
+                    <p
+                      className={"seat-notice is-" + seatNoticeTone}
+                      role="status"
+                      aria-live="polite"
+                    >
                       {seatNotice}
                     </p>
                   </div>
