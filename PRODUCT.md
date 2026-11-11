@@ -19,12 +19,12 @@ A Kars-based tour agency sells seat-based small-vehicle tours online and by phon
 
 ## Positioning
 
-Local operator with its own VIP minibuses/midibuses and real seat maps per departure; small groups, guide seat reserved, no card capture (payments are bank transfer or cash recorded by the agency).
+Local operator with its own VIP minibuses/midibuses and real seat maps per departure; small groups, guide seat reserved. The deposit can be paid by card online (Vakıfbank virtual POS, 3D Secure; the booking is confirmed instantly) or by bank transfer/cash recorded by the agency.
 
 ## Operating Context
 
 - Bookings come from the website (pre-reservation awaiting agency approval) and from phone/WhatsApp (entered by staff).
-- Payments happen outside the system and are recorded with a receipt reference; a deposit is needed before approval.
+- Payments: card deposit online (auto-confirms the booking) or bank transfer/cash recorded by staff with a receipt reference; a deposit is needed before approval. While the bank reviews the integration the live site runs in preview mode (`PAYMENT_PREVIEW=1`): the card screen is shown but nothing is charged.
 - Each departure has date, time, price, vehicle class and capacity, pickup point, guide.
 - Field work: passenger list per departure, QR ticket scan, "boarded" and "no-show" marks.
 - Push notifications reach owner/operations phones for new bookings, cancellations, leads and Google reviews.
@@ -34,7 +34,9 @@ Local operator with its own VIP minibuses/midibuses and real seat maps per depar
 
 - Stack: React 19 + Vite + Express + MongoDB, lucide icons, self-hosted fonts (Marcellus, Onest). Single global stylesheet `src/styles.css`.
 - Roles gate tabs server-side; guides see only daily operations.
-- Card payment (virtual POS) is not connected; SMS not connected; SMTP optional.
+- Card payment: Vakıfbank virtual POS with 3D Secure (`server/vakifbank.mjs`); the card is entered on the site's own form and never stored. SMS not connected; SMTP optional.
+- Legal texts (pre-information form, tour service contract, privacy, cookies, cancellation) are generated in `server/legal.mjs` and published at `/bilgilendirme`.
+- Membership prize wheel: guests spin in the invite popup; weighted percent and fixed-TL prizes become a coupon after e-mail verification.
 - Panel changes reach the Android app by deploy; a new APK is needed only for native changes.
 
 ## Brand Commitments

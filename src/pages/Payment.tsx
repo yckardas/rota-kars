@@ -65,13 +65,20 @@ export function PayDeposit({
   return (
     <section className="pay-deposit" aria-labelledby="pay-title">
       <div>
-        <h2 id="pay-title">{t("Kaporanızı şimdi ödeyin.")}</h2>
+        {/* Önizleme (banka incelemesi): kart ekranı görünür ama çekim yapılmaz; başlık bunu söyler. */}
+        <h2 id="pay-title">
+          {preview ? t("Kartla ödeme yakında") : t("Kaporanızı şimdi ödeyin.")}
+        </h2>
         <p>
           {r.deposit < r.total ? t("%30 kapora") : t("Tur bedeli")}{" "}
           <strong>{currency(due)}</strong>.{" "}
-          {t(
-            "Ödeme alınınca rezervasyonunuz anında onaylanır ve QR kodlu biletiniz geçerli olur.",
-          )}
+          {preview
+            ? t(
+                "Banka onayının ardından bu tutarı buradan kartla ödeyebileceksiniz. Şimdilik kartınızdan çekim yapılmaz; acentemiz ödeme için sizinle iletişime geçecek.",
+              )
+            : t(
+                "Ödeme alınınca rezervasyonunuz anında onaylanır ve QR kodlu biletiniz geçerli olur.",
+              )}
         </p>
         {error && (
           <p className="error" role="alert">
@@ -85,15 +92,8 @@ export function PayDeposit({
         ) : (
           <CreditCard size={17} />
         )}
-        {t("Kartla öde")}
+        {preview ? t("Kart ekranını görüntüle") : t("Kartla öde")}
       </button>
-      {preview && (
-        <small>
-          {t(
-            "Kartla ödeme banka onayının ardından açılacak; şimdilik ödeme alınmaz.",
-          )}
-        </small>
-      )}
       <small>
         <ShieldCheck size={14} />{" "}
         {catalog.payment.cardForm

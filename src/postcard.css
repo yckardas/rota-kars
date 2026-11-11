@@ -3855,6 +3855,54 @@ html:has(.kp) {
   color: var(--kp-ink);
 }
 
+/* ---------- Telefon düzeni (inceleme 2026-11-11) ---------- */
+@media (max-width: 700px) {
+  /* Tur sayfasının ana düğmesi görünürken yüzen düğmeler çekilir; düğme
+     ekrandan çıkınca mobil rezervasyon çubuğuyla birlikte geri gelirler. */
+  body[data-action-visible] .chat-launchers {
+    opacity: 0;
+    transform: translateY(24px);
+    pointer-events: none;
+    visibility: hidden;
+  }
+  /* Ana sayfadaki VIP koltuk planı sütunu genişletip sayfayı yana kaydırmasın. */
+  .kp .vip-inner > * {
+    min-width: 0;
+  }
+  .kp .vip-visual .seat-map {
+    width: 270px;
+  }
+  /* 16px altı alan iPhone'da odaklanınca ekranı yakınlaştırır. */
+  .kp .search-input {
+    min-width: 0;
+    width: 100%;
+  }
+  .kp .search-input input {
+    font-size: 16px;
+  }
+  /* Filtreler kesilip yatay kaymak yerine iki satıra sarar. */
+  .kp .tour-filters,
+  .kp .catalog-controls .tour-filters {
+    flex-wrap: wrap;
+    overflow: visible;
+    white-space: normal;
+    gap: 8px;
+    padding-bottom: 0;
+  }
+  .kp .tour-filters button {
+    font-size: 14px;
+    min-height: 40px;
+  }
+}
+/* 10px işlevsel bağlantılar okunur boyuta çıkar (en az 12px). */
+.kp .instagram-post-title small,
+.kp .instagram-card-caption > a,
+.kp a.review-source,
+.kp .social-link span,
+.kp .review-order {
+  font-size: 12px;
+}
+
 /* ---------- Rezervasyon: durum hep görünür (inceleme 2026-11-11) ---------- */
 /* Koltuk planındaki sessiz değişikliklerin duyurusu */
 .kp .seat-notice {
