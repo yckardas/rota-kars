@@ -1389,10 +1389,14 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   </select>
                 </label>
               ) : (
-                <p>
-                  <Link to={membershipHref}>{t("Üye olun")}</Link>
-                  {t(", çarkı çevirin ve tur indirimi kazanın.")}
-                </p>
+                // Koltuk seçildikten sonra kullanıcıyı rezervasyondan çıkaran bağlantı gösterilmez.
+                !selected.length &&
+                !hold && (
+                  <p>
+                    <Link to={membershipHref}>{t("Üye olun")}</Link>
+                    {t(", çarkı çevirin ve tur indirimi kazanın.")}
+                  </p>
+                )
               )}
               {quoteBusy && <small role="status">{t("Fiyat hesaplanıyor…")}</small>}
               {quoteError && (
