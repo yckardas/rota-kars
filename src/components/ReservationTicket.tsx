@@ -156,10 +156,10 @@ export function ReservationTicket({
         <p>
           {r.status === "confirmed" || r.status === "completed"
             ? t(
-                "Rezervasyonunuz acente tarafından onaylanmıştır. Güncel ödeme ve hareket bilgileri yukarıdadır.",
+                "Rezervasyonunuz onaylandı. Güncel ödeme ve hareket bilgileri yukarıda.",
               )
             : t(
-                "Ön rezervasyon kesin bilet değildir. Tahsilat kaydedilmemiş ve onaylanmamış talepler 24 saat sonra serbest kalır. Referansınızı ve e-posta adresinizi saklayın.",
+                "Bu bir ön rezervasyondur; kapora ödenip onaylanınca biletiniz geçerli olur. Ödemesi kaydedilmeyen ön rezervasyonlar 24 saat sonra düşer. Referansınızı ve e-posta adresinizi saklayın.",
               )}
         </p>
       </div>

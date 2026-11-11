@@ -56,8 +56,6 @@ export const site: Record<string, string> = {
   "Google yorumları": "Google reviews",
   "Kaporayı kartla güvenle ödeyin; rezervasyonunuz anında onaylanır.":
     "Pay the deposit securely by card; your booking is confirmed instantly.",
-  "Ödeme havale veya nakit; kart bilgisi istenmez.":
-    "Pay by bank transfer or cash; no card details needed.",
   "Sizin için bir rota var.": "There’s a route for you.",
   "Bütün turları görün": "See all tours",
   "Tüm rotalar": "All routes",
@@ -163,15 +161,11 @@ export const site: Record<string, string> = {
   "Seçtiğiniz seferin hareket ve buluşma bilgileri rezervasyon belgenizde görünür. E-posta hizmeti etkin olduğunda güncellemeler ve hareket hatırlatması kayıtlı adresinize iletilir.":
     "Departure and meeting details for your chosen trip appear on your booking document. When email is enabled, updates and a departure reminder are sent to your registered address.",
   "Rezervasyon nasıl kesinleşir?": "How is a booking confirmed?",
-  "Ön rezervasyonunuzu tarih ve koltuk seçerek oluşturabilirsiniz. Bu aşamada tahsilat yapılmaz. Acente programı ve ödeme koşullarını teyit ettikten sonra kesin rezervasyon sürecini tamamlar.":
-    "You can make a pre-booking by choosing a date and seats. Nothing is charged at this stage. Once the agency confirms the itinerary and payment terms, it completes the final booking.",
   "Rehber koltuğunu seçebilir miyim?": "Can I choose the guide’s seat?",
   "{seats}+1 aracın şoför yanındaki ön koltuğu rehbere ayrılmıştır. Şoför ve rehber dışında {guests} misafir için koltuk seçilebilir.":
     "In the {seats}+1 vehicle, the front seat beside the driver is kept for the guide. Besides the driver and guide, seats can be chosen for {guests} guests.",
   "İptal ve program değişikliği nasıl olur?":
     "How do cancellations and itinerary changes work?",
-  "Ön rezervasyon talebinizi referans numarası ve e-posta adresinizle sorgulayabilir, acente onayı bekleyen talebinizi iptal edebilirsiniz. Kesin rezervasyonun iptal ve iade koşulları acente tarafından tur bazında paylaşılır.":
-    "You can look up your pre-booking with its reference number and your email address, and cancel it while it awaits agency approval. Cancellation and refund terms for confirmed bookings are shared by the agency for each tour.",
   "kişi başı başlangıç fiyatı": "starting price per person",
   "İlk hareket {date}, {time}": "Next departure {date}, {time}",
   "Size uyan günü seçin.": "Pick the day that suits you.",
@@ -179,7 +173,6 @@ export const site: Record<string, string> = {
     "Claim your seat for the journey now.",
   "İlk hareket: {date}": "Next departure: {date}",
   "{n} yolcu koltuğu": "{n} passenger seats",
-  "Acente onaylı ön rezervasyon": "Agency-approved pre-booking",
   "Demo sürümünde fiyat ve sefer tarihleri örnektir. Online ödeme henüz aktif değildir.":
     "In the demo, prices and departure dates are samples. Online payment is not active yet.",
   "Online ödeme henüz aktif değildir.": "Online payment is not active yet.",

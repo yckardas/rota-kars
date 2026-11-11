@@ -11,9 +11,6 @@ export const booking: Record<string, string> = {
   "Bu rota için birlikte plan yapalım.": "Let's plan this route together.",
   "Tur seçeneklerine dön": "Back to tours",
   "Yolculuğunuzun ilk adımı tamam.": "The first step of your trip is done.",
-  "Talebiniz kaydedildi. Kesin rezervasyon için acente teyidi gerekir.":
-    "Your request has been saved. Our agency will confirm your booking.",
-  "Bu işlemde ödeme alınmadı.": "No payment was taken.",
   "Özeti yazdır": "Print summary",
   "Rezervasyonumu sorgula": "Look up my booking",
   "Koltuk {seats}": "Seats {seats}",
@@ -86,8 +83,6 @@ export const booking: Record<string, string> = {
   "Koltuk seçimine dön": "Back to seat selection",
   "Özeti incele": "Review summary",
   "Son bir kez göz atalım.": "One last look.",
-  "Tercih ettiğiniz ödeme planını belirleyin. Bu adımda tahsilat yapılmaz.":
-    "Choose how you'd like to pay. You won't be charged at this step.",
   "%30 kapora": "30% deposit",
   "Tam ödeme": "Full payment",
   "Acente onayından sonra": "After agency confirmation",
@@ -97,9 +92,6 @@ export const booking: Record<string, string> = {
     "Once your pre-booking is created, you can pay the chosen amount by card with 3D Secure (SMS verification); your booking is confirmed as soon as the payment goes through. You can also pay our agency by bank transfer or cash.",
   "Bu adımda ödeme alınmaz; kartla ödeme sonraki adımdadır.":
     "No payment at this step; card payment comes next.",
-  "Online ödeme henüz aktif değil.": "Online payment isn't available yet.",
-  "Ön rezervasyon talebinizi iletebilirsiniz. Ödeme seçenekleri ve kesin rezervasyon için acentemizle iletişime geçin.":
-    "You can send your pre-booking request now. Contact our agency for payment options and to confirm your booking.",
   "Bilgileri düzenle": "Edit details",
   "Ön rezervasyon oluştur": "Request pre-booking",
   "{time} hareket": "Departs {time}",
@@ -191,10 +183,6 @@ export const booking: Record<string, string> = {
   Yolcular: "Passengers",
   Koltuklar: "Seats",
   Buluşma: "Meeting point",
-  "Rezervasyonunuz acente tarafından onaylanmıştır. Güncel ödeme ve hareket bilgileri yukarıdadır.":
-    "Your booking has been confirmed by our agency. Current payment and departure details are shown above.",
-  "Ön rezervasyon kesin bilet değildir. Tahsilat kaydedilmemiş ve onaylanmamış talepler 24 saat sonra serbest kalır. Referansınızı ve e-posta adresinizi saklayın.":
-    "A pre-booking is not a confirmed ticket. Unpaid, unconfirmed requests are released after 24 hours. Keep your reference number and email address.",
   // Vakıfbank kart ödemesi
   "Ödeme Vakıfbank sanal POS ile alınır; kartınız 3D Secure (SMS onayı) ile doğrulanır ve kart bilgileriniz saklanmaz.":
     "Payment is taken through VakıfBank's virtual POS; your card is verified with 3D Secure (SMS) and your card details are not stored.",
@@ -249,8 +237,6 @@ export const booking: Record<string, string> = {
   "Ödeme bankanız tarafından onaylanmadı.": "Your bank did not approve the payment.",
   "Bu ödeme zaten alındı.": "This payment has already been received.",
   // Ödeme önizlemesi (PAYMENT_PREVIEW=1)
-  "Kartla ödeme banka onayının ardından açılacak; şimdilik ödeme alınmaz.":
-    "Card payment will open after bank approval; no payment is taken for now.",
   "Önizleme · kartla ödeme banka onayından sonra açılacak": "Preview · card payment opens after bank approval",
   "Kartla ödeme, banka onayının ardından açılacak. Kartınızdan çekim yapılmadı; ön rezervasyonunuz kayıtlı, acentemiz sizinle iletişime geçecek.":
     "Card payment will open after bank approval. Your card was not charged; your pre-booking is saved and our agency will contact you.",
@@ -296,6 +282,41 @@ export const booking: Record<string, string> = {
     "Tour service contract",
   "Belgeleriniz":
     "Your documents",
+  // Ödeme durumuna göre metinler
+  "Ödeme havale veya nakitle; rezervasyonunuzu acentemiz onaylar.":
+    "Pay by bank transfer or cash; our agency confirms your booking.",
+  "Tarih ve koltuğunuzu seçip ön rezervasyonunuzu oluşturun. Ardından kaporayı (%30) ya da tamamını kartla ödediğinizde rezervasyonunuz anında onaylanır ve QR kodlu biletiniz geçerli olur. Havale veya nakitle de ödeyebilirsiniz; o durumda ödemeniz kaydedilince acentemiz onaylar.":
+    "Choose your date and seats to create a pre-booking. When you then pay the deposit (30%) or the full amount by card, your booking is confirmed instantly and your QR ticket becomes valid. You can also pay by bank transfer or cash; in that case our agency confirms once your payment is recorded.",
+  "Tarih ve koltuğunuzu seçip ön rezervasyonunuzu oluşturun; bu adımda ödeme alınmaz. Acentemiz sizinle iletişime geçer, kaporayı (%30) havale veya nakitle ödediğinizde rezervasyonunuzu onaylar. Koltuklarınız bu sırada 24 saate kadar sizin için tutulur.":
+    "Choose your date and seats to create a pre-booking; no payment is taken at this step. Our agency contacts you and confirms your booking once you pay the deposit (30%) by bank transfer or cash. Your seats are held for up to 24 hours meanwhile.",
+  "Kaporayı ödeyince anında onay":
+    "Instant confirmation once the deposit is paid",
+  "Acente onaylı rezervasyon":
+    "Bookings confirmed by the agency",
+  "Koltuklarınız ayrıldı.":
+    "Your seats are held.",
+  "Ön rezervasyonunuz kaydedildi; koltuklarınız 24 saate kadar sizin için tutuluyor. Kaporayı kartla ödediğiniz anda rezervasyonunuz onaylanır. Dilerseniz havale veya nakitle de ödeyebilirsiniz.":
+    "Your pre-booking is saved and your seats are held for up to 24 hours. Your booking is confirmed the moment you pay the deposit by card. You can also pay by bank transfer or cash.",
+  "Ön rezervasyonunuz kaydedildi; koltuklarınız 24 saate kadar sizin için tutuluyor. Acentemiz sizinle iletişime geçecek; kaporayı havale veya nakitle ödediğinizde rezervasyonunuz onaylanır. Bu işlemde ödeme alınmadı.":
+    "Your pre-booking is saved and your seats are held for up to 24 hours. Our agency will contact you; your booking is confirmed once you pay the deposit by bank transfer or cash. No payment was taken.",
+  "Ödeme planınızı seçin. Ödemeyi ön rezervasyonunuz oluşunca, bir sonraki adımda kartla yaparsınız.":
+    "Choose your payment plan. You pay by card in the next step, once your pre-booking is created.",
+  "Ödeme planınızı seçin. Bu adımda ödeme alınmaz.":
+    "Choose your payment plan. No payment is taken at this step.",
+  "Ödeme havale veya nakitle yapılır.":
+    "Payment is by bank transfer or cash.",
+  "Ön rezervasyonunuzu gönderin; acentemiz sizinle iletişime geçip ödeme bilgilerini iletir. Kaporanız kaydedilince rezervasyonunuz onaylanır. Online kartla ödeme henüz aktif değil.":
+    "Send your pre-booking; our agency will contact you with payment details. Your booking is confirmed once your deposit is recorded. Online card payment isn't available yet.",
+  "Kartla ödeme yakında":
+    "Card payment coming soon",
+  "Banka onayının ardından bu tutarı buradan kartla ödeyebileceksiniz. Şimdilik kartınızdan çekim yapılmaz; acentemiz ödeme için sizinle iletişime geçecek.":
+    "Once the bank approves, you'll be able to pay this amount here by card. For now no charge is made to your card; our agency will contact you about payment.",
+  "Kart ekranını görüntüle":
+    "View the card screen",
+  "Rezervasyonunuz onaylandı. Güncel ödeme ve hareket bilgileri yukarıda.":
+    "Your booking is confirmed. Current payment and departure details are above.",
+  "Bu bir ön rezervasyondur; kapora ödenip onaylanınca biletiniz geçerli olur. Ödemesi kaydedilmeyen ön rezervasyonlar 24 saat sonra düşer. Referansınızı ve e-posta adresinizi saklayın.":
+    "This is a pre-booking; your ticket becomes valid once the deposit is paid and confirmed. Pre-bookings without a recorded payment lapse after 24 hours. Keep your reference and e-mail address.",
   // Rezervasyon durumu
   "Koltuk {n} az önce doldu; başka bir koltuk seçin.":
     "Seat {n} was just taken; please choose another seat.",

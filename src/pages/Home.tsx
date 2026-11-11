@@ -221,7 +221,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
             <span>
               {catalog.payment.enabled
                 ? t("Kaporayı kartla güvenle ödeyin; rezervasyonunuz anında onaylanır.")
-                : t("Ödeme havale veya nakit; kart bilgisi istenmez.")}
+                : t("Ödeme havale veya nakitle; rezervasyonunuzu acentemiz onaylar.")}
             </span>
           </p>
         </div>

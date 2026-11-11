@@ -467,13 +467,20 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         <div className="success-icon">
           <Check />
         </div>
-        <h1>{t("Yolculuğunuzun ilk adımı tamam.")}</h1>
+        <h1>
+          {catalog.payment.enabled
+            ? t("Koltuklarınız ayrıldı.")
+            : t("Yolculuğunuzun ilk adımı tamam.")}
+        </h1>
+        {/* Para hiçbir zaman belirsiz kalmaz: ne ödendiği ve neyin onayı getirdiği tek cümlede. */}
         <p>
-          {t(
-            "Talebiniz kaydedildi. Kesin rezervasyon için acente teyidi gerekir.",
-          )}
-          <br />
-          {t("Bu işlemde ödeme alınmadı.")}
+          {catalog.payment.enabled
+            ? t(
+                "Ön rezervasyonunuz kaydedildi; koltuklarınız 24 saate kadar sizin için tutuluyor. Kaporayı kartla ödediğiniz anda rezervasyonunuz onaylanır. Dilerseniz havale veya nakitle de ödeyebilirsiniz.",
+              )
+            : t(
+                "Ön rezervasyonunuz kaydedildi; koltuklarınız 24 saate kadar sizin için tutuluyor. Acentemiz sizinle iletişime geçecek; kaporayı havale veya nakitle ödediğinizde rezervasyonunuz onaylanır. Bu işlemde ödeme alınmadı.",
+              )}
         </p>
         <PayDeposit
           catalog={catalog}
@@ -1091,9 +1098,11 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                 {t("Son bir kez göz atalım.")}
               </h2>
               <p className="muted">
-                {t(
-                  "Tercih ettiğiniz ödeme planını belirleyin. Bu adımda tahsilat yapılmaz.",
-                )}
+                {catalog.payment.enabled
+                  ? t(
+                      "Ödeme planınızı seçin. Ödemeyi ön rezervasyonunuz oluşunca, bir sonraki adımda kartla yaparsınız.",
+                    )
+                  : t("Ödeme planınızı seçin. Bu adımda ödeme alınmaz.")}
               </p>
               <div className="confirmation-passengers">
                 {selected.map((n, i) => (
@@ -1162,10 +1171,10 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                     </>
                   ) : (
                     <>
-                      <strong>{t("Online ödeme henüz aktif değil.")}</strong>
+                      <strong>{t("Ödeme havale veya nakitle yapılır.")}</strong>
                       <p>
                         {t(
-                          "Ön rezervasyon talebinizi iletebilirsiniz. Ödeme seçenekleri ve kesin rezervasyon için acentemizle iletişime geçin.",
+                          "Ön rezervasyonunuzu gönderin; acentemiz sizinle iletişime geçip ödeme bilgilerini iletir. Kaporanız kaydedilince rezervasyonunuz onaylanır. Online kartla ödeme henüz aktif değil.",
                         )}
                       </p>
                     </>
