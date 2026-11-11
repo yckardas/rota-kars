@@ -29,6 +29,10 @@ const ATTEMPTS_PER_RESERVATION = 6;
 const FULL_AUTH_ECI = ["05", "02"];
 export const ATTEMPT_ID = /^PY[0-9A-F]{24}$/;
 export const VAKIFBANK_RETURN_PATH = "/api/payments/vakifbank/return";
+// Önizleme: gerçek ödeme kapalıyken (banka başvurusu sürecinde) kart ekranı
+// gösterilir ama kart hiçbir yere gönderilmez ve çekim yapılmaz.
+export const PREVIEW_MESSAGE =
+  "Kartla ödeme, banka onayının ardından açılacak. Kartınızdan çekim yapılmadı; ön rezervasyonunuz kayıtlı, acentemiz sizinle iletişime geçecek.";
 const DISABLED_MESSAGE =
   "Online ödeme henüz aktif değil. Ön rezervasyon talebiniz acente tarafından değerlendirilecektir.";
 // Ödemenin hangi sağlayıcıyla açık olduğunu belirler. Gerçek para çekmeyen
@@ -51,14 +55,17 @@ function resolveProvider(env) {
   return { name: "vakifbank", test: bank.mode !== "production", bank, base };
 }
 export function paymentConfig(env = process.env) {
-  const p = resolveProvider(env);
+  const p = resolveProvider(env),
+    // PAYMENT_PREVIEW=1: ödeme kapalıyken kart ekranının önizlemesi (banka incelemesi için).
+    preview = !p && env.PAYMENT_PREVIEW === "1";
   return {
     enabled: Boolean(p),
+    preview,
     provider: p?.name ?? null,
     // Gerçek para çekmeyen ortam (deneme, simülatör veya bankanın test sunucusu).
     test: Boolean(p?.test),
     // Kart bilgisi sitenin kendi formunda alınır, 3D Secure ile bankada doğrulanır.
-    cardForm: p?.name === "vakifbank",
+    cardForm: p?.name === "vakifbank" || preview,
     simulator: Boolean(p?.bank?.simulator),
     currency: "TRY",
     modes: ["deposit", "full"],
@@ -95,6 +102,10 @@ function testProvider(secret) {
     },
   };
 }
+const previewProvider = {
+  name: "preview",
+  start: ({ session }) => ({ redirectUrl: "/odeme/kart/" + session.id }),
+};
 const esc = (v) =>
   String(v ?? "").replace(
     /[<>&'"]/g,
@@ -199,7 +210,8 @@ export function createPayments(
     provider,
     // Müşteri ödeme başlatır: referans + e-posta eşleşmeli, kalan kapora/tutar alınır.
     async start(reference, email, { lang = "tr" } = {}) {
-      if (!provider) throw new AppError(503, config.message);
+      const kind = provider ?? (config.preview ? previewProvider : null);
+      if (!kind) throw new AppError(503, config.message);
       const r = await workflow.get(reference);
       if (r.email !== String(email).trim().toLowerCase())
         throw new AppError(
@@ -216,7 +228,7 @@ export function createPayments(
           id,
           reference: r.reference,
           amount,
-          provider: provider.name,
+          provider: kind.name,
           status: "pending",
           lang: lang === "en" ? "en" : "tr",
           attempt_id: null,
@@ -224,7 +236,7 @@ export function createPayments(
           expires_at: clock() + SESSION_MS,
         };
       await db.insert("payment_sessions", id, session);
-      return { ...provider.start({ session, reservation: r }), amount };
+      return { ...kind.start({ session, reservation: r }), amount };
     },
     async session(id) {
       const s = await getSession(id),
@@ -263,6 +275,8 @@ export function createPayments(
     // 1. adım (Vakıfbank): kart doğrulanır, deneme kaydı açılır, bankaya 3D Secure
     // kayıt sorgusu yapılır. Kart yalnız bellekte, şifreli ve kısa süre tutulur.
     async card(sessionId, input) {
+      // Önizlemede kart formu sunucuya gönderilmez; gelirse de işlenmez.
+      if (config.preview) throw new AppError(503, PREVIEW_MESSAGE);
       if (provider?.name !== "vakifbank")
         throw new AppError(503, config.message);
       const s = await getSession(sessionId);

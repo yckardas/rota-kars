@@ -30,7 +30,12 @@ export function PayDeposit({
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const due = Math.max(0, r.deposit - (r.net_paid || 0));
-  if (!catalog.payment.enabled || r.status !== "pending_agency" || !due)
+  const preview = !catalog.payment.enabled && catalog.payment.preview;
+  if (
+    !(catalog.payment.enabled || preview) ||
+    r.status !== "pending_agency" ||
+    !due
+  )
     return null;
   async function pay() {
     setBusy(true);
@@ -73,6 +78,13 @@ export function PayDeposit({
         )}
         {t("Kartla öde")}
       </button>
+      {preview && (
+        <small>
+          {t(
+            "Kartla ödeme banka onayının ardından açılacak; şimdilik ödeme alınmaz.",
+          )}
+        </small>
+      )}
       <small>
         <ShieldCheck size={14} />{" "}
         {catalog.payment.cardForm
@@ -185,7 +197,8 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [pan, setPan] = useState(""),
-    [expiry, setExpiry] = useState("");
+    [expiry, setExpiry] = useState(""),
+    [notice, setNotice] = useState("");
   useEffect(() => {
     api<Session>("/payments/sessions/" + id)
       .then((x) => {
@@ -194,8 +207,20 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
       })
       .catch((e) => setError(e.message));
   }, [id]);
+  const preview = s?.provider === "preview";
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // Önizleme: kart bilgisi hiçbir yere gönderilmez, form temizlenir.
+    if (preview) {
+      e.currentTarget.reset();
+      setPan("");
+      setExpiry("");
+      setError("");
+      setNotice(
+        "Kartla ödeme, banka onayının ardından açılacak. Kartınızdan çekim yapılmadı; ön rezervasyonunuz kayıtlı, acentemiz sizinle iletişime geçecek.",
+      );
+      return;
+    }
     const form = new FormData(e.currentTarget);
     setBusy(true);
     setError("");
@@ -223,6 +248,11 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
             {t("Banka simülasyonu · gerçek para çekilmez")}
           </p>
         )}
+        {preview && (
+          <p className="payment-test-flag">
+            {t("Önizleme · kartla ödeme banka onayından sonra açılacak")}
+          </p>
+        )}
         <h1>{s ? currency(s.amount) : "…"}</h1>
         <p className="muted">
           {s
@@ -234,6 +264,11 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
         {error && (
           <p className="error" role="alert">
             {t(error)}
+          </p>
+        )}
+        {notice && (
+          <p className="card-form-notice" role="status">
+            {t(notice)}
           </p>
         )}
         {open && (

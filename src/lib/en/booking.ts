@@ -256,4 +256,10 @@ export const booking: Record<string, string> = {
     "This booking is no longer waiting for this payment (cancelled, expired or already paid). Your card was not charged.",
   "Ödeme bankanız tarafından onaylanmadı.": "Your bank did not approve the payment.",
   "Bu ödeme zaten alındı.": "This payment has already been received.",
+  // Ödeme önizlemesi (PAYMENT_PREVIEW=1)
+  "Kartla ödeme banka onayının ardından açılacak; şimdilik ödeme alınmaz.":
+    "Card payment will open after bank approval; no payment is taken for now.",
+  "Önizleme · kartla ödeme banka onayından sonra açılacak": "Preview · card payment opens after bank approval",
+  "Kartla ödeme, banka onayının ardından açılacak. Kartınızdan çekim yapılmadı; ön rezervasyonunuz kayıtlı, acentemiz sizinle iletişime geçecek.":
+    "Card payment will open after bank approval. Your card was not charged; your pre-booking is saved and our agency will contact you.",
 };

@@ -2620,6 +2620,15 @@ html:has(.kp) {
   justify-content: center;
   margin-top: 4px;
 }
+.kp .card-form-notice {
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border-left: 3px solid var(--kp-gold);
+  background: var(--kp-snow);
+  font-size: 15px;
+  color: var(--kp-ink);
+  text-align: left;
+}
 .kp .card-form-note {
   display: flex;
   gap: 8px;

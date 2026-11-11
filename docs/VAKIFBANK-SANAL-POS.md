@@ -56,6 +56,17 @@ Ayarlar eksik veya hatalıysa ödeme kendiliğinden kapalı kalır. Bu durumda s
 - `4000 0000 0000 0101` 3D Secure'a kayıtlı değildir.
 - Banka sayfası açıkça "SİMÜLASYON" yazar.
 
+## Banka incelemesi için önizleme (`PAYMENT_PREVIEW=1`)
+
+Banka başvuruyu incelerken ödeme ekranını canlı sitede görmek ister. Gerçek ödeme kapalıyken Railway'de `PAYMENT_PREVIEW=1` ayarlanırsa:
+
+- Rezervasyon sayfasında ve "Rezervasyonum"da **Kartla öde** düğmesi görünür. Altında "Kartla ödeme banka onayının ardından açılacak; şimdilik ödeme alınmaz." notu yer alır.
+- `/odeme/kart/:id` kart formu açılır; üstünde "Önizleme" etiketi bulunur.
+- Form gönderildiğinde kart bilgisi **sunucuya hiç gönderilmez**. Form temizlenir ve "Kartınızdan çekim yapılmadı; ön rezervasyonunuz kayıtlı" mesajı çıkar. Rezervasyon acente onayı bekleyen ön rezervasyon olarak kalır.
+- Gerçek sağlayıcı açıldığında (`PAYMENT_PROVIDER=vakifbank`) önizleme kendiliğinden devre dışı kalır. Yine de değişkeni silmek iyi olur.
+
+Bankaya göstermek için: sitede bir sefere ön rezervasyon yapın, ardından "Kartla öde" düğmesine basın.
+
 ## Bankaya başvururken
 
 Bankanın sanal POS başvurusunda genelde istedikleri ve sitede durumları:
