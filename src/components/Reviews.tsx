@@ -66,7 +66,7 @@ export function Reviews({ tourId }: { tourId?: string }) {
                 </span>
               </span>
               <a
-                className="btn btn-small"
+                className="btn btn-outline btn-small"
                 href={url}
                 target="_blank"
                 rel="noreferrer"

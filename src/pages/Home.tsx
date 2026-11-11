@@ -436,8 +436,9 @@ export function Home({ catalog }: { catalog: Catalog }) {
                 </li>
               ))}
             </ul>
+            {/* Kırmızı yalnız tur rezervasyonu için; yan hizmetler çerçeveli düğme. */}
             <a
-              className="btn"
+              className="btn btn-outline"
               href={whatsappLink(
                 catalog.business.whatsapp,
                 t(
@@ -485,7 +486,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
             </span>
           </div>
           <div className="button-row">
-            <Link className="btn" to="/konaklama">
+            <Link className="btn btn-outline" to="/konaklama">
               {t("Konaklamayı planla")} <ArrowRight size={17} />
             </Link>
             <button className="text-link" onClick={() => setRequest(true)}>

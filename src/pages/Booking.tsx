@@ -504,6 +504,20 @@ export function Booking({ catalog }: { catalog: Catalog }) {
   const seconds = hold
     ? Math.max(0, Math.floor((hold.expiresAt - now) / 1000))
     : 0;
+  const clock = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+  async function extendHold() {
+    if (!hold) return;
+    setExtendBusy(true);
+    setExtendError("");
+    try {
+      const next = await post<Hold>(`/holds/${hold.token}/extend`, {});
+      setHold({ ...hold, expiresAt: next.expiresAt });
+    } catch (e) {
+      setExtendError((e as Error).message);
+    } finally {
+      setExtendBusy(false);
+    }
+  }
   // "Koltuk 3" ya da birden fazla koltukta "Koltuk 3, 4" (İngilizcede çoğul).
   const seatList =
     selected.length > 1
@@ -531,9 +545,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
             aria-live="off"
           >
             <Clock3 size={17} />
-            {t("Koltuklarınız {time} dakika ayrıldı", {
-              time: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`,
-            })}
+            {t("Koltuklarınız için kalan süre: {time}", { time: clock })}
           </span>
         )}
       </div>
@@ -550,21 +562,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
             type="button"
             className="btn btn-small"
             disabled={extendBusy}
-            onClick={async () => {
-              setExtendBusy(true);
-              setExtendError("");
-              try {
-                const next = await post<Hold>(
-                  `/holds/${hold.token}/extend`,
-                  {},
-                );
-                setHold({ ...hold, expiresAt: next.expiresAt });
-              } catch (e) {
-                setExtendError((e as Error).message);
-              } finally {
-                setExtendBusy(false);
-              }
-            }}
+            onClick={extendHold}
           >
             {t("Süreyi 10 dakika uzat")}
           </button>
@@ -1318,6 +1316,23 @@ export function Booking({ catalog }: { catalog: Catalog }) {
           )}
         </div>
         <aside className="booking-summary" ref={summaryRef}>
+          {/* Masaüstünde sabit özet: 2. adımı doldururken kalan süre ve uzatma hep görünür. */}
+          {hold && seconds > 0 && (
+            <div className={"summary-hold" + (seconds <= 120 ? " is-low" : "")}>
+              <Clock3 size={16} />
+              <span>{t("Koltuklarınız için kalan süre: {time}", { time: clock })}</span>
+              {seconds <= 120 && (
+                <button
+                  type="button"
+                  className="text-link"
+                  disabled={extendBusy}
+                  onClick={extendHold}
+                >
+                  {t("Süreyi 10 dakika uzat")}
+                </button>
+              )}
+            </div>
+          )}
           <div className="booking-summary-photo">
             <img
               {...responsive(tour.image, "320px")}
@@ -1389,10 +1404,14 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   </select>
                 </label>
               ) : (
-                <p>
-                  <Link to={membershipHref}>{t("Üye olun")}</Link>
-                  {t(", çarkı çevirin ve tur indirimi kazanın.")}
-                </p>
+                // Koltuk seçildikten sonra kullanıcıyı rezervasyondan çıkaran bağlantı gösterilmez.
+                !selected.length &&
+                !hold && (
+                  <p>
+                    <Link to={membershipHref}>{t("Üye olun")}</Link>
+                    {t(", çarkı çevirin ve tur indirimi kazanın.")}
+                  </p>
+                )
               )}
               {quoteBusy && <small role="status">{t("Fiyat hesaplanıyor…")}</small>}
               {quoteError && (

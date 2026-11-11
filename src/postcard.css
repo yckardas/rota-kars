@@ -4348,3 +4348,68 @@ html:has(.kp) {
     color: var(--kp-red);
   }
 }
+
+/* ---------- Son kontrol 2 (yeniden inceleme 2026-11-11) ---------- */
+/* Masaüstü özet kartında kalan süre ve uzatma */
+.kp .summary-hold {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--kp-rule);
+  border-radius: 4px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--kp-ink);
+}
+.kp .summary-hold > svg {
+  color: var(--kp-ink-2);
+}
+.kp .summary-hold.is-low {
+  border-color: var(--kp-red);
+}
+.kp .summary-hold.is-low > svg,
+.kp .summary-hold.is-low > span {
+  color: var(--kp-red);
+}
+.kp .summary-hold .text-link {
+  font: inherit;
+  font-weight: 600;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  color: var(--kp-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+/* Telefonda özet kartı akışın sonunda; süre orada üst şeritte zaten görünür. */
+@media (max-width: 950px) {
+  .kp .summary-hold {
+    display: none;
+  }
+}
+@media (max-width: 700px) {
+  /* Üst menü simgeleri: en az 44px dokunma alanı (görünür boyut aynı kalır). */
+  .kp .member-header-link,
+  .kp .reservation-link {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-grid;
+    place-items: center;
+    margin: 0 -6px;
+  }
+  .kp .mobile-menu {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  /* "Google'da yorumları okuyun" bağlantısı okunur ve dokunulur boyutta. */
+  .kp .reviews-section .section-heading > .text-link {
+    font-size: 14px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+}

@@ -14,8 +14,9 @@ import {
   type WheelSector,
 } from "./PrizeWheel";
 import { currency } from "../lib/types";
-// Only invite on discovery pages, never mid-booking or on account/ticket pages.
-const INVITE_PAGES = ["/", "/turlar", "/hizmetler", "/hakkimizda"];
+// Yalnız keşif sayfalarında; rezervasyon, hesap ve bilet sayfalarında asla.
+// Tur listesinde de açılmaz: kullanıcı turları karşılaştırırken araya girmesin.
+const INVITE_PAGES = ["/", "/hizmetler", "/hakkimizda"];
 const SEEN_KEY = "rota-membership-invite-v1";
 // Kazanılan hediyenin özeti; üyelik sayfasında "hediyen bekliyor" yazmak için.
 // Asıl hediye sunucuda, rota_wheel çereziyle eşlenmiş olarak durur.
