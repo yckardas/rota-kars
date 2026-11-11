@@ -296,4 +296,13 @@ export const booking: Record<string, string> = {
     "Tour service contract",
   "Belgeleriniz":
     "Your documents",
+  // Rezervasyon durumu
+  "Koltuk {n} az önce doldu; başka bir koltuk seçin.":
+    "Seat {n} was just taken; please choose another seat.",
+  "Yolcu sayısı {n} oldu · {total}":
+    "Passengers now {n} · {total}",
+  "{selected} / {count} koltuk seçildi":
+    "{selected} of {count} seats chosen",
+  "Devam":
+    "Continue",
 };

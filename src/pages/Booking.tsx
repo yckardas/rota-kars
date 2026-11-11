@@ -75,6 +75,8 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     ),
     [seats, setSeats] = useState<Seat[]>([]),
     [selected, setSelected] = useState<number[]>([]),
+    // Koltuk planındaki sessiz değişiklikler (yolcu sayısı arttı, koltuk doldu) burada duyurulur.
+    [seatNotice, setSeatNotice] = useState(""),
     [step, setStep] = useState(0),
     [hold, setHold] = useState<Hold | null>(null),
     [busy, setBusy] = useState(false),
@@ -230,6 +232,27 @@ export function Booking({ catalog }: { catalog: Catalog }) {
   }, [step, departureId, mode, couponId]);
   const holdRef = useRef<Hold | null>(null);
   holdRef.current = hold;
+  const selectedRef = useRef<number[]>([]);
+  selectedRef.current = selected;
+  // Telefonda 1. adımın "Devam" çubuğu: asıl düğme ekranda değilken görünür.
+  const continueRef = useRef<HTMLButtonElement>(null),
+    [continueInView, setContinueInView] = useState(true);
+  useEffect(() => {
+    const el = continueRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([e]) => setContinueInView(e.isIntersecting));
+    io.observe(el);
+    return () => io.disconnect();
+  }, [step, loaded]);
+  // Çubuk görünürken telefondaki WhatsApp/asistan düğmeleri onun üstüne binmesin.
+  const barShown = step === 0 && selected.length > 0 && !continueInView;
+  useEffect(() => {
+    if (barShown) document.body.dataset.continueBar = "";
+    else delete document.body.dataset.continueBar;
+    return () => {
+      delete document.body.dataset.continueBar;
+    };
+  }, [barShown]);
   const departure = departures.find((d) => d.id === departureId),
     subtotal = (departure?.price || tour?.price || 0) * count,
     total = quote?.total ?? subtotal;
@@ -269,6 +292,18 @@ export function Booking({ catalog }: { catalog: Catalog }) {
           if (active) {
             setSeats(d.seats);
             setActiveVehicle(d.vehicle);
+            // Seçili ama henüz tutulmamış koltuk bu arada başkasına geçtiyse bırakılır.
+            const lost = selectedRef.current.filter(
+              (n) => d.seats.find((s) => s.number === n)?.status !== "available",
+            );
+            if (lost.length) {
+              setSelected((cur) => cur.filter((n) => !lost.includes(n)));
+              setSeatNotice(
+                t("Koltuk {n} az önce doldu; başka bir koltuk seçin.", {
+                  n: lost.join(", "),
+                }),
+              );
+            }
           }
         })
         .catch((e) => {
@@ -347,6 +382,8 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     }
     setStep(Math.max(0, step - 1));
     setError("");
+    // Geri dönünce sayfanın dibinde kalınmaz; ileri giderken olduğu gibi adımın başına çıkılır.
+    window.scrollTo({ top: 120, behavior: "smooth" });
   }
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -539,7 +576,15 @@ export function Booking({ catalog }: { catalog: Catalog }) {
             {selected.length ? ` · ${seatList}` : ""}
           </span>
         </div>
-        <b>{currency(total)}</b>
+        <div className="booking-mini-end">
+          <b>{currency(total)}</b>
+          {hold && seconds > 0 && (
+            <small className={"mini-timer" + (seconds <= 120 ? " is-low" : "")}>
+              <Clock3 size={13} />
+              {`${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`}
+            </small>
+          )}
+        </div>
       </div>
       <div className="booking-layout">
         <div className="booking-main">
@@ -626,14 +671,22 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   selected={selected}
                   onSelect={(n) => {
                     setError("");
+                    setSeatNotice("");
                     if (selected.includes(n))
                       setSelected(selected.filter((s) => s !== n));
                     else if (selected.length < count)
                       setSelected([...selected, n]);
-                    // Yolcu sayısı dolduysa koltuk seçimi sayıyı 4'e kadar büyütür.
+                    // Yolcu sayısı dolduysa koltuk seçimi sayıyı 4'e kadar büyütür;
+                    // bu sessiz kalmaz: yeni sayı ve tutar duyurulur.
                     else if (count < Math.min(MAX_SEATS, vehicle.sellableSeats)) {
                       setCount(count + 1);
                       setSelected([...selected, n]);
+                      setSeatNotice(
+                        t("Yolcu sayısı {n} oldu · {total}", {
+                          n: count + 1,
+                          total: currency((departure?.price || tour.price) * (count + 1)),
+                        }),
+                      );
                     } else
                       setError(
                         t(
@@ -686,6 +739,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                         count,
                       })}
                     </small>
+                    <p className="seat-notice" role="status" aria-live="polite">
+                      {seatNotice}
+                    </p>
                   </div>
                   <div className="inline-note">
                     <LockKeyhole size={16} />
@@ -702,12 +758,41 @@ export function Booking({ catalog }: { catalog: Catalog }) {
               </div>
               <button
                 className="btn"
+                ref={continueRef}
                 disabled={busy || !departureId}
                 onClick={chooseSeats}
               >
                 {busy ? <LoaderCircle className="spin" size={17} /> : null}
                 {t("Yolcu bilgilerine geç")} <ArrowRight size={17} />
               </button>
+              {selected.length > 0 && (
+                <div
+                  className={
+                    "booking-continue-bar" + (continueInView ? " is-tucked" : "")
+                  }
+                  aria-hidden={continueInView || undefined}
+                >
+                  <div>
+                    <strong>{currency(total)}</strong>
+                    <span>
+                      {selected.length === count
+                        ? seatList
+                        : t("{selected} / {count} koltuk seçildi", {
+                            selected: selected.length,
+                            count,
+                          })}
+                    </span>
+                  </div>
+                  <button
+                    className="btn"
+                    tabIndex={continueInView ? -1 : undefined}
+                    disabled={busy || selected.length !== count}
+                    onClick={chooseSeats}
+                  >
+                    {t("Devam")} <ArrowRight size={17} />
+                  </button>
+                </div>
+              )}
             </>
           ) : step === 1 ? (
             <form
