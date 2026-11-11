@@ -36,6 +36,9 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
     [activeImage, setActiveImage] = useState(0);
   const strip = useRef<HTMLDivElement>(null),
     stripVisible = useClearOfLaunchers(strip);
+  // Telefonda da: "Tarih ve koltuk seç" görünürken WhatsApp ve asistan düğmeleri
+  // onun üstüne binmesin (ana sayfada düğmeler yerinde kalır).
+  useClearOfLaunchers(strip, "actionVisible");
   useEffect(() => {
     setActiveImage(0);
     if (t && !t.inquiryOnly)
