@@ -3691,3 +3691,166 @@ html:has(.kp) {
     max-height: 220px;
   }
 }
+
+/* ---------- Şans çarkı ----------
+   Kartpostal malzemesi: mürekkep, kâğıt ve uçak postası kırmızısı dilimler,
+   çevresinde uçak postası şeridi, ortada damga gibi "ROTA". Dönüş tek bir
+   uzun yavaşlamayla biter; hareket azaltılmışsa çark doğrudan sonuçta durur. */
+.prize-wheel-box {
+  width: min(300px, 78vw);
+  margin: 18px auto 10px;
+}
+.prize-wheel-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.wheel-face {
+  transform-origin: 150px 150px;
+}
+.wheel-face.moving {
+  transition: transform 4.2s cubic-bezier(0.12, 0.6, 0.08, 1);
+}
+.wheel-slice {
+  stroke: var(--kp-card, #fff);
+  stroke-width: 1.5;
+}
+.wheel-slice.ink {
+  fill: var(--kp-ink, #1a2846);
+}
+.wheel-slice.card {
+  fill: var(--kp-card, #fff);
+}
+.wheel-slice.red {
+  fill: var(--kp-red, #c2342b);
+}
+.wheel-label {
+  font-family: var(--display);
+  font-size: 21px;
+  fill: var(--kp-card, #fff);
+  pointer-events: none;
+}
+.wheel-label.card {
+  fill: var(--kp-ink, #1a2846);
+}
+.wheel-rim {
+  fill: none;
+  stroke: var(--kp-card, #fff);
+  stroke-width: 10;
+}
+.wheel-rim-red,
+.wheel-rim-ink {
+  fill: none;
+  stroke-width: 10;
+  stroke-dasharray: 12 20;
+}
+.wheel-rim-red {
+  stroke: var(--kp-red, #c2342b);
+}
+.wheel-rim-ink {
+  stroke: var(--kp-ink, #1a2846);
+  stroke-dashoffset: -16;
+}
+.wheel-hub {
+  fill: var(--kp-card, #fff);
+  stroke: var(--kp-red, #c2342b);
+  stroke-width: 2;
+  stroke-dasharray: 3 3;
+}
+.wheel-hub-text {
+  font-family: var(--display);
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  fill: var(--kp-gold, #8a6128);
+}
+.wheel-pointer-svg {
+  fill: var(--kp-red, #c2342b);
+  stroke: var(--kp-card, #fff);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 2px 2px rgba(26, 40, 70, 0.25));
+}
+@media (prefers-reduced-motion: reduce) {
+  .wheel-face.moving {
+    transition: none;
+  }
+}
+
+/* Davet penceresi: çark */
+.kp .wheel-invite {
+  text-align: center;
+}
+.kp .wheel-invite h2 {
+  font-size: clamp(26px, 6vw, 32px);
+  line-height: 1.15;
+  margin: 4px 0 0;
+}
+.kp .wheel-status {
+  min-height: 3em;
+  margin: 4px auto 14px;
+  max-width: 34ch;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--kp-ink-2);
+}
+.kp .wheel-terms {
+  margin-top: 14px;
+  text-align: left;
+  font-size: 13px;
+  color: var(--kp-ink-2);
+}
+.kp .wheel-terms summary {
+  cursor: pointer;
+  text-align: center;
+  color: var(--kp-ink);
+}
+.kp .wheel-terms ul {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 18px;
+}
+.kp .wheel-terms li {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--kp-hair);
+  padding: 4px 0;
+}
+.kp .wheel-terms p {
+  margin: 8px 0 0;
+  line-height: 1.55;
+}
+.kp .wheel-terms a {
+  color: var(--kp-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Üyelik sayfası: bekleyen çark hediyesi */
+.kp .wheel-pending-note {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px dashed var(--kp-red);
+  border-radius: 4px;
+  background: var(--kp-card);
+}
+.kp .wheel-pending-note > svg {
+  color: var(--kp-red);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.kp .wheel-pending-note p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--kp-ink-2);
+}
+.kp .wheel-pending-note strong {
+  color: var(--kp-ink);
+}

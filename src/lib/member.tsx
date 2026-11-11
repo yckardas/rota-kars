@@ -16,7 +16,11 @@ export type Member = {
 };
 export type Coupon = {
   id: string;
+  // Eski kuponlarda kind yoktur: yüzde kupon sayılır.
+  kind?: "percent" | "amount";
   percent: number;
+  // Tutar kuponu (kuruş).
+  amount?: number;
   source: string;
   policy_json?: string;
   expires_at: number;
@@ -27,8 +31,10 @@ export type MemberDashboard = {
   coupons: Coupon[];
   spin: {
     prize_index: number;
-    coupon_id: string;
-    sectors_json?: string;
+    // Misafir hediyesi e-posta doğrulanana kadar kupona dönüşmez (null).
+    coupon_id: string | null;
+    prize_json?: { kind: "percent" | "amount"; value: number; weight: number };
+    sectors_json?: unknown;
   } | null;
   referrals: { total: number; rewarded: number };
   reservations: {

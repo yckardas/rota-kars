@@ -100,9 +100,17 @@ export function attachAdvancedApi(
       const input = z
         .object({
           active: z.boolean(),
+          // Yüzde: 1–50; tutar: kuruş, 10–1.000 TL; ağırlık: kazanma payı.
           sectors: z
-            .array(z.union([z.literal(5), z.literal(10), z.literal(15)]))
-            .length(6),
+            .array(
+              z.discriminatedUnion("kind", [
+                z.object({ kind: z.literal("percent"), value: z.number().int().min(1).max(50), weight: z.number().int().min(1).max(1000) }),
+                z.object({ kind: z.literal("amount"), value: z.number().int().min(1000).max(100000), weight: z.number().int().min(1).max(1000) }),
+              ]),
+            )
+            .min(4)
+            .max(8),
+          amountMinTotal: z.number().int().min(0).max(100000000),
           validDays: z.number().int().min(1).max(365),
           minTotal: z.number().int().min(0).max(100000000),
           tourIds: z.array(tourId).max(tours.length),

@@ -8,6 +8,11 @@ import {
 import { promisify } from "node:util";
 import { AppError } from "./store.mjs";
 import { fromJson } from "./database.mjs";
+import { pickSector } from "./campaigns.mjs";
+// Misafirin çevirdiği hediye bu süre içinde üyelikle sahiplenilebilir.
+const WHEEL_PRIZE_DAYS = 7;
+// Aynı IP'den 24 saatte en çok bu kadar misafir çevirmesi.
+const WHEEL_SPINS_PER_IP = 3;
 const derive = promisify(scrypt),
   digest = (s) => createHash("sha256").update(s).digest("hex");
 export async function hashPassword(password) {
@@ -48,21 +53,51 @@ export async function createMembers(db, { clock, tx, campaigns }) {
           phone: m.phone || "",
         }
       : null;
-  const coupon = async (memberId, percent, source) => {
+  // prize: yüzde (sayı ya da { kind: "percent", value }) veya { kind: "amount", value: kuruş }.
+  const coupon = async (memberId, prize, source) => {
     const policy = await campaigns.get();
+    const p = typeof prize === "number" ? { kind: "percent", value: prize } : prize,
+      amount = p.kind === "amount";
     const id = randomBytes(16).toString("hex");
     await db.insert("member_coupons", id, {
       id,
       member_id: memberId,
-      percent,
+      kind: amount ? "amount" : "percent",
+      percent: amount ? 0 : p.value,
+      amount: amount ? p.value : 0,
       source,
       created_at: clock(),
       expires_at: clock() + policy.validDays * 86400000,
       used_reservation: null,
-      policy_json: { minTotal: policy.minTotal, tourIds: policy.tourIds },
+      // TL kuponu yalnız amountMinTotal ve üzerindeki turlarda geçer.
+      policy_json: {
+        minTotal: amount ? Math.max(policy.minTotal, policy.amountMinTotal) : policy.minTotal,
+        tourIds: policy.tourIds,
+      },
     });
     return db.one("member_coupons", { _id: id });
   };
+  // Çark hediyesi kupona dönüşür: e-posta doğrulaması gerekiyorsa doğrulanınca.
+  // Hediye çark çevrildiğinde değil, aktifleştiği anda kupon olur; süresi o an başlar.
+  const activatePending = async (memberId) => {
+    const spin = await db.one("member_spins", { _id: memberId, coupon_id: null });
+    if (!spin) return null;
+    const campaign = await campaigns.get();
+    if (campaign.requireVerified && !(await db.one("members", { _id: memberId }))?.email_verified)
+      return null;
+    const prize = fromJson(spin.prize_json, null);
+    if (!prize) return null;
+    const c = await coupon(memberId, prize, "wheel");
+    const updated = await db.update(
+      "member_spins",
+      { _id: memberId, coupon_id: null },
+      { coupon_id: c.id, activated_at: clock() },
+    );
+    // Eşzamanlı iki istekte yalnız biri kupon bağlar; fazlası silinir.
+    if (!updated) await db.remove("member_coupons", { _id: c.id });
+    return updated ? c : null;
+  };
+  const ipHash = (ip) => digest("rota-wheel:" + String(ip || ""));
   const insert = async ({ name, email, passwordHash = null, referralCode }) => {
     const normalized = email.trim().toLowerCase();
     if (await db.one("members", { email: normalized }))
@@ -187,10 +222,12 @@ export async function createMembers(db, { clock, tx, campaigns }) {
       );
       return {
         member: publicMember(row),
-        coupons: await db.find(
-          "member_coupons",
-          { member_id: memberId },
-          { sort: { created_at: -1, id: 1 } },
+        coupons: await activatePending(memberId).then(() =>
+          db.find(
+            "member_coupons",
+            { member_id: memberId },
+            { sort: { created_at: -1, id: 1 } },
+          ),
         ),
         spin: (await db.one("member_spins", { _id: memberId })) || null,
         referrals: {
@@ -226,21 +263,111 @@ export async function createMembers(db, { clock, tx, campaigns }) {
           !(await db.one("members", { _id: memberId }))?.email_verified
         )
           throw new AppError(403, "Önce e-posta adresinizi doğrulayın.");
-        const index = randomInt(campaign.sectors.length),
-          prize = await coupon(memberId, campaign.sectors[index], "wheel");
+        const index = pickSector(campaign.sectors),
+          sector = campaign.sectors[index],
+          prize = await coupon(memberId, sector, "wheel");
         await db.insert("member_spins", memberId, {
           member_id: memberId,
           coupon_id: prize.id,
           prize_index: index,
+          prize_json: sector,
           sectors_json: campaign.sectors,
+          activated_at: clock(),
         });
         return {
           coupon: prize,
           index,
+          prize: sector,
           sectors: campaign.sectors,
         };
       });
     },
+    // Üye olmadan, davet penceresinde çevrilen çark. Sonuç sunucuda seçilir ve
+    // tarayıcıya yalnız bir jeton (çerez) verilir; hediye üyelikle sahiplenilir.
+    // Jetonu hâlâ geçerli olan misafir yeniden çeviremez, aynı sonucu görür.
+    guestSpin({ token = null, ip = "" } = {}) {
+      return tx(async () => {
+        const campaign = await campaigns.get();
+        if (!campaign.active)
+          throw new AppError(409, "Şans çarkı kampanyası şu anda kapalı.");
+        if (token) {
+          const existing = await db.one("wheel_prizes", {
+            token_hash: digest(token),
+            member_id: null,
+            expires_at: { $gt: clock() },
+          });
+          if (existing)
+            return {
+              token,
+              index: existing.prize_index,
+              prize: fromJson(existing.prize_json, null),
+              sectors: fromJson(existing.sectors_json, campaign.sectors),
+              expiresAt: existing.expires_at,
+              repeated: true,
+            };
+        }
+        const recent = await db.count("wheel_prizes", {
+          ip_hash: ipHash(ip),
+          created_at: { $gt: clock() - 86400000 },
+        });
+        if (recent >= WHEEL_SPINS_PER_IP)
+          throw new AppError(429, "Bugünlük çark hakkı doldu. Yarın yeniden deneyebilirsiniz.");
+        const index = pickSector(campaign.sectors),
+          fresh = randomBytes(24).toString("hex"),
+          id = randomBytes(16).toString("hex"),
+          expiresAt = clock() + WHEEL_PRIZE_DAYS * 86400000;
+        await db.insert("wheel_prizes", id, {
+          id,
+          token_hash: digest(fresh),
+          ip_hash: ipHash(ip),
+          prize_index: index,
+          prize_json: campaign.sectors[index],
+          sectors_json: campaign.sectors,
+          member_id: null,
+          created_at: clock(),
+          expires_at: expiresAt,
+        });
+        return {
+          token: fresh,
+          index,
+          prize: campaign.sectors[index],
+          sectors: campaign.sectors,
+          expiresAt,
+          repeated: false,
+        };
+      });
+    },
+    // Misafir hediyesini üyeye bağlar (kayıt, giriş, sosyal giriş). Üyenin çark
+    // hakkı zaten kullanılmışsa hediye bağlanmaz. Bağlanan hediye e-posta
+    // doğrulanınca kupona dönüşür (activatePending).
+    claimWheel(memberId, token) {
+      if (!token) return Promise.resolve(null);
+      return tx(async () => {
+        const prize = await db.one("wheel_prizes", {
+          token_hash: digest(token),
+          member_id: null,
+          expires_at: { $gt: clock() },
+        });
+        if (!prize) return null;
+        if (await db.one("member_spins", { _id: memberId })) return null;
+        const taken = await db.update(
+          "wheel_prizes",
+          { _id: prize.id, member_id: null },
+          { member_id: memberId, claimed_at: clock() },
+        );
+        if (!taken) return null;
+        await db.insert("member_spins", memberId, {
+          member_id: memberId,
+          coupon_id: null,
+          prize_index: prize.prize_index,
+          prize_json: fromJson(prize.prize_json, null),
+          sectors_json: fromJson(prize.sectors_json, null),
+          source: "guest",
+        });
+        return activatePending(memberId);
+      });
+    },
+    activatePending,
     async priceCoupon(memberId, couponId, subtotal, tourId = null) {
       if (!couponId)
         return {
@@ -275,7 +402,11 @@ export async function createMembers(db, { clock, tx, campaigns }) {
         );
       if (policy.tourIds?.length && !policy.tourIds.includes(tourId))
         throw new AppError(400, "Bu kupon seçilen turda geçerli değil.");
-      const discount = Math.round((subtotal * c.percent) / 100);
+      // TL kuponu toplamı aşamaz; yüzde kupon toplamın yüzdesi kadardır.
+      const discount =
+        c.kind === "amount"
+          ? Math.min(Number(c.amount) || 0, subtotal)
+          : Math.round((subtotal * c.percent) / 100);
       return {
         discount,
         total: subtotal - discount,

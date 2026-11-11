@@ -201,7 +201,7 @@ test("campaign policy is snapshotted, minimum and eligible tour enforced; verifi
     m = await member(s);
   await s.campaigns.save({
     ...(await s.campaigns.get()),
-    sectors: [15, 15, 15, 15, 15, 15],
+    sectors: Array.from({ length: 6 }, () => ({ kind: "percent", value: 15, weight: 1 })),
     minTotal: 200000,
     tourIds: ["ani-cildir"],
     validDays: 7,

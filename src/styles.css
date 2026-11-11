@@ -5697,68 +5697,6 @@ input[type="radio"] {
   color: var(--muted);
   font-size: 10px;
 }
-.wheel-wrap {
-  position: relative;
-  width: 280px;
-  height: 280px;
-  margin: 32px auto;
-  padding: 10px;
-}
-.prize-wheel {
-  position: relative;
-  width: 260px;
-  height: 260px;
-  border: 7px solid white;
-  border-radius: 50%;
-  background: conic-gradient(
-    #193c4b 0deg 60deg,
-    #d8b377 60deg 120deg,
-    #e3edf0 120deg 180deg,
-    #193c4b 180deg 240deg,
-    #d8b377 240deg 300deg,
-    #e3edf0 300deg 360deg
-  );
-  box-shadow:
-    0 0 0 1px #d5dfe4,
-    0 8px 22px #173a4815;
-  transition: transform 4.2s cubic-bezier(0.14, 0.65, 0.1, 1);
-}
-.prize-wheel > span {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  color: white;
-  font-size: 23px;
-  font-weight: 600;
-}
-.prize-wheel > span:nth-child(3n) {
-  color: var(--navy);
-}
-.wheel-pointer {
-  position: absolute;
-  top: -2px;
-  left: calc(50% - 10px);
-  z-index: 2;
-  width: 0;
-  height: 0;
-  border-left: 10px solid transparent;
-  border-right: 10px solid transparent;
-  border-top: 25px solid var(--gold);
-  filter: drop-shadow(0 2px 2px #173a4820);
-}
-.wheel-center {
-  position: absolute;
-  top: calc(50% - 27px);
-  left: calc(50% - 27px);
-  width: 54px;
-  height: 54px;
-  display: grid;
-  place-items: center;
-  background: white;
-  color: var(--gold-text);
-  border: 5px solid #f2f6f7;
-  border-radius: 50%;
-}
 .wheel-result {
   color: #256548 !important;
   font-weight: 600;
@@ -6106,10 +6044,6 @@ input[type="radio"] {
   .referral-panel {
     padding: 26px 20px;
   }
-  .wheel-wrap {
-    transform: scale(0.92);
-    margin: 17px auto;
-  }
   .referral-panel h2 {
     font-size: 36px;
   }
@@ -6144,7 +6078,6 @@ input[type="radio"] {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .prize-wheel,
   .service-card {
     transition: none;
   }
@@ -6297,8 +6230,20 @@ input[type="radio"] {
 }
 .campaign-sectors {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 12px;
+  margin-bottom: 12px;
+}
+.campaign-sector {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px 12px;
+  margin: 0;
+}
+.campaign-sector legend {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 4px;
 }
 .notification-list {
   display: grid;
@@ -6404,9 +6349,6 @@ input[type="radio"] {
   font-size: 13px;
 }
 @media (max-width: 700px) {
-  .campaign-sectors {
-    grid-template-columns: repeat(3, 1fr);
-  }
   .profile-settings {
     grid-template-columns: 1fr;
     padding: 20px;

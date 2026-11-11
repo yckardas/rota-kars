@@ -296,6 +296,8 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx, pii
       await db.remove("admin_sessions", { expires_at: { $lt: now } });
       await db.remove("account_tokens", { expires_at: { $lt: now - 30 * DAY } });
       await db.remove("oauth_used", { expires_at: { $lt: now } });
+      // Sahiplenilmeyen misafir çark hediyeleri (IP özeti dahil) süresinden 30 gün sonra.
+      await db.remove("wheel_prizes", { member_id: null, expires_at: { $lt: now - 30 * DAY } });
       await db.remove("push_log", { created_at: { $lt: now - 30 * DAY } });
       // Uzun süredir görülmeyen (uygulaması silinmiş/açılmayan) cihazlar.
       await db.remove("push_devices", { last_seen: { $lt: now - 120 * DAY } });
