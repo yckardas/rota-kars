@@ -388,4 +388,31 @@ export const site: Record<string, string> = {
     "One prize per account. The coupon is issued when your e-mail is verified and is valid for {days} days. Lira discounts apply to bookings of {min} or more and never exceed the tour price.",
   "Kampanya koşulları":
     "Campaign terms",
+  // Ana sayfa sadeleşme
+  "Kars’ta başka neler var?":
+    "What else is there in Kars?",
+  "Transfer ve özel ulaşım":
+    "Transfers and private transport",
+  "Havalimanı transferi, VIP araç, kongre ve gezi ulaşımı.":
+    "Airport transfers, VIP vehicles, congress and trip transport.",
+  "Şoförlü araç kiralama":
+    "Vehicle hire with driver",
+  "4+1’den 46+1’e araç; D2 ve B2 belgeli, deneyimli kaptanlarla.":
+    "Vehicles from 4+1 to 46+1, D2 and B2 licensed, with experienced drivers.",
+  "Filoyu görün":
+    "See the fleet",
+  "Bir gün daha kalın":
+    "Stay one more day",
+  "Turunuzun öncesinde veya sonrasında anlaşmalı otellerde konaklama.":
+    "Stay at our partner hotels before or after your tour.",
+  "Bütün turları görün ({n})":
+    "See all tours ({n})",
+  "İlk hareket {date}":
+    "First departure {date}",
+  "dolu":
+    "full",
+  "son {n} koltuk":
+    "last {n} seats",
+  "{n} boş koltuk":
+    "{n} seats left",
 };

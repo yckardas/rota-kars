@@ -11,6 +11,7 @@ import {
 import type { Catalog } from "../lib/types";
 import { responsive } from "../lib/images";
 import { RequestForm } from "../components/RequestForm";
+import { FleetSection } from "../components/FleetSection";
 const details: Record<
   string,
   {
@@ -173,6 +174,7 @@ export function Services({ catalog }: { catalog: Catalog }) {
             </Link>
           ))}
         </section>
+        <FleetSection catalog={catalog} />
       </>
     );
   return (
