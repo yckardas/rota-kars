@@ -274,9 +274,13 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
             <details>
               <summary>{tx("Rezervasyon nasıl kesinleşir?")}</summary>
               <p>
-                {tx(
-                  "Ön rezervasyonunuzu tarih ve koltuk seçerek oluşturabilirsiniz. Bu aşamada tahsilat yapılmaz. Acente programı ve ödeme koşullarını teyit ettikten sonra kesin rezervasyon sürecini tamamlar.",
-                )}
+                {catalog.payment.enabled
+                  ? tx(
+                      "Tarih ve koltuğunuzu seçip ön rezervasyonunuzu oluşturun. Ardından kaporayı (%30) ya da tamamını kartla ödediğinizde rezervasyonunuz anında onaylanır ve QR kodlu biletiniz geçerli olur. Havale veya nakitle de ödeyebilirsiniz; o durumda ödemeniz kaydedilince acentemiz onaylar.",
+                    )
+                  : tx(
+                      "Tarih ve koltuğunuzu seçip ön rezervasyonunuzu oluşturun; bu adımda ödeme alınmaz. Acentemiz sizinle iletişime geçer, kaporayı (%30) havale veya nakitle ödediğinizde rezervasyonunuzu onaylar. Koltuklarınız bu sırada 24 saate kadar sizin için tutulur.",
+                    )}
               </p>
             </details>
             <details>
@@ -296,9 +300,11 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
                 {tx("İptal ve program değişikliği nasıl olur?")}
               </summary>
               <p>
-                {tx(
-                  "Ön rezervasyon talebinizi referans numarası ve e-posta adresinizle sorgulayabilir, acente onayı bekleyen talebinizi iptal edebilirsiniz. Kesin rezervasyonun iptal ve iade koşulları acente tarafından tur bazında paylaşılır.",
-                )}
+                {/* Tek kaynak: katalogdaki iptal metni (server/catalog.mjs). */}
+                {catalog.cancellationPolicy}{" "}
+                <Link to="/bilgilendirme#iptal">
+                  {tx("İptal ve iade koşulları")}
+                </Link>
               </p>
             </details>
           </section>
@@ -356,7 +362,9 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
             </span>
             <span>
               <Check size={15} />
-              {tx("Acente onaylı ön rezervasyon")}
+              {catalog.payment.enabled
+                ? tx("Kaporayı ödeyince anında onay")
+                : tx("Acente onaylı rezervasyon")}
             </span>
           </div>
           {catalog.demo ? (
