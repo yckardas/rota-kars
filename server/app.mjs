@@ -39,7 +39,8 @@ import { fcmHint } from "./push.mjs";
 import { normalizeInstagramUrl, createInstagramFeed } from "./instagram.mjs";
 import { AppError, REQUEST_STATUS } from "./store.mjs";
 import { createReviewsService } from "./reviews.mjs";
-import { createPayments, depositFor } from "./payments.mjs";
+import { createPayments, depositFor, VAKIFBANK_RETURN_PATH } from "./payments.mjs";
+import { attachBankSimulator } from "./bank-simulator.mjs";
 const clean = z.string().trim().min(2).max(100),
   email = z.string().trim().email().max(254),
   phone = z
@@ -138,6 +139,7 @@ export function createApp(
       store,
     }),
     socialFetch = fetch,
+    bankFetch = null,
     instagramFeed = createInstagramFeed({
       env,
       settings: store.instagramSettings,
@@ -149,7 +151,9 @@ export function createApp(
   const payments = createPayments(store.db, {
       clock: store.clock || Date.now,
       workflow: store.workflow,
+      notifications: store.notifications,
       env,
+      bankFetch,
     }),
     paymentStatus = payments.config;
   // Giriş denemesi sınırları: IP başına limite ek olarak hesap (e-posta) başına ve
@@ -248,6 +252,11 @@ export function createApp(
   const sameSite = (req) =>
     req.headers.origin === `${req.protocol}://${req.headers.host}` ||
     configuredOrigins.includes(req.headers.origin);
+  // Bankanın 3D Secure dönüşü tarayıcıdan form olarak gelir.
+  app.use(
+    VAKIFBANK_RETURN_PATH,
+    express.urlencoded({ extended: false, limit: "16kb" }),
+  );
   app.use(
     "/api/auth/callback",
     express.urlencoded({
@@ -266,9 +275,13 @@ export function createApp(
       "X-Content-Type-Options": "nosniff",
       "Referrer-Policy": "strict-origin-when-cross-origin",
     });
-    const appleCallback =
-      req.path === "/auth/callback/apple" && req.method === "POST";
-    if (req.method !== "GET" && req.method !== "HEAD" && !appleCallback) {
+    // Apple girişi ve banka 3D dönüşü başka siteden gelen form gönderimidir; kendi
+    // doğrulamalarıyla (imzalı durum çerezi / bankayla sunucudan sunucuya onay) korunur.
+    const crossSiteForm =
+      req.method === "POST" &&
+      (req.path === "/auth/callback/apple" ||
+        "/api" + req.path === VAKIFBANK_RETURN_PATH);
+    if (req.method !== "GET" && req.method !== "HEAD" && !crossSiteForm) {
       if (req.headers.origin && !sameSite(req))
         return res.status(403).json({
           message: "Bu kaynaktan işlem yapılamaz.",
@@ -285,7 +298,9 @@ export function createApp(
           ? "login"
           : req.path === "/chat"
             ? "chat"
-            : req.method === "POST" && req.path === "/holds"
+            : req.method === "POST" && req.path.startsWith("/payments/card/")
+              ? "card"
+              : req.method === "POST" && req.path === "/holds"
               ? "hold"
               : req.method === "POST" && req.path === "/reservations"
                 ? "booking"
@@ -310,6 +325,8 @@ export function createApp(
         // kötüye kullanıma karşı ayrıca sınırlanır.
         hold: Number(env.HOLD_LIMIT_PER_15MIN || 20),
         booking: Number(env.BOOKING_LIMIT_PER_15MIN || 6),
+        // Kart denemesi: çalıntı kart denemelerine karşı IP başına ayrıca sınırlı.
+        card: 12,
         api: 300,
       }[bucket]
     )
@@ -871,11 +888,61 @@ export function createApp(
     "/api/payments/start",
     route(async (q, r) => {
       const input = z
-        .object({ reference: referenceInput, email })
+        .object({ reference: referenceInput, email, lang: z.enum(["tr", "en"]).optional() })
         .parse(q.body);
-      r.json(await payments.start(input.reference, input.email));
+      r.json(await payments.start(input.reference, input.email, { lang: input.lang }));
     }),
   );
+  // Vakıfbank kart ödemesi. Kart bilgisi veritabanına ve loglara yazılmaz; 3D
+  // Secure süresince bellekte şifreli tutulur (server/vakifbank.mjs).
+  const paymentSessionId = z.string().regex(/^[a-f0-9]{48}$/);
+  app.post(
+    "/api/payments/card/:id",
+    route(async (q, r) => {
+      const id = paymentSessionId.parse(q.params.id),
+        card = z
+          .object({
+            holder: z.string().max(80),
+            pan: z.string().max(30),
+            expiry: z.string().max(10),
+            cvv: z.string().max(6),
+          })
+          .parse(q.body);
+      r.json(await payments.card(id, card));
+    }),
+  );
+  // Bankanın 3D dönüşü: sonuç sayfasına (başarılı) veya kart formuna (yeniden dene) döner.
+  app.post(
+    VAKIFBANK_RETURN_PATH,
+    route(async (q, r) => {
+      const result = await payments.completeCard(
+        q.body || {},
+        String(q.ip || "").replace(/^::ffff:/, ""),
+      );
+      if (!result.sessionId) return r.redirect(303, "/");
+      const prefix = result.lang === "en" ? "/en" : "";
+      r.redirect(
+        303,
+        prefix +
+          (result.retry ? "/odeme/kart/" : "/odeme/sonuc/") +
+          result.sessionId,
+      );
+    }),
+  );
+  // Kartı veren bankanın 3D Secure sayfasına otomatik gönderilen form. Bankanın
+  // adresi kart veren bankaya göre değiştiğinden bu sayfa her https adrese form gönderebilir.
+  app.get(
+    "/odeme/3d/:id",
+    route(async (q, r) => {
+      const html = await payments.threeDsPage(String(q.params.id));
+      r.set({ "Cache-Control": "no-store", "X-Robots-Tag": "noindex" });
+      if (production)
+        r.set("Content-Security-Policy", csp.replace("form-action 'self' https://appleid.apple.com", "form-action 'self' https:"));
+      if (!html) return r.redirect(303, "/rezervasyonum");
+      r.type("html").send(html);
+    }),
+  );
+  if (paymentStatus.simulator) attachBankSimulator(app);
   app.get(
     "/api/payments/sessions/:id",
     route(async (q, r) =>

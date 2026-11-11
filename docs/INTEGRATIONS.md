@@ -47,9 +47,9 @@ Kaynaklar:
 
 ## Ödeme sınırı
 
-`server/payments.mjs` sağlayıcıdan bağımsız başlangıç sınırıdır, gerçek bankacılık entegrasyonu değildir. Başarılı ödeme simülasyonu bile üretim API'sinde açılmaz. `PAYMENT_PROVIDER` ayarını değiştirmek tek başına ödeme açmaz. Banka seçilince adapter ayrıca yazılır.
+`server/payments.mjs` ödeme sınırıdır. `PAYMENT_PROVIDER=vakifbank` ile Vakıfbank sanal POS (VPOS 724 + 3D Secure) kullanılır; kurulum, güvenlik ve gerçeğe geçiş adımları [VAKIFBANK-SANAL-POS.md](VAKIFBANK-SANAL-POS.md) dosyasındadır. Para çekmeyen seçenekler (deneme sağlayıcısı, banka simülatörü, bankanın test sunucusu) üretimde `PAYMENT_ALLOW_TEST=1` olmadan açılmaz.
 
-Sağlayıcı belli olduğunda imza doğrulaması, sipariş/tutar/para birimi kontrolü, tekrar gönderilen callback için idempotency, 3D Secure dönüşleri, başarısız ödeme, süre aşımı ve iade akışları uygulanmalıdır. İstemcinin başarı yönlendirmesi ödeme kanıtı kabul edilmemelidir. Gerçek ödeme aktif olmadan `pending_agency` kaydı kesin bilete çevrilmez.
+İstemcinin başarı yönlendirmesi ödeme kanıtı kabul edilmez: tahsilat yalnız bankanın VPOS servisinden sunucudan sunucuya alınan satış onayıyla kaydedilir. Ödeme alınmadan `pending_agency` kaydı kesin bilete çevrilmez.
 
 ## Oteller
 

@@ -1005,7 +1005,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                       <strong>{t("Ödemeyi bir sonraki adımda kartla yapın.")}</strong>
                       <p>
                         {t(
-                          "Ön rezervasyonunuz oluşunca seçtiğiniz tutarı ödeme kuruluşunun güvenli sayfasında kartla ödeyebilirsiniz; ödeme alınınca rezervasyonunuz anında onaylanır. Dilerseniz acentemizle havale veya nakit de ödeyebilirsiniz.",
+                          "Ön rezervasyonunuz oluşunca seçtiğiniz tutarı kartla, 3D Secure (SMS onayı) ile ödeyebilirsiniz; ödeme alınınca rezervasyonunuz anında onaylanır. Dilerseniz acentemizle havale veya nakit de ödeyebilirsiniz.",
                         )}
                       </p>
                     </>
