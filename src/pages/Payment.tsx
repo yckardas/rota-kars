@@ -1,10 +1,19 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type InputHTMLAttributes } from "react";
 import { useParams } from "react-router-dom";
 import { Link, localPath, useLang, useLocalNavigate } from "../lib/i18n";
 import { CreditCard, LoaderCircle, LockKeyhole, ShieldCheck } from "lucide-react";
 import { api, post } from "../lib/api";
 import { currency, type Catalog, type Reservation } from "../lib/types";
 import { StatusStamp } from "../components/ReservationTicket";
+import {
+  CardVisual,
+  cardProblems,
+  emptyCard,
+  formatExpiry,
+  formatPan,
+  type CardField,
+  type CardValues,
+} from "../components/PaymentCard";
 type Session = {
   id: string;
   reference: string;
@@ -168,36 +177,17 @@ export function TestPayment() {
     </section>
   );
 }
-// Kart numarasını dörtlü gruplar, son kullanmayı AA/YY biçiminde gösterir.
-const groupPan = (v: string) =>
-  v
-    .replace(/\D/g, "")
-    .slice(0, 19)
-    .replace(/(\d{4})(?=\d)/g, "$1 ");
-const formatExpiry = (v: string, previous: string) => {
-  const d = v.replace(/\D/g, "").slice(0, 4);
-  // Silerken "/" işaretine takılmasın.
-  if (v.length < previous.length && previous.endsWith("/") && d.length === 2)
-    return d.slice(0, 1);
-  return d.length >= 2 ? d.slice(0, 2) + "/" + d.slice(2) : d;
-};
-const brandOf = (pan: string) =>
-  /^4/.test(pan)
-    ? "Visa"
-    : /^(5[1-5]|2[2-7])/.test(pan)
-      ? "Mastercard"
-      : /^(9792|65)/.test(pan)
-        ? "Troy"
-        : "";
-// Vakıfbank kart ödemesi: kart bilgisi alınır, 3D Secure için bankaya geçilir.
+// Vakıfbank kart ödemesi: canlı kart görseli eşliğinde kart bilgisi alınır,
+// 3D Secure için bankaya geçilir.
 export function CardPayment({ catalog }: { catalog: Catalog }) {
   const { t } = useLang();
   const { id } = useParams(),
     [s, setS] = useState<Session | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [pan, setPan] = useState(""),
-    [expiry, setExpiry] = useState(""),
+    [card, setCard] = useState<CardValues>(emptyCard),
+    [focused, setFocused] = useState<CardField | null>(null),
+    [problems, setProblems] = useState<Partial<Record<CardField, string>>>({}),
     [notice, setNotice] = useState("");
   useEffect(() => {
     api<Session>("/payments/sessions/" + id)
@@ -208,29 +198,44 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
       .catch((e) => setError(e.message));
   }, [id]);
   const preview = s?.provider === "preview";
+  // Hatalı gösterilen alan düzeltildikçe mesajı kalkar.
+  const change = (field: CardField, value: string) => {
+    const next = { ...card, [field]: value };
+    setCard(next);
+    if (problems[field])
+      setProblems((p) => ({ ...p, [field]: cardProblems(next)[field] }));
+  };
+  const blur = (field: CardField) => {
+    setFocused((f) => (f === field ? null : f));
+    if (card[field])
+      setProblems((p) => ({ ...p, [field]: cardProblems(card)[field] }));
+  };
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const found = cardProblems(card);
+    setProblems(found);
+    const first = (["holder", "pan", "expiry", "cvv"] as CardField[]).find(
+      (f) => found[f],
+    );
+    if (first) {
+      e.currentTarget.querySelector<HTMLInputElement>(`[name="${first}"]`)?.focus();
+      return;
+    }
+    setError("");
     // Önizleme: kart bilgisi hiçbir yere gönderilmez, form temizlenir.
     if (preview) {
-      e.currentTarget.reset();
-      setPan("");
-      setExpiry("");
-      setError("");
+      (document.activeElement as HTMLElement | null)?.blur();
+      setFocused(null);
+      setCard(emptyCard);
       setNotice(
         "Kartla ödeme, banka onayının ardından açılacak. Kartınızdan çekim yapılmadı; ön rezervasyonunuz kayıtlı, acentemiz sizinle iletişime geçecek.",
       );
       return;
     }
-    const form = new FormData(e.currentTarget);
     setBusy(true);
-    setError("");
     try {
-      const res = await post<{ redirect: string }>("/payments/card/" + id, {
-        holder: String(form.get("holder") || ""),
-        pan,
-        expiry,
-        cvv: String(form.get("cvv") || ""),
-      });
+      const res = await post<{ redirect: string }>("/payments/card/" + id, card);
+      setCard(emptyCard);
       // Bankaya yönlendiren sayfa sunucudadır; dil öneki eklenmez.
       window.location.assign(res.redirect);
     } catch (err) {
@@ -238,8 +243,33 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
       setBusy(false);
     }
   }
-  const open = s && s.status === "pending" && !s.expired,
-    brand = brandOf(pan.replace(/\s/g, ""));
+  const open = s && s.status === "pending" && !s.expired;
+  const field = (
+    name: CardField,
+    label: string,
+    props: InputHTMLAttributes<HTMLInputElement>,
+    format: (v: string) => string = (v) => v,
+  ) => (
+    <label className="field">
+      {t(label)}
+      <input
+        name={name}
+        value={card[name]}
+        onChange={(e) => change(name, format(e.target.value))}
+        onFocus={() => setFocused(name)}
+        onBlur={() => blur(name)}
+        aria-invalid={problems[name] ? true : undefined}
+        aria-describedby={problems[name] ? "card-err-" + name : undefined}
+        spellCheck={false}
+        {...props}
+      />
+      {problems[name] && (
+        <small className="field-error" id={"card-err-" + name}>
+          {t(problems[name]!)}
+        </small>
+      )}
+    </label>
+  );
   return (
     <section className="container payment-page">
       <article className="ticket-check payment-card">
@@ -272,64 +302,44 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
           </p>
         )}
         {open && (
-          <form className="card-form" onSubmit={submit} autoComplete="on">
-            <label className="field">
-              {t("Kart üzerindeki isim")}
-              <input
-                name="holder"
-                autoComplete="cc-name"
-                minLength={3}
-                maxLength={60}
-                required
-              />
-            </label>
-            <label className="field">
-              <span className="card-number-label">
-                {t("Kart numarası")}
-                {brand && <em>{brand}</em>}
-              </span>
-              <input
-                name="cardnumber"
-                inputMode="numeric"
-                autoComplete="cc-number"
-                value={pan}
-                onChange={(e) => setPan(groupPan(e.target.value))}
-                placeholder="0000 0000 0000 0000"
-                minLength={15}
-                maxLength={23}
-                required
-              />
-            </label>
+          <form className="card-form" onSubmit={submit} autoComplete="on" noValidate>
+            <CardVisual card={card} focused={focused} t={t} />
+            {field("holder", "Kart üzerindeki isim", {
+              autoComplete: "cc-name",
+              maxLength: 60,
+              autoCapitalize: "characters",
+            })}
+            {field(
+              "pan",
+              "Kart numarası",
+              {
+                inputMode: "numeric",
+                autoComplete: "cc-number",
+                placeholder: "0000 0000 0000 0000",
+                maxLength: 19,
+              },
+              formatPan,
+            )}
             <div className="card-form-row">
-              <label className="field">
-                {t("Son kullanma (AA/YY)")}
-                <input
-                  name="exp"
-                  inputMode="numeric"
-                  autoComplete="cc-exp"
-                  value={expiry}
-                  onChange={(e) =>
-                    setExpiry(formatExpiry(e.target.value, expiry))
-                  }
-                  placeholder={t("AA/YY")}
-                  minLength={5}
-                  maxLength={5}
-                  required
-                />
-              </label>
-              <label className="field">
-                {t("Güvenlik kodu (CVV)")}
-                <input
-                  name="cvv"
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="cc-csc"
-                  pattern="[0-9]{3,4}"
-                  minLength={3}
-                  maxLength={4}
-                  required
-                />
-              </label>
+              {field("expiry", "Son kullanma (AA/YY)", {
+                inputMode: "numeric",
+                autoComplete: "cc-exp",
+                placeholder: t("AA/YY"),
+                maxLength: 5,
+                onChange: (e) =>
+                  change("expiry", formatExpiry(e.target.value, card.expiry)),
+              })}
+              {field(
+                "cvv",
+                "Güvenlik kodu (CVV)",
+                {
+                  inputMode: "numeric",
+                  autoComplete: "cc-csc",
+                  placeholder: "•••",
+                  maxLength: 3,
+                },
+                (v) => v.replace(/\D/g, "").slice(0, 3),
+              )}
             </div>
             <button className="btn" disabled={busy}>
               {busy ? (
@@ -337,7 +347,9 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
               ) : (
                 <LockKeyhole size={17} />
               )}
-              {t("{amount} öde", { amount: currency(s.amount) })}
+              {busy
+                ? t("Bankanıza bağlanılıyor…")
+                : t("{amount} öde", { amount: currency(s.amount) })}
             </button>
             <p className="card-form-note">
               <ShieldCheck size={15} />

@@ -2602,19 +2602,241 @@ html:has(.kp) {
   grid-template-columns: 1fr 1fr;
   gap: 14px;
 }
-.kp .card-number-label {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-}
-.kp .card-number-label em {
-  font-style: normal;
-  font-weight: 700;
-  color: var(--kp-red);
-}
-.kp .card-form input[name="cardnumber"] {
-  letter-spacing: 1.5px;
+.kp .card-form input[name="pan"],
+.kp .card-form input[name="expiry"],
+.kp .card-form input[name="cvv"] {
+  letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
+}
+.kp .card-form [aria-invalid="true"] {
+  border-color: var(--kp-red);
+  box-shadow: inset 0 0 0 1px var(--kp-red);
+}
+.kp .card-form .field-error {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--kp-red-d);
+}
+/* Canlı kart görseli: yazılanlar kartta belirir, CVV için kart arkasına döner. */
+.kp .pay-card-stage {
+  display: flex;
+  justify-content: center;
+  padding: 6px 0 10px;
+  perspective: 1400px;
+}
+.kp .pay-card {
+  position: relative;
+  width: min(100%, 360px);
+  aspect-ratio: 1.586;
+}
+.kp .pay-card-inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.kp .pay-card[data-side="back"] .pay-card-inner {
+  transform: rotateY(180deg);
+}
+.kp .pay-card-face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  color: #fff;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  background:
+    repeating-radial-gradient(
+      circle at 115% 125%,
+      rgb(255 255 255 / 7%) 0 1px,
+      transparent 1px 15px
+    ),
+    linear-gradient(115deg, transparent 62%, rgb(194 52 43 / 38%) 100%),
+    radial-gradient(130% 140% at 0% 0%, #34507f 0%, #1f3158 48%, #111b33 100%);
+  box-shadow:
+    0 22px 40px -20px rgb(17 27 51 / 65%),
+    0 2px 6px rgb(17 27 51 / 18%);
+}
+.kp .pay-card-front {
+  padding: 20px 22px;
+}
+.kp .pay-card-back {
+  transform: rotateY(180deg);
+}
+.kp .pay-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.kp .pay-card-chip {
+  width: 44px;
+  height: auto;
+}
+.kp .pay-card-mark {
+  position: relative;
+  width: 64px;
+  height: 28px;
+}
+.kp .pay-card-mark [data-mark] {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  opacity: 0;
+  transform: translateY(5px);
+  transition:
+    opacity 0.25s ease,
+    transform 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.kp .pay-card-mark svg {
+  width: auto;
+  height: 24px;
+}
+.kp .pay-card[data-brand="visa"] [data-mark="visa"],
+.kp .pay-card[data-brand="mastercard"] [data-mark="mastercard"],
+.kp .pay-card[data-brand="troy"] [data-mark="troy"] {
+  opacity: 1;
+  transform: none;
+}
+.kp .pay-card-pan {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 13%;
+  font-size: clamp(17px, 5.2vw, 22px);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 1px rgb(0 0 0 / 25%);
+}
+.kp .pay-card-group.gap {
+  margin-left: 0.55em;
+}
+.kp .pan-slot {
+  display: inline-block;
+  width: 0.66em;
+  text-align: center;
+  opacity: 0.5;
+}
+.kp .pan-slot.filled {
+  opacity: 1;
+  animation: pay-card-digit 0.24s cubic-bezier(0.23, 1, 0.32, 1);
+}
+@keyframes pay-card-digit {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+}
+.kp .pay-card-bottom {
+  position: absolute;
+  right: 22px;
+  bottom: 18px;
+  left: 22px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+}
+.kp .pay-card-bottom small {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+.kp .pay-card-holder {
+  min-width: 0;
+}
+.kp .pay-card-holder span,
+.kp .pay-card-expiry span {
+  display: block;
+  overflow: hidden;
+  font-size: 14px;
+  letter-spacing: 0.07em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  opacity: 0.55;
+  transition: opacity 0.2s ease;
+}
+.kp .pay-card-expiry span {
+  font-variant-numeric: tabular-nums;
+}
+.kp .pay-card-holder span.filled,
+.kp .pay-card-expiry span.filled {
+  opacity: 1;
+}
+.kp .pay-card-focus {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  width: 0;
+  height: 0;
+  border: 1.5px solid rgb(255 255 255 / 72%);
+  border-radius: 10px;
+  pointer-events: none;
+  transition:
+    transform 0.35s cubic-bezier(0.23, 1, 0.32, 1),
+    width 0.35s cubic-bezier(0.23, 1, 0.32, 1),
+    height 0.35s cubic-bezier(0.23, 1, 0.32, 1),
+    opacity 0.2s ease;
+}
+.kp .pay-card-stripe {
+  height: 44px;
+  margin-top: 24px;
+  background: #0b1224;
+}
+.kp .pay-card-sign {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 40px;
+  margin: 18px 22px 0;
+  padding-right: 14px;
+  border-radius: 4px;
+  background: repeating-linear-gradient(-45deg, #f6f3ea 0 6px, #ebe6d8 6px 12px);
+  color: var(--kp-ink);
+  font-weight: 700;
+  font-style: italic;
+  letter-spacing: 0.2em;
+}
+.kp .pay-card-back-note {
+  position: absolute;
+  right: 22px;
+  bottom: 16px;
+  left: 22px;
+  font-size: 11px;
+  line-height: 1.4;
+  opacity: 0.78;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kp .pay-card-inner,
+  .kp .pay-card-mark [data-mark],
+  .kp .pay-card-focus,
+  .kp .pay-card-holder span,
+  .kp .pay-card-expiry span {
+    transition: none;
+  }
+  .kp .pan-slot.filled {
+    animation: none;
+  }
+  .kp .pay-card[data-side="back"] .pay-card-inner,
+  .kp .pay-card-back {
+    transform: none;
+  }
+  .kp .pay-card-back,
+  .kp .pay-card[data-side="back"] .pay-card-front {
+    visibility: hidden;
+  }
+  .kp .pay-card[data-side="back"] .pay-card-back {
+    visibility: visible;
+  }
 }
 .kp .card-form .btn {
   justify-content: center;
