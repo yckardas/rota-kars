@@ -1,0 +1,220 @@
+{
+  "kaynak": "Wayback Machine, wp-sitemap-posts-product-1.xml (2025-07-13) ve ana sayfa kayıtları",
+  "not": "Fiyatlar kişi başı taban fiyat; Kapadokya'da 1 ₺ yer tutucu olarak görünüyordu.",
+  "turlar": [
+    {
+      "slug": "gunubirlik-ani-antik-kenti-cildir-golu-ve-kars-sehir-turu",
+      "baslik": "Günübirlik Ani Antik Kenti, Çıldır Gölü ve Kars Şehir Turu",
+      "baslik_kaynagi": "eski ana sayfa",
+      "eski_adres": "https://rotakarsturizm.com/tur/gunubirlik-ani-antik-kenti-cildir-golu-ve-kars-sehir-turu/",
+      "yeni_katalog_id": "ani-cildir",
+      "eski_fiyat_tl": {
+        "2024-07-27": 350,
+        "2025-03-29": 750,
+        "2025-07-13": 750
+      }
+    },
+    {
+      "slug": "savsat-karagol-turu",
+      "baslik": "Şavşat Karagöl Turu",
+      "baslik_kaynagi": "adresten türetildi, doğrulanmadı",
+      "eski_adres": "https://rotakarsturizm.com/tur/savsat-karagol-turu/",
+      "yeni_katalog_id": null,
+      "eski_fiyat_tl": {}
+    },
+    {
+      "slug": "konaklamali-karadeniz-turu",
+      "baslik": "Konaklamalı Karadeniz Turu",
+      "baslik_kaynagi": "adresten türetildi, doğrulanmadı",
+      "eski_adres": "https://rotakarsturizm.com/tur/konaklamali-karadeniz-turu/",
+      "yeni_katalog_id": null,
+      "eski_fiyat_tl": {}
+    },
+    {
+      "slug": "gunubirlik-batum-turu",
+      "baslik": "Günübirlik Batum Turu",
+      "baslik_kaynagi": "eski ana sayfa",
+      "eski_adres": "https://rotakarsturizm.com/tur/gunubirlik-batum-turu/",
+      "yeni_katalog_id": "batum",
+      "eski_fiyat_tl": {
+        "2024-07-27": 1299,
+        "2025-03-29": 1299,
+        "2025-07-13": 1750
+      }
+    },
+    {
+      "slug": "konaklamali-batum-turu",
+      "baslik": "Konaklamalı Batum Turu",
+      "baslik_kaynagi": "adresten türetildi, doğrulanmadı",
+      "eski_adres": "https://rotakarsturizm.com/tur/konaklamali-batum-turu/",
+      "yeni_katalog_id": null,
+      "eski_fiyat_tl": {}
+    },
+    {
+      "slug": "konaklamali-tiflis-turu",
+      "baslik": "Konaklamalı Tiflis Turu",
+      "baslik_kaynagi": "adresten türetildi, doğrulanmadı",
+      "eski_adres": "https://rotakarsturizm.com/tur/konaklamali-tiflis-turu/",
+      "yeni_katalog_id": null,
+      "eski_fiyat_tl": {}
+    },
+    {
+      "slug": "gunubirlik-van-turu",
+      "baslik": "Günübirlik Van Turu",
+      "baslik_kaynagi": "eski ana sayfa",
+      "eski_adres": "https://rotakarsturizm.com/tur/gunubirlik-van-turu/",
+      "yeni_katalog_id": "van-gunubirlik",
+      "eski_fiyat_tl": {
+        "2024-07-27": 1500,
+        "2025-03-29": 1500,
+        "2025-07-13": 1750
+      }
+    },
+    {
+      "slug": "sarikamis-kayak-turu",
+      "baslik": "Sarıkamış Kayak Turu",
+      "baslik_kaynagi": "eski ana sayfa",
+      "eski_adres": "https://rotakarsturizm.com/tur/sarikamis-kayak-turu/",
+      "yeni_katalog_id": "sarikamis",
+      "eski_fiyat_tl": {
+        "2024-07-27": 600,
+        "2025-03-29": 850,
+        "2025-07-13": 850
+      }
+    },
+    {
+      "slug": "nahcivan-turu",
+      "baslik": "Nahçıvan Turu",
+      "baslik_kaynagi": "adresten türetildi, doğrulanmadı",
+      "eski_adres": "https://rotakarsturizm.com/tur/nahcivan-turu/",
+      "yeni_katalog_id": null,
+      "eski_fiyat_tl": {}
+    },
+    {
+      "slug": "narman-peri-bacalari-tortum-selalesi-turu",
+      "baslik": "Narman Peri Bacaları ve Tortum Şelalesi Turu",
+      "baslik_kaynagi": "adresten türetildi, doğrulanmadı",
+      "eski_adres": "https://rotakarsturizm.com/tur/narman-peri-bacalari-tortum-selalesi-turu/",
+      "yeni_katalog_id": null,
+      "eski_fiyat_tl": {}
+    },
+    {
+      "slug": "kapadokya-turu",
+      "baslik": "Kapadokya Turu",
+      "baslik_kaynagi": "eski ana sayfa",
+      "eski_adres": "https://rotakarsturizm.com/tur/kapadokya-turu/",
+      "yeni_katalog_id": null,
+      "eski_fiyat_tl": {}
+    },
+    {
+      "slug": "tuzluca-tuz-magaralari-isakpasa-sarayi-turu",
+      "baslik": "Tuzluca Tuz Mağaraları ve İshak Paşa Sarayı Turu",
+      "baslik_kaynagi": "adresten türetildi, doğrulanmadı",
+      "eski_adres": "https://rotakarsturizm.com/tur/tuzluca-tuz-magaralari-isakpasa-sarayi-turu/",
+      "yeni_katalog_id": null,
+      "eski_fiyat_tl": {}
+    },
+    {
+      "slug": "konaklamali-van-turu-tuz-magarasi-ve-ishak-pasa-sarayi-dahil",
+      "baslik": "Konaklamalı Van Turu (Tuz Mağarası ve İshak Paşa Sarayı Dahil)",
+      "baslik_kaynagi": "eski ana sayfa",
+      "eski_adres": "https://rotakarsturizm.com/tur/konaklamali-van-turu-tuz-magarasi-ve-ishak-pasa-sarayi-dahil/",
+      "yeni_katalog_id": "van",
+      "eski_fiyat_tl": {
+        "2024-07-27": 3500,
+        "2025-03-29": 3500,
+        "2025-07-13": 4000
+      }
+    },
+    {
+      "slug": "buyuk-azerbaycan-turu-nahcivan-baku",
+      "baslik": "Büyük Azerbaycan Turu (Nahçıvan–Bakü)",
+      "baslik_kaynagi": "adresten türetildi, doğrulanmadı",
+      "eski_adres": "https://rotakarsturizm.com/tur/buyuk-azerbaycan-turu-nahcivan-baku/",
+      "yeni_katalog_id": null,
+      "eski_fiyat_tl": {}
+    },
+    {
+      "slug": "guneydogu-turu",
+      "baslik": "Güneydoğu Turu",
+      "baslik_kaynagi": "adresten türetildi, doğrulanmadı",
+      "eski_adres": "https://rotakarsturizm.com/tur/guneydogu-turu/",
+      "yeni_katalog_id": null,
+      "eski_fiyat_tl": {}
+    },
+    {
+      "slug": "2-gece-konaklamali-tiflis-turu",
+      "baslik": "2 Gece Konaklamalı Tiflis Turu",
+      "baslik_kaynagi": "adresten türetildi, doğrulanmadı",
+      "eski_adres": "https://rotakarsturizm.com/tur/2-gece-konaklamali-tiflis-turu/",
+      "yeni_katalog_id": null,
+      "eski_fiyat_tl": {}
+    },
+    {
+      "slug": "baku-tiflis-turu-istanbul-izmir-direkt-ucuslu",
+      "baslik": "Bakü–Tiflis Turu (İstanbul/İzmir Direkt Uçuşlu)",
+      "baslik_kaynagi": "adresten türetildi, doğrulanmadı",
+      "eski_adres": "https://rotakarsturizm.com/tur/baku-tiflis-turu-istanbul-izmir-direkt-ucuslu/",
+      "yeni_katalog_id": null,
+      "eski_fiyat_tl": {}
+    },
+    {
+      "slug": "butik-mardin-turu-diyarbakir-mardin-midyat",
+      "baslik": "Butik Mardin Turu (Diyarbakır–Mardin–Midyat)",
+      "baslik_kaynagi": "adresten türetildi, doğrulanmadı",
+      "eski_adres": "https://rotakarsturizm.com/tur/butik-mardin-turu-diyarbakir-mardin-midyat/",
+      "yeni_katalog_id": null,
+      "eski_fiyat_tl": {}
+    },
+    {
+      "slug": "batum-tiflis-turu-2-gece-konaklamali",
+      "baslik": "Batum–Tiflis Turu (2 Gece Konaklamalı)",
+      "baslik_kaynagi": "adresten türetildi, doğrulanmadı",
+      "eski_adres": "https://rotakarsturizm.com/tur/batum-tiflis-turu-2-gece-konaklamali/",
+      "yeni_katalog_id": null,
+      "eski_fiyat_tl": {}
+    },
+    {
+      "slug": "azerbaycan-baku-turu",
+      "baslik": "Azerbaycan Bakü Turu",
+      "baslik_kaynagi": "adresten türetildi, doğrulanmadı",
+      "eski_adres": "https://rotakarsturizm.com/tur/azerbaycan-baku-turu/",
+      "yeni_katalog_id": null,
+      "eski_fiyat_tl": {}
+    },
+    {
+      "slug": "2-gece-konaklamali-batum-turu-yilbasi-ozel",
+      "baslik": "2 Gece Konaklamalı Batum Turu (Yılbaşı Özel)",
+      "baslik_kaynagi": "adresten türetildi, doğrulanmadı",
+      "eski_adres": "https://rotakarsturizm.com/tur/2-gece-konaklamali-batum-turu-yilbasi-ozel/",
+      "yeni_katalog_id": null,
+      "eski_fiyat_tl": {}
+    },
+    {
+      "slug": "azerbaycan-baku-turu-yilbasi-ozel",
+      "baslik": "Azerbaycan Bakü Turu (Yılbaşı Özel)",
+      "baslik_kaynagi": "adresten türetildi, doğrulanmadı",
+      "eski_adres": "https://rotakarsturizm.com/tur/azerbaycan-baku-turu-yilbasi-ozel/",
+      "yeni_katalog_id": null,
+      "eski_fiyat_tl": {}
+    },
+    {
+      "slug": "guneydogu-turu-3-gunluk",
+      "baslik": "Güneydoğu Turu (3 Günlük)",
+      "baslik_kaynagi": "adresten türetildi, doğrulanmadı",
+      "eski_adres": "https://rotakarsturizm.com/tur/guneydogu-turu-3-gunluk/",
+      "yeni_katalog_id": null,
+      "eski_fiyat_tl": {}
+    },
+    {
+      "slug": "van-havzasi-turu",
+      "baslik": "Van Havzası Turu",
+      "baslik_kaynagi": "eski ana sayfa",
+      "eski_adres": "https://rotakarsturizm.com/tur/van-havzasi-turu/",
+      "yeni_katalog_id": "van-havzasi",
+      "eski_fiyat_tl": {
+        "2025-07-13": 7000
+      }
+    }
+  ]
+}
