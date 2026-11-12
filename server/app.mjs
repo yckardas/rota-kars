@@ -30,6 +30,7 @@ import { createChatService } from "./chat.mjs";
 import { attachSeoRoutes } from "./seo.mjs";
 import { roleAllows, ROLES } from "./admin-auth.mjs";
 import { createStorage, MEDIA_LIMITS } from "./storage.mjs";
+import { createBackup } from "./backup.mjs";
 import { vehicleModels, fleetVehicles } from "./operations.mjs";
 import { passengerDetail } from "./passenger-id.mjs";
 import { preInfoText, isLateBooking, freeCancelDays } from "./legal.mjs";
@@ -149,6 +150,7 @@ export function createApp(
       settings: store.instagramSettings,
     }),
     storage = createStorage({ env, db: store.db }),
+    backup = createBackup({ env, db: store.db, notifications: store.notifications, clock: store.clock || Date.now }),
     turnstile = createTurnstile(env),
   } = {},
 ) {
@@ -732,6 +734,17 @@ export function createApp(
       const url = await storage.signedUrl("/media/" + q.params.file);
       r.set("Cache-Control", "private, max-age=300");
       r.redirect(302, url);
+    }),
+  );
+  // Gece yedeği: durum herkese açık değil, yalnız yönetim paneline. Elle yedek sahibe özel.
+  app.locals.backup = backup;
+  app.get("/api/admin/backup", requireAdmin, route(async (_q, r) => r.json(await backup.status())));
+  app.post(
+    "/api/admin/backup",
+    requireAdmin,
+    route(async (_q, r) => {
+      if (!backup.configured) throw new AppError(503, "Gece yedeği yapılandırılmamış. BACKUP_* değişkenlerini Railway'de tanımlayın.");
+      r.status(201).json(await backup.run({ reason: "manual" }));
     }),
   );
   app.get("/api/admin/uploads", requireAdmin, async (_q, r) =>

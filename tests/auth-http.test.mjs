@@ -73,7 +73,12 @@ test("HTTP member registration/session, owner-only coupons and double-spend race
     };
   assert.equal((await req("/reservations/quote", quote)).status, 401);
   const amount = await (await req("/reservations/quote", quote, sid)).json();
-  assert.equal(amount.total, 100000 - 1000 * prize.coupon.percent);
+  // Çark TL ya da yüzde indirimi verebilir.
+  const discount =
+    prize.coupon.kind === "amount"
+      ? Math.min(prize.coupon.amount, 100000)
+      : 1000 * prize.coupon.percent;
+  assert.equal(amount.total, 100000 - discount);
   const holds = [
     await store.hold(departure.id, [1]),
     await store.hold(departure.id, [2]),

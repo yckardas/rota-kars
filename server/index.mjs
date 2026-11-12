@@ -86,6 +86,22 @@ const retention = async () => {
 };
 setTimeout(retention, 60000).unref();
 setInterval(retention, 24 * 3600 * 1000).unref();
+// Gece yedeği (BACKUP_* tanımlıysa): 10 dakikada bir bakılır; 03:00'ten sonra
+// bugünün yedeği yoksa alınır. Yeniden başlatma ya da deploy günü kaçırtmaz.
+const backup = app.locals.backup;
+if (backup.configured) {
+  const backupTick = async () => {
+    try {
+      const r = await backup.tick();
+      if (!r.skipped) console.log(JSON.stringify({ level: "info", job: "backup", ...r }));
+    } catch (e) {
+      console.error(JSON.stringify({ level: "error", job: "backup", message: String(e?.message || "").slice(0, 300) }));
+    }
+  };
+  setTimeout(backupTick, 120000).unref();
+  setInterval(backupTick, 10 * 60000).unref();
+} else if (backup.partial)
+  console.warn(`Gece yedeği kapalı: ${backup.config.error || "eksik değişkenler " + backup.config.missing.join(", ")}.`);
 // Google'a yeni yorum gelince yöneticilere bildirim.
 const reviewWatch = createReviewWatch({ db: store.db, notifications: store.notifications });
 if (reviewWatch.configured) {

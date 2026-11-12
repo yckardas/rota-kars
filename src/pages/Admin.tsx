@@ -446,7 +446,9 @@ function AdminPanel({
         {tab === "content" && (
           <ContentManager key={key("content")} catalog={catalog} isOwner={me.user.role === "owner"} onSaved={refreshCatalog} />
         )}
-        {tab === "integrations" && <Integrations catalog={catalog} />}
+        {tab === "integrations" && (
+          <Integrations catalog={catalog} owner={me.user.role === "owner"} />
+        )}
       </main>
       <nav className="admin-tabbar" aria-label="Yönetim menüsü">
         {tabs
@@ -574,9 +576,93 @@ function ReviewAssignments({ catalog }: { catalog: Catalog }) {
     </>
   );
 }
-function Integrations({ catalog }: { catalog: Catalog }) {
+type BackupStatus = {
+  configured: boolean;
+  partial: boolean;
+  missing: string[];
+  configError: string | null;
+  lastSuccessAt: number | null;
+  lastSize: number | null;
+  lastDocuments: number | null;
+  lastError: string | null;
+  lastErrorAt: number | null;
+  stale: boolean;
+};
+const when = (ms: number) =>
+  new Date(ms).toLocaleString("tr-TR", {
+    timeZone: "Europe/Istanbul",
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+const fileSize = (bytes: number) =>
+  bytes < 1024 * 1024
+    ? `${Math.max(1, Math.round(bytes / 1024))} KB`
+    : `${(bytes / 1024 / 1024).toLocaleString("tr-TR", { maximumFractionDigits: 1 })} MB`;
+// Gece yedeğinin son durumu; sahip elle de yedek alabilir (ilk kurulumda deneme için).
+function BackupCard({ owner }: { owner: boolean }) {
+  const [s, setS] = useState<BackupStatus | null>(null),
+    [busy, setBusy] = useState(false),
+    feedback = useFeedback(),
+    load = () =>
+      api<BackupStatus>("/admin/backup")
+        .then(setS)
+        .catch(() => setS(null));
+  useEffect(() => {
+    load();
+  }, []);
+  async function runNow() {
+    setBusy(true);
+    try {
+      const r = await post<{ size: number; documents: number }>("/admin/backup", {});
+      feedback.ok(`Yedek alındı: ${r.documents} kayıt, ${fileSize(r.size)}.`);
+      await load();
+    } catch (e) {
+      feedback.error(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+  if (!s) return null;
+  const failing = s.configured && s.lastError && (!s.lastSuccessAt || (s.lastErrorAt || 0) > s.lastSuccessAt);
+  return (
+    <article>
+      <h3>Gece yedeği</h3>
+      {!s.configured ? (
+        <span className="status-tag inactive">Kapalı</span>
+      ) : failing || s.stale ? (
+        <span className="status-tag status-cancelled">{failing ? "Son deneme başarısız" : "Gecikmiş"}</span>
+      ) : (
+        <span className="status-tag status-confirmed">Çalışıyor</span>
+      )}
+      {!s.configured ? (
+        <p>
+          {s.configError ||
+            (s.partial
+              ? `Eksik değişkenler: ${s.missing.join(", ")}.`
+              : "Veritabanı her gece 03:00'te şifrelenip ayrı bir depoya yazılır. BACKUP_* değişkenleri tanımlanınca başlar.")}
+        </p>
+      ) : (
+        <p>
+          {s.lastSuccessAt
+            ? `Son yedek ${when(s.lastSuccessAt)} · ${s.lastDocuments} kayıt · ${fileSize(s.lastSize || 0)}.`
+            : "Henüz yedek alınmadı. İlk yedek bu gece 03:00'te alınır."}
+          {failing && ` Hata: ${s.lastError}`} Son 7 gün, 4 hafta ve 12 ay saklanır.
+        </p>
+      )}
+      {owner && s.configured && (
+        <button className="btn btn-small" onClick={runNow} disabled={busy}>
+          {busy ? "Yedek alınıyor…" : "Şimdi yedekle"}
+        </button>
+      )}
+    </article>
+  );
+}
+function Integrations({ catalog, owner }: { catalog: Catalog; owner: boolean }) {
   return (
     <div className="integration-list">
+      <BackupCard owner={owner} />
       <article>
         <h3>Sanal POS</h3>
         <span className="status-tag">Banka anlaşması bekleniyor</span>

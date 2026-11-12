@@ -18,11 +18,29 @@ Veritabanı **MongoDB**'dir ve Railway'in varsayılan, **tek düğümlü** Mongo
    ```
 
    Referanstaki servis adı (`MongoDB`) Railway'deki Mongo servisinizin adıyla aynı olmalıdır. Uygulama adrese `authSource=admin` ekler. Çözülmemiş `${{...}}` ifadesi açık hata verir. Bağlantı adresini loglara yazmayın.
-3. **Yedek:** Mongo servisinin volume'ü için Railway'de otomatik yedeklemeyi açın. Ayrıca belirli aralıklarla `mongodump --uri "$MONGO_URL" --archive=rota-kars-$(date +%F).gz --gzip` ile yedeği Railway dışına alın.
+3. **Yedek:** Railway'in kendi Mongo yedeği ücretli planda. Uygulama bunun yerine her gece kendi yedeğini alır (aşağıda "Gece yedeği"). İlk kurulumda bir kez de elle alın: `mongodump --uri "$MONGO_PUBLIC_URL" --archive=rota-kars-$(date +%F).gz --gzip`.
 
 İndeksler (benzersiz e-posta, rezervasyon referansı, ödeme işlem referansı vb.) uygulama açılışında otomatik oluşturulur; ayrıca migration komutu yoktur.
 
 Ek değişkenler: güçlü benzersiz `ADMIN_PASSWORD`, `SITE_URL` ve `PUBLIC_BASE_URL=https://firmanin-domaini`, `TRUST_PROXY=1` (tek güvenilir reverse proxy), `PAYMENT_PROVIDER=disabled`. `PORT` Railway tarafından verilir, sunucu `0.0.0.0` dinler. Gerçek üretimde `DEMO_MODE` ve `SEED_DEMO` kapalı kalmalıdır; örnek seferler otomatik eklenmez.
+
+## Gece yedeği (Cloudflare R2)
+
+Uygulama her gece 03:00'ten (Türkiye saati) sonra veritabanının tamamını dışa aktarır, gzip ile sıkıştırır, AES-256-GCM ile şifreler ve ayrı bir S3 uyumlu depoya yazar. Yazdığı dosyayı geri okuyup açarak doğrular. Deploy ya da yeniden başlatma günü kaçırtmaz: 10 dakikada bir bakılır, bugünün yedeği yoksa alınır. Hata olursa saatte bir yeniden dener ve yöneticilere günde bir bildirim (uygulama + acente e-postası) gönderir.
+
+- **Saklama:** son 7 gün, son 4 haftanın her birinden en yenisi, son 12 ayın her birinden en yenisi (en fazla ~23 dosya). Bugünkü boyutlarla bir dosya birkaç yüz KB; 10 GB ücretsiz R2 kotası yıllarca yeter.
+- **Değişkenler (uygulama servisi):** `BACKUP_ENDPOINT` (`https://<hesap-id>.r2.cloudflarestorage.com`), `BACKUP_ACCESS_KEY_ID`, `BACKUP_SECRET_ACCESS_KEY` (R2 → Manage API tokens, yalnız bu bucket'a "Object Read & Write"), `BACKUP_BUCKET`, `BACKUP_ENCRYPTION_KEY` (`openssl rand -base64 32`). İsteğe bağlı: `BACKUP_REGION` (varsayılan `auto`), `BACKUP_PREFIX` (varsayılan `rota-kars/`). Hepsi boşsa yedek kapalıdır; bir kısmı girilmişse panelde eksikler yazar. Hatalı bir değer siteyi düşürmez, yedeği kapatır.
+- **Anahtar:** `BACKUP_ENCRYPTION_KEY` ve `PII_ENCRYPTION_KEY` parola yöneticisinde de saklanmalı. Railway hesabına erişim kaybolursa yedeği açmanın tek yolu bunlardır; yolcu kimlik numaraları ayrıca PII anahtarıyla şifrelidir.
+- **Panel:** Yönetim → Bağlantılar → "Gece yedeği" son yedeğin zamanını, kayıt sayısını ve boyutunu gösterir. Sahip "Şimdi yedekle" ile elle yedek alabilir (ilk kurulumda deneme için).
+- **Geri yükleme:** değişkenleri yerelde bir dosyaya (ör. `.env.yedek`, depoya eklemeyin) yazıp:
+
+  ```bash
+  node --env-file=.env.yedek scripts/restore-backup.mjs --list
+  node --env-file=.env.yedek scripts/restore-backup.mjs --from rota-kars/2026-11-12.rkb --check
+  node --env-file=.env.yedek scripts/restore-backup.mjs --from rota-kars/2026-11-12.rkb --to-db rota-kars-geri-yukleme
+  ```
+
+  `--check` yalnız açıp sayar. `--to-db` önce ayrı bir veritabanına yükler; dolu koleksiyonların üzerine `--replace` olmadan, canlı veritabanına (`MONGODB_DB`) `--overwrite-live` olmadan yazmaz. Ayda bir `--check` ile son yedeğin açıldığını denemek iyi bir alışkanlıktır.
 
 ## Dosya depolama (Railway Storage Bucket)
 
