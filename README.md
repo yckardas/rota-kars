@@ -48,7 +48,7 @@ Railway MongoDB (replica set) kurulumu, dağıtım hazırlığı, hesap güvenli
 - Google Business Profile ve Places API (New) bağlantı kodu, otomatik tur eşleştirmesi ve yönetici düzeltmesi.
 - Ana sayfanın en sonunda “Müşterilerimizin gözünden Rota Kars” bölümü: Google puanı (4,9 / 456), gerçek Google yorumları ve canlı Google Haritalar kartı.
 - Canlı siteden taşınan içerik: Yeni açılan turlar / Koşulsuz iptal / TL ile ödeme / Müşteri memnuniyeti şeridi, Hizmetlerimiz (turizm taşımacılığı, VIP, kongre, express), şoförlü araç kiralama filosu, Günübirlik Van ve Van Havzası turları, tur iptali koşulları, TÜRSAB 13948 rozeti.
-- Sağ altta akıllı asistan: `ANTHROPIC_API_KEY` tanımlıysa Claude (`CHAT_MODEL`, varsayılan `claude-opus-5-5`) katalog bilgisiyle yanıt verir; anahtar yoksa yerleşik kural tabanlı Türkçe asistan çalışır. Her iki durumda da gerektiğinde WhatsApp'a (0546 480 21 36) devir düğmesi çıkar; ayrıca kalıcı WhatsApp butonu vardır.
+- Sağ altta akıllı asistan: `ANTHROPIC_API_KEY` tanımlıysa Claude (`CHAT_MODEL`, varsayılan `claude-opus-5-5`) katalog bilgisiyle yanıt verir; anahtar yoksa yerleşik kural tabanlı Türkçe asistan çalışır. Her iki durumda da gerektiğinde WhatsApp'a (0545 935 34 10) devir düğmesi çıkar; ayrıca kalıcı WhatsApp butonu vardır.
 - Parola korumalı yerel yönetim paneli.
 - Dört hizmet için tıklanabilir detay ve teklif talebi sayfaları.
 - E-posta/parola ile üyelik, e-posta doğrulama/parola yenileme altyapısı, profil, hesap başına tek şans çarkı, yönetilebilir %5/%10/%15 kuponlar, davet sonrası iki hesaba %10 ödül ve rezervasyonda tek kuponla sunucuda fiyat hesabı.

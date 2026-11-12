@@ -1,4 +1,4 @@
-/** Builds a tel: href from a Turkish phone number such as "0545 935 34 10" or "905464802136". */
+/** Builds a tel: href from a Turkish phone number such as "0545 935 34 10" or "905459353410". */
 export function telHref(phone: string) {
   let digits = (phone || "").replace(/\D/g, "");
   if (digits.startsWith("00")) digits = digits.slice(2);
