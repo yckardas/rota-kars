@@ -40,7 +40,7 @@ test("tour pages get their own title, canonical and TouristTrip offer", () => {
 });
 
 test("private pages are noindex without canonical, unknown pages are 404", () => {
-  for (const p of ["/rezervasyon/ani-cildir", "/uyelik", "/hesabim", "/yonetim", "/bilet/abc"]) {
+  for (const p of ["/rezervasyon/ani-cildir", "/uyelik", "/hesabim", "/yonetim", "/bilet/abc", "/odeme", "/en/odeme"]) {
     const m = pageMeta(p, BASE);
     assert.equal(m.status, 200, p);
     assert.equal(m.index, false, p);

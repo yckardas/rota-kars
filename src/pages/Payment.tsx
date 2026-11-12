@@ -1,6 +1,18 @@
-import { useEffect, useState, type FormEvent, type InputHTMLAttributes } from "react";
+import {
+  useEffect,
+  useState,
+  type FormEvent,
+  type InputHTMLAttributes,
+  type ReactNode,
+} from "react";
 import { useParams } from "react-router-dom";
-import { Link, localPath, useLang, useLocalNavigate } from "../lib/i18n";
+import {
+  Link,
+  localeOf,
+  localPath,
+  useLang,
+  useLocalNavigate,
+} from "../lib/i18n";
 import { CreditCard, LoaderCircle, LockKeyhole, ShieldCheck } from "lucide-react";
 import { api, post } from "../lib/api";
 import { currency, type Catalog, type Reservation } from "../lib/types";
@@ -177,27 +189,30 @@ export function TestPayment() {
     </section>
   );
 }
-// Vakıfbank kart ödemesi: canlı kart görseli eşliğinde kart bilgisi alınır,
-// 3D Secure için bankaya geçilir.
-export function CardPayment({ catalog }: { catalog: Catalog }) {
+// Kart formu: canlı kart görseli, alan doğrulaması ve öde düğmesi. Rezervasyon
+// ödemesi (/odeme/kart/:id) ve herkese açık /odeme sayfası aynı formu kullanır.
+function CardForm({
+  catalog,
+  amountLabel,
+  busy,
+  onPay,
+  beforePay,
+  children,
+}: {
+  catalog: Catalog;
+  // Düğmede gösterilecek biçimlenmiş tutar ("₺1.250"); yoksa yalnız "Öde".
+  amountLabel: string | null;
+  busy: boolean;
+  // Kart geçerliyse çağrılır; reset formu temizler.
+  onPay: (card: CardValues, reset: () => void) => void;
+  // Kart alanlarından önceki alanlar için; false dönerse ödeme başlamaz.
+  beforePay?: (form: HTMLFormElement) => boolean;
+  children?: ReactNode;
+}) {
   const { t } = useLang();
-  const { id } = useParams(),
-    [s, setS] = useState<Session | null>(null),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
-    [card, setCard] = useState<CardValues>(emptyCard),
+  const [card, setCard] = useState<CardValues>(emptyCard),
     [focused, setFocused] = useState<CardField | null>(null),
-    [problems, setProblems] = useState<Partial<Record<CardField, string>>>({}),
-    [notice, setNotice] = useState("");
-  useEffect(() => {
-    api<Session>("/payments/sessions/" + id)
-      .then((x) => {
-        setS(x);
-        if (x.message) setError(x.message);
-      })
-      .catch((e) => setError(e.message));
-  }, [id]);
-  const preview = s?.provider === "preview";
+    [problems, setProblems] = useState<Partial<Record<CardField, string>>>({});
   // Hatalı gösterilen alan düzeltildikçe mesajı kalkar.
   const change = (field: CardField, value: string) => {
     const next = { ...card, [field]: value };
@@ -210,40 +225,25 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
     if (card[field])
       setProblems((p) => ({ ...p, [field]: cardProblems(card)[field] }));
   };
-  async function submit(e: FormEvent<HTMLFormElement>) {
+  function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const form = e.currentTarget;
+    if (beforePay && !beforePay(form)) return;
     const found = cardProblems(card);
     setProblems(found);
     const first = (["holder", "pan", "expiry", "cvv"] as CardField[]).find(
       (f) => found[f],
     );
     if (first) {
-      e.currentTarget.querySelector<HTMLInputElement>(`[name="${first}"]`)?.focus();
+      form.querySelector<HTMLInputElement>(`[name="${first}"]`)?.focus();
       return;
     }
-    setError("");
-    // Önizleme: kart bilgisi hiçbir yere gönderilmez, form temizlenir.
-    if (preview) {
+    onPay(card, () => {
       (document.activeElement as HTMLElement | null)?.blur();
       setFocused(null);
       setCard(emptyCard);
-      setNotice(
-        "Kartla ödeme, banka onayının ardından açılacak. Kartınızdan çekim yapılmadı; ön rezervasyonunuz kayıtlı, acentemiz sizinle iletişime geçecek.",
-      );
-      return;
-    }
-    setBusy(true);
-    try {
-      const res = await post<{ redirect: string }>("/payments/card/" + id, card);
-      setCard(emptyCard);
-      // Bankaya yönlendiren sayfa sunucudadır; dil öneki eklenmez.
-      window.location.assign(res.redirect);
-    } catch (err) {
-      setError((err as Error).message);
-      setBusy(false);
-    }
+    });
   }
-  const open = s && s.status === "pending" && !s.expired;
   const field = (
     name: CardField,
     label: string,
@@ -270,6 +270,117 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
       )}
     </label>
   );
+  return (
+    <form className="card-form" onSubmit={submit} autoComplete="on" noValidate>
+      {children}
+      <CardVisual card={card} focused={focused} t={t} />
+      {field("holder", "Kart üzerindeki isim", {
+        autoComplete: "cc-name",
+        maxLength: 60,
+        autoCapitalize: "characters",
+      })}
+      {field(
+        "pan",
+        "Kart numarası",
+        {
+          inputMode: "numeric",
+          autoComplete: "cc-number",
+          placeholder: "0000 0000 0000 0000",
+          maxLength: 19,
+        },
+        formatPan,
+      )}
+      <div className="card-form-row">
+        {field("expiry", "Son kullanma (AA/YY)", {
+          inputMode: "numeric",
+          autoComplete: "cc-exp",
+          placeholder: t("AA/YY"),
+          maxLength: 5,
+          onChange: (e) =>
+            change("expiry", formatExpiry(e.target.value, card.expiry)),
+        })}
+        {field(
+          "cvv",
+          "Güvenlik kodu (CVV)",
+          {
+            inputMode: "numeric",
+            autoComplete: "cc-csc",
+            placeholder: "•••",
+            maxLength: 3,
+          },
+          (v) => v.replace(/\D/g, "").slice(0, 3),
+        )}
+      </div>
+      <button className="btn" disabled={busy}>
+        {busy ? (
+          <LoaderCircle className="spin" size={17} />
+        ) : (
+          <LockKeyhole size={17} />
+        )}
+        {busy
+          ? t("Bankanıza bağlanılıyor…")
+          : amountLabel
+            ? t("{amount} öde", { amount: amountLabel })
+            : t("Öde")}
+      </button>
+      <p className="card-form-note">
+        <ShieldCheck size={15} />
+        <span>
+          {t(
+            "Bir sonraki adımda bankanızın 3D Secure sayfasında SMS koduyla onaylayacaksınız. Visa, Mastercard ve Troy kabul edilir. Kart bilgileriniz saklanmaz.",
+          )}
+        </span>
+      </p>
+      {catalog.payment.simulator && (
+        <p className="card-form-note">
+          {t(
+            "Simülasyon kartı: 4111 1111 1111 1111, ileri bir tarih, herhangi bir CVV. 0002 ile biten kart reddedilir.",
+          )}
+        </p>
+      )}
+    </form>
+  );
+}
+// Vakıfbank kart ödemesi: canlı kart görseli eşliğinde kart bilgisi alınır,
+// 3D Secure için bankaya geçilir.
+export function CardPayment({ catalog }: { catalog: Catalog }) {
+  const { t } = useLang();
+  const { id } = useParams(),
+    [s, setS] = useState<Session | null>(null),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(""),
+    [notice, setNotice] = useState("");
+  useEffect(() => {
+    api<Session>("/payments/sessions/" + id)
+      .then((x) => {
+        setS(x);
+        if (x.message) setError(x.message);
+      })
+      .catch((e) => setError(e.message));
+  }, [id]);
+  const preview = s?.provider === "preview";
+  async function pay(card: CardValues, reset: () => void) {
+    setError("");
+    // Önizleme: kart bilgisi hiçbir yere gönderilmez, form temizlenir.
+    if (preview) {
+      reset();
+      setNotice(
+        "Kartla ödeme, banka onayının ardından açılacak. Kartınızdan çekim yapılmadı; ön rezervasyonunuz kayıtlı, acentemiz sizinle iletişime geçecek.",
+      );
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await post<{ redirect: string }>("/payments/card/" + id, card);
+      reset();
+      // Bankaya yönlendiren sayfa sunucudadır; dil öneki eklenmez.
+      window.location.assign(res.redirect);
+    } catch (err) {
+      setError((err as Error).message);
+      setBusy(false);
+    }
+  }
+  const open = s && s.status === "pending" && !s.expired;
   return (
     <section className="container payment-page">
       <article className="ticket-check payment-card">
@@ -302,71 +413,12 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
           </p>
         )}
         {open && (
-          <form className="card-form" onSubmit={submit} autoComplete="on" noValidate>
-            <CardVisual card={card} focused={focused} t={t} />
-            {field("holder", "Kart üzerindeki isim", {
-              autoComplete: "cc-name",
-              maxLength: 60,
-              autoCapitalize: "characters",
-            })}
-            {field(
-              "pan",
-              "Kart numarası",
-              {
-                inputMode: "numeric",
-                autoComplete: "cc-number",
-                placeholder: "0000 0000 0000 0000",
-                maxLength: 19,
-              },
-              formatPan,
-            )}
-            <div className="card-form-row">
-              {field("expiry", "Son kullanma (AA/YY)", {
-                inputMode: "numeric",
-                autoComplete: "cc-exp",
-                placeholder: t("AA/YY"),
-                maxLength: 5,
-                onChange: (e) =>
-                  change("expiry", formatExpiry(e.target.value, card.expiry)),
-              })}
-              {field(
-                "cvv",
-                "Güvenlik kodu (CVV)",
-                {
-                  inputMode: "numeric",
-                  autoComplete: "cc-csc",
-                  placeholder: "•••",
-                  maxLength: 3,
-                },
-                (v) => v.replace(/\D/g, "").slice(0, 3),
-              )}
-            </div>
-            <button className="btn" disabled={busy}>
-              {busy ? (
-                <LoaderCircle className="spin" size={17} />
-              ) : (
-                <LockKeyhole size={17} />
-              )}
-              {busy
-                ? t("Bankanıza bağlanılıyor…")
-                : t("{amount} öde", { amount: currency(s.amount) })}
-            </button>
-            <p className="card-form-note">
-              <ShieldCheck size={15} />
-              <span>
-                {t(
-                  "Bir sonraki adımda bankanızın 3D Secure sayfasında SMS koduyla onaylayacaksınız. Visa, Mastercard ve Troy kabul edilir. Kart bilgileriniz saklanmaz.",
-                )}
-              </span>
-            </p>
-            {catalog.payment.simulator && (
-              <p className="card-form-note">
-                {t(
-                  "Simülasyon kartı: 4111 1111 1111 1111, ileri bir tarih, herhangi bir CVV. 0002 ile biten kart reddedilir.",
-                )}
-              </p>
-            )}
-          </form>
+          <CardForm
+            catalog={catalog}
+            amountLabel={currency(s.amount)}
+            busy={busy}
+            onPay={pay}
+          />
         )}
         {s && s.status === "paid" && (
           <Link className="btn" to={"/odeme/sonuc/" + s.id}>
@@ -388,6 +440,116 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
             </Link>
           </>
         )}
+      </article>
+    </section>
+  );
+}
+// "1.250,50", "1250.5" ve "1250" gibi yazımları kuruşa çevirir (currency ile aynı birim).
+export function parseAmount(raw: string) {
+  let v = raw.replace(/[\s₺TL]/gi, "");
+  if (v.includes(",")) v = v.replace(/\./g, "").replace(",", ".");
+  else if (/^\d{1,3}(\.\d{3})+$/.test(v)) v = v.replace(/\./g, "");
+  if (!/^\d+(\.\d{1,2})?$/.test(v)) return null;
+  const n = Math.round(Number(v) * 100);
+  return n >= 100 && n <= 100_000_000 ? n : null;
+}
+// Kuruşlu tutarı yuvarlamadan gösterir ("₺1.250,50").
+const exactCurrency = (kurus: number) =>
+  new Intl.NumberFormat(localeOf(), {
+    style: "currency",
+    currency: "TRY",
+    currencyDisplay: "narrowSymbol",
+    minimumFractionDigits: kurus % 100 ? 2 : 0,
+  }).format(kurus / 100);
+// Herkese açık ödeme sayfası (/odeme): rezervasyon gerekmeden kart ekranını
+// gösterir (banka incelemesi için). Kart bilgisi hiçbir yere gönderilmez.
+export function OpenPayment({ catalog }: { catalog: Catalog }) {
+  const { t } = useLang();
+  const [amountText, setAmountText] = useState(""),
+    [reference, setReference] = useState(""),
+    [amountError, setAmountError] = useState(""),
+    [notice, setNotice] = useState("");
+  const amount = parseAmount(amountText);
+  function checkAmount(form: HTMLFormElement) {
+    if (amount) return true;
+    setAmountError("Ödenecek tutarı TL olarak yazın (ör. 1.250).");
+    form.querySelector<HTMLInputElement>('[name="amount"]')?.focus();
+    return false;
+  }
+  return (
+    <section className="container payment-page">
+      <article className="ticket-check payment-card">
+        <p className="payment-test-flag">
+          {t("Önizleme · kartla ödeme banka onayından sonra açılacak")}
+        </p>
+        <h1>{t("Online ödeme")}</h1>
+        <p className="muted">
+          {t(
+            "Rota Kars Turizm tur ve transfer ödemeleri. Rezervasyon numaranızı ve acentemizin bildirdiği tutarı yazıp kartınızla ödeyin.",
+          )}
+        </p>
+        {notice && (
+          <p className="card-form-notice" role="status">
+            {t(notice)}
+          </p>
+        )}
+        <CardForm
+          catalog={catalog}
+          amountLabel={amount ? exactCurrency(amount) : null}
+          busy={false}
+          beforePay={checkAmount}
+          onPay={(_card, reset) => {
+            reset();
+            setNotice(
+              "Kartla ödeme, banka onayının ardından açılacak. Kartınızdan çekim yapılmadı ve kart bilgileriniz hiçbir yere gönderilmedi.",
+            );
+          }}
+        >
+          <div className="card-form-row">
+            <label className="field">
+              {t("Ödenecek tutar (TL)")}
+              <input
+                name="amount"
+                inputMode="decimal"
+                placeholder="0,00"
+                maxLength={14}
+                value={amountText}
+                onChange={(e) => {
+                  setAmountText(e.target.value);
+                  if (amountError && parseAmount(e.target.value))
+                    setAmountError("");
+                }}
+                aria-invalid={amountError ? true : undefined}
+                aria-describedby={amountError ? "pay-err-amount" : undefined}
+              />
+              {amountError && (
+                <small className="field-error" id="pay-err-amount">
+                  {t(amountError)}
+                </small>
+              )}
+            </label>
+            <label className="field">
+              {t("Rezervasyon no (varsa)")}
+              <input
+                name="reference"
+                maxLength={20}
+                autoCapitalize="characters"
+                spellCheck={false}
+                value={reference}
+                onChange={(e) => setReference(e.target.value.toUpperCase())}
+              />
+            </label>
+          </div>
+        </CardForm>
+        <p className="card-form-note">
+          <Link to="/bilgilendirme#sozlesme">
+            {t("Ön bilgilendirme ve hizmet sözleşmesi")}
+          </Link>
+          {" · "}
+          <Link to="/bilgilendirme#iptal">{t("İptal ve iade koşulları")}</Link>
+          {" · "}
+          <Link to="/bilgilendirme#kvkk">{t("KVKK aydınlatma metni")}</Link>
+        </p>
       </article>
     </section>
   );
