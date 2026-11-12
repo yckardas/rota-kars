@@ -1412,3 +1412,22 @@
   padding: 8px;
   border-radius: 3px;
 }
+
+/* Uygulama olarak ekleme önerisi ve Hesabım satırı */
+.rk-admin .app-install {
+  border: 1px solid var(--mortar);
+  background: var(--surface);
+}
+.rk-admin .app-install > svg:first-child {
+  color: var(--red);
+  flex: none;
+}
+.rk-admin .app-install .btn {
+  white-space: nowrap;
+}
+.rk-admin .install-row {
+  margin: 4px 0 14px;
+}
+.rk-admin .install-row .muted svg {
+  vertical-align: -2px;
+}

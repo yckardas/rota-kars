@@ -1,6 +1,6 @@
-// Android yönetici uygulaması (Capacitor) ile köprü. Site tarayıcıda açıldığında
-// bu fonksiyonlar hiçbir şey yapmaz; uygulama içinde Capacitor köprüsü
-// window.Capacitor olarak gelir (eklenti paketleri site koduna eklenmez).
+// Android yönetici uygulaması (Capacitor) ile köprü ve tarayıcıdan yüklenen uygulama
+// (PWA). Uygulama içinde Capacitor köprüsü window.Capacitor olarak gelir (eklenti
+// paketleri site koduna eklenmez); tarayıcıda bildirimler Web Push ile çalışır.
 import { api, post } from "./api";
 
 type Listener = { remove: () => Promise<void> | void };
@@ -25,31 +25,44 @@ type CapacitorGlobal = {
 const cap = () => (window as Window & { Capacitor?: CapacitorGlobal }).Capacitor;
 export const isNativeApp = () => Boolean(cap()?.isNativePlatform?.());
 
-const TOKEN_KEY = "rota-push-token";
-const storage = {
+const stored = (key: string) => ({
   get: () => {
     try {
-      return localStorage.getItem(TOKEN_KEY);
+      return localStorage.getItem(key);
     } catch {
       return null;
     }
   },
   set: (v: string | null) => {
     try {
-      if (v) localStorage.setItem(TOKEN_KEY, v);
-      else localStorage.removeItem(TOKEN_KEY);
+      if (v) localStorage.setItem(key, v);
+      else localStorage.removeItem(key);
     } catch {}
   },
-};
+});
+const storage = stored("rota-push-token"),
+  webStorage = stored("rota-web-push");
 
 // Bildirime dokununca yalnız site içi bir yola gidilir.
 const internalPath = (url: unknown) =>
   typeof url === "string" && /^\/(?![/\\])[\w\-/?=&.%]*$/.test(url) ? url : "/yonetim";
 
 let listeners: Listener[] = [];
-export type PushState = "unsupported" | "unconfigured" | "denied" | "registered" | "error";
+export type PushState =
+  | "unsupported"
+  | "unconfigured"
+  | "denied"
+  | "prompt"
+  | "needs-install"
+  | "registered"
+  | "error";
 
-export async function enablePush(onOpen: (path: string) => void): Promise<PushState> {
+// prompt: false iken izin sorulmaz; yalnız daha önce izin verilmişse kayıt tazelenir.
+export async function enablePush(
+  onOpen: (path: string) => void,
+  { prompt = true }: { prompt?: boolean } = {},
+): Promise<PushState> {
+  if (!isNativeApp()) return enableWebPush({ prompt });
   const push = cap()?.Plugins.PushNotifications;
   if (!isNativeApp() || !push) return "unsupported";
   // Firebase yapılandırması olmayan pakette kayıt denenmez (uygulama çökerdi).
@@ -98,12 +111,113 @@ export async function enablePush(onOpen: (path: string) => void): Promise<PushSt
   return "registered";
 }
 
-// Çıkışta bu telefon bildirim listesinden çıkarılır.
+// Çıkışta bu cihaz bildirim listesinden çıkarılır.
 export async function disablePush() {
   const token = storage.get();
-  if (!token) return;
-  await post("/admin/devices/remove", { token }).catch(() => {});
-  storage.set(null);
+  if (token) {
+    await post("/admin/devices/remove", { token }).catch(() => {});
+    storage.set(null);
+  }
+  const endpoint = webStorage.get();
+  if (endpoint) {
+    await post("/admin/devices/remove", { endpoint }).catch(() => {});
+    webStorage.set(null);
+    const reg = await navigator.serviceWorker?.getRegistration("/yonetim").catch(() => undefined);
+    await (await reg?.pushManager.getSubscription())?.unsubscribe().catch(() => {});
+  }
+}
+
+// ---- Tarayıcıdan yüklenen uygulama (PWA) ----
+export const isIos = () =>
+  /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+export const isStandalone = () =>
+  matchMedia("(display-mode: standalone)").matches ||
+  (navigator as Navigator & { standalone?: boolean }).standalone === true;
+export const webPushSupported = () =>
+  !isNativeApp() && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+
+export function registerAppWorker() {
+  if (isNativeApp() || !("serviceWorker" in navigator)) return;
+  navigator.serviceWorker.register("/yonetim-sw.js", { scope: "/yonetim" }).catch(() => {});
+}
+
+// Bildirime dokununca açık panel ilgili sekmeye geçer (yonetim-sw.js gönderir).
+export function onAppNotificationOpen(fn: (path: string) => void) {
+  if (!("serviceWorker" in navigator)) return () => {};
+  const handler = (e: MessageEvent) => {
+    if (e.data?.type === "rota-open") fn(internalPath(e.data.path));
+  };
+  navigator.serviceWorker.addEventListener("message", handler);
+  return () => navigator.serviceWorker.removeEventListener("message", handler);
+}
+
+const base64Url = (bytes: ArrayBuffer | null) =>
+  bytes ? btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "") : "";
+const fromBase64Url = (text: string) =>
+  Uint8Array.from(atob(text.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+
+function browserLabel() {
+  const ua = navigator.userAgent;
+  const browser = /Edg\//.test(ua) ? "Edge" : /SamsungBrowser/.test(ua) ? "Samsung" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : "Tarayıcı";
+  const device = isIos() ? (/iPad/.test(ua) || navigator.maxTouchPoints > 1 && !/iPhone/.test(ua) ? "iPad" : "iPhone") : /Android/.test(ua) ? "Android" : /Windows/.test(ua) ? "Windows" : /Mac OS X/.test(ua) ? "Mac" : "bilgisayar";
+  return `${browser} · ${device}`;
+}
+
+async function enableWebPush({ prompt }: { prompt: boolean }): Promise<PushState> {
+  // iPhone'da bildirim yalnız ana ekrana eklenmiş uygulamada açılır.
+  if (!webPushSupported()) return isIos() && !isStandalone() ? "needs-install" : "unsupported";
+  let permission = Notification.permission;
+  if (permission === "default" && prompt) permission = await Notification.requestPermission();
+  if (permission === "denied") return "denied";
+  if (permission !== "granted") return "prompt";
+  registerAppWorker();
+  const reg = await navigator.serviceWorker.ready;
+  const { publicKey } = await api<{ publicKey: string }>("/admin/devices/web-key");
+  let sub = await reg.pushManager.getSubscription();
+  // Sunucu anahtarı değiştiyse eski abonelik yenilenir.
+  if (sub && base64Url(sub.options.applicationServerKey) !== publicKey) {
+    await sub.unsubscribe().catch(() => {});
+    sub = null;
+  }
+  sub ||= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: fromBase64Url(publicKey) });
+  const json = sub.toJSON();
+  await post("/admin/devices", {
+    platform: "web",
+    subscription: { endpoint: json.endpoint, keys: json.keys },
+    label: browserLabel(),
+  });
+  webStorage.set(sub.endpoint);
+  return "registered";
+}
+
+// Chrome/Edge "Yükle" teklifini saklar; panel kendi düğmesiyle gösterir.
+type InstallEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
+let installEvent: InstallEvent | null = null;
+const installWatchers = new Set<() => void>();
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    installEvent = e as InstallEvent;
+    installWatchers.forEach((fn) => fn());
+  });
+  window.addEventListener("appinstalled", () => {
+    installEvent = null;
+    installWatchers.forEach((fn) => fn());
+  });
+}
+export const canInstallApp = () => Boolean(installEvent);
+export function watchInstall(fn: () => void) {
+  installWatchers.add(fn);
+  return () => void installWatchers.delete(fn);
+}
+export async function installApp() {
+  const e = installEvent;
+  if (!e) return false;
+  await e.prompt();
+  const { outcome } = await e.userChoice;
+  installEvent = null;
+  installWatchers.forEach((fn) => fn());
+  return outcome === "accepted";
 }
 
 const newer = (a: string, b: string) => {

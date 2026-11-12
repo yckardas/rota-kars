@@ -1,0 +1,24 @@
+{
+  "id": "/yonetim",
+  "name": "Rota Kars Yönetim",
+  "short_name": "Rota Yönetim",
+  "description": "Rota Kars Turizm yönetim paneli: rezervasyonlar, seferler, talepler ve anlık bildirimler.",
+  "lang": "tr",
+  "dir": "ltr",
+  "start_url": "/yonetim",
+  "scope": "/yonetim",
+  "display": "standalone",
+  "background_color": "#24201D",
+  "theme_color": "#24201D",
+  "icons": [
+    { "src": "/images/app/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/images/app/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/images/app/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Rezervasyonlar", "url": "/yonetim?sekme=reservations", "icons": [{ "src": "/images/app/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Yeni rezervasyon", "url": "/yonetim?sekme=reservations&yeni=1", "icons": [{ "src": "/images/app/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Günlük operasyon", "url": "/yonetim?sekme=daily", "icons": [{ "src": "/images/app/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Gelen talepler", "url": "/yonetim?sekme=requests", "icons": [{ "src": "/images/app/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

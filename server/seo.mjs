@@ -409,6 +409,14 @@ export function headTags(meta, base) {
     `<meta property="og:url" content="${attr(url)}">`,
     `<meta property="og:image" content="${attr(image)}">`,
     `<meta name="twitter:card" content="summary_large_image">`,
+    // Yönetim paneli telefona/masaüstüne uygulama olarak yüklenebilir (PWA); site değil.
+    meta.path === "/yonetim"
+      ? '<link rel="manifest" href="/yonetim.webmanifest">' +
+        '<link rel="apple-touch-icon" href="/images/app/apple-touch-icon.png">' +
+        '<meta name="apple-mobile-web-app-title" content="Rota Yönetim">' +
+        '<meta name="mobile-web-app-capable" content="yes">' +
+        '<meta name="apple-mobile-web-app-status-bar-style" content="black">'
+      : "",
     ld({ "@context": "https://schema.org", "@graph": meta.graph }),
   ]
     .filter(Boolean)

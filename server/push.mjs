@@ -1,9 +1,14 @@
-// Yönetici uygulamasına anlık bildirim (Firebase Cloud Messaging HTTP v1).
-// FIREBASE_SERVICE_ACCOUNT: Firebase konsolundan indirilen hizmet hesabı JSON'u
-// (düz veya base64). Ayarlı değilse bildirimler sessizce atlanır.
+// Yönetici uygulamasına anlık bildirim. İki yol:
+// - Android uygulaması: Firebase Cloud Messaging HTTP v1. FIREBASE_SERVICE_ACCOUNT:
+//   Firebase konsolundan indirilen hizmet hesabı JSON'u (düz veya base64). Ayarlı
+//   değilse Android bildirimleri sessizce atlanır.
+// - Tarayıcıdan yüklenen uygulama (PWA): standart Web Push (VAPID). Anahtar çifti ilk
+//   kullanımda üretilip veritabanında saklanır; WEB_PUSH_PUBLIC_KEY/PRIVATE_KEY ile
+//   sabitlenebilir. Ek ayar gerekmez.
 // Bildirimler yalnız sahip ve operasyon rolündeki, aktif yöneticilerin
 // cihazlarına gider; rehberler müşteri bilgisi içeren bildirim almaz.
 import { createHash, createPrivateKey, createSign } from "node:crypto";
+import webpush from "web-push";
 
 const RECIPIENT_ROLES = ["owner", "operations"];
 const tokenId = (token) => createHash("sha256").update(String(token)).digest("hex");
@@ -53,15 +58,30 @@ const FCM_HINTS = {
   PERMISSION_DENIED: "Hizmet hesabının bildirim gönderme yetkisi yok. Firebase'den yeni bir özel anahtar oluşturun.",
   SENDER_ID_MISMATCH: "Telefondaki uygulama başka bir Firebase projesine bağlı (google-services.json ile anahtar farklı projelerden).",
   UNREGISTERED: "Telefonun bildirim kaydı geçersiz; uygulamada bildirimleri yeniden açın.",
+  FCM_NOT_CONFIGURED: "Android uygulaması için Railway'de FIREBASE_SERVICE_ACCOUNT ayarlı değil. Tarayıcıdan yüklenen uygulama bundan etkilenmez.",
   invalid_grant: "Firebase anahtarı reddedildi (silinmiş ya da hatalı). Yeni bir özel anahtar oluşturup Railway'e girin.",
 };
 export const fcmHint = (code) => FCM_HINTS[code] || null;
 
-export function createPush(db, { env = process.env, fetchImpl = fetch, clock = Date.now } = {}) {
+// Sunucu yalnız bilinen tarayıcı bildirim servislerine istek atar (Chrome/Edge/
+// Firefox/Safari); kayıt sırasında verilen adres başka bir yere yönlendirilemez.
+const WEB_PUSH_HOSTS =
+  /^(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|web\.push\.apple\.com|[a-z0-9-]+\.notify\.windows\.com)$/;
+export function webPushEndpointOk(endpoint) {
+  try {
+    const u = new URL(endpoint);
+    return u.protocol === "https:" && !u.port && !u.username && WEB_PUSH_HOSTS.test(u.hostname);
+  } catch {
+    return false;
+  }
+}
+
+export function createPush(db, { env = process.env, fetchImpl = fetch, clock = Date.now, webPush = webpush } = {}) {
   const config = readServiceAccount(env.FIREBASE_SERVICE_ACCOUNT),
     account = config.account;
   let accessToken = null,
-    tokenExpires = 0;
+    tokenExpires = 0,
+    vapid = null;
   const log = (level, message, extra = {}) =>
     console[level === "error" ? "error" : "log"](JSON.stringify({ level, job: "push", message, ...extra }));
   if (config.status === "invalid") log("error", "FIREBASE_SERVICE_ACCOUNT okunamadı: " + config.reason);
@@ -102,7 +122,50 @@ export function createPush(db, { env = process.env, fetchImpl = fetch, clock = D
     return accessToken;
   }
 
-  async function sendTo(device, { title, body, url, kind }) {
+  // Birden çok sunucu aynı anda başlarsa da tek anahtar çifti kalır (insertIfAbsent).
+  function vapidKeys() {
+    if (env.WEB_PUSH_PUBLIC_KEY && env.WEB_PUSH_PRIVATE_KEY)
+      return Promise.resolve({ publicKey: env.WEB_PUSH_PUBLIC_KEY, privateKey: env.WEB_PUSH_PRIVATE_KEY });
+    vapid ||= (async () => {
+      await db.insertIfAbsent("integration_settings", "web_push_vapid", {
+        id: "web_push_vapid",
+        body: webPush.generateVAPIDKeys(),
+        updated_at: clock(),
+      });
+      return (await db.one("integration_settings", { _id: "web_push_vapid" })).body;
+    })().catch((error) => {
+      vapid = null;
+      throw error;
+    });
+    return vapid;
+  }
+  const vapidSubject = /^https:\/\//.test(env.PUBLIC_BASE_URL || "") ? env.PUBLIC_BASE_URL : "https://rotakarsturizm.com";
+
+  async function sendWeb(device, { title, body, url, kind }) {
+    const keys = await vapidKeys();
+    try {
+      await webPush.sendNotification(device.subscription, JSON.stringify({ title, body, url: url || "/yonetim", kind: kind || "general" }), {
+        vapidDetails: { subject: vapidSubject, ...keys },
+        TTL: 24 * 3600,
+        urgency: "high",
+        timeout: 10000,
+      });
+      return "sent";
+    } catch (e) {
+      // 404/410: tarayıcı aboneliği bitirdi (izin geri alındı, site verisi silindi).
+      if (e?.statusCode === 404 || e?.statusCode === 410) {
+        await db.remove("push_devices", { _id: device.id });
+        return "removed";
+      }
+      const error = new Error(`Web Push ${e?.statusCode || ""} ${e?.body || e?.message || e}`.trim().slice(0, 300));
+      error.code = e?.statusCode ? "WEB_PUSH_" + e.statusCode : "WEB_PUSH";
+      throw error;
+    }
+  }
+
+  async function sendTo(device, message) {
+    if (device.platform === "web") return sendWeb(device, message);
+    const { title, body, url, kind } = message;
     const res = await fetchImpl(
       `https://fcm.googleapis.com/v1/projects/${encodeURIComponent(account.project_id)}/messages:send`,
       {
@@ -142,10 +205,13 @@ export function createPush(db, { env = process.env, fetchImpl = fetch, clock = D
   }
 
   const api = {
+    // enabled: Android (Firebase) hazır mı. Web Push her zaman açıktır.
     enabled: Boolean(account),
     status: config.status,
     statusReason: config.reason || null,
-    async register(adminId, { token, platform = "android", label = "" }) {
+    webPublicKey: async () => (await vapidKeys()).publicKey,
+    async register(adminId, { token, platform = "android", label = "", subscription = null }) {
+      if (platform === "web") token = subscription.endpoint;
       const id = tokenId(token);
       // Aynı telefon başka bir yöneticiyle giriş yaparsa kayıt yeni yöneticiye geçer.
       await db.upsert("push_devices", id, {
@@ -154,6 +220,7 @@ export function createPush(db, { env = process.env, fetchImpl = fetch, clock = D
         token,
         platform,
         label: String(label).slice(0, 60),
+        subscription: platform === "web" ? { endpoint: subscription.endpoint, keys: subscription.keys } : null,
         created_at: (await db.one("push_devices", { _id: id }))?.created_at || clock(),
         last_seen: clock(),
       });
@@ -170,7 +237,6 @@ export function createPush(db, { env = process.env, fetchImpl = fetch, clock = D
     removeForAdmin: (adminId) => db.remove("push_devices", { admin_id: adminId }),
     // Hata fırlatmaz: bildirim gönderilemezse işlem (rezervasyon vb.) etkilenmez.
     async notifyAdmins(message, { adminIds = null } = {}) {
-      if (!account) return { sent: 0, skipped: true, errors: [] };
       const admins = await db.find("admin_users", {
         role: { $in: RECIPIENT_ROLES },
         disabled: { $ne: true },
@@ -182,7 +248,14 @@ export function createPush(db, { env = process.env, fetchImpl = fetch, clock = D
         removed = 0;
       const errors = [],
         results = [];
-      for (const device of devices)
+      for (const device of devices) {
+        if (device.platform !== "web" && !account) {
+          // Firebase ayarlı değil: Android telefon atlanır, yalnız sonuçta görünür.
+          const e = { code: "FCM_NOT_CONFIGURED", message: "Android bildirimi için FIREBASE_SERVICE_ACCOUNT ayarlı değil." };
+          errors.push(e);
+          results.push({ adminId: device.admin_id, deviceId: device.id, label: device.label, outcome: "error", ...e });
+          continue;
+        }
         try {
           const result = await sendTo(device, message);
           if (result === "sent") sent++;
@@ -194,6 +267,7 @@ export function createPush(db, { env = process.env, fetchImpl = fetch, clock = D
           errors.push(e);
           results.push({ adminId: device.admin_id, deviceId: device.id, label: device.label, outcome: "error", ...e });
         }
+      }
       return { sent, removed, devices: devices.length, errors, results };
     },
     // Sahip için: bildirim alacak ekip üyeleri ve kayıtlı telefonları.
@@ -207,7 +281,7 @@ export function createPush(db, { env = process.env, fetchImpl = fetch, clock = D
         receives: RECIPIENT_ROLES.includes(a.role),
         devices: devices
           .filter((d) => d.admin_id === a.id)
-          .map((d) => ({ id: d.id, label: d.label, createdAt: d.created_at, lastSeen: d.last_seen })),
+          .map((d) => ({ id: d.id, platform: d.platform, label: d.label, createdAt: d.created_at, lastSeen: d.last_seen })),
       }));
     },
   };

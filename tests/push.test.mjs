@@ -308,3 +308,79 @@ test("HTTP: owner sees each team member's phones and per-device results of a tea
   assert.equal(res.results.find((r) => r.label === "Eski telefon").outcome, "removed");
   assert.deepEqual(firebase.sent.map((m) => m.token).sort(), [TOKEN(1), TOKEN(2)]);
 });
+
+test("web push: installed panel subscribes, gets notifications, dead subscriptions are dropped", async (t) => {
+  const sent = [];
+  let gone = new Set();
+  const webPush = {
+    generateVAPIDKeys: () => ({ publicKey: "B" + "a".repeat(86), privateKey: "p".repeat(43) }),
+    sendNotification: async (subscription, payload, options) => {
+      assert.equal(options.vapidDetails.publicKey, "B" + "a".repeat(86));
+      assert.match(options.vapidDetails.subject, /^https:\/\//);
+      if (gone.has(subscription.endpoint)) throw Object.assign(new Error("gone"), { statusCode: 410 });
+      sent.push({ endpoint: subscription.endpoint, keys: subscription.keys, ...JSON.parse(payload) });
+    },
+  };
+  // Firebase yok: Android telefon atlanır ama tarayıcı bildirimi çalışır.
+  const store = await openStore(":memory:", { env: {}, webPush, pushFetch: async () => assert.fail("FCM çağrılmamalı") });
+  const app = createApp(store, {
+    env: { ADMIN_PASSWORD: "ilk-kurulum-parolasi" },
+    reviewsService: { get: async () => ({ status: "not_configured", reviews: [] }) },
+  });
+  const server = app.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(async () => {
+    await new Promise((r) => server.close(r));
+    await store.db.close();
+  });
+  const base = `http://127.0.0.1:${server.address().port}/api`;
+  const call = async (path, { body, cookie } = {}) => {
+    const r = await fetch(base + path, {
+      method: body ? "POST" : "GET",
+      body: body ? JSON.stringify(body) : undefined,
+      headers: { "Content-Type": "application/json", "X-Rota-Client": "web", ...(cookie ? { Cookie: cookie } : {}) },
+    });
+    return { status: r.status, json: await r.json().catch(() => null), cookie: r.headers.get("set-cookie")?.split(";")[0] };
+  };
+  const boot = (await call("/admin/login", { body: { password: "ilk-kurulum-parolasi" } })).cookie;
+  const keys = { p256dh: "B" + "x".repeat(86), auth: "y".repeat(22) };
+  const chrome = "https://fcm.googleapis.com/fcm/send/abc:def-123";
+  const bootSub = { platform: "web", subscription: { endpoint: chrome, keys } };
+  assert.equal((await call("/admin/devices", { body: bootSub, cookie: boot })).status, 403, "ilk kurulum parolası abone olamaz");
+  const owner = (
+    await call("/admin/users", {
+      body: { email: "sahip@rotakars.test", name: "Sahip", password: "sahip-parolasi-2026", role: "owner" },
+      cookie: boot,
+    })
+  ).cookie;
+  assert.equal((await call("/admin/devices/web-key")).status, 401);
+  const key = (await call("/admin/devices/web-key", { cookie: owner })).json.publicKey;
+  assert.equal(key, "B" + "a".repeat(86));
+  assert.equal((await call("/admin/devices/web-key", { cookie: owner })).json.publicKey, key, "anahtar sabit kalır");
+
+  const subscribe = (endpoint, cookie = owner) =>
+    call("/admin/devices", { body: { platform: "web", subscription: { endpoint, keys }, label: "Chrome · Android" }, cookie });
+  // Sunucu yalnız bilinen bildirim servislerine istek atar.
+  for (const bad of ["https://evil.test/push", "http://fcm.googleapis.com/x", "https://fcm.googleapis.com:8443/x", "https://169.254.169.254/latest"])
+    assert.equal((await subscribe(bad)).status, 400, bad);
+  assert.equal((await subscribe(chrome)).status, 201);
+  assert.equal((await subscribe("https://web.push.apple.com/QGx-safari")).status, 201);
+  assert.equal((await call("/admin/devices", { body: { token: TOKEN(7) }, cookie: owner })).status, 201);
+  const devices = (await call("/admin/devices", { cookie: owner })).json.devices;
+  assert.deepEqual(devices.map((d) => d.platform).sort(), ["android", "web", "web"]);
+
+  gone = new Set(["https://web.push.apple.com/QGx-safari"]);
+  const test = (await call("/admin/devices/test", { body: {}, cookie: owner })).json;
+  assert.equal(test.sent, 1);
+  assert.equal(test.removed, 1, "biten Safari aboneliği silinir");
+  assert.equal(test.errors[0].code, "FCM_NOT_CONFIGURED");
+  assert.match(test.errors[0].hint, /FIREBASE_SERVICE_ACCOUNT/);
+  assert.deepEqual(sent.at(-1), { endpoint: chrome, keys, title: "Rota Kars Yönetim", body: "Test bildirimi: bu telefon bildirim alıyor.", url: "/yonetim", kind: "test" });
+
+  // Rezervasyon olayları da tarayıcıya düşer (Firebase olmasa bile).
+  await store.request("vehicle", { name: "Test Yolcu", email: "t@example.com", phone: "05551112233", guests: 2 });
+  assert.equal(sent.at(-1).url, "/yonetim?sekme=requests");
+
+  assert.equal((await call("/admin/devices/remove", { body: { endpoint: chrome }, cookie: owner })).json.removed, 1);
+  assert.equal((await call("/admin/devices", { cookie: owner })).json.devices.length, 1);
+});

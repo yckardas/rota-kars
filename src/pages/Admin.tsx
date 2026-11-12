@@ -44,10 +44,11 @@ import { FeedbackProvider, useFeedback } from "../components/admin/feedback";
 import "../admin.css";
 import {
   AppUpdateBanner,
+  InstallBanner,
   PushSettings,
   SessionList,
 } from "../components/admin/MobileApp";
-import { disablePush, enablePush, isNativeApp } from "../lib/native";
+import { disablePush, enablePush, isNativeApp, onAppNotificationOpen, registerAppWorker } from "../lib/native";
 import { TourOperations } from "../components/TourOperations";
 import { InstagramManager } from "../components/InstagramManager";
 import {
@@ -187,11 +188,16 @@ function AdminPanel({
     me && !me.bootstrap && !me.needs2faSetup && me.user.role !== "guide",
   );
   const openFromNotification = (path: string) => navigate(path);
-  // Android uygulamasında giriş yapınca telefon bildirimlere otomatik kaydolur.
+  // Android uygulamasında giriş yapınca telefon bildirimlere otomatik kaydolur;
+  // tarayıcıda yalnız daha önce izin verilmişse kayıt tazelenir (izin sorulmaz).
   useEffect(() => {
-    if (canReceivePush && isNativeApp())
-      enablePush(openFromNotification).catch(() => {});
+    if (canReceivePush) enablePush(openFromNotification, { prompt: false }).catch(() => {});
   }, [canReceivePush]);
+  // Tarayıcıdan yüklenebilir uygulama: bildirim ve çevrimdışı sayfa için çalışan.
+  useEffect(() => {
+    registerAppWorker();
+    return onAppNotificationOpen(openFromNotification);
+  }, []);
   // Menü rozetleri: onay bekleyen, iptal talebi, yeni talep. Dakikada bir tazelenir.
   const canCount = Boolean(me && !me.needs2faSetup && me.user.role !== "guide");
   useEffect(() => {
@@ -361,6 +367,7 @@ function AdminPanel({
       </aside>
       <main className="admin-main" ref={mainRef}>
         <AppUpdateBanner />
+        <InstallBanner />
         <div className="section-heading">
           <div>
             <h1>{title}</h1>

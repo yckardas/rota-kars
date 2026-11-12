@@ -5,17 +5,26 @@ import {
   Download,
   LoaderCircle,
   MessageCircle,
+  MonitorSmartphone,
   Phone,
   Printer,
+  Share,
   Smartphone,
   UserCheck,
+  X,
 } from "lucide-react";
 import { api, post } from "../../lib/api";
 import { dateLabel } from "../../lib/types";
 import {
+  canInstallApp,
   checkAppUpdate,
   enablePush,
+  installApp,
+  isIos,
   isNativeApp,
+  isStandalone,
+  watchInstall,
+  webPushSupported,
   type AppUpdate,
 } from "../../lib/native";
 import { Modal } from "../Modal";
@@ -28,7 +37,65 @@ type Device = {
   lastSeen: number;
 };
 
-// Hesabım sekmesi: bu telefonun bildirim durumu ve kayıtlı cihazlar.
+const deviceName = (d: { platform?: string; label: string }) =>
+  d.label || (d.platform === "web" ? "Tarayıcı" : "Android telefon");
+
+// Tarayıcıda açılan paneli telefona/masaüstüne uygulama olarak ekleme.
+function useInstall() {
+  const [, render] = useState(0);
+  useEffect(() => watchInstall(() => render((n) => n + 1)), []);
+  const native = isNativeApp(),
+    installed = !native && isStandalone();
+  return {
+    available: !native && !installed && (canInstallApp() || isIos()),
+    canPrompt: canInstallApp(),
+    ios: isIos(),
+    installed,
+  };
+}
+const INSTALL_DISMISS = "rota-install-dismissed";
+
+// Panelin üstünde bir kez önerilir; "Şimdi değil" denince bir daha çıkmaz.
+export function InstallBanner() {
+  const install = useInstall();
+  const [hidden, setHidden] = useState(() => {
+    try {
+      return localStorage.getItem(INSTALL_DISMISS) === "1";
+    } catch {
+      return false;
+    }
+  });
+  if (hidden || !install.available) return null;
+  const dismiss = () => {
+    try {
+      localStorage.setItem(INSTALL_DISMISS, "1");
+    } catch {}
+    setHidden(true);
+  };
+  return (
+    <div className="app-update app-install" role="status">
+      <MonitorSmartphone size={18} />
+      <span>
+        <strong>Paneli uygulama olarak ekleyin</strong>
+        <small>
+          {install.canPrompt
+            ? "Ana ekrandan tek dokunuşla açılır, yeni rezervasyon bildirimleri gelir."
+            : "Safari'de Paylaş düğmesine, sonra \"Ana Ekrana Ekle\"ye dokunun."}
+        </small>
+      </span>
+      {install.canPrompt && (
+        <button className="btn btn-small" onClick={() => installApp().then((ok) => ok && setHidden(true))}>
+          <Download size={15} /> Yükle
+        </button>
+      )}
+      <button className="icon-btn" onClick={dismiss} aria-label="Şimdi değil" title="Şimdi değil">
+        <X size={16} />
+      </button>
+    </div>
+  );
+}
+
+// Hesabım sekmesi: bu cihazın bildirim durumu ve kayıtlı cihazlar.
 export function PushSettings({
   canReceive,
   onOpen,
@@ -45,6 +112,7 @@ export function PushSettings({
     [busy, setBusy] = useState(""),
     [message, setMessage] = useState(""),
     [error, setError] = useState("");
+  const native = isNativeApp();
   const load = () =>
     api<NonNullable<typeof info>>("/admin/devices")
       .then(setInfo)
@@ -59,15 +127,17 @@ export function PushSettings({
     try {
       if (kind === "enable") {
         const state = await enablePush(onOpen);
-        setMessage(
-          state === "registered"
-            ? "Bu telefon bildirim alacak."
-            : state === "unconfigured"
-              ? "Bu uygulama sürümü bildirim servisine (Firebase) bağlı değil. Bildirimli yeni sürümü kurun."
-              : state === "denied"
-              ? "Bildirim izni verilmedi. Telefon ayarlarından Rota Kars Yönetim için bildirimlere izin verin."
-              : "Bildirimler yalnız Android uygulamasında açılabilir.",
-        );
+        const text: Record<string, string> = {
+          registered: native ? "Bu telefon bildirim alacak." : "Bu cihaz bildirim alacak.",
+          unconfigured: "Bu uygulama sürümü bildirim servisine (Firebase) bağlı değil. Bildirimli yeni sürümü kurun.",
+          denied: native
+            ? "Bildirim izni verilmedi. Telefon ayarlarından Rota Kars Yönetim için bildirimlere izin verin."
+            : "Bildirim izni engellendi. Adres çubuğundaki site ayarlarından (kilit simgesi) bildirimlere izin verin.",
+          prompt: "Bildirim izni verilmedi. Yeniden deneyip \"İzin ver\"e dokunun.",
+          "needs-install": "iPhone'da bildirim için önce paneli ana ekrana ekleyin (Paylaş → Ana Ekrana Ekle), sonra oradan açıp yeniden deneyin.",
+          unsupported: "Bu tarayıcı bildirimleri desteklemiyor. Chrome, Edge, Firefox ya da Safari kullanın.",
+        };
+        (state === "registered" ? setMessage : setError)(text[state] || "Bildirim açılamadı.");
         await load();
       } else {
         const r = await post<{
@@ -78,15 +148,15 @@ export function PushSettings({
         }>("/admin/devices/test", {});
         if (r.errors?.length) {
           const e = r.errors[0];
-          setError(`Firebase gönderimi reddetti (${e.code}). ${e.hint || e.message}`);
+          setError(`Gönderim başarısız (${e.code}). ${e.hint || e.message}`);
         } else if (r.removed && !r.sent)
-          setError("Telefonun bildirim kaydı geçersizdi ve silindi. Uygulamada \"Bu telefonda bildirimleri aç\" ile yeniden kaydedin.");
+          setError("Cihazın bildirim kaydı geçersizdi ve silindi. \"Bildirimleri aç\" ile yeniden kaydedin.");
         setMessage(
           r.sent
-            ? `Test bildirimi ${r.sent} cihaza gönderildi. Birkaç saniye içinde telefona düşmeli.`
+            ? `Test bildirimi ${r.sent} cihaza gönderildi. Birkaç saniye içinde düşmeli.`
             : r.devices
               ? ""
-              : "Kayıtlı cihaz bulunamadı. Önce uygulamada \"Bu telefonda bildirimleri aç\" butonuna basın.",
+              : "Kayıtlı cihaz bulunamadı. Önce \"Bildirimleri aç\" düğmesine basın.",
         );
         await load();
       }
@@ -100,7 +170,7 @@ export function PushSettings({
     return (
       <section className="admin-section push-settings">
         <h2>
-          <BellRing size={19} /> Telefon bildirimleri
+          <BellRing size={19} /> Bildirimler
         </h2>
         <p className="muted">
           Rezervasyon ve yorum bildirimleri yalnız sahip ve operasyon
@@ -111,13 +181,14 @@ export function PushSettings({
   return (
     <section className="admin-section push-settings">
       <h2>
-        <BellRing size={19} /> Telefon bildirimleri
+        <BellRing size={19} /> Bildirimler
       </h2>
       <p className="muted">
         Yeni ön rezervasyon, iptal, gelen talep ve yeni Google yorumu anında
-        telefonunuza düşer.
+        telefonunuza ya da bilgisayarınıza düşer.
       </p>
-      {info && !info.enabled && (
+      <InstallRow />
+      {native && info && !info.enabled && (
         <p className="admin-banner" role="note">
           {info.status === "invalid"
             ? `Railway'deki FIREBASE_SERVICE_ACCOUNT okunamadı: ${info.statusReason}. Değeri yeniden girin (base64 önerilir).`
@@ -125,10 +196,10 @@ export function PushSettings({
         </p>
       )}
       <div className="push-actions">
-        {isNativeApp() && (
+        {(native || webPushSupported() || isIos()) && (
           <button className="btn" onClick={() => run("enable")} disabled={Boolean(busy)}>
             {busy === "enable" ? <LoaderCircle className="spin" size={16} /> : <Smartphone size={16} />}
-            Bu telefonda bildirimleri aç
+            {native ? "Bu telefonda bildirimleri aç" : "Bu cihazda bildirimleri aç"}
           </button>
         )}
         <button
@@ -152,12 +223,12 @@ export function PushSettings({
       )}
       {info && (
         <ul className="device-list">
-          {info.devices.length === 0 && <li className="muted">Kayıtlı telefon yok.</li>}
+          {info.devices.length === 0 && <li className="muted">Kayıtlı cihaz yok.</li>}
           {info.devices.map((d) => (
             <li key={d.id}>
-              <Smartphone size={16} />
+              {d.platform === "web" ? <MonitorSmartphone size={16} /> : <Smartphone size={16} />}
               <span>
-                <strong>{d.label || "Android telefon"}</strong>
+                <strong>{deviceName(d)}</strong>
                 <small>Son görülme: {new Date(d.lastSeen).toLocaleString("tr-TR")}</small>
               </span>
             </li>
@@ -169,12 +240,38 @@ export function PushSettings({
   );
 }
 
+// Hesabım: uygulama olarak ekleme durumu (APK ve yüklü uygulamada gizlenir).
+function InstallRow() {
+  const install = useInstall();
+  if (install.installed)
+    return (
+      <p className="notice-success" role="status">
+        <Check size={16} /> Panel bu cihaza uygulama olarak yüklü.
+      </p>
+    );
+  if (!install.available) return null;
+  return (
+    <div className="install-row">
+      {install.canPrompt ? (
+        <button className="btn btn-outline" onClick={() => installApp()}>
+          <Download size={16} /> Uygulama olarak yükle
+        </button>
+      ) : (
+        <p className="muted">
+          <Share size={15} aria-hidden="true" /> iPhone'da Safari'nin Paylaş düğmesine, sonra "Ana Ekrana Ekle"ye
+          dokunun. Bildirimler ana ekrandaki uygulamadan açılır.
+        </p>
+      )}
+    </div>
+  );
+}
+
 type TeamMember = {
   id: string;
   name: string;
   role: string;
   receives: boolean;
-  devices: { id: string; label: string; lastSeen: number }[];
+  devices: { id: string; platform?: string; label: string; lastSeen: number }[];
 };
 type TeamResult = { adminId: string; deviceId: string; label: string; outcome: string; code?: string; hint?: string | null };
 const ROLE_NAMES: Record<string, string> = { owner: "Sahip", operations: "Operasyon", guide: "Rehber" };
@@ -200,14 +297,14 @@ function TeamPush() {
       : r.outcome === "sent"
         ? "✓ Gönderildi"
         : r.outcome === "removed"
-          ? "Kayıt geçersizdi, silindi: telefonda bildirimleri yeniden açın"
+          ? "Kayıt geçersizdi, silindi: o cihazda bildirimleri yeniden açın"
           : `✗ ${r.code}${r.hint ? " · " + r.hint : ""}`;
   return (
     <div className="team-push" style={{ marginTop: 22, paddingTop: 16, borderTop: "1px solid var(--line)", display: "grid", gap: 10 }}>
       <h3 style={{ margin: 0, fontSize: 16 }}>Ekip bildirim durumu</h3>
       <p className="muted">
-        Bildirimler sahip ve operasyon rolündekilerin kayıtlı telefonlarına gider. Telefonu listede yoksa o kişi kendi
-        hesabıyla uygulamada "Bu telefonda bildirimleri aç" demeli.
+        Bildirimler sahip ve operasyon rolündekilerin kayıtlı cihazlarına gider. Cihazı listede yoksa o kişi kendi
+        hesabıyla Hesabım → "Bildirimleri aç" demeli.
       </p>
       <ul className="device-list">
         {team.map((m) => (
@@ -217,12 +314,12 @@ function TeamPush() {
                 {m.name} · {ROLE_NAMES[m.role] || m.role}
               </strong>
               {!m.receives && <small>Rehber rolü bildirim almaz.</small>}
-              {m.receives && m.devices.length === 0 && <small className="error">Kayıtlı telefon yok</small>}
+              {m.receives && m.devices.length === 0 && <small className="error">Kayıtlı cihaz yok</small>}
               {m.devices.map((d) => {
                 const r = results?.find((x) => x.deviceId === d.id);
                 return (
                   <small key={d.id}>
-                    {d.label || "Android telefon"} · son görülme {new Date(d.lastSeen).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" })}
+                    {deviceName(d)} · son görülme {new Date(d.lastSeen).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" })}
                     {r && <b style={{ color: r.outcome === "sent" ? "#2f6b3d" : "#b5462f" }}> · {outcome(r)}</b>}
                   </small>
                 );

@@ -4,6 +4,7 @@ import { once } from "node:events";
 import { createApp } from "../server/app.mjs";
 import { openStore } from "../server/store.mjs";
 import {
+  headTags,
   pageMeta,
   renderHtml,
   robotsTxt,
@@ -177,4 +178,12 @@ test("production links never trust the Host header", async () => {
   );
   assert.equal(siteBase({ NODE_ENV: "production", PUBLIC_BASE_URL: "javascript:alert(1)" }, evil), "https://rotakarsturizm.com");
   assert.equal(siteBase({}, { protocol: "http", headers: { host: "localhost:5173" } }), "http://localhost:5173");
+});
+
+test("only the admin page offers the installable app manifest", () => {
+  const base = "https://rotakarsturizm.com";
+  const admin = headTags(pageMeta("/yonetim", base), base);
+  assert.match(admin, /<link rel="manifest" href="\/yonetim\.webmanifest">/);
+  assert.match(admin, /apple-touch-icon/);
+  for (const path of ["/", "/turlar", "/uyelik"]) assert.doesNotMatch(headTags(pageMeta(path, base), base), /manifest/);
 });
