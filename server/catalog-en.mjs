@@ -1,7 +1,7 @@
 // Katalogdaki metinlerin İngilizcesi (sitenin /en sürümü). Alan sırası catalog.mjs ile aynıdır.
 export const en = {
   business: {
-    whatsappLabel: "+90 546 480 21 36",
+    whatsappLabel: "+90 545 935 34 10",
     hours: "Every day · until 10 pm",
   },
   features: [

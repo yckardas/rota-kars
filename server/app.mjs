@@ -1538,7 +1538,7 @@ export function createApp(
     email: z.string().trim().email().max(200),
     address: line(200).min(5),
     hours: line(120),
-    whatsapp: z.string().trim().regex(/^\d{10,15}$/, "WhatsApp numarasını ülke koduyla, yalnız rakam girin (ör. 905464802136)."),
+    whatsapp: z.string().trim().regex(/^\d{10,15}$/, "WhatsApp numarasını ülke koduyla, yalnız rakam girin (ör. 905459353410)."),
     whatsappLabel: line(40),
     instagram: https(/(^|\.)instagram\.com$/),
     facebook: https(/(^|\.)facebook\.com$/),

@@ -50,7 +50,7 @@ Kaynak kısaltmaları:
 
 | Sitedeki bilgi | Yer | Not |
 |---|---|---|
-| WhatsApp 0546 480 21 36 | `server/catalog.mjs` → `business.whatsapp` | Belgelerde yok; yanlış değil, yalnız doğrulanmadı. |
+| WhatsApp 0545 935 34 10 | `server/catalog.mjs` → `business.whatsapp` | Belgelerde yok; yanlış değil, yalnız doğrulanmadı. |
 | `founded: 2010` ("2010'dan beri") | `server/catalog.mjs`, altbilgi | ✅ Acente 03.11.2026'da doğru olduğunu teyit etti; ifade kalıyor. Not: bugünkü Ltd. Şti. 09.02.2022'de tescilli, yani 2010 markanın daha önceki faaliyetini anlatıyor. Bir şikâyet hâlinde dayanağını gösterebilecek bir belge (eski vergi levhası, eski işletme belgesi vb.) dosyada bulunsun. |
 | "Google'da 456 değerlendirmede 4,9 puan" | `server/catalog.mjs` → `features` | Yasal metin konusu değil; sabit yazılmış bir sayı, canlı veriden gelmiyor. |
 
