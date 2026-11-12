@@ -38,6 +38,7 @@ export async function openStore(
     seed = true,
     env = process.env,
     pushFetch = fetch,
+    webPush,
     uetdsFetch = fetch,
   } = {},
 ) {
@@ -126,7 +127,7 @@ export async function openStore(
     db.index("push_devices", { admin_id: 1 }),
     db.index("push_log", { created_at: 1 }),
   ]);
-  const push = createPush(db, { env, clock, fetchImpl: pushFetch });
+  const push = createPush(db, { env, clock, fetchImpl: pushFetch, ...(webPush ? { webPush } : {}) });
   const notifications = await createNotifications(db, { clock, tx, env, push });
   const content = await createContent(db, { clock });
   const accountSecurity = await createAccountSecurity(db, {

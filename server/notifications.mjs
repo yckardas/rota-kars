@@ -33,7 +33,7 @@ export async function createNotifications(db, { clock, tx, env = {}, push = null
     agencyEmails,
     async notifyAgency({ subject, body, actionUrl = null, kind, dedupeKey, pushUrl = "/yonetim" }) {
       // Yönetici uygulamasına anlık bildirim: işlem tamamlandıktan sonra, olay başına bir kez.
-      if (push?.enabled) {
+      if (push) {
         const send = async () => {
           if (!(await db.insertIfAbsent("push_log", "agency:" + dedupeKey, { kind, created_at: clock() }))) return;
           const lines = String(body || "").split("\n").filter(Boolean);

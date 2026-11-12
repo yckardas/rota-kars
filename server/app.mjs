@@ -36,7 +36,7 @@ import { preInfoText, isLateBooking, freeCancelDays } from "./legal.mjs";
 import { en } from "./catalog-en.mjs";
 import { attachSocialAuth, cookieValue } from "./social-auth.mjs";
 import { createTurnstile } from "./turnstile.mjs";
-import { fcmHint } from "./push.mjs";
+import { fcmHint, webPushEndpointOk } from "./push.mjs";
 import { normalizeInstagramUrl, createInstagramFeed } from "./instagram.mjs";
 import { AppError, REQUEST_STATUS } from "./store.mjs";
 import { createReviewsService } from "./reviews.mjs";
@@ -1231,7 +1231,7 @@ export function createApp(
       bootstrap: q.adminCtx.bootstrap,
       needs2faSetup: q.adminCtx.needs2faSetup,
       require2fa: store.adminAuth.require2fa,
-      pushEnabled: store.push.enabled,
+      pushEnabled: true,
     }),
   );
   // Yönetici uygulaması: bu telefona bildirim gönderilsin diye cihaz kaydı.
@@ -1253,13 +1253,30 @@ export function createApp(
       }),
     ),
   );
+  // Tarayıcıdan yüklenen uygulama (PWA) bu açık anahtarla bildirim aboneliği açar.
+  app.get(
+    "/api/admin/devices/web-key",
+    requireAdmin,
+    route(async (_q, r) => r.json({ publicKey: await store.push.webPublicKey() })),
+  );
+  const webSubscription = z.object({
+    endpoint: z.string().max(1024).refine(webPushEndpointOk, "Bilinmeyen bildirim servisi."),
+    keys: z.object({
+      p256dh: z.string().min(40).max(200).regex(/^[\w-]+=*$/),
+      auth: z.string().min(16).max(64).regex(/^[\w-]+=*$/),
+    }),
+  });
   app.post(
     "/api/admin/devices",
     requireAdmin,
     route(async (q, r) => {
       realAdmin(q);
+      const label = z.string().max(60).optional();
       const input = z
-        .object({ token: pushToken, platform: z.enum(["android"]).default("android"), label: z.string().max(60).optional() })
+        .union([
+          z.object({ platform: z.literal("web"), subscription: webSubscription, label }),
+          z.object({ token: pushToken, platform: z.literal("android").default("android"), label }),
+        ])
         .parse(q.body);
       r.status(201).json(await store.push.register(q.admin.id, input));
     }),
@@ -1268,22 +1285,21 @@ export function createApp(
     "/api/admin/devices/remove",
     requireAdmin,
     route(async (q, r) => {
-      const input = z.object({ token: pushToken }).parse(q.body);
-      r.json({ removed: await store.push.unregister(q.admin.id, input.token) });
+      const input = z.union([z.object({ token: pushToken }), z.object({ endpoint: webSubscription.shape.endpoint })]).parse(q.body);
+      r.json({ removed: await store.push.unregister(q.admin.id, input.token || input.endpoint) });
     }),
   );
   // Sahip: ekipte kimin telefonu kayıtlı, herkese test gönderip cihaz bazında sonuç.
   app.get(
     "/api/admin/devices/team",
     requireAdmin,
-    route(async (_q, r) => r.json({ enabled: store.push.enabled, team: await store.push.team() })),
+    route(async (_q, r) => r.json({ enabled: true, team: await store.push.team() })),
   );
   app.post(
     "/api/admin/devices/test-team",
     requireAdmin,
     route(async (q, r) => {
       realAdmin(q);
-      if (!store.push.enabled) throw new AppError(503, "Bildirim servisi (FIREBASE_SERVICE_ACCOUNT) ayarlı değil.");
       const result = await store.push.notifyAdmins({
         title: "Rota Kars Yönetim",
         body: `Ekip testi (${q.admin.name}): bu telefon bildirim alıyor.`,
@@ -1298,13 +1314,6 @@ export function createApp(
     requireAdmin,
     route(async (q, r) => {
       realAdmin(q);
-      if (!store.push.enabled)
-        throw new AppError(
-          503,
-          store.push.status === "invalid"
-            ? "FIREBASE_SERVICE_ACCOUNT okunamadı: " + store.push.statusReason + "."
-            : "Bildirim servisi (FIREBASE_SERVICE_ACCOUNT) ayarlı değil.",
-        );
       const result = await store.push.notifyAdmins(
         { title: "Rota Kars Yönetim", body: "Test bildirimi: bu telefon bildirim alıyor.", url: "/yonetim", kind: "test" },
         { adminIds: [q.admin.id] },

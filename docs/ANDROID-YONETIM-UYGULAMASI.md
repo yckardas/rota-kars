@@ -115,6 +115,23 @@ durumda geri almak için kullanılabilir.
 - 1.1.x deneme (debug) APK'ları başka anahtarla imzalıydı: 1.2.0'a geçerken telefonda eski
   uygulama bir kez kaldırılıp yeni APK kurulur. Sonraki sürümler doğrudan üstüne kurulur.
 
+## Tarayıcıdan uygulama olarak ekleme (APK'sız)
+
+Panel APK kurmadan da uygulama olarak eklenebilir; iPhone ve bilgisayarda da çalışır.
+
+- **Android (Chrome):** `rotakarsturizm.com/yonetim` açılınca panelin üstünde "Paneli uygulama
+  olarak ekleyin · Yükle" önerisi çıkar (ya da Chrome menüsü → Uygulamayı yükle).
+- **iPhone (Safari):** Paylaş → Ana Ekrana Ekle. Bildirim yalnız ana ekrandan açılan uygulamada
+  çalışır (iOS 16.4+).
+- **Bilgisayar (Chrome/Edge):** adres çubuğundaki yükle simgesi; ayrı pencerede açılır.
+- Bildirimler: Hesabım → "Bu cihazda bildirimleri aç". Standart Web Push kullanılır; Firebase
+  ya da Railway ayarı gerekmez (anahtar çifti ilk kullanımda üretilip veritabanında saklanır,
+  istenirse `WEB_PUSH_PUBLIC_KEY` / `WEB_PUSH_PRIVATE_KEY` ile sabitlenir).
+- Güncelleme gerekmez: uygulama her açılışta canlı siteyi yükler. Bağlantı yoksa kısa bir
+  "İnternet bağlantısı yok" sayfası görünür.
+- Sunucu bildirimleri yalnız bilinen tarayıcı servislerine (Google, Mozilla, Apple, Microsoft)
+  gönderir; çıkış yapınca o cihazın aboneliği silinir.
+
 ## Güvenlik notları
 
 - Uygulama yalnız yapılandırılan site adresini açar; başka adresler telefonun tarayıcısında açılır.
