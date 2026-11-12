@@ -3,6 +3,7 @@
 // HTML'de doğru meta etiketlerini görsün diye şablona enjekte edilir.
 import { business, tours, services } from "./catalog.mjs";
 import { en } from "./catalog-en.mjs";
+import { legacyRedirects } from "./legacy-redirects.mjs";
 
 const SITE = "Rota Kars Turizm";
 const DEFAULT_DESCRIPTION =
@@ -506,6 +507,8 @@ export function sitemapXml(base) {
 
 // robots.txt, sitemap.xml ve istemci tarafı gezinti için meta API'si.
 export function attachSeoRoutes(app, env) {
+  // Eski WordPress adresleri (Google'da hâlâ listelenen) yeni sayfalara 301 ile gider.
+  app.use(legacyRedirects());
   app.get("/robots.txt", (q, r) =>
     r.type("text/plain").send(robotsTxt(siteBase(env, q), env)),
   );
