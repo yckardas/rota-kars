@@ -66,6 +66,9 @@ const TestPayment = lazy(() =>
 const CardPayment = lazy(() =>
   import("./pages/Payment").then((m) => ({ default: m.CardPayment })),
 );
+const OpenPayment = lazy(() =>
+  import("./pages/Payment").then((m) => ({ default: m.OpenPayment })),
+);
 const PaymentResult = lazy(() =>
   import("./pages/Payment").then((m) => ({ default: m.PaymentResult })),
 );
@@ -192,6 +195,7 @@ function App() {
             element={<AccountSecurity mode="forgot" />}
           />
           <Route path="bilet/:token" element={<TicketVerification />} />
+          <Route path="odeme" element={<OpenPayment catalog={shown!} />} />
           <Route path="odeme/deneme/:id" element={<TestPayment />} />
           <Route
             path="odeme/kart/:id"

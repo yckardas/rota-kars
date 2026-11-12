@@ -191,6 +191,7 @@ const PRIVATE = [
   [/^\/hesabim$/, "Hesabım"],
   [/^\/bilet\/[^/]+$/, "Bilet doğrulama"],
   [/^\/odeme\/(kart|sonuc|deneme)\/[a-f0-9]{48}$/, "Ödeme"],
+  [/^\/odeme$/, "Online ödeme"],
   [/^\/yonetim$/, "Yönetim"],
 ];
 
@@ -222,6 +223,7 @@ const EN_PRIVATE = {
   Hesabım: "My account",
   "Bilet doğrulama": "Ticket check",
   Ödeme: "Payment",
+  "Online ödeme": "Online payment",
 };
 const isEn = (p) => p === "/en" || p.startsWith("/en/");
 const stripEn = (p) => (p === "/en" ? "/" : p.slice(3));

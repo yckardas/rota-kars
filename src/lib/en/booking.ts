@@ -240,6 +240,18 @@ export const booking: Record<string, string> = {
   "Önizleme · kartla ödeme banka onayından sonra açılacak": "Preview · card payment opens after bank approval",
   "Kartla ödeme, banka onayının ardından açılacak. Kartınızdan çekim yapılmadı; ön rezervasyonunuz kayıtlı, acentemiz sizinle iletişime geçecek.":
     "Card payment will open after bank approval. Your card was not charged; your pre-booking is saved and our agency will contact you.",
+  // Herkese açık ödeme sayfası (/odeme)
+  Öde: "Pay",
+  "Online ödeme": "Online payment",
+  "Rota Kars Turizm tur ve transfer ödemeleri. Rezervasyon numaranızı ve acentemizin bildirdiği tutarı yazıp kartınızla ödeyin.":
+    "Rota Kars Turizm tour and transfer payments. Enter your booking number and the amount our agency gave you, then pay by card.",
+  "Ödenecek tutar (TL)": "Amount to pay (TRY)",
+  "Ödenecek tutarı TL olarak yazın (ör. 1.250).": "Enter the amount in TRY (e.g. 1,250).",
+  "Rezervasyon no (varsa)": "Booking no. (if any)",
+  "Kartla ödeme, banka onayının ardından açılacak. Kartınızdan çekim yapılmadı ve kart bilgileriniz hiçbir yere gönderilmedi.":
+    "Card payment will open after bank approval. Your card was not charged and your card details were not sent anywhere.",
+  "Ön bilgilendirme ve hizmet sözleşmesi": "Pre-contract information and service agreement",
+  "KVKK aydınlatma metni": "Privacy notice (KVKK)",
   // Canlı kart görseli
   "Kart sahibi": "Cardholder",
   "Son kullanma": "Expires",
