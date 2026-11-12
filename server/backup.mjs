@@ -36,15 +36,40 @@ const TR_OFFSET = 3 * HOUR;
 export const BACKUP_HOUR = 3;
 export const RETENTION = { daily: 7, weekly: 4, monthly: 12 };
 
+// Panele yapıştırılırken eklenen boşluk ve tırnaklar atılır.
+const clean = (v) =>
+  String(v ?? "")
+    .trim()
+    .replace(/^(["'])(.*)\1$/s, "$2")
+    .trim();
+export const ENDPOINT_HINT = "BACKUP_ENDPOINT https://<hesap-kimliği>.r2.cloudflarestorage.com biçiminde olmalı.";
+// R2 endpoint'i sık yapılan hatalara karşı düzeltilir: https:// eksikse eklenir,
+// sondaki bucket adı ya da "/" atılır, yalnız 32 haneli hesap kimliği verildiyse
+// adres ondan kurulur. Düzeltilemeyen değer için null döner.
+export function normalizeEndpoint(raw) {
+  let v = clean(raw);
+  if (!v) return "";
+  if (/^[a-f0-9]{32}$/i.test(v)) return `https://${v.toLowerCase()}.r2.cloudflarestorage.com`;
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(v)) v = "https://" + v;
+  try {
+    const u = new URL(v);
+    if (!/^https?:$/.test(u.protocol) || !u.hostname.includes(".") || /\s/.test(u.hostname)) return null;
+    return u.origin;
+  } catch {
+    return null;
+  }
+}
+
 export function backupConfiguration(env = process.env) {
+  const endpoint = normalizeEndpoint(env.BACKUP_ENDPOINT);
   const config = {
-    endpoint: env.BACKUP_ENDPOINT || "",
-    region: env.BACKUP_REGION || "auto",
-    accessKeyId: env.BACKUP_ACCESS_KEY_ID || "",
-    secretAccessKey: env.BACKUP_SECRET_ACCESS_KEY || "",
-    bucket: env.BACKUP_BUCKET || "",
-    prefix: (env.BACKUP_PREFIX ?? "rota-kars/").replace(/^\/+/, ""),
-    keyText: env.BACKUP_ENCRYPTION_KEY || "",
+    endpoint: endpoint || "",
+    region: clean(env.BACKUP_REGION) || "auto",
+    accessKeyId: clean(env.BACKUP_ACCESS_KEY_ID),
+    secretAccessKey: clean(env.BACKUP_SECRET_ACCESS_KEY),
+    bucket: clean(env.BACKUP_BUCKET).replace(/^\/+|\/+$/g, ""),
+    prefix: clean(env.BACKUP_PREFIX ?? "rota-kars/").replace(/^\/+/, ""),
+    keyText: clean(env.BACKUP_ENCRYPTION_KEY),
   };
   const required = {
     endpoint: "BACKUP_ENDPOINT",
@@ -62,9 +87,12 @@ export function backupConfiguration(env = process.env) {
   // Yanlış girilmiş bir değer siteyi açılışta düşürmez; yedek kapalı kalır ve
   // yönetim panelinde hata olarak görünür.
   config.error = null;
-  if (Object.values(config).some((v) => typeof v === "string" && v.includes("${{")))
+  if (Object.values({ ...config, raw: env.BACKUP_ENDPOINT }).some((v) => typeof v === "string" && v.includes("${{")))
     config.error = "BACKUP_* değişkenlerinden biri Railway referansı olarak çözülmemiş.";
-  else if (config.keyText) {
+  else if (endpoint === null) {
+    config.error = ENDPOINT_HINT;
+    config.missing = config.missing.filter((n) => n !== "BACKUP_ENDPOINT");
+  } else if (config.keyText) {
     const key = Buffer.from(config.keyText, "base64");
     if (key.length !== 32)
       config.error = "BACKUP_ENCRYPTION_KEY 32 baytlık base64 bir anahtar olmalı (openssl rand -base64 32).";
@@ -191,6 +219,20 @@ export function selectExpired(keys, retention = RETENTION) {
   return dated.filter((k) => !keep.has(k.key)).map((k) => k.key);
 }
 
+// Depo hatalarını hangi değişkene bakılacağını söyleyen Türkçe mesaja çevirir.
+export function explainError(e) {
+  const code = e?.Code || e?.name || e?.code || "",
+    raw = String(e?.message || e || "");
+  if (/Invalid URL/i.test(raw)) return ENDPOINT_HINT;
+  if (code === "InvalidAccessKeyId") return "BACKUP_ACCESS_KEY_ID geçersiz: R2 API anahtarındaki Access Key ID'yi kontrol edin.";
+  if (code === "SignatureDoesNotMatch") return "BACKUP_SECRET_ACCESS_KEY hatalı: R2 API anahtarındaki Secret Access Key'i kontrol edin.";
+  if (code === "NoSuchBucket") return "BACKUP_BUCKET adında bir bucket bulunamadı.";
+  if (code === "AccessDenied" || code === "Unauthorized")
+    return "Anahtarın bu bucket'a yazma izni yok: R2 API anahtarı Object Read & Write olmalı ve bucket seçili olmalı.";
+  if (/ENOTFOUND|EAI_AGAIN|getaddrinfo/i.test(raw + code)) return "BACKUP_ENDPOINT adresine ulaşılamadı: hesap kimliğini kontrol edin.";
+  return raw.slice(0, 300);
+}
+
 export function createBackup({ db, notifications = null, env = process.env, clock = Date.now, client = null } = {}) {
   const config = backupConfiguration(env);
   const s3 =
@@ -223,7 +265,19 @@ export function createBackup({ db, notifications = null, env = process.env, cloc
     return Buffer.from(await r.Body.transformToByteArray());
   }
   // Yedek alınır, geri okunup açılarak doğrulanır, sonra eski yedekler budanır.
-  async function run({ reason = "schedule" } = {}) {
+  // Başarısızlık panelde görünsün diye her durumda kaydedilir; hata açıklanmış
+  // mesajla yeniden fırlatılır.
+  async function run(options) {
+    try {
+      return await attempt(options);
+    } catch (e) {
+      const message = explainError(e),
+        s = (await state()) || {};
+      await setState({ last_error: message, last_error_at: clock(), failures: (s.failures || 0) + 1 }).catch(() => {});
+      throw Object.assign(new Error(message), { cause: e });
+    }
+  }
+  async function attempt({ reason = "schedule" } = {}) {
     if (!s3) throw new Error("Gece yedeği yapılandırılmamış.");
     const started = clock();
     const { header, plain } = await dumpDatabase(db.database, { clock });
@@ -283,8 +337,7 @@ export function createBackup({ db, notifications = null, env = process.env, cloc
       await setState({ last_attempt_at: now });
       return await run();
     } catch (e) {
-      const message = String(e?.message || e).slice(0, 300);
-      await setState({ last_error: message, last_error_at: clock(), failures: (s?.failures || 0) + 1 });
+      const message = e.message;
       await notifications
         ?.notifyAgency({
           subject: "Gece yedeği alınamadı",

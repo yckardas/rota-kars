@@ -744,7 +744,11 @@ export function createApp(
     requireAdmin,
     route(async (_q, r) => {
       if (!backup.configured) throw new AppError(503, "Gece yedeği yapılandırılmamış. BACKUP_* değişkenlerini Railway'de tanımlayın.");
-      r.status(201).json(await backup.run({ reason: "manual" }));
+      try {
+        r.status(201).json(await backup.run({ reason: "manual" }));
+      } catch (e) {
+        throw new AppError(502, "Yedek alınamadı. " + e.message);
+      }
     }),
   );
   app.get("/api/admin/uploads", requireAdmin, async (_q, r) =>
