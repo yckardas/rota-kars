@@ -9,6 +9,8 @@ import { roleAllows } from "../server/admin-auth.mjs";
 import {
   backupConfiguration,
   createBackup,
+  explainError,
+  normalizeEndpoint,
   dumpDatabase,
   openBackup,
   parseBackup,
@@ -96,6 +98,53 @@ test("yapılandırma: eksik ya da hatalı değişken siteyi düşürmez, yedeği
   assert.equal(badKey.configured, false);
   assert.match(badKey.error, /32 baytlık/);
   assert.equal(backupConfiguration(ENV).configured, true);
+});
+
+test("endpoint: sık yapılan yazım hataları düzeltilir, düzeltilemeyen açıkça söylenir", () => {
+  const id = "0123456789abcdef0123456789abcdef",
+    want = `https://${id}.r2.cloudflarestorage.com`;
+  for (const raw of [
+    want,
+    `${id}.r2.cloudflarestorage.com`,
+    `"${want}"`,
+    ` ${want}/ `,
+    `${want}/rota-kars-yedek`,
+    id,
+    id.toUpperCase(),
+  ])
+    assert.equal(normalizeEndpoint(raw), want, raw);
+  assert.equal(normalizeEndpoint(""), "");
+  for (const raw of ["rota-kars-yedek", "ftp://x.example.com", "https://", "abc def"])
+    assert.equal(normalizeEndpoint(raw), null, raw);
+  const bad = backupConfiguration({ ...ENV, BACKUP_ENDPOINT: "rota-kars-yedek" });
+  assert.equal(bad.configured, false);
+  assert.match(bad.error, /r2\.cloudflarestorage\.com biçiminde/);
+  assert.deepEqual(bad.missing, []);
+  const quoted = backupConfiguration({ ...ENV, BACKUP_BUCKET: ' "yedek" ', BACKUP_ACCESS_KEY_ID: "test\n" });
+  assert.equal(quoted.bucket, "yedek");
+  assert.equal(quoted.accessKeyId, "test");
+});
+
+test("depo hataları hangi değişkene bakılacağını söyler", () => {
+  assert.match(explainError(new TypeError("Invalid URL")), /BACKUP_ENDPOINT/);
+  assert.match(explainError({ name: "InvalidAccessKeyId", message: "x" }), /BACKUP_ACCESS_KEY_ID/);
+  assert.match(explainError({ name: "SignatureDoesNotMatch", message: "x" }), /BACKUP_SECRET_ACCESS_KEY/);
+  assert.match(explainError({ name: "NoSuchBucket", message: "x" }), /BACKUP_BUCKET/);
+  assert.match(explainError({ name: "AccessDenied", message: "x" }), /Object Read & Write/);
+  assert.match(explainError(new Error("getaddrinfo ENOTFOUND abc.r2")), /ulaşılamadı/);
+});
+
+test("elle yedek hatası da kaydedilir ve açıklanmış mesajla döner", async (t) => {
+  const { s3, backup } = await setup(t);
+  s3.failPut = true;
+  s3.send = ((send) => async (c) => {
+    if (c.constructor.name === "PutObjectCommand") throw Object.assign(new Error("denied"), { name: "AccessDenied" });
+    return send(c);
+  })(s3.send.bind(s3));
+  await assert.rejects(backup.run({ reason: "manual" }), /Object Read & Write/);
+  const status = await backup.status();
+  assert.match(status.lastError, /Object Read & Write/);
+  assert.ok(status.lastErrorAt);
 });
 
 test("saklama: son 7 gün, 4 hafta ve 12 ay kalır; tanınmayan dosyaya dokunulmaz", () => {

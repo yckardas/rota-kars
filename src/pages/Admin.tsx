@@ -639,7 +639,7 @@ function BackupCard({ owner }: { owner: boolean }) {
       {!s.configured ? (
         <span className="status-tag inactive">Kapalı</span>
       ) : failing || s.stale ? (
-        <span className="status-tag status-cancelled">{failing ? "Son deneme başarısız" : "Gecikmiş"}</span>
+        <span className="status-tag backup-fail">{failing ? "Son deneme başarısız" : "Gecikmiş"}</span>
       ) : (
         <span className="status-tag status-confirmed">Çalışıyor</span>
       )}
@@ -651,12 +651,19 @@ function BackupCard({ owner }: { owner: boolean }) {
               : "Veritabanı her gece 03:00'te şifrelenip ayrı bir depoya yazılır. BACKUP_* değişkenleri tanımlanınca başlar.")}
         </p>
       ) : (
-        <p>
-          {s.lastSuccessAt
-            ? `Son yedek ${when(s.lastSuccessAt)} · ${s.lastDocuments} kayıt · ${fileSize(s.lastSize || 0)}.`
-            : "Henüz yedek alınmadı. İlk yedek bu gece 03:00'te alınır."}
-          {failing && ` Hata: ${s.lastError}`} Son 7 gün, 4 hafta ve 12 ay saklanır.
-        </p>
+        <>
+          <p>
+            {s.lastSuccessAt
+              ? `Son yedek ${when(s.lastSuccessAt)} · ${s.lastDocuments} kayıt · ${fileSize(s.lastSize || 0)}.`
+              : "Henüz yedek alınmadı. İlk yedek bu gece 03:00'te alınır."}{" "}
+            Son 7 gün, 4 hafta ve 12 ay saklanır.
+          </p>
+          {failing && (
+            <p className="backup-error" role="alert">
+              <strong>Hata ({when(s.lastErrorAt || Date.now())}):</strong> {s.lastError}
+            </p>
+          )}
+        </>
       )}
       {owner && s.configured && (
         <button className="btn btn-small" onClick={runNow} disabled={busy}>
