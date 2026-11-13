@@ -424,6 +424,38 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
       .catch((e) => setError(e.message));
   }, [id]);
   const preview = s?.provider === "preview";
+  const [modeBusy, setModeBusy] = useState(false);
+  // Ödeme planı burada da değiştirilebilir (henüz ödeme alınmadıysa): müşteri
+  // rezervasyona geri dönüp yeni kayıt açmak zorunda kalmaz.
+  async function changeMode(mode: "deposit" | "full") {
+    if (!s || s.summary?.paymentMode === mode) return;
+    setError("");
+    setNotice("");
+    setModeBusy(true);
+    try {
+      const r = await post<{ amount: number; paymentMode: "deposit" | "full" }>(
+        "/payments/mode/" + id,
+        { mode },
+      );
+      const deposit = mode === "full" ? s.summary!.total : r.amount + s.summary!.paid;
+      setS({
+        ...s,
+        amount: r.amount,
+        consented: false,
+        summary: { ...s.summary!, paymentMode: r.paymentMode, deposit },
+      });
+      // Tutar ve metin değişti: sözleşme onayı yeniden istenir.
+      setTerms(false);
+      // Ön bilgilendirme formundaki ödeme planı da güncellenir.
+      api<Session>("/payments/sessions/" + id)
+        .then((x) => setS(x))
+        .catch(() => {});
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setModeBusy(false);
+    }
+  }
   function checkConsents(form: HTMLFormElement) {
     if (terms) return true;
     setConsentError(PAYMENT_TERMS_MISSING);
@@ -538,6 +570,43 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
               </p>
             )}
           </dl>
+        )}
+        {open && sum && !sum.paid && ["deposit", "full"].includes(sum.paymentMode) && (
+          <fieldset className="payment-choices payment-plan" disabled={modeBusy || busy}>
+            <legend>{t("Ödeme planı")}</legend>
+            {(
+              [
+                [
+                  "deposit",
+                  t("%{pct} kapora", { pct: catalog.payment.depositPercent ?? 30 }),
+                  Math.round((sum.total * (catalog.payment.depositPercent ?? 30)) / 100),
+                ],
+                ["full", t("Tam ödeme"), sum.total],
+              ] as const
+            ).map(([value, title, amount]) => (
+              <label
+                key={value}
+                className={"payment-choice " + (sum.paymentMode === value ? "active" : "")}
+              >
+                <input
+                  type="radio"
+                  name="paymentPlan"
+                  value={value}
+                  checked={sum.paymentMode === value}
+                  onChange={() => changeMode(value)}
+                />
+                <span>
+                  <strong>{title}</strong>
+                  <small>
+                    {value === "deposit"
+                      ? t("Kalanı tur günü hareketten önce")
+                      : t("Tamamı şimdi")}
+                  </small>
+                </span>
+                <strong>{currency(amount)}</strong>
+              </label>
+            ))}
+          </fieldset>
         )}
         {error && (
           <p className="error" role="alert">

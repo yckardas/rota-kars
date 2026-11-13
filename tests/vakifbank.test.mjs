@@ -500,3 +500,52 @@ test("önizleme modu: ödeme ekranının onayları da kaydedilir", async (t) => 
   assert.equal((await consent(id)).status, 200);
   assert.ok((await store.db.one("payment_sessions", { _id: id })).consents_at);
 });
+test("ödeme ekranında kapora ↔ tam ödeme değişir; tutar, kapora ve form güncellenir, onay yeniden istenir", async (t) => {
+  const { store, api, form, r, start, consent, throughBank } = await fixture(t);
+  const id = await start();
+  assert.equal((await sessionOf(api, id)).amount, r.deposit);
+  assert.equal((await consent(id)).status, 200);
+  assert.equal((await api("/payments/mode/" + id, { mode: "yarim" })).status, 400);
+  const full = await api("/payments/mode/" + id, { mode: "full" });
+  assert.equal(full.status, 200);
+  assert.deepEqual(await full.json(), { amount: r.total, paymentMode: "full" });
+  const s = await sessionOf(api, id);
+  assert.equal(s.amount, r.total);
+  assert.equal(s.summary.paymentMode, "full");
+  // Tutar değişti: ödeme ekranındaki onay yeniden verilmeli.
+  assert.equal(s.consented, false);
+  const saved = await store.workflow.get(r.reference);
+  assert.equal(saved.deposit, r.total);
+  assert.equal(saved.payment_mode, "full");
+  // Tam ödemeyle 3D Secure'dan geçince tutarın tamamı tahsil edilir.
+  const back = await throughBank(id);
+  await form("/api/payments/vakifbank/return", back, { Origin: "https://3dsecure.example" });
+  const paid = await store.workflow.get(r.reference);
+  assert.equal(paid.net_paid, r.total);
+  assert.equal(paid.status, "confirmed");
+  // Ödeme alındıktan sonra plan değişmez.
+  assert.equal((await api("/payments/mode/" + id, { mode: "deposit" })).status, 409);
+});
+
+test("ödeme planı değişince kayıttaki ön bilgilendirme formu yeni planla yazılır", async (t) => {
+  const { store, api } = await fixture(t);
+  const d = (await store.listDepartures("ani-cildir"))[0];
+  const h = await store.hold(d.id, [7]);
+  const r = await store.reserve({
+    holdToken: h.token,
+    name: "Can Demir",
+    email: "can@example.com",
+    phone: "05551112244",
+    passengers: ["Can Demir"],
+    paymentMode: "full",
+    legal: { onlinePayment: true, depositPercent: 30 },
+  });
+  assert.doesNotMatch(r.pre_info_text, /%30 kapora/);
+  const start = await (await api("/payments/start", { reference: r.reference, email: "can@example.com" })).json();
+  const id = start.redirectUrl.split("/").pop();
+  assert.equal((await api("/payments/mode/" + id, { mode: "deposit" })).status, 200);
+  const after = await store.workflow.get(r.reference);
+  assert.equal(after.deposit, Math.round(r.total * 0.3));
+  assert.match(after.pre_info_text, /%30 kapora/);
+  assert.equal((await sessionOf(api, id)).amount, after.deposit);
+});

@@ -475,6 +475,39 @@ export async function createWorkflow(
         return updated;
       });
     },
+    // Müşteri ödeme ekranında kapora / tam ödeme arasında geçiş yapar. Yalnız
+    // henüz hiç ödeme alınmamış ön rezervasyonda; kayıttaki ön bilgilendirme
+    // formu yeni ödeme planıyla yeniden yazılır.
+    async changePaymentMode(reference, mode, { depositPercent, onlinePayment = false } = {}) {
+      return tx(async () => {
+        await cleanup();
+        const r = await api.get(reference, { fresh: false });
+        if (r.payment_mode === mode) return r;
+        if (r.status !== "pending_agency" || r.net_paid > 0 || !["deposit", "full"].includes(r.payment_mode))
+          throw new AppError(409, "Bu rezervasyonun ödeme planı artık değiştirilemez.");
+        await db.update(
+          "reservations",
+          { _id: r.id },
+          { payment_mode: mode, deposit: mode === "full" ? r.total : depositFor(r.total) },
+        );
+        let updated = await api.get(reference, { fresh: false });
+        const tour = tours.find((t) => t.id === updated.tourId);
+        if (updated.pre_info_text && tour) {
+          await db.update(
+            "reservations",
+            { _id: r.id },
+            {
+              pre_info_text: preInfoText(
+                legalDataFromReservation(updated, tour, { depositPercent, onlinePayment }),
+              ),
+            },
+          );
+          updated = await api.get(reference, { fresh: false });
+        }
+        await audit(r, "payment_mode_changed", { from: r.payment_mode, to: mode });
+        return updated;
+      });
+    },
     async passengers(reference, names) {
       return tx(async () => {
         await cleanup();

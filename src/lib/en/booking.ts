@@ -91,6 +91,16 @@ export const booking: Record<string, string> = {
   "Sonraki adımda kartla": "By card in the next step",
   "Ödemeye geç": "Continue to payment",
   "Bu adıma dön": "Back to this step",
+  "{reference} numaralı ön rezervasyonunuz oluşturuldu.":
+    "Your pre-booking {reference} has been created.",
+  "Koltuklarınız sizin için ayrıldı. Kapora ya da tam ödeme seçimini ödeme sayfasında değiştirebilirsiniz; yeni rezervasyon yapmanıza gerek yok.":
+    "Your seats are held for you. You can switch between deposit and full payment on the payment page; there is no need to book again.",
+  "Ödemeye dön": "Back to payment",
+  "Başka bir rezervasyon yapacağım": "I want to make another booking",
+  "Ödeme planı": "Payment plan",
+  "%{pct} kapora": "{pct}% deposit",
+  "Kalanı tur günü hareketten önce": "Rest on the tour day before departure",
+  "Tamamı şimdi": "All of it now",
   "{count} yolcu için en fazla {count} koltuk seçebilirsiniz. Başka koltuk için önce seçili bir koltuğu kaldırın ya da yolcu sayısını artırın.":
     "You can choose up to {count} seats for {count} passengers. To pick another seat, first remove a selected one or increase the number of passengers.",
   "Rezervasyonunuz kartla ödemeyle birlikte kesinleşir.":

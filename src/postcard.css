@@ -4870,3 +4870,29 @@ html:has(.kp) {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+/* Ödeme sayfasında kapora / tam ödeme seçimi */
+.kp .payment-plan {
+  border: 0;
+  padding: 0;
+  margin: 18px 0 6px;
+}
+.kp .payment-plan legend {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--kp-ink-2);
+  margin-bottom: 8px;
+}
+.kp .payment-plan[disabled] {
+  opacity: 0.6;
+}
+/* Ödeme ekranından geri dönülünce: oluşan ön rezervasyona dönüş */
+.kp .pending-booking {
+  margin-bottom: 22px;
+}
+.kp .pending-booking .button-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+  margin-top: 12px;
+}
