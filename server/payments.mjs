@@ -302,6 +302,30 @@ export function createPayments(
             : null,
       };
     },
+    // Ödeme ekranında ödeme planı değişir (kapora ↔ tam ödeme): rezervasyonun
+    // kaporası ve oturumun tutarı güncellenir; metinler değiştiği için ödeme
+    // ekranındaki sözleşme onayı yeniden istenir. Kart adımı başladıysa değişmez.
+    async changeMode(id, mode) {
+      const s = await getSession(id);
+      if (s.status !== "pending" || s.expires_at < clock())
+        throw new AppError(
+          409,
+          "Ödeme süresi doldu. Rezervasyonum sayfasından yeniden başlatın.",
+        );
+      if (s.attempt_id)
+        throw new AppError(409, "Kart ödemesi başladı; ödeme planı artık değiştirilemez.");
+      const r = await workflow.changePaymentMode(s.reference, mode, {
+        depositPercent: DEPOSIT_PERCENT,
+        onlinePayment: Boolean(provider),
+      });
+      const amount = due(r);
+      await db.update(
+        "payment_sessions",
+        { _id: s.id },
+        { amount, consents_at: null, consents: null },
+      );
+      return { amount, paymentMode: r.payment_mode };
+    },
     // Ödeme ekranındaki birleşik onay kutusu (ön bilgilendirme, sözleşme,
     // iptal-iade). Kart bilgisi alınmadan önce oturuma kaydedilir; önizleme
     // modunda da kaydedilir. Kart adımı bu kayıt olmadan başlamaz.

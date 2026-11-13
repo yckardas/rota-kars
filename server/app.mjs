@@ -1123,6 +1123,15 @@ export function createApp(
       r.json(await payments.card(id, card));
     }),
   );
+  // Ödeme ekranında kapora / tam ödeme seçimi (henüz ödeme alınmamışsa).
+  app.post(
+    "/api/payments/mode/:id",
+    route(async (q, r) => {
+      const id = paymentSessionId.parse(q.params.id),
+        input = z.object({ mode: z.enum(["deposit", "full"]) }).strict().parse(q.body);
+      r.json(await payments.changeMode(id, input.mode));
+    }),
+  );
   // Ödeme ekranındaki tek birleşik onay (ön bilgilendirme, sözleşme, iptal-iade;
   // ayrıntılı dört onay rezervasyonda alınır): kart bilgisi alınmadan önce ödeme
   // oturumuna ve rıza kayıtlarına yazılır (önizleme modunda da).

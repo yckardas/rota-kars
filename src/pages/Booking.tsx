@@ -20,6 +20,7 @@ import {
   Armchair,
   ShieldCheck,
   FileText,
+  CreditCard,
 } from "lucide-react";
 import { api, post, ApiError } from "../lib/api";
 import {
@@ -57,6 +58,19 @@ import { countryName, countryOptions } from "../lib/countries";
 import type { Companion } from "../components/Companions";
 // Tek rezervasyonda en fazla bu kadar koltuk (sunucudaki GUEST_MAX_SEATS ile aynı).
 const MAX_SEATS = 4;
+// Kart ekranına geçilen son ön rezervasyon: müşteri geri tuşuyla dönerse
+// yeni kayıt açmak yerine ödemesine dönebilsin (ödeme oturumu 30 dakika açık).
+const PENDING_KEY = "rk-pending-booking";
+const PENDING_MS = 30 * 60 * 1000;
+type PendingBooking = { tourId: string; reference: string; payUrl: string; at: number };
+function readPending(tourId?: string): PendingBooking | null {
+  try {
+    const p = JSON.parse(sessionStorage.getItem(PENDING_KEY) || "null") as PendingBooking | null;
+    return p && p.tourId === tourId && Date.now() - p.at < PENDING_MS ? p : null;
+  } catch {
+    return null;
+  }
+}
 type IdForm = {
   // ISO 3166-1 alfa-2 ülke kodu
   nationality: string;
@@ -97,6 +111,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     // "info": bilgi (yolcu sayısı arttı), "warn": sorun (koltuk başkasına geçti).
     [seatNoticeTone, setSeatNoticeTone] = useState<"info" | "warn">("info"),
     [step, setStep] = useState(0),
+    [pending, setPending] = useState<PendingBooking | null>(null),
     [hold, setHold] = useState<Hold | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -282,6 +297,13 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     // Geri dönünce sayfanın dibinde kalınmaz; ileri giderken olduğu gibi adımın başına çıkılır.
     window.scrollTo({ top: 120, behavior: "smooth" });
   }
+  useEffect(() => {
+    setPending(readPending(tourId));
+    // Sayfa yeniden yüklendiyse (ör. ödeme ekranından geri gelindi) adım başa
+    // döner; geçmiş kaydı da buna uyar.
+    if (Number(window.history.state?.bookingStep || 0) > 0)
+      window.history.replaceState({ ...window.history.state, bookingStep: 0 }, "");
+  }, [tourId]);
   useEffect(() => {
     const onPop = (e: PopStateEvent) => {
       const target = Number(e.state?.bookingStep || 0);
@@ -509,7 +531,16 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         : null;
       if (toPayment?.redirectUrl) {
         saveCompanions();
-        window.location.assign(localPath(lang, toPayment.redirectUrl));
+        const payUrl = localPath(lang, toPayment.redirectUrl);
+        try {
+          sessionStorage.setItem(
+            PENDING_KEY,
+            JSON.stringify({ tourId: tour?.id, reference: r.reference, payUrl, at: Date.now() }),
+          );
+        } catch {
+          /* gizli sekme: uyarı gösterilmez */
+        }
+        window.location.assign(payUrl);
         return;
       }
       setResult(r);
@@ -706,6 +737,42 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         <div className="booking-main" data-dir={stepDir}>
           {step === 0 ? (
             <>
+              {pending && (
+                <div className="info-note pending-booking" role="status">
+                  <Info size={20} />
+                  <div>
+                    <strong>
+                      {t("{reference} numaralı ön rezervasyonunuz oluşturuldu.", {
+                        reference: pending.reference,
+                      })}
+                    </strong>
+                    <p>
+                      {t(
+                        "Koltuklarınız sizin için ayrıldı. Kapora ya da tam ödeme seçimini ödeme sayfasında değiştirebilirsiniz; yeni rezervasyon yapmanıza gerek yok.",
+                      )}
+                    </p>
+                    <div className="button-row">
+                      <a className="btn" href={pending.payUrl}>
+                        <CreditCard size={17} /> {t("Ödemeye dön")}
+                      </a>
+                      <button
+                        type="button"
+                        className="text-link"
+                        onClick={() => {
+                          try {
+                            sessionStorage.removeItem(PENDING_KEY);
+                          } catch {
+                            /* yok say */
+                          }
+                          setPending(null);
+                        }}
+                      >
+                        {t("Başka bir rezervasyon yapacağım")}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
               <h2 ref={stepHeading} tabIndex={-1}>
                 {t("Ne zaman, hangi koltukta?")}
               </h2>
