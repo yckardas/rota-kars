@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { normalizeInstagramUrl } from "../server/instagram.mjs";
 import { openStore } from "../server/store.mjs";
 test("Reels URLs drop tracking and use the trusted canonical host", () => {
@@ -26,14 +27,23 @@ test("rejects executable URLs, arbitrary hosts and non-post URLs", () => {
   ])
     assert.equal(normalizeInstagramUrl(u), null, u);
 });
-test("user-selected five reels are seeded and can be unpublished", async () => {
-  const s = await openStore(":memory:");
+test("the five Rota Kars reels are published once, with local video files, and can be unpublished", async () => {
+  // Canlı ortam: demo verisi yüklenmez ama Reels yayını yine de bir kez uygulanır.
+  const s = await openStore(":memory:", {
+    env: { NODE_ENV: "production", PII_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64") },
+  });
   try {
-    assert.equal((await s.instagramPosts()).length, 5);
-    assert.equal(
-      (await s.instagramPosts())[0].permalink,
-      "https://www.instagram.com/reel/DJ9cqtzI9EE/",
-    );
+    const posts = await s.instagramPosts();
+    assert.equal(posts.length, 5);
+    assert.equal(posts[0].permalink, "https://www.instagram.com/reel/DTavnLpDGqm/");
+    for (const p of posts) {
+      assert.match(p.videoSrc, /^\/videos\/[a-z0-9-]+\.mp4$/);
+      assert.ok(existsSync(new URL(`../public${p.videoSrc}`, import.meta.url)), p.videoSrc);
+      assert.match(p.cover, /^\/images\/[\w.-]+$/);
+      assert.ok(existsSync(new URL(`../public${p.cover}`, import.meta.url)), p.cover);
+    }
+    const release = await s.db.one("integration_settings", { _id: "instagram_reels_2026_11" });
+    assert.equal(release.body.count, 5);
     const p = (await s.instagramPosts())[0];
     await s.upsertInstagramPost({
       ...p,

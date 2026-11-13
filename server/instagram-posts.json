@@ -1,41 +1,46 @@
 [
   {
-    "id": "a8534ee1-6000-4000-8000-000000000001",
-    "title": "Yolculuklarımızdan",
-    "permalink": "https://www.instagram.com/reel/DJ9cqtzI9EE/",
-    "cover": "/images/ani.webp",
+    "id": "a8534ee1-6000-4000-8000-000000000011",
+    "title": "Buzun üzerinde atlı kızaklarla Çıldır Gölü 🎣",
+    "permalink": "https://www.instagram.com/reel/DTavnLpDGqm/",
+    "cover": "/images/ig-cildir-atli-kizak.webp",
+    "videoSrc": "/videos/cildir-atli-kizak.mp4",
     "position": 0,
     "active": true
   },
   {
-    "id": "a8534ee1-6000-4000-8000-000000000002",
-    "title": "Rotadan anlar",
-    "permalink": "https://www.instagram.com/reel/Cy0fU7io4jF/",
-    "cover": "/images/cildir.webp",
+    "id": "a8534ee1-6000-4000-8000-000000000012",
+    "title": "Kars’ta sadece gezmiyoruz, şehri yaşıyoruz! 🛡️",
+    "permalink": "https://www.instagram.com/reel/DTYd7ddAKno/",
+    "cover": "/images/ig-kars-ani-gezisi.webp",
+    "videoSrc": "/videos/kars-ani-gezisi.mp4",
     "position": 1,
     "active": true
   },
   {
-    "id": "a8534ee1-6000-4000-8000-000000000003",
-    "title": "Birlikte yoldayız",
-    "permalink": "https://www.instagram.com/reel/CxqwQ5Boiai/",
-    "cover": "/images/rota-bus.webp",
+    "id": "a8534ee1-6000-4000-8000-000000000013",
+    "title": "Olmazsa olmazı Sıra Gecesi 🎉",
+    "permalink": "https://www.instagram.com/reel/DJzjc6qA3WR/",
+    "cover": "/images/ig-sira-gecesi.webp",
+    "videoSrc": "/videos/sira-gecesi.mp4",
     "position": 2,
     "active": true
   },
   {
-    "id": "a8534ee1-6000-4000-8000-000000000004",
-    "title": "Keşif günlüğü",
-    "permalink": "https://www.instagram.com/reel/CvaGIDyIpUH/",
-    "cover": "/images/sarikamis.webp",
+    "id": "a8534ee1-6000-4000-8000-000000000014",
+    "title": "Kasım ara tatilinde terapiye gidemediğimiz için buraya geldik 🥳",
+    "permalink": "https://www.instagram.com/reel/DCR5iQbIB7o/",
+    "cover": "/images/ig-ara-tatil-eglence.webp",
+    "videoSrc": "/videos/ara-tatil-eglence.mp4",
     "position": 3,
     "active": true
   },
   {
-    "id": "a8534ee1-6000-4000-8000-000000000005",
-    "title": "Rota Kars’tan",
-    "permalink": "https://www.instagram.com/reel/CvMsAm_Ig_1/",
-    "cover": "/images/batum.webp",
+    "id": "a8534ee1-6000-4000-8000-000000000015",
+    "title": "Terapiye gidemiyorsanız sıra gecesine gidin 😅",
+    "permalink": "https://www.instagram.com/reel/DBmPXtGoy2P/",
+    "cover": "/images/ig-sira-gecesi-davul.webp",
+    "videoSrc": "/videos/sira-gecesi-davul.mp4",
     "position": 4,
     "active": true
   }
