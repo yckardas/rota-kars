@@ -10,6 +10,14 @@ import {
   vakifbankConfig,
 } from "./vakifbank.mjs";
 import { simulatorFetch } from "./bank-simulator.mjs";
+import { tours } from "./catalog.mjs";
+import {
+  LEGAL_VERSION,
+  cancellationRules,
+  contractText,
+  legalDataFromReservation,
+  preInfoText,
+} from "./legal.mjs";
 // Online kapora / tam ödeme. PAYMENT_PROVIDER ile seçilir:
 // - "disabled" (varsayılan): online ödeme kapalı, ön rezervasyon acenteye düşer.
 // - "test": gerçek para çekmeyen deneme sağlayıcısı (yalnız yerel/deneme ortamı).
@@ -240,7 +248,17 @@ export function createPayments(
     },
     async session(id) {
       const s = await getSession(id),
-        r = await workflow.get(s.reference);
+        r = await workflow.get(s.reference),
+        open = s.status === "pending" && s.expires_at >= clock(),
+        tour = tours.find((t) => t.id === r.tourId);
+      // Ödeme ekranında onaylanacak metinler bu rezervasyonun verisiyle yazılır;
+      // kişisel veri içerdiklerinden yalnız ödeme oturumu açıkken verilir.
+      const legal = tour
+        ? legalDataFromReservation(r, tour, {
+            depositPercent: DEPOSIT_PERCENT,
+            onlinePayment: true,
+          })
+        : null;
       return {
         id: s.id,
         reference: s.reference,
@@ -252,7 +270,63 @@ export function createPayments(
         // Son kart denemesinin müşteriye gösterilecek sonucu (reddedildi vb.).
         message: s.last_error || null,
         card: s.masked_pan ? { masked: s.masked_pan, brand: s.brand } : null,
+        // Ödenen rezervasyonun özeti (tur, tarih, kişi, tutarlar).
+        summary: {
+          tourName: tour?.name || r.tourName || "",
+          date: r.date,
+          startTime: r.start_time,
+          pickup: r.pickup || "",
+          count: r.seats.length,
+          seats: r.seats,
+          paymentMode: r.payment_mode,
+          total: r.total,
+          deposit: r.deposit,
+          paid: r.net_paid || 0,
+        },
+        consented: Boolean(s.consents_at),
+        documents:
+          open && legal
+            ? {
+                version: LEGAL_VERSION,
+                preInfo: r.pre_info_text || preInfoText(legal),
+                contract:
+                  "TASLAK · Bu sözleşme ödemeniz bankanızca onaylandığı anda aşağıdaki hükümlerle kurulur ve bir örneği e-postanıza gönderilir.\n\n" +
+                  contractText({ ...legal, via: "online", draft: true }),
+                cancellation: cancellationRules(tour, {
+                  depositPercent: DEPOSIT_PERCENT,
+                }),
+              }
+            : null,
       };
+    },
+    // Ödeme ekranındaki zorunlu onay kutuları (ön bilgilendirme, sözleşme,
+    // iptal-iade, aydınlatma). Kart bilgisi alınmadan önce oturuma kaydedilir;
+    // önizleme modunda da kaydedilir. Kart adımı bu kayıt olmadan başlamaz.
+    async consent(id, { ip = "" } = {}) {
+      const s = await getSession(id);
+      if (s.status !== "pending" || s.expires_at < clock())
+        throw new AppError(
+          409,
+          "Ödeme süresi doldu. Rezervasyonum sayfasından yeniden başlatın.",
+        );
+      const r = await workflow.get(s.reference),
+        at = clock();
+      await db.update(
+        "payment_sessions",
+        { _id: s.id },
+        {
+          consents_at: at,
+          consents: {
+            pre_info: at,
+            service_contract: at,
+            cancellation_terms: at,
+            kvkk_notice: at,
+            version: LEGAL_VERSION,
+            ip: String(ip).slice(0, 64),
+          },
+        },
+      );
+      return { reference: r.reference, email: r.email, memberId: r.member_id || null };
     },
     // Deneme sağlayıcısı bildirimi: imza doğrulanır, tutar oturumdan alınır.
     async complete(body) {
@@ -288,6 +362,11 @@ export function createPayments(
         throw new AppError(
           409,
           "Ödeme süresi doldu. Rezervasyonum sayfasından yeniden başlatın.",
+        );
+      if (!s.consents_at)
+        throw new AppError(
+          409,
+          "Ödemeden önce ön bilgilendirme formu, tur hizmet sözleşmesi, iptal-iade koşulları ve aydınlatma metni onay kutularını işaretleyin.",
         );
       const r = await workflow.get(s.reference);
       if (r.status !== "pending_agency" || due(r) !== s.amount)

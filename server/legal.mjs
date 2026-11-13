@@ -178,7 +178,9 @@ export function contractText(data, b = business) {
     pct = data.depositPercent || DEFAULT_DEPOSIT_PERCENT;
   const parts = [
     `TUR HİZMET SÖZLEŞMESİ · sürüm ${LEGAL_VERSION}`,
-    `Sözleşme no: ${data.reference} · Kuruluş: ${stamp(data.confirmedAt || Date.now())} (${data.via === "online" ? "online ödeme ile otomatik onay" : "acente onayı"})`,
+    data.draft
+      ? `Sözleşme no: ${data.reference} · Kuruluş: ${data.via === "online" ? "ödemeniz bankaca onaylandığı anda" : "rezervasyonunuz onaylandığı anda"}`
+      : `Sözleşme no: ${data.reference} · Kuruluş: ${stamp(data.confirmedAt || Date.now())} (${data.via === "online" ? "online ödeme ile otomatik onay" : "acente onayı"})`,
     section("Madde 1. Taraflar", [
       ...legalEntity(b).map((l, i) => (i === 0 ? l + ' ("Acente")' : l)),
       `Müşteri: ${data.customer.name} · ${data.customer.email} · ${data.customer.phone} ("Müşteri")`,

@@ -95,7 +95,7 @@ test("HTTP member registration/session, owner-only coupons and double-spend race
           passengers: ["Test Yolcu"],
           passengerDetails: [{ nationality: "TR", idNumber: "10000000146", gender: "K" }],
           paymentMode: "full",
-          consent: true,
+          consents: { preInfo: true, contract: true, cancellation: true, privacy: true },
           couponId: prize.coupon.id,
           total: 1,
         },

@@ -338,4 +338,49 @@ export const booking: Record<string, string> = {
     "{selected} of {count} seats chosen",
   "Devam":
     "Continue",
+  // Sözleşme onay kutuları ve ödeme ekranı
+  "Sözleşmeler ve onaylar": "Contracts and consents",
+  "Devam etmek için her birini okuyup ayrı ayrı onaylayın. Onaylarınız tarih ve saatiyle kaydedilir; metinler e-postanıza da gönderilir.":
+    "Read and tick each one separately to continue. Your consents are recorded with date and time, and the texts are also emailed to you.",
+  "{link} okudum, onaylıyorum.": "I have read and accept the {link}.",
+  "{link} okudum, kabul ediyorum.": "I have read and agree to the {link}.",
+  "Kişisel verilerimin işlenmesine ilişkin {link} okudum, bilgilendirildim.":
+    "I have read the {link} on how my personal data is processed.",
+  "Ön Bilgilendirme Formu'nu": "Pre-Information Form",
+  "Tur Hizmet Sözleşmesi'ni (Mesafeli Satış Sözleşmesi)":
+    "Tour Service Agreement (distance sales contract)",
+  "KVKK Aydınlatma Metni'ni": "Privacy Notice (KVKK)",
+  "İptal ve İade Koşulları": "Cancellation and Refund Terms",
+  "KVKK Aydınlatma Metni": "Privacy Notice (KVKK)",
+  "Okudum, onaylıyorum": "I have read it, I accept",
+  "Kapat": "Close",
+  "Ödemeye geçmeden önce dört onay kutusunun hepsini işaretleyin.":
+    "Tick all four boxes before you pay.",
+  "Ön rezervasyon için dört onay kutusunun hepsini işaretleyin.":
+    "Tick all four boxes to make your booking.",
+  "Online ödeme yaparsanız rezervasyonunuz ödemeyle birlikte kesinleşir; havale veya nakit ödemede sözleşme acente onayıyla kurulur.":
+    "If you pay online, your booking is confirmed with the payment; with bank transfer or cash, the contract is formed when the agency confirms.",
+  "Ödemeden önce ön bilgilendirme formu, tur hizmet sözleşmesi, iptal-iade koşulları ve aydınlatma metni onay kutularını işaretleyin.":
+    "Before paying, tick the boxes for the pre-information form, the tour service agreement, the cancellation terms and the privacy notice.",
+  "Onaylarınız kaydedildi. Kartla ödeme, banka onayının ardından açılacak. Kartınızdan çekim yapılmadı; ön rezervasyonunuz kayıtlı, acentemiz sizinle iletişime geçecek.":
+    "Your consents have been recorded. Card payment will open once the bank approves. Your card was not charged; your provisional booking is saved and our agency will contact you.",
+  "Rezervasyon adımları": "Booking steps",
+  "Tur seçimi": "Choose a tour",
+  "Rezervasyon": "Booking",
+  "Ödeme": "Payment",
+  "Tur": "Tour",
+  "Tarih": "Date",
+  "Yolcu": "Passengers",
+  "{count} kişi": "{count} people",
+  "Şimdi ödenecek kapora (%{pct})": "Deposit due now ({pct}%)",
+  "Şimdi ödenecek tutar (tamamı)": "Amount due now (in full)",
+  "Kalan {rest} tur günü hareketten önce ödenir.":
+    "The remaining {rest} is paid on the tour day before departure.",
+  "TÜRSAB belge no {no}": "TÜRSAB licence no {no}",
+  "Yasal metinler": "Legal texts",
+  "Künye": "Company details",
+  "Sonraki adımda kart ödeme ekranını göreceksiniz.":
+    "You will see the card payment screen next.",
+  "Ön rezervasyonunuz oluşunca kartla ödeme ekranına geçebilirsiniz. Kartla ödeme banka onayının ardından açılacak; o zamana kadar kartınızdan çekim yapılmaz ve acentemiz havale veya nakit ödeme için sizinle iletişime geçer.":
+    "Once your provisional booking is created you can go to the card payment screen. Card payment opens once the bank approves; until then your card is not charged and our agency will contact you for bank transfer or cash payment.",
 };

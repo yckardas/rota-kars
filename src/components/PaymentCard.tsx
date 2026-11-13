@@ -110,6 +110,20 @@ const marks: Record<Exclude<CardBrand, "">, ReactElement> = {
     </svg>
   ),
 };
+// Ödeme ekranında kabul edilen kartlar ve güvenlik işaretleri.
+export function CardMarks() {
+  return (
+    <div className="card-marks" aria-label="Visa, Mastercard, Troy · 3D Secure">
+      {(["visa", "mastercard", "troy"] as const).map((b) => (
+        <span key={b} className={"card-mark card-mark-" + b}>
+          {marks[b]}
+        </span>
+      ))}
+      <span className="card-mark card-mark-text">3D Secure</span>
+      <span className="card-mark card-mark-text">256-bit SSL</span>
+    </div>
+  );
+}
 export function CardVisual({
   card,
   focused,

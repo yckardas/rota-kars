@@ -18,6 +18,16 @@ import { api, post } from "../lib/api";
 import { currency, type Catalog, type Reservation } from "../lib/types";
 import { StatusStamp } from "../components/ReservationTicket";
 import {
+  CONSENT_MISSING,
+  LegalConsents,
+  allConsents,
+  consentsComplete,
+  noConsents,
+  type Consents,
+  type LegalDocuments,
+} from "../components/LegalConsents";
+import {
+  CardMarks,
   CardVisual,
   cardProblems,
   emptyCard,
@@ -36,6 +46,20 @@ type Session = {
   provider?: string;
   message?: string | null;
   card?: { masked: string; brand: string } | null;
+  summary?: {
+    tourName: string;
+    date: string;
+    startTime: string;
+    pickup: string;
+    count: number;
+    seats: number[];
+    paymentMode: "deposit" | "full";
+    total: number;
+    deposit: number;
+    paid: number;
+  };
+  consented?: boolean;
+  documents?: LegalDocuments | null;
 };
 // Rezervasyon sonrası ve "Rezervasyonum"da: kalan kaporayı kartla ödeme kartı.
 export function PayDeposit({
@@ -198,6 +222,7 @@ function CardForm({
   onPay,
   beforePay,
   children,
+  footer,
 }: {
   catalog: Catalog;
   // Düğmede gösterilecek biçimlenmiş tutar ("₺1.250"); yoksa yalnız "Öde".
@@ -208,6 +233,8 @@ function CardForm({
   // Kart alanlarından önceki alanlar için; false dönerse ödeme başlamaz.
   beforePay?: (form: HTMLFormElement) => boolean;
   children?: ReactNode;
+  // Kart alanlarından sonra, öde düğmesinden önce (onay kutuları).
+  footer?: ReactNode;
 }) {
   const { t } = useLang();
   const [card, setCard] = useState<CardValues>(emptyCard),
@@ -311,6 +338,7 @@ function CardForm({
           (v) => v.replace(/\D/g, "").slice(0, 3),
         )}
       </div>
+      {footer}
       <button className="btn" disabled={busy}>
         {busy ? (
           <LoaderCircle className="spin" size={17} />
@@ -331,6 +359,7 @@ function CardForm({
           )}
         </span>
       </p>
+      <CardMarks />
       {catalog.payment.simulator && (
         <p className="card-form-note">
           {t(
@@ -341,36 +370,87 @@ function CardForm({
     </form>
   );
 }
-// Vakıfbank kart ödemesi: canlı kart görseli eşliğinde kart bilgisi alınır,
-// 3D Secure için bankaya geçilir.
-export function CardPayment({ catalog }: { catalog: Catalog }) {
+// Ödeme ekranının altındaki satıcı künyesi (banka incelemesinde aranan bilgiler).
+function MerchantInfo({ catalog }: { catalog: Catalog }) {
   const { t } = useLang();
+  const b = catalog.business;
+  return (
+    <footer className="merchant-info">
+      <strong>{b.legalName || b.name}</strong>
+      <span>{b.address}</span>
+      <span>
+        {b.phone} · {b.email}
+      </span>
+      {b.tursabNo && (
+        <span>
+          {t("TÜRSAB belge no {no}", { no: b.tursabNo })}
+          {b.mersis ? " · MERSİS " + b.mersis : ""}
+        </span>
+      )}
+      <nav aria-label={t("Yasal metinler")}>
+        <Link to="/iletisim#kunye" target="_blank">
+          {t("Künye")}
+        </Link>
+        <Link to="/bilgilendirme#sozlesme" target="_blank">
+          {t("Ön bilgilendirme ve hizmet sözleşmesi")}
+        </Link>
+        <Link to="/bilgilendirme#iptal" target="_blank">
+          {t("İptal ve iade koşulları")}
+        </Link>
+        <Link to="/bilgilendirme#kvkk" target="_blank">
+          {t("KVKK aydınlatma metni")}
+        </Link>
+      </nav>
+    </footer>
+  );
+}
+// Vakıfbank kart ödemesi: önce ödenen rezervasyonun özeti ve zorunlu onay
+// kutuları, sonra canlı kart görseli eşliğinde kart bilgisi; 3D Secure için
+// bankaya geçilir. Onaylar kart bilgisi gönderilmeden önce sunucuya kaydedilir.
+export function CardPayment({ catalog }: { catalog: Catalog }) {
+  const { t, locale } = useLang();
   const { id } = useParams(),
     [s, setS] = useState<Session | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [notice, setNotice] = useState("");
+    [notice, setNotice] = useState(""),
+    [consents, setConsents] = useState<Consents>(noConsents),
+    [consentError, setConsentError] = useState("");
   useEffect(() => {
     api<Session>("/payments/sessions/" + id)
       .then((x) => {
         setS(x);
         if (x.message) setError(x.message);
+        // Reddedilen karttan sonra aynı oturuma dönülürse onaylar kayıtlıdır.
+        if (x.consented) setConsents(allConsents);
       })
       .catch((e) => setError(e.message));
   }, [id]);
   const preview = s?.provider === "preview";
+  function checkConsents(form: HTMLFormElement) {
+    if (consentsComplete(consents)) return true;
+    setConsentError(CONSENT_MISSING);
+    form
+      .querySelector<HTMLInputElement>(".legal-consents input:not(:checked)")
+      ?.focus();
+    return false;
+  }
   async function pay(card: CardValues, reset: () => void) {
     setError("");
-    // Önizleme: kart bilgisi hiçbir yere gönderilmez, form temizlenir.
-    if (preview) {
-      reset();
-      setNotice(
-        "Kartla ödeme, banka onayının ardından açılacak. Kartınızdan çekim yapılmadı; ön rezervasyonunuz kayıtlı, acentemiz sizinle iletişime geçecek.",
-      );
-      return;
-    }
+    setNotice("");
     setBusy(true);
     try {
+      // Onaylar her ödeme denemesinden önce oturuma yazılır (önizlemede de).
+      await post("/payments/consent/" + id, consents);
+      // Önizleme: kart bilgisi hiçbir yere gönderilmez, form temizlenir.
+      if (preview) {
+        reset();
+        setNotice(
+          "Onaylarınız kaydedildi. Kartla ödeme, banka onayının ardından açılacak. Kartınızdan çekim yapılmadı; ön rezervasyonunuz kayıtlı, acentemiz sizinle iletişime geçecek.",
+        );
+        setBusy(false);
+        return;
+      }
       const res = await post<{ redirect: string }>("/payments/card/" + id, card);
       reset();
       // Bankaya yönlendiren sayfa sunucudadır; dil öneki eklenmez.
@@ -380,10 +460,27 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
       setBusy(false);
     }
   }
-  const open = s && s.status === "pending" && !s.expired;
+  const open = s && s.status === "pending" && !s.expired,
+    sum = s?.summary;
+  const day = sum
+    ? new Intl.DateTimeFormat(locale, {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        weekday: "long",
+        timeZone: "Europe/Istanbul",
+      }).format(new Date(sum.date + "T12:00:00+03:00"))
+    : "";
   return (
     <section className="container payment-page">
       <article className="ticket-check payment-card">
+        <ol className="payment-steps" aria-label={t("Rezervasyon adımları")}>
+          <li className="is-done">{t("Tur seçimi")}</li>
+          <li className="is-done">{t("Rezervasyon")}</li>
+          <li className="is-current" aria-current="step">
+            {t("Ödeme")}
+          </li>
+        </ol>
         {catalog.payment.simulator && (
           <p className="payment-test-flag">
             {t("Banka simülasyonu · gerçek para çekilmez")}
@@ -402,6 +499,49 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
               })
             : t("Ödeme yükleniyor…")}
         </p>
+        {sum && (
+          <dl className="payment-summary">
+            <div>
+              <dt>{t("Tur")}</dt>
+              <dd>{sum.tourName}</dd>
+            </div>
+            <div>
+              <dt>{t("Tarih")}</dt>
+              <dd>
+                {day} · {sum.startTime}
+              </dd>
+            </div>
+            <div>
+              <dt>{t("Yolcu")}</dt>
+              <dd>
+                {t("{count} kişi", { count: sum.count })} ·{" "}
+                {t("Koltuk {n}", { n: sum.seats.join(", ") })}
+              </dd>
+            </div>
+            <div>
+              <dt>{t("Toplam tur bedeli")}</dt>
+              <dd>{currency(sum.total)}</dd>
+            </div>
+            <div className="is-due">
+              <dt>
+                {sum.paymentMode === "deposit"
+                  ? t("Şimdi ödenecek kapora (%{pct})", {
+                      pct: catalog.payment.depositPercent ?? 30,
+                    })
+                  : t("Şimdi ödenecek tutar (tamamı)")}
+              </dt>
+              <dd>{currency(s!.amount)}</dd>
+            </div>
+            {sum.paymentMode === "deposit" && (
+              <p className="payment-summary-note">
+                {t(
+                  "Kalan {rest} tur günü hareketten önce ödenir.",
+                  { rest: currency(Math.max(0, sum.total - sum.paid - s!.amount)) },
+                )}
+              </p>
+            )}
+          </dl>
+        )}
         {error && (
           <p className="error" role="alert">
             {t(error)}
@@ -418,6 +558,19 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
             amountLabel={currency(s.amount)}
             busy={busy}
             onPay={pay}
+            beforePay={checkConsents}
+            footer={
+              <LegalConsents
+                value={consents}
+                onChange={(next) => {
+                  setConsents(next);
+                  if (consentsComplete(next)) setConsentError("");
+                }}
+                documents={s.documents}
+                error={consentError}
+                disabled={busy}
+              />
+            }
           />
         )}
         {s && s.status === "paid" && (
@@ -440,6 +593,7 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
             </Link>
           </>
         )}
+        <MerchantInfo catalog={catalog} />
       </article>
     </section>
   );
@@ -468,12 +622,21 @@ export function OpenPayment({ catalog }: { catalog: Catalog }) {
   const [amountText, setAmountText] = useState(""),
     [reference, setReference] = useState(""),
     [amountError, setAmountError] = useState(""),
-    [notice, setNotice] = useState("");
+    [notice, setNotice] = useState(""),
+    [consents, setConsents] = useState<Consents>(noConsents),
+    [consentError, setConsentError] = useState("");
   const amount = parseAmount(amountText);
   function checkAmount(form: HTMLFormElement) {
-    if (amount) return true;
-    setAmountError("Ödenecek tutarı TL olarak yazın (ör. 1.250).");
-    form.querySelector<HTMLInputElement>('[name="amount"]')?.focus();
+    if (!amount) {
+      setAmountError("Ödenecek tutarı TL olarak yazın (ör. 1.250).");
+      form.querySelector<HTMLInputElement>('[name="amount"]')?.focus();
+      return false;
+    }
+    if (consentsComplete(consents)) return true;
+    setConsentError(CONSENT_MISSING);
+    form
+      .querySelector<HTMLInputElement>(".legal-consents input:not(:checked)")
+      ?.focus();
     return false;
   }
   return (
@@ -498,6 +661,16 @@ export function OpenPayment({ catalog }: { catalog: Catalog }) {
           amountLabel={amount ? exactCurrency(amount) : null}
           busy={false}
           beforePay={checkAmount}
+          footer={
+            <LegalConsents
+              value={consents}
+              onChange={(next) => {
+                setConsents(next);
+                if (consentsComplete(next)) setConsentError("");
+              }}
+              error={consentError}
+            />
+          }
           onPay={(_card, reset) => {
             reset();
             setNotice(
@@ -541,15 +714,7 @@ export function OpenPayment({ catalog }: { catalog: Catalog }) {
             </label>
           </div>
         </CardForm>
-        <p className="card-form-note">
-          <Link to="/bilgilendirme#sozlesme">
-            {t("Ön bilgilendirme ve hizmet sözleşmesi")}
-          </Link>
-          {" · "}
-          <Link to="/bilgilendirme#iptal">{t("İptal ve iade koşulları")}</Link>
-          {" · "}
-          <Link to="/bilgilendirme#kvkk">{t("KVKK aydınlatma metni")}</Link>
-        </p>
+        <MerchantInfo catalog={catalog} />
       </article>
     </section>
   );

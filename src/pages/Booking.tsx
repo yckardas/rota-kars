@@ -37,6 +37,21 @@ import { SeatMap } from "../components/SeatMap";
 import { telHref } from "../lib/phone";
 import { ReservationTicket } from "../components/ReservationTicket";
 import { PayDeposit } from "./Payment";
+import {
+  LegalConsents,
+  consentsComplete,
+  noConsents,
+  type Consents,
+} from "../components/LegalConsents";
+type PreInfo = {
+  text: string;
+  lateBooking: boolean;
+  freeCancelDays: number;
+  contract: string;
+  cancellation: string[];
+};
+const BOOKING_CONSENT_MISSING =
+  "Ön rezervasyon için dört onay kutusunun hepsini işaretleyin.";
 import { tcknValid, maskId } from "../lib/tckn";
 import { countryName, countryOptions } from "../lib/countries";
 import type { Companion } from "../components/Companions";
@@ -89,10 +104,11 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     [passengers, setPassengers] = useState<string[]>([]),
     [ids, setIds] = useState<IdForm[]>([]),
     [contact, setContact] = useState({ name: "", email: "", phone: "" }),
-    [consent, setConsent] = useState(false),
+    [consents, setConsents] = useState<Consents>(noConsents),
+    [consentError, setConsentError] = useState(""),
     [othersDeclaration, setOthersDeclaration] = useState(false),
     [marketingConsent, setMarketingConsent] = useState(false),
-    [preInfo, setPreInfo] = useState<{ text: string; lateBooking: boolean; freeCancelDays: number } | null>(null),
+    [preInfo, setPreInfo] = useState<PreInfo | null>(null),
     [preInfoError, setPreInfoError] = useState(""),
     human = useTurnstile("booking"),
     [loaded, setLoaded] = useState(false),
@@ -201,7 +217,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     if (step !== 2 || !departureId) return;
     let active = true;
     setPreInfoError("");
-    post<{ text: string; lateBooking: boolean; freeCancelDays: number }>(
+    post<PreInfo>(
       "/reservations/pre-info",
       {
         departureId,
@@ -403,6 +419,14 @@ export function Booking({ catalog }: { catalog: Catalog }) {
       setStep(0);
       return;
     }
+    if (!consentsComplete(consents)) {
+      setConsentError(BOOKING_CONSENT_MISSING);
+      document
+        .querySelector<HTMLInputElement>(".legal-consents input:not(:checked)")
+        ?.focus();
+      return;
+    }
+    setConsentError("");
     setBusy(true);
     setError("");
     try {
@@ -420,7 +444,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
           };
         }),
         paymentMode: mode,
-        consent,
+        consents,
         ...(count > 1 ? { othersDeclaration } : {}),
         marketingConsent,
         ...(couponId ? { couponId } : {}),
@@ -1176,6 +1200,15 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                         )}
                       </p>
                     </>
+                  ) : catalog.payment.preview ? (
+                    <>
+                      <strong>{t("Sonraki adımda kart ödeme ekranını göreceksiniz.")}</strong>
+                      <p>
+                        {t(
+                          "Ön rezervasyonunuz oluşunca kartla ödeme ekranına geçebilirsiniz. Kartla ödeme banka onayının ardından açılacak; o zamana kadar kartınızdan çekim yapılmaz ve acentemiz havale veya nakit ödeme için sizinle iletişime geçer.",
+                        )}
+                      </p>
+                    </>
                   ) : (
                     <>
                       <strong>{t("Ödeme havale veya nakitle yapılır.")}</strong>
@@ -1231,34 +1264,26 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                     : preInfoError || t("Form hazırlanıyor…")}
                 </div>
               </section>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={consent}
-                  onChange={(e) => setConsent(e.target.checked)}
-                  required
-                />
-                <span>
-                  {/* Bağlantılar cümlenin içinde; sıra dile göre değişebilir. */}
-                  {t(
-                    "Ön Bilgilendirme Formu'nu, {contract} ve {cancel} okudum, onaylıyorum. Online ödeme yaparsam rezervasyonun ödemeyle birlikte kesinleşeceğini, havale veya nakit ödemede sözleşmenin acente onayıyla kurulacağını biliyorum.",
-                  )
-                    .split(/(\{contract\}|\{cancel\})/)
-                    .map((part, k) =>
-                      part === "{contract}" ? (
-                        <Link key={k} to="/bilgilendirme#sozlesme" target="_blank">
-                          {t("Tur Hizmet Sözleşmesi'ni")}
-                        </Link>
-                      ) : part === "{cancel}" ? (
-                        <Link key={k} to="/bilgilendirme#iptal" target="_blank">
-                          {t("İptal ve İade Koşulları'nı")}
-                        </Link>
-                      ) : (
-                        part
-                      ),
-                    )}
-                </span>
-              </label>
+              <LegalConsents
+                value={consents}
+                onChange={(next) => {
+                  setConsents(next);
+                  if (consentsComplete(next)) setConsentError("");
+                }}
+                documents={
+                  preInfo && {
+                    preInfo: preInfo.text,
+                    contract: preInfo.contract,
+                    cancellation: preInfo.cancellation,
+                  }
+                }
+                error={consentError}
+              />
+              <p className="legal-notice-line">
+                {t(
+                  "Online ödeme yaparsanız rezervasyonunuz ödemeyle birlikte kesinleşir; havale veya nakit ödemede sözleşme acente onayıyla kurulur.",
+                )}
+              </p>
               {count > 1 && (
                 <label className="checkbox-label">
                   <input
