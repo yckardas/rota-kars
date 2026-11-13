@@ -4860,3 +4860,13 @@ html:has(.kp) {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+/* Tamamlanan rezervasyon adımı tıklanınca o adıma dönülür. */
+.kp .booking-steps li.is-link {
+  cursor: pointer;
+}
+.kp .booking-steps li.is-link:hover,
+.kp .booking-steps li.is-link:focus-visible {
+  color: var(--kp-red);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
