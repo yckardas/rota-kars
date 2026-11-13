@@ -143,6 +143,42 @@ const clientKey = (req) => {
   const parts = ip.split("::")[0].split(":");
   return parts.slice(0, 4).join(":") + "::/64";
 };
+// Doğrulama hatasında müşteriye hangi alanın eksik/yanlış olduğu söylenir.
+const FIELD_LABELS = {
+  name: "ad soyad",
+  email: "e-posta adresi",
+  phone: "telefon numarası",
+  passengers: "yolcu adı",
+  nationality: "uyruk",
+  idNumber: "kimlik / pasaport numarası",
+  gender: "cinsiyet",
+  consents: "sözleşme onay kutuları",
+  terms: "sözleşme onay kutusu",
+  consent: "onay kutusu",
+  holdToken: "koltuk seçimi",
+  checkIn: "tarih",
+  checkOut: "çıkış tarihi",
+  guests: "kişi sayısı",
+};
+const validationMessage = (err) => {
+  const issue = err.issues[0];
+  if (!issue) return "Bilgileri kontrol edin.";
+  const path = issue.path,
+    passenger =
+      path[0] === "passengers" || path[0] === "passengerDetails" ? Number(path[1]) + 1 : 0,
+    key =
+      path[0] === "passengers"
+        ? "passengers"
+        : [...path].reverse().find((k) => typeof k === "string" && FIELD_LABELS[k]),
+    // Şemada özel yazılmış Türkçe mesajlar olduğu gibi gösterilir.
+    custom = issue.code === "custom";
+  if (custom) return (passenger ? passenger + ". yolcu: " : "") + issue.message;
+  if (!key) return "Bilgileri kontrol edin.";
+  return passenger
+    ? "Bilgileri kontrol edin: " + passenger + ". yolcunun " +
+        (key === "passengers" ? "ad soyadı" : FIELD_LABELS[key]) + " eksik veya hatalı."
+    : "Bilgileri kontrol edin: " + FIELD_LABELS[key] + " eksik veya hatalı.";
+};
 // Herkese açık sefer bilgisinde rehberin adı/telefonu yer almaz (yalnız yönetim ve bilette).
 // Plaka da yalnız panelde: halka açık seferde araç adı ve yılı kalır.
 const publicDeparture = ({ guide_name, guide_phone, ...d }) => {
@@ -354,6 +390,12 @@ export function createApp(
     )
       return res.status(429).json({
         message: "Çok fazla istek. Biraz sonra tekrar deneyin.",
+      });
+    // Reddedilen rezervasyon denemesi (eksik/yanlış bilgi) sınırdan düşülmez;
+    // müşteri bilgisini düzeltip yeniden gönderirken "çok fazla istek"e takılmasın.
+    if (bucket === "booking")
+      res.on("finish", () => {
+        if (res.statusCode === 400 || res.statusCode === 409) l.n = Math.max(0, l.n - 1);
       });
     if (limits.size > 5000)
       for (const [k, v] of limits) if (v.reset < now) limits.delete(k);
@@ -928,6 +970,12 @@ export function createApp(
   app.post(
     "/api/reservations",
     route(async (q, r) => {
+      // Site güncellenmeden önce açılmış sekme eski onay alanını gönderir.
+      if (q.body && "consent" in q.body && !("consents" in q.body))
+        throw new AppError(
+          409,
+          "Site güncellendi. Sayfayı yenileyip rezervasyonu yeniden yapın.",
+        );
       const input = bookingSchema.parse(q.body);
       if (input.passengers.length > 1 && input.othersDeclaration !== true)
         throw new AppError(
@@ -1680,8 +1728,7 @@ export function createApp(
   app.use((err, q, r, _next) => {
     if (err instanceof z.ZodError)
       return r.status(400).json({
-        message:
-          "Bilgileri kontrol edin. Tarih, iletişim alanları ve onay zorunludur.",
+        message: validationMessage(err),
         details: err.issues.map((i) => ({
           field: i.path.join("."),
           message: i.message,
