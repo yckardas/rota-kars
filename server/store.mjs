@@ -68,6 +68,33 @@ export async function openStore(
     await db.updateMany("instagram_posts", { cover: from }, { cover: to });
     await db.updateMany("hotels", { image: from }, { image: to });
   }
+  // Kasım 2026: @rotakarstur'un orijinal sesli son Reels'leri (video dosyaları
+  // public/videos altında) sitede yayına alınır. Her veritabanında bir kez çalışır;
+  // aynı bağlantı zaten varsa eklenmez, sonra panelden yapılan silme ve
+  // gizlemelere dokunulmaz.
+  const reelsRelease = "instagram_reels_2026_11";
+  if (seed && !(await db.one("integration_settings", { _id: reelsRelease }))) {
+    const reels = JSON.parse(
+      readFileSync(new URL("./instagram-posts.json", import.meta.url), "utf8"),
+    );
+    for (const post of reels) {
+      if (await db.one("instagram_posts", { permalink: post.permalink })) continue;
+      await db.upsert("instagram_posts", post.id, {
+        id: post.id,
+        title: post.title,
+        permalink: post.permalink,
+        cover: post.cover,
+        position: post.position,
+        active: post.active ? 1 : 0,
+        videoSrc: post.videoSrc || null,
+      });
+    }
+    await db.upsert("integration_settings", reelsRelease, {
+      id: reelsRelease,
+      body: { appliedAt: clock(), count: reels.length },
+      updated_at: clock(),
+    });
+  }
   const tx = (fn) => db.transaction(fn);
   let members;
   // Süresi dolan kilit/ön rezervasyon temizliği. Yazma işlemlerinde (işlem içinde)
@@ -149,9 +176,6 @@ export async function openStore(
       env.DEMO_MODE === "1" ||
       env.SEED_DEMO === "1")
   ) {
-    const instagramPosts = JSON.parse(
-      readFileSync(new URL("./instagram-posts.json", import.meta.url), "utf8"),
-    );
     // Örnek veriler toplu ve "yoksa ekle" biçiminde yazılır.
     const ifAbsent = (doc) => ({
       updateOne: {
@@ -160,19 +184,6 @@ export async function openStore(
         upsert: true,
       },
     });
-    await db.col("instagram_posts").bulkWrite(
-      instagramPosts.map((post) =>
-        ifAbsent({
-          id: post.id,
-          title: post.title,
-          permalink: post.permalink,
-          cover: post.cover,
-          position: post.position,
-          active: post.active ? 1 : 0,
-          videoSrc: null,
-        }),
-      ),
-    );
     const seedDepartures = [];
     const today = new Date(clock());
     for (const t of tours)
