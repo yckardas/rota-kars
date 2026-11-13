@@ -88,8 +88,12 @@ export const booking: Record<string, string> = {
   "Acente onayından sonra": "After agency confirmation",
   "Kartla ödeyince anında onay": "Confirmed instantly when paid by card",
   "Ödemeyi bir sonraki adımda kartla yapın.": "Pay by card in the next step.",
-  "Ön rezervasyonunuz oluşunca seçtiğiniz tutarı kartla, 3D Secure (SMS onayı) ile ödeyebilirsiniz; ödeme alınınca rezervasyonunuz anında onaylanır. Dilerseniz acentemizle havale veya nakit de ödeyebilirsiniz.":
-    "Once your pre-booking is created, you can pay the chosen amount by card with 3D Secure (SMS verification); your booking is confirmed as soon as the payment goes through. You can also pay our agency by bank transfer or cash.",
+  "Ön rezervasyonunuz oluşunca kart ödeme ekranına yönlendirilirsiniz. Seçtiğiniz tutarı 3D Secure (SMS onayı) ile ödersiniz; ödeme alınınca rezervasyonunuz anında onaylanır.":
+    "Once your pre-booking is created, you are taken to the card payment screen. You pay the chosen amount with 3D Secure (SMS verification); your booking is confirmed as soon as the payment goes through.",
+  "Sonraki adımda kartla": "By card in the next step",
+  "Ödemeye geç": "Continue to payment",
+  "Rezervasyonunuz kartla ödemeyle birlikte kesinleşir.":
+    "Your booking is confirmed when you pay by card.",
   "Bu adımda ödeme alınmaz; kartla ödeme sonraki adımdadır.":
     "No payment at this step; card payment comes next.",
   "Bilgileri düzenle": "Edit details",
@@ -307,8 +311,8 @@ export const booking: Record<string, string> = {
     "Bookings confirmed by the agency",
   "Koltuklarınız ayrıldı.":
     "Your seats are held.",
-  "Ön rezervasyonunuz kaydedildi; koltuklarınız 24 saate kadar sizin için tutuluyor. Kaporayı kartla ödediğiniz anda rezervasyonunuz onaylanır. Dilerseniz havale veya nakitle de ödeyebilirsiniz.":
-    "Your pre-booking is saved and your seats are held for up to 24 hours. Your booking is confirmed the moment you pay the deposit by card. You can also pay by bank transfer or cash.",
+  "Ön rezervasyonunuz kaydedildi; koltuklarınız 24 saate kadar sizin için tutuluyor. Kaporayı kartla ödediğiniz anda rezervasyonunuz onaylanır.":
+    "Your pre-booking is saved and your seats are held for up to 24 hours. Your booking is confirmed the moment you pay the deposit by card.",
   "Ön rezervasyonunuz kaydedildi; koltuklarınız 24 saate kadar sizin için tutuluyor. Acentemiz sizinle iletişime geçecek; kaporayı havale veya nakitle ödediğinizde rezervasyonunuz onaylanır. Bu işlemde ödeme alınmadı.":
     "Your pre-booking is saved and your seats are held for up to 24 hours. Our agency will contact you; your booking is confirmed once you pay the deposit by bank transfer or cash. No payment was taken.",
   "Ödeme planınızı seçin. Ödemeyi ön rezervasyonunuz oluşunca, bir sonraki adımda kartla yaparsınız.":
@@ -375,10 +379,8 @@ export const booking: Record<string, string> = {
   "TÜRSAB belge no {no}": "TÜRSAB licence no {no}",
   "Yasal metinler": "Legal texts",
   "Künye": "Company details",
-  "Sonraki adımda kart ödeme ekranını göreceksiniz.":
-    "You will see the card payment screen next.",
-  "Ön rezervasyonunuz oluşunca kartla ödeme ekranına geçebilirsiniz. Kartla ödeme banka onayının ardından açılacak; o zamana kadar kartınızdan çekim yapılmaz ve acentemiz havale veya nakit ödeme için sizinle iletişime geçer.":
-    "Once your provisional booking is created you can go to the card payment screen. Card payment opens once the bank approves; until then your card is not charged and our agency will contact you for bank transfer or cash payment.",
+  "Ön rezervasyonunuz oluşunca kart ödeme ekranına yönlendirilirsiniz. Kartla ödeme banka onayının ardından açılacak; o zamana kadar kartınızdan çekim yapılmaz.":
+    "Once your pre-booking is created, you are taken to the card payment screen. Card payment opens once the bank approves; until then your card is not charged.",
   "Sözleşme onayı": "Agreement",
   "Bu koşulları {when} tarihinde rezervasyonunuzda onayladınız. Ödeme için bir kez daha onaylayın.":
     "You accepted these terms with your booking on {when}. Please confirm them once more to pay.",

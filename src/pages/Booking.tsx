@@ -4,7 +4,7 @@ import { placeName } from "../lib/place";
 import { useClearOfLaunchers } from "../lib/launchers";
 import { responsive } from "../lib/images";
 import { useLocation, useParams, useSearchParams } from "react-router-dom";
-import { Link, useLang } from "../lib/i18n";
+import { Link, localPath, useLang } from "../lib/i18n";
 import {
   ArrowLeft,
   ArrowRight,
@@ -74,6 +74,8 @@ const emptyId: IdForm = {
 };
 export function Booking({ catalog }: { catalog: Catalog }) {
   const { t, lang } = useLang();
+  // Kartla ödeme açık ya da banka önizlemesinde: rezervasyondan sonra kart ekranına geçilir.
+  const cardFlow = Boolean(catalog.payment.enabled || catalog.payment.preview);
   // Uyruk adları sayfanın dilinde (Intl.DisplayNames).
   const COUNTRIES = useMemo(() => countryOptions(lang), [lang]);
   const { tourId } = useParams(),
@@ -413,6 +415,21 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     // Geri dönünce sayfanın dibinde kalınmaz; ileri giderken olduğu gibi adımın başına çıkılır.
     window.scrollTo({ top: 120, behavior: "smooth" });
   }
+  // İşaretlenen yolcular üyenin yol arkadaşlarına kaydedilir (hata olursa
+  // rezervasyon etkilenmez).
+  function saveCompanions() {
+    if (member)
+      for (const [i, p] of ids.slice(0, selected.length).entries())
+        if (p?.save && !p.companionId)
+          post("/member/companions", {
+            name: passengers[i],
+            nationality: p.nationality,
+            idNumber: p.idNumber,
+            gender: p.gender,
+            // Kaydet kutusu, kişinin bilgisi dahilinde kaydedildiği beyanını içerir.
+            declaration: true,
+          }).catch(() => {});
+  }
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!hold) {
@@ -452,20 +469,22 @@ export function Booking({ catalog }: { catalog: Catalog }) {
       });
       holdRef.current = null;
       setHold(null);
+      // Kartla ödeme açıksa (veya banka önizlemesindeyse) doğrudan kart ekranına
+      // geçilir; açılamazsa başarı sayfasındaki "Kartla öde" düğmesi kalır.
+      const toPayment = cardFlow
+        ? await post<{ redirectUrl: string }>("/payments/start", {
+            reference: r.reference,
+            email: contact.email,
+            lang,
+          }).catch(() => null)
+        : null;
+      if (toPayment?.redirectUrl) {
+        saveCompanions();
+        window.location.assign(localPath(lang, toPayment.redirectUrl));
+        return;
+      }
       setResult(r);
-      // İşaretlenen yolcular üyenin yol arkadaşlarına kaydedilir (hata olursa
-      // rezervasyon etkilenmez).
-      if (member)
-        for (const [i, p] of ids.slice(0, selected.length).entries())
-          if (p?.save && !p.companionId)
-            post("/member/companions", {
-              name: passengers[i],
-              nationality: p.nationality,
-              idNumber: p.idNumber,
-              gender: p.gender,
-              // Kaydet kutusu, kişinin bilgisi dahilinde kaydedildiği beyanını içerir.
-              declaration: true,
-            }).catch(() => {});
+      saveCompanions();
       window.scrollTo({ top: 120, behavior: "smooth" });
     } catch (e) {
       setError((e as Error).message);
@@ -495,15 +514,15 @@ export function Booking({ catalog }: { catalog: Catalog }) {
           <Check />
         </div>
         <h1>
-          {catalog.payment.enabled
+          {cardFlow
             ? t("Koltuklarınız ayrıldı.")
             : t("Yolculuğunuzun ilk adımı tamam.")}
         </h1>
         {/* Para hiçbir zaman belirsiz kalmaz: ne ödendiği ve neyin onayı getirdiği tek cümlede. */}
         <p>
-          {catalog.payment.enabled
+          {cardFlow
             ? t(
-                "Ön rezervasyonunuz kaydedildi; koltuklarınız 24 saate kadar sizin için tutuluyor. Kaporayı kartla ödediğiniz anda rezervasyonunuz onaylanır. Dilerseniz havale veya nakitle de ödeyebilirsiniz.",
+                "Ön rezervasyonunuz kaydedildi; koltuklarınız 24 saate kadar sizin için tutuluyor. Kaporayı kartla ödediğiniz anda rezervasyonunuz onaylanır.",
               )
             : t(
                 "Ön rezervasyonunuz kaydedildi; koltuklarınız 24 saate kadar sizin için tutuluyor. Acentemiz sizinle iletişime geçecek; kaporayı havale veya nakitle ödediğinizde rezervasyonunuz onaylanır. Bu işlemde ödeme alınmadı.",
@@ -1181,7 +1200,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                       <small>
                         {catalog.payment.enabled
                           ? t("Kartla ödeyince anında onay")
-                          : t("Acente onayından sonra")}
+                          : catalog.payment.preview
+                            ? t("Sonraki adımda kartla")
+                            : t("Acente onayından sonra")}
                       </small>
                     </span>
                     <strong>{currency(Number(amount))}</strong>
@@ -1196,16 +1217,16 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                       <strong>{t("Ödemeyi bir sonraki adımda kartla yapın.")}</strong>
                       <p>
                         {t(
-                          "Ön rezervasyonunuz oluşunca seçtiğiniz tutarı kartla, 3D Secure (SMS onayı) ile ödeyebilirsiniz; ödeme alınınca rezervasyonunuz anında onaylanır. Dilerseniz acentemizle havale veya nakit de ödeyebilirsiniz.",
+                          "Ön rezervasyonunuz oluşunca kart ödeme ekranına yönlendirilirsiniz. Seçtiğiniz tutarı 3D Secure (SMS onayı) ile ödersiniz; ödeme alınınca rezervasyonunuz anında onaylanır.",
                         )}
                       </p>
                     </>
                   ) : catalog.payment.preview ? (
                     <>
-                      <strong>{t("Sonraki adımda kart ödeme ekranını göreceksiniz.")}</strong>
+                      <strong>{t("Ödemeyi bir sonraki adımda kartla yapın.")}</strong>
                       <p>
                         {t(
-                          "Ön rezervasyonunuz oluşunca kartla ödeme ekranına geçebilirsiniz. Kartla ödeme banka onayının ardından açılacak; o zamana kadar kartınızdan çekim yapılmaz ve acentemiz havale veya nakit ödeme için sizinle iletişime geçer.",
+                          "Ön rezervasyonunuz oluşunca kart ödeme ekranına yönlendirilirsiniz. Kartla ödeme banka onayının ardından açılacak; o zamana kadar kartınızdan çekim yapılmaz.",
                         )}
                       </p>
                     </>
@@ -1280,9 +1301,11 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                 error={consentError}
               />
               <p className="legal-notice-line">
-                {t(
-                  "Online ödeme yaparsanız rezervasyonunuz ödemeyle birlikte kesinleşir; havale veya nakit ödemede sözleşme acente onayıyla kurulur.",
-                )}
+                {cardFlow
+                  ? t("Rezervasyonunuz kartla ödemeyle birlikte kesinleşir.")
+                  : t(
+                      "Online ödeme yaparsanız rezervasyonunuz ödemeyle birlikte kesinleşir; havale veya nakit ödemede sözleşme acente onayıyla kurulur.",
+                    )}
               </p>
               {count > 1 && (
                 <label className="checkbox-label">
@@ -1343,7 +1366,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   ) : (
                     <Ticket size={17} />
                   )}
-                  {t("Ön rezervasyon oluştur")}
+                  {cardFlow ? t("Ödemeye geç") : t("Ön rezervasyon oluştur")}
                 </button>
               </div>
             </form>

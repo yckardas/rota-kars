@@ -180,3 +180,36 @@ test("rezervasyonda ön bilgilendirme onayı kaydedilir, e-postaya eklenir; onay
   assert.match(confirmMail.body, /TUR HİZMET SÖZLEŞMESİ/);
   assert.match(confirmMail.body, /ÖN BİLGİLENDİRME FORMU/);
 });
+
+test("rezervasyon hatası hangi alanın yanlış olduğunu söyler; eski sekme yenilemeye yönlendirilir; reddedilen deneme sınırdan düşmez", async (t) => {
+  const { req, store } = await fixture(t),
+    d = (await store.listDepartures("ani-cildir"))[0];
+  const hold = (await req("/holds", { departureId: d.id, seats: [5] })).json;
+  const body = {
+    holdToken: hold.token,
+    ...contact,
+    passengers: ["Ayşe Yılmaz"],
+    passengerDetails: [TR],
+    paymentMode: "deposit",
+    consents: { preInfo: true, contract: true, cancellation: true, privacy: true },
+  };
+  // Güncellemeden önce açılmış sekme eski tek "consent" alanını yollar.
+  const { consents: _, ...old } = body;
+  const stale = await req("/reservations", { ...old, consent: true });
+  assert.equal(stale.status, 409);
+  assert.match(stale.json.message, /Sayfayı yenileyip/);
+  const phone = await req("/reservations", { ...body, phone: "123" });
+  assert.equal(phone.status, 400);
+  assert.equal(phone.json.message, "Bilgileri kontrol edin: telefon numarası eksik veya hatalı.");
+  const id = await req("/reservations", {
+    ...body,
+    passengerDetails: [{ ...TR, idNumber: "12345678901" }],
+  });
+  assert.equal(id.json.message, "1. yolcu: Geçerli bir T.C. kimlik numarası girin.");
+  const consent = await req("/reservations", { ...body, consents: { preInfo: true } });
+  assert.match(consent.json.message, /sözleşme onay kutuları/);
+  // Sınır 15 dakikada 6 deneme: düzeltilip tekrar gönderilen hatalı denemeler sayılmaz.
+  for (let i = 0; i < 6; i++)
+    assert.equal((await req("/reservations", { ...body, email: "yanlis" })).status, 400);
+  assert.equal((await req("/reservations", body)).status, 201);
+});
