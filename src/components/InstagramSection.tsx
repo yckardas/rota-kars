@@ -1,17 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { responsive } from "../lib/images";
-import {
-  Instagram,
-  Play,
-  ExternalLink,
-  ChevronLeft,
-  ChevronRight,
-  LoaderCircle,
-  Volume2,
-  VolumeX,
-} from "lucide-react";
+import { Play, LoaderCircle, Volume2, VolumeX } from "lucide-react";
 import { api } from "../lib/api";
-import { Modal } from "./Modal";
 import { useLang } from "../lib/i18n";
 export type InstagramPost = {
   id: string;
@@ -22,6 +12,31 @@ export type InstagramPost = {
   active: number;
   videoSrc?: string | null;
 };
+// Bölüm, firmanın Instagram profilinin görünümünü taşır. Takipçi ve gönderi sayıları
+// bilerek yok: kopyalanan sayılar eskir ve uydurma gibi okunur. Biyografi
+// @rotakarstur profilinden alınmıştır (Kasım 2026).
+const PROFILE = {
+  name: "ROTA KARS TURİZM A-13948",
+  category: "Seyahat acentesi",
+  bio: [
+    "🌇 Batum, Tiflis, Nahçıvan Turları",
+    "🏛 Bakü Azerbaycan Turu",
+    "🏞 GAP, Karadeniz Turları",
+    "🛖 Kars Çıkışlı Turlar",
+    "🏘 Ani ve Çıldır Turu",
+    "⛷️ Sarıkamış Kayak Turu",
+  ],
+  avatar: "/images/logo.png",
+};
+// Sitede en fazla 6 video, Instagram'ın üçlü ızgarası gibi iki satır.
+const MAX_REELS = 6;
+export function instagramHandle(profileUrl: string) {
+  try {
+    return new URL(profileUrl).pathname.split("/").filter(Boolean)[0] || "rotakarstur";
+  } catch {
+    return "rotakarstur";
+  }
+}
 // Instagram gönderisi doğrudan iframe ile gömülür: üçüncü taraf betik (embed.js)
 // yüklenmez, CSP'de Instagram yalnız frame-src'de kalır.
 export function instagramEmbedUrl(permalink: string) {
@@ -36,223 +51,221 @@ export function instagramEmbedUrl(permalink: string) {
     return null;
   }
 }
-function InstagramEmbed({ post }: { post: InstagramPost }) {
+const reducedMotion = () =>
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+// Videolu kart: ekrana girince sessiz oynar, çıkınca durur; üstte hikâye ilerleme
+// çubuğu. Ses aynı anda yalnız bir kartta açık olur. Hareket azaltmayı seçen
+// ziyaretçi videoyu kendisi başlatır.
+function VideoReel({
+  post,
+  soundOn,
+  setSoundOn,
+  onFail,
+}: {
+  post: InstagramPost;
+  soundOn: boolean;
+  setSoundOn: (on: boolean) => void;
+  onFail: () => void;
+}) {
+  const video = useRef<HTMLVideoElement>(null),
+    bar = useRef<HTMLElement>(null),
+    [paused, setPaused] = useState(true),
+    [waiting, setWaiting] = useState(false),
+    { t } = useLang();
+  const play = () => {
+    const el = video.current;
+    if (!el) return;
+    el.preload = "auto";
+    el.play().catch(() => setPaused(true));
+  };
+  useEffect(() => {
+    const el = video.current;
+    if (!el || reducedMotion() || !("IntersectionObserver" in window)) return;
+    const watcher = new IntersectionObserver(
+      ([entry]) => (entry.isIntersecting ? play() : el.pause()),
+      { threshold: 0.5 },
+    );
+    watcher.observe(el);
+    return () => watcher.disconnect();
+  }, []);
+  useEffect(() => {
+    if (video.current) video.current.muted = !soundOn;
+  }, [soundOn]);
+  return (
+    <>
+      <video
+        ref={video}
+        src={post.videoSrc!}
+        poster={post.cover || undefined}
+        muted
+        loop
+        playsInline
+        preload="none"
+        aria-label={post.title}
+        onClick={() => (video.current?.paused ? play() : video.current?.pause())}
+        onPlay={() => setPaused(false)}
+        onPause={() => setPaused(true)}
+        onWaiting={() => setWaiting(true)}
+        onPlaying={() => setWaiting(false)}
+        onTimeUpdate={(e) => {
+          const el = e.currentTarget;
+          if (el.duration && bar.current)
+            bar.current.style.transform = `scaleX(${el.currentTime / el.duration})`;
+        }}
+        onError={onFail}
+      />
+      <span className="ig-progress" aria-hidden="true">
+        <i ref={bar} />
+      </span>
+      {waiting && !paused && (
+        <span className="ig-buffering" aria-hidden="true">
+          <LoaderCircle size={26} className="spin" />
+        </span>
+      )}
+      {paused && (
+        <button
+          type="button"
+          className="ig-play"
+          onClick={play}
+          aria-label={t("{title} videosunu izle", { title: post.title })}
+        >
+          <Play size={26} fill="currentColor" />
+        </button>
+      )}
+      <button
+        type="button"
+        className="ig-sound"
+        aria-pressed={soundOn}
+        aria-label={soundOn ? t("Sesi kapat") : t("Sesi aç")}
+        onClick={() => {
+          setSoundOn(!soundOn);
+          if (!soundOn && video.current?.paused) play();
+        }}
+      >
+        {soundOn ? <Volume2 size={20} /> : <VolumeX size={20} />}
+      </button>
+    </>
+  );
+}
+// Video dosyası olmayan paylaşım: kapak görünür, ziyaretçi isteyince Instagram
+// oynatıcısı kartın içinde açılır. Instagram kendiliğinden çağrılmaz.
+function EmbedReel({ post }: { post: InstagramPost }) {
   const src = instagramEmbedUrl(post.permalink),
-    [status, setStatus] = useState<"loading" | "ready" | "unavailable">(
-      src ? "loading" : "unavailable",
-    ),
+    [open, setOpen] = useState(false),
+    [status, setStatus] = useState<"loading" | "ready" | "unavailable">("loading"),
     { t } = useLang();
   useEffect(() => {
-    if (!src) return;
-    setStatus("loading");
+    if (!open) return;
     const timer = setTimeout(
-      () => setStatus((current) => (current === "loading" ? "unavailable" : current)),
+      () => setStatus((s) => (s === "loading" ? "unavailable" : s)),
       10000,
     );
     return () => clearTimeout(timer);
-  }, [src]);
+  }, [open]);
+  if (open && src)
+    return (
+      <>
+        <iframe
+          src={src}
+          title={post.title || t("Instagram gönderisi")}
+          loading="lazy"
+          allow="autoplay; encrypted-media; picture-in-picture; clipboard-write"
+          referrerPolicy="strict-origin-when-cross-origin"
+          onLoad={() => setStatus("ready")}
+        />
+        {status !== "ready" && (
+          <p className="ig-status" role="status">
+            {status === "loading" ? (
+              <>
+                <LoaderCircle size={17} className="spin" /> {t("Instagram yükleniyor…")}
+              </>
+            ) : (
+              <>
+                {t("Oynatıcı yüklenemedi.")}{" "}
+                <a href={post.permalink} target="_blank" rel="noopener noreferrer">
+                  {t("Instagram’da görüntüle")}
+                </a>
+              </>
+            )}
+          </p>
+        )}
+      </>
+    );
   return (
-    <div className="instagram-inline-player">
-      {status === "loading" && (
-        <p className="instagram-player-status" role="status">
-          <LoaderCircle size={17} className="spin" /> {t("Instagram yükleniyor…")}
-        </p>
-      )}
-      {status === "unavailable" && (
-        <p className="instagram-player-status" role="status">
-          {t("Oynatıcı yüklenemedi.")}{" "}
-          <a href={post.permalink} target="_blank" rel="noopener noreferrer">
-            {t("Instagram’da görüntüle")}
-          </a>
-        </p>
+    <>
+      {post.cover && (
+        <img
+          {...responsive(post.cover, "(max-width: 640px) 84vw, 33vw")}
+          alt=""
+          loading="lazy"
+          decoding="async"
+        />
       )}
       {src && (
-        <div className="instagram-embed-host">
-          <iframe
-            src={src}
-            title={post.title || t("Instagram gönderisi")}
-            loading="lazy"
-            allow="autoplay; encrypted-media; picture-in-picture; clipboard-write"
-            referrerPolicy="strict-origin-when-cross-origin"
-            onLoad={() => setStatus("ready")}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-const canHover = () =>
-  window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-const reducedMotion = () =>
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-// Videolu kart: <video> hazır bekler; masaüstünde üzerine gelince, dokunmatik
-// cihazlarda kart ekranın ortasına gelince sessiz oynar. Sayfadan çıkılmaz.
-function VideoCard({
-  post,
-  playing,
-  setPlaying,
-}: {
-  post: InstagramPost;
-  playing: boolean;
-  setPlaying: (on: boolean) => void;
-}) {
-  const card = useRef<HTMLElement>(null),
-    video = useRef<HTMLVideoElement>(null),
-    [muted, setMuted] = useState(true),
-    [failed, setFailed] = useState(false),
-    [ready, setReady] = useState(false),
-    { t } = useLang();
-  useEffect(() => {
-    const el = video.current;
-    if (!el) return;
-    if (playing && !reducedMotion()) {
-      el.play().catch(() => setPlaying(false));
-    } else {
-      el.pause();
-      if (!playing) {
-        el.muted = true;
-        setMuted(true);
-      }
-    }
-  }, [playing, setPlaying]);
-  // Dokunmatik cihazlar: görünür alanın ortasındaki kart oynar.
-  useEffect(() => {
-    if (canHover()) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setPlaying(entry.intersectionRatio >= 0.75),
-      { threshold: [0, 0.75, 1] },
-    );
-    observer.observe(card.current!);
-    return () => observer.disconnect();
-  }, [setPlaying]);
-  return (
-    <article
-      ref={card}
-      className={"instagram-post has-video" + (playing ? " is-playing" : "")}
-      onPointerEnter={(e) => e.pointerType === "mouse" && setPlaying(true)}
-      onPointerLeave={(e) => e.pointerType === "mouse" && setPlaying(false)}
-      onFocus={() => setPlaying(true)}
-      onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node))
-          setPlaying(false);
-      }}
-    >
-      <div className="instagram-card-media">
-        {failed ? (
-          <img
-            {...responsive(post.cover, "(max-width: 760px) 80vw, 25vw")}
-            alt=""
-            loading="lazy"
-            decoding="async"
-          />
-        ) : (
-          <video
-            ref={video}
-            src={post.videoSrc!}
-            poster={post.cover || undefined}
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            aria-label={post.title}
-            onCanPlay={() => setReady(true)}
-            onError={() => setFailed(true)}
-          />
-        )}
-        <span className="instagram-reel-icon">
-          <Instagram size={18} />
-        </span>
-        {!playing && (
-          <span className="instagram-play" aria-hidden="true">
-            <Play size={22} fill="currentColor" />
-          </span>
-        )}
-        {playing && !ready && !failed && (
-          <span className="instagram-buffering" aria-hidden="true">
-            <LoaderCircle size={22} className="spin" />
-          </span>
-        )}
-        {!failed && (
-          <button
-            className="instagram-sound"
-            aria-label={muted ? t("Sesi aç") : t("Sesi kapat")}
-            aria-pressed={!muted}
-            onClick={() => {
-              const el = video.current!;
-              el.muted = !el.muted;
-              setMuted(el.muted);
-              if (el.paused) setPlaying(true);
-            }}
-          >
-            {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-          </button>
-        )}
-        <span className="instagram-post-title">
-          {post.title}
-          <small>
-            {failed
-              ? t("Video şu an yüklenemedi")
-              : t("Üzerine gelin, izleyin")}
-          </small>
-        </span>
-      </div>
-      <div className="instagram-card-caption">
-        <a href={post.permalink} target="_blank" rel="noreferrer">
-          {t("Instagram’da aç")} <ExternalLink size={12} />
-        </a>
-      </div>
-    </article>
-  );
-}
-// Video dosyası olmayan paylaşım: tıklanınca Instagram'ın oynatıcısı pencerede açılır.
-function EmbedCard({ post, open }: { post: InstagramPost; open: () => void }) {
-  const { t } = useLang();
-  return (
-    <article className="instagram-post">
-      <div className="instagram-card-media">
         <button
-          className="instagram-cover"
-          onClick={open}
+          type="button"
+          className="ig-play"
+          onClick={() => setOpen(true)}
           aria-label={t("{title} videosunu izle", { title: post.title })}
         >
-          <img
-            {...responsive(post.cover, "(max-width: 760px) 80vw, 25vw")}
-            alt=""
-            loading="lazy"
-            decoding="async"
-          />
-          <span className="instagram-reel-icon">
-            <Instagram size={18} />
-          </span>
-          <span className="instagram-play">
-            <Play size={22} fill="currentColor" />
-          </span>
-          <span className="instagram-post-title">
-            {post.title}
-            <small>{t("İzlemek için tıklayın")}</small>
-          </span>
+          <Play size={26} fill="currentColor" />
         </button>
+      )}
+    </>
+  );
+}
+function Reel({
+  post,
+  handle,
+  soundOn,
+  setSoundOn,
+}: {
+  post: InstagramPost;
+  handle: string;
+  soundOn: boolean;
+  setSoundOn: (on: boolean) => void;
+}) {
+  const [videoFailed, setVideoFailed] = useState(false),
+    { t } = useLang();
+  return (
+    <article className="ig-reel">
+      <div className="ig-player">
+        {post.videoSrc && !videoFailed ? (
+          <VideoReel
+            post={post}
+            soundOn={soundOn}
+            setSoundOn={setSoundOn}
+            onFail={() => setVideoFailed(true)}
+          />
+        ) : (
+          <EmbedReel post={post} />
+        )}
       </div>
-      <div className="instagram-card-caption">
-        <a href={post.permalink} target="_blank" rel="noreferrer">
-          {t("Instagram’da aç")} <ExternalLink size={12} />
-        </a>
-      </div>
+      <p className="ig-caption">
+        <strong>{handle}</strong> {post.title}
+      </p>
+      <a
+        className="ig-open"
+        href={post.permalink}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {t("Instagram’da aç")} ↗
+      </a>
     </article>
   );
 }
 export function InstagramSection({ profileUrl }: { profileUrl: string }) {
   const [posts, setPosts] = useState<InstagramPost[]>([]),
-    // Aynı anda tek video oynar.
-    [playing, setPlaying] = useState<string | null>(null),
-    [embed, setEmbed] = useState<InstagramPost | null>(null),
-    rail = useRef<HTMLDivElement>(null),
-    { t } = useLang();
+    // Ses aynı anda yalnız bir videoda açık olur.
+    [soundId, setSoundId] = useState<string | null>(null),
+    { t } = useLang(),
+    handle = instagramHandle(profileUrl);
   useEffect(() => {
     let alive = true;
     api<{ posts: InstagramPost[] }>("/instagram")
       .then((r) => {
-        if (alive) setPosts(r.posts);
+        if (alive) setPosts(r.posts.slice(0, MAX_REELS));
       })
       .catch(() => {});
     return () => {
@@ -260,105 +273,90 @@ export function InstagramSection({ profileUrl }: { profileUrl: string }) {
     };
   }, []);
   return (
-    <section id="instagram" className="instagram-section">
+    <section
+      id="instagram"
+      className="instagram-section ig-profile"
+      aria-labelledby="ig-handle"
+    >
       <div className="container">
-        <div className="section-heading">
-          <div>
-            <h2>{t("Instagram’da biz.")}</h2>
-            <p className="muted">
-              {t("Yollardan, buluşmalardan, birlikte biriktirdiğimiz anlardan.")}
-            </p>
-          </div>
+        <div className="ig-head">
           <a
-            className="text-link"
+            className="ig-avatar"
             href={profileUrl}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
+            aria-label={t("Instagram’da {name}", { name: "Rota Kars Turizm" })}
           >
-            {t("Bizi Instagram’da takip edin")} <ExternalLink size={15} />
+            <img src={PROFILE.avatar} alt="" width="96" height="96" loading="lazy" />
           </a>
+          <div className="ig-meta">
+            <div className="ig-row">
+              <h2 id="ig-handle" className="ig-handle">
+                {handle}
+              </h2>
+              <a
+                className="ig-follow"
+                href={profileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {t("Takip et")}
+              </a>
+            </div>
+            <p className="ig-name">{PROFILE.name}</p>
+            <p className="ig-category">{t(PROFILE.category)}</p>
+            <p className="ig-bio">
+              {PROFILE.bio.map((line, i) => (
+                <span key={i}>
+                  {t(line)}
+                  <br />
+                </span>
+              ))}
+            </p>
+          </div>
+        </div>
+        <div className="ig-tabs" aria-hidden="true">
+          <span>
+            <svg
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="5" />
+              <path d="M3 9h18M9 3l3 6M15 3l3 6M10 13v5l4-2.5z" />
+            </svg>
+            REELS
+          </span>
         </div>
         {posts.length ? (
-          <>
-            <div className="instagram-rail" ref={rail}>
-              {posts.map((post) =>
-                post.videoSrc ? (
-                  <VideoCard
-                    key={post.id}
-                    post={post}
-                    playing={playing === post.id}
-                    setPlaying={(on) =>
-                      setPlaying((current) =>
-                        on ? post.id : current === post.id ? null : current,
-                      )
-                    }
-                  />
-                ) : (
-                  <EmbedCard
-                    key={post.id}
-                    post={post}
-                    open={() => setEmbed(post)}
-                  />
-                ),
-              )}
-            </div>
-            <div className="instagram-rail-footer">
-              <small>
-                {posts.some((p) => p.videoSrc)
-                  ? t(
-                      "Videolar üzerine gelince sessiz oynar; sesi kartın köşesinden açabilirsiniz.",
-                    )
-                  : t("Videoyu izlemek için karta tıklayın.")}
-              </small>
-              <div>
-                <button
-                  className="icon-btn"
-                  onClick={() =>
-                    rail.current?.scrollBy({ left: -350, behavior: "smooth" })
-                  }
-                  aria-label={t("Önceki Instagram videoları")}
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <button
-                  className="icon-btn"
-                  onClick={() =>
-                    rail.current?.scrollBy({ left: 350, behavior: "smooth" })
-                  }
-                  aria-label={t("Sonraki Instagram videoları")}
-                >
-                  <ChevronRight size={18} />
-                </button>
-              </div>
-            </div>
-          </>
+          <div className="ig-reels">
+            {posts.map((post) => (
+              <Reel
+                key={post.id}
+                post={post}
+                handle={handle}
+                soundOn={soundId === post.id}
+                setSoundOn={(on) => setSoundId(on ? post.id : null)}
+              />
+            ))}
+          </div>
         ) : (
-          <div className="instagram-empty">
-            <Instagram size={35} />
-            <div>
-              <h3>{t("Yolculuğumuz Instagram’da da devam ediyor.")}</h3>
-              <p>
-                {t(
-                  "Rotalarımızdan videolar için @rotakarstur hesabımızı ziyaret edin.",
-                )}
-              </p>
-            </div>
+          <div className="ig-empty">
+            <p>{t("Rotalarımızdan videolar Instagram’da.")}</p>
             <a
-              className="btn"
+              className="ig-follow"
               href={profileUrl}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
             >
-              {t("Reels’leri keşfedin")} <ExternalLink size={15} />
+              {t("Reels’leri keşfedin")}
             </a>
           </div>
         )}
       </div>
-      {embed && (
-        <Modal title={embed.title} onClose={() => setEmbed(null)}>
-          <InstagramEmbed post={embed} />
-        </Modal>
-      )}
     </section>
   );
 }
