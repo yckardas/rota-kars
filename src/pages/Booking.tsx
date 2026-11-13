@@ -285,6 +285,15 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     window.history.pushState({ ...window.history.state, bookingStep: n }, "");
     window.scrollTo({ top: 120, behavior: "smooth" });
   }
+  // Ön rezervasyon zaten açıldıysa ilk adıma dönülür ve "Ödemeye dön" uyarısı öne çıkar.
+  function showPending() {
+    setHold(null);
+    setStep(0);
+    setError("");
+    if (Number(window.history.state?.bookingStep || 0) > 0)
+      window.history.replaceState({ ...window.history.state, bookingStep: 0 }, "");
+    window.scrollTo({ top: 0 });
+  }
   async function backTo(target: number) {
     if (target >= stepRef.current) return;
     if (target === 0) {
@@ -303,6 +312,21 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     // döner; geçmiş kaydı da buna uyar.
     if (Number(window.history.state?.bookingStep || 0) > 0)
       window.history.replaceState({ ...window.history.state, bookingStep: 0 }, "");
+  }, [tourId]);
+  // Ödeme ekranından geri tuşuyla dönülünce tarayıcı sayfayı çoğu zaman
+  // önbellekten (bfcache) olduğu gibi geri getirir: bileşen yeniden kurulmaz,
+  // son adım ve dolu form ekranda kalır. Bu durumda da ön rezervasyon uyarısı
+  // gösterilir ve adım başa alınır; yeni rezervasyon denenmez.
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => {
+      if (!e.persisted) return;
+      const p = readPending(tourId);
+      setPending(p);
+      setBusy(false);
+      if (p) showPending();
+    };
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
   }, [tourId]);
   useEffect(() => {
     const onPop = (e: PopStateEvent) => {
@@ -484,7 +508,10 @@ export function Booking({ catalog }: { catalog: Catalog }) {
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!hold) {
-      setStep(0);
+      const p = readPending(tourId);
+      setPending(p);
+      if (p) showPending();
+      else setStep(0);
       return;
     }
     if (!consentsComplete(consents)) {
@@ -531,15 +558,20 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         : null;
       if (toPayment?.redirectUrl) {
         saveCompanions();
-        const payUrl = localPath(lang, toPayment.redirectUrl);
+        const payUrl = localPath(lang, toPayment.redirectUrl),
+          p: PendingBooking = {
+            tourId: tour?.id || "",
+            reference: r.reference,
+            payUrl,
+            at: Date.now(),
+          };
         try {
-          sessionStorage.setItem(
-            PENDING_KEY,
-            JSON.stringify({ tourId: tour?.id, reference: r.reference, payUrl, at: Date.now() }),
-          );
+          sessionStorage.setItem(PENDING_KEY, JSON.stringify(p));
         } catch {
-          /* gizli sekme: uyarı gösterilmez */
+          /* gizli sekme: uyarı sayfa önbellekteyken yine de görünür */
         }
+        // Sayfa önbellekten geri gelirse uyarı hazır olsun.
+        setPending(p);
         window.location.assign(payUrl);
         return;
       }
