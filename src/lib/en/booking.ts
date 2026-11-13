@@ -39,8 +39,6 @@ export const booking: Record<string, string> = {
   "Bu rota için açık bir tarih bulunmuyor.":
     "There are no open dates for this route.",
   "Acente ile görüşün.": "Contact our agency.",
-  "Tek rezervasyonda en fazla {max} koltuk seçebilirsiniz. Daha büyük gruplar için bize WhatsApp'tan yazın.":
-    "You can book up to {max} seats at a time. For larger groups, message us on WhatsApp.",
   "İyi bir yolculuk,": "A great trip",
   "iyi bir yerle başlar.": "starts with a great seat.",
   "Şoförün yanındaki ön koltuk rehberinize ayrıldı. Diğer {n} koltuktan dilediğinizi seçin.":
@@ -92,6 +90,9 @@ export const booking: Record<string, string> = {
     "Once your pre-booking is created, you are taken to the card payment screen. You pay the chosen amount with 3D Secure (SMS verification); your booking is confirmed as soon as the payment goes through.",
   "Sonraki adımda kartla": "By card in the next step",
   "Ödemeye geç": "Continue to payment",
+  "Bu adıma dön": "Back to this step",
+  "{count} yolcu için en fazla {count} koltuk seçebilirsiniz. Başka koltuk için önce seçili bir koltuğu kaldırın ya da yolcu sayısını artırın.":
+    "You can choose up to {count} seats for {count} passengers. To pick another seat, first remove a selected one or increase the number of passengers.",
   "Rezervasyonunuz kartla ödemeyle birlikte kesinleşir.":
     "Your booking is confirmed when you pay by card.",
   "Bu adımda ödeme alınmaz; kartla ödeme sonraki adımdadır.":
@@ -336,8 +337,6 @@ export const booking: Record<string, string> = {
   // Rezervasyon durumu
   "Koltuk {n} az önce doldu; başka bir koltuk seçin.":
     "Seat {n} was just taken; please choose another seat.",
-  "Yolcu sayısı {n} oldu · {total}":
-    "Passengers now {n} · {total}",
   "{selected} / {count} koltuk seçildi":
     "{selected} of {count} seats chosen",
   "Devam":

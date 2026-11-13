@@ -261,6 +261,44 @@ export function Booking({ catalog }: { catalog: Catalog }) {
   const stepDir = stepDirRef.current;
   const holdRef = useRef<Hold | null>(null);
   holdRef.current = hold;
+  const stepRef = useRef(step);
+  stepRef.current = step;
+  // Adımlar tarayıcı geçmişine yazılır: telefonun/tarayıcının geri tuşu
+  // rezervasyondan çıkmak yerine bir önceki adıma döner.
+  function goStep(n: number) {
+    setStep(n);
+    window.history.pushState({ ...window.history.state, bookingStep: n }, "");
+    window.scrollTo({ top: 120, behavior: "smooth" });
+  }
+  async function backTo(target: number) {
+    if (target >= stepRef.current) return;
+    if (target === 0) {
+      const h = holdRef.current;
+      if (h) await api(`/holds/${h.token}`, { method: "DELETE" }).catch(() => {});
+      setHold(null);
+    }
+    setStep(target);
+    setError("");
+    // Geri dönünce sayfanın dibinde kalınmaz; ileri giderken olduğu gibi adımın başına çıkılır.
+    window.scrollTo({ top: 120, behavior: "smooth" });
+  }
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      const target = Number(e.state?.bookingStep || 0);
+      if (target < stepRef.current) void backTo(target);
+      // Süre dolup başa dönüldüyse ileri adımların geçmiş kayıtları atlanır.
+      else if (target > stepRef.current) window.history.back();
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  // Sayfadaki geri düğmeleri ve adım çubuğu da geçmiş üzerinden döner; geçmiş
+  // kaydı yoksa (ör. sayfa yenilendiyse) doğrudan döner.
+  function backToStep(target: number) {
+    const at = Number(window.history.state?.bookingStep || 0);
+    if (at === step && target < step) window.history.go(target - step);
+    else void backTo(target);
+  }
   const selectedRef = useRef<number[]>([]);
   selectedRef.current = selected;
   // Telefonda 1. adımın "Devam" çubuğu: asıl düğme ekranda değilken görünür.
@@ -384,8 +422,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     try {
       const h = await post<Hold>("/holds", { departureId, seats: selected });
       setHold(h);
-      setStep(1);
-      window.scrollTo({ top: 120, behavior: "smooth" });
+      goStep(1);
     } catch (e) {
       setError((e as Error).message);
       const fresh = await api<{ seats: Seat[] }>(
@@ -404,16 +441,8 @@ export function Booking({ catalog }: { catalog: Catalog }) {
       setBusy(false);
     }
   }
-  async function back() {
-    if (step === 1) {
-      if (hold)
-        await api(`/holds/${hold.token}`, { method: "DELETE" }).catch(() => {});
-      setHold(null);
-    }
-    setStep(Math.max(0, step - 1));
-    setError("");
-    // Geri dönünce sayfanın dibinde kalınmaz; ileri giderken olduğu gibi adımın başına çıkılır.
-    window.scrollTo({ top: 120, behavior: "smooth" });
+  function back() {
+    backToStep(Math.max(0, step - 1));
   }
   // İşaretlenen yolcular üyenin yol arkadaşlarına kaydedilir (hata olursa
   // rezervasyon etkilenmez).
@@ -621,8 +650,26 @@ export function Booking({ catalog }: { catalog: Catalog }) {
           (s, i) => (
             <li
               key={s}
-              className={step === i ? "current" : step > i ? "complete" : ""}
+              className={
+                (step === i ? "current" : step > i ? "complete" : "") +
+                (step > i && !result ? " is-link" : "")
+              }
               aria-current={step === i ? "step" : undefined}
+              // Tamamlanan adıma dokunmak o adıma geri döndürür.
+              {...(step > i && !result
+                ? {
+                    role: "button",
+                    tabIndex: 0,
+                    title: t("Bu adıma dön"),
+                    onClick: () => backToStep(i),
+                    onKeyDown: (e: React.KeyboardEvent) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        backToStep(i);
+                      }
+                    },
+                  }
+                : {})}
             >
               <span>{step > i ? <Check size={14} /> : i + 1}</span>
               {t(s)}
@@ -745,23 +792,14 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                       setSelected(selected.filter((s) => s !== n));
                     else if (selected.length < count)
                       setSelected([...selected, n]);
-                    // Yolcu sayısı dolduysa koltuk seçimi sayıyı 4'e kadar büyütür;
-                    // bu sessiz kalmaz: yeni sayı ve tutar duyurulur.
-                    else if (count < Math.min(MAX_SEATS, vehicle.sellableSeats)) {
-                      setCount(count + 1);
-                      setSelected([...selected, n]);
-                      setSeatNoticeTone("info");
-                      setSeatNotice(
-                        t("Yolcu sayısı {n} oldu · {total}", {
-                          n: count + 1,
-                          total: currency((departure?.price || tour.price) * (count + 1)),
-                        }),
-                      );
-                    } else
+                    // Tek yolcuda başka koltuğa dokunmak seçimi o koltuğa taşır.
+                    else if (count === 1) setSelected([n]);
+                    // Yolcu sayısından fazla koltuk seçilmez; sayı yukarıdan artırılır.
+                    else
                       setError(
                         t(
-                          "Tek rezervasyonda en fazla {max} koltuk seçebilirsiniz. Daha büyük gruplar için bize WhatsApp'tan yazın.",
-                          { max: MAX_SEATS },
+                          "{count} yolcu için en fazla {count} koltuk seçebilirsiniz. Başka koltuk için önce seçili bir koltuğu kaldırın ya da yolcu sayısını artırın.",
+                          { count },
                         ),
                       );
                   }}
@@ -892,8 +930,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   );
                   return;
                 }
-                setStep(2);
-                window.scrollTo({ top: 120, behavior: "smooth" });
+                goStep(2);
               }}
             >
               <h2 ref={stepHeading} tabIndex={-1}>
