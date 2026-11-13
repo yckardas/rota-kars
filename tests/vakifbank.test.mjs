@@ -64,7 +64,15 @@ async function fixture(t, env = SIM_ENV, options = {}) {
     assert.match(body.redirectUrl, /^\/odeme\/kart\/[a-f0-9]{48}$/);
     return body.redirectUrl.split("/").pop();
   };
-  const card = (sessionId, pan = GOOD_CARD, extra = {}) =>
+  const ALL = { preInfo: true, contract: true, cancellation: true, privacy: true };
+  const consent = (sessionId, body = ALL) =>
+    api("/payments/consent/" + sessionId, body);
+  // Müşteri ödeme ekranında önce onay kutularını işaretler, sonra kartı girer.
+  const card = async (sessionId, pan = GOOD_CARD, extra = {}) => {
+    await consent(sessionId);
+    return rawCard(sessionId, pan, extra);
+  };
+  const rawCard = (sessionId, pan = GOOD_CARD, extra = {}) =>
     api("/payments/card/" + sessionId, {
       holder: "Ayşe Yılmaz",
       pan,
@@ -100,7 +108,7 @@ async function fixture(t, env = SIM_ENV, options = {}) {
     const back = hidden(await acs.text());
     return back;
   };
-  return { store, api, form, r, start, card, throughBank, origin };
+  return { store, api, form, r, start, card, rawCard, consent, throughBank, origin };
 }
 const sessionOf = async (api, id) =>
   (await api("/payments/sessions/" + id)).json();
@@ -447,4 +455,48 @@ test("önizleme modu: kart ekranı açılır ama kart işlenmez, rezervasyon bek
     "pending_agency",
   );
   assert.equal((await store.db.find("payment_attempts")).length, 0);
+});
+
+test("ödeme ekranı: onay kutuları işaretlenmeden kart alınmaz, onaylar kaydedilir", async (t) => {
+  const { store, api, r, start, rawCard, consent } = await fixture(t);
+  const id = await start();
+  // Oturum, ödeme ekranında gösterilecek özeti ve bu rezervasyonun metinlerini verir.
+  const s = await sessionOf(api, id);
+  assert.equal(s.consented, false);
+  assert.equal(s.summary.tourName, "Ani, Çıldır ve Kars");
+  assert.equal(s.summary.count, 1);
+  assert.match(s.documents.preInfo, new RegExp(r.reference));
+  assert.match(s.documents.contract, /TUR HİZMET SÖZLEŞMESİ/);
+  assert.ok(s.documents.cancellation.length > 3);
+  // Onaysız kart denemesi bankaya gitmez.
+  const without = await rawCard(id);
+  assert.equal(without.status, 409);
+  assert.match((await without.json()).message, /onay kutularını/);
+  assert.equal((await store.db.find("payment_attempts")).length, 0);
+  // Eksik onay reddedilir.
+  const partial = await consent(id, { preInfo: true, contract: true, cancellation: true });
+  assert.equal(partial.status, 400);
+  assert.equal((await sessionOf(api, id)).consented, false);
+  // Dört onay ayrı ayrı oturuma ve rıza kayıtlarına yazılır.
+  assert.equal((await consent(id)).status, 200);
+  const saved = await store.db.one("payment_sessions", { _id: id });
+  assert.ok(saved.consents_at);
+  assert.deepEqual(
+    Object.keys(saved.consents).filter((k) => typeof saved.consents[k] === "number").sort(),
+    ["cancellation_terms", "kvkk_notice", "pre_info", "service_contract"],
+  );
+  const ledger = (await store.db.find("consents", { source: "payment" })).map((c) => c.type).sort();
+  assert.deepEqual(ledger, ["cancellation_terms", "kvkk_notice", "pre_info", "service_contract"]);
+  assert.equal((await sessionOf(api, id)).consented, true);
+  assert.equal((await rawCard(id)).status, 200);
+});
+
+test("önizleme modu: ödeme ekranının onayları da kaydedilir", async (t) => {
+  const { store, api, start, consent } = await fixture(t, { PAYMENT_PREVIEW: "1" });
+  const id = await start();
+  const s = await sessionOf(api, id);
+  assert.equal(s.provider, "preview");
+  assert.ok(s.documents.preInfo);
+  assert.equal((await consent(id)).status, 200);
+  assert.ok((await store.db.one("payment_sessions", { _id: id })).consents_at);
 });

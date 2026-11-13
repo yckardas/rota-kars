@@ -63,6 +63,9 @@ Banka başvuruyu incelerken ödeme ekranını canlı sitede görmek ister. Gerç
 - Rezervasyon sayfasında ve "Rezervasyonum"da **Kartla öde** düğmesi görünür. Altında "Kartla ödeme banka onayının ardından açılacak; şimdilik ödeme alınmaz." notu yer alır.
 - `/odeme/kart/:id` kart formu açılır; üstünde "Önizleme" etiketi bulunur.
 - Form gönderildiğinde kart bilgisi **sunucuya hiç gönderilmez**. Form temizlenir ve "Kartınızdan çekim yapılmadı; ön rezervasyonunuz kayıtlı" mesajı çıkar. Rezervasyon acente onayı bekleyen ön rezervasyon olarak kalır.
+- Ödeme ekranında ödenen rezervasyonun özeti (tur, tarih, yolcu/koltuk, toplam bedel, şimdi ödenecek tutar), kabul edilen kartlar (Visa, Mastercard, Troy) ile 3D Secure işareti ve şirket künyesi yer alır.
+- Rezervasyonun son adımında ve ödeme ekranında dört ayrı **zorunlu onay kutusu** vardır: Ön Bilgilendirme Formu, Tur Hizmet Sözleşmesi (mesafeli satış), İptal ve İade Koşulları, KVKK Aydınlatma Metni. Metinler bu rezervasyonun bilgileriyle açılır pencerede okunur. Kutular işaretlenmeden rezervasyon da ödeme de yapılamaz.
+- Onaylar sunucuda kaydedilir: rezervasyonda `booking_consents`, ödeme oturumunda `consents` (tarih, metin sürümü, IP) ve `consents` koleksiyonunda tür başına kayıt (`source: booking | payment`). Kart adımı (`/api/payments/card/:id`) ödeme ekranı onayı (`/api/payments/consent/:id`) olmadan başlamaz; önizlemede de onay kaydedilir.
 - Gerçek sağlayıcı açıldığında (`PAYMENT_PROVIDER=vakifbank`) önizleme kendiliğinden devre dışı kalır. Yine de değişkeni silmek iyi olur.
 
 Bankaya göstermek için: sitede bir sefere ön rezervasyon yapın, ardından "Kartla öde" düğmesine basın.

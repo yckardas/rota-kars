@@ -4603,3 +4603,243 @@ html:has(.kp) {
     transform: none;
   }
 }
+
+/* --- Sözleşme onay kutuları (rezervasyon ve ödeme ekranı) --- */
+.kp .legal-consents {
+  margin: 20px 0 18px;
+  padding: 16px 18px 6px;
+  border: 1px solid var(--kp-rule);
+  border-radius: 4px;
+  background: var(--kp-card);
+  min-width: 0;
+  text-align: left;
+}
+.kp .legal-consents legend {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 0 6px;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--kp-ink);
+}
+.kp .legal-consents-hint {
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--kp-ink-2);
+}
+.kp .legal-consents .consent-item {
+  margin: 0;
+  padding: 10px 0;
+  border-top: 1px solid var(--kp-hair);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--kp-ink);
+}
+.kp .legal-consents .consent-item:first-of-type {
+  border-top: 0;
+}
+.kp .legal-consents .consent-item input {
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+}
+.kp .legal-consents .consent-item.is-missing span {
+  color: var(--kp-red-d);
+}
+.kp .consent-doc-link {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--kp-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  text-align: left;
+}
+.kp .consent-doc-link:hover {
+  color: var(--kp-red-d);
+}
+.kp .consent-error {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--kp-red-d);
+}
+.kp .legal-doc {
+  max-height: min(60vh, 560px);
+  overflow: auto;
+  margin: 0;
+  padding: 18px 24px 16px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--kp-ink);
+}
+.kp .legal-doc:focus-visible {
+  outline: 2px solid var(--kp-red);
+  outline-offset: 2px;
+}
+.kp .legal-doc-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 14px 24px 18px;
+  border-top: 1px solid var(--kp-hair);
+}
+
+/* --- Ödeme ekranı: adımlar, rezervasyon özeti, kart işaretleri, künye --- */
+.kp .payment-steps {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--kp-ink-2);
+  counter-reset: step;
+}
+.kp .payment-steps li {
+  counter-increment: step;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.kp .payment-steps li::before {
+  content: counter(step);
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--kp-rule);
+  border-radius: 50%;
+  font-size: 11px;
+}
+.kp .payment-steps li + li::after {
+  order: -1;
+  content: "";
+  width: 18px;
+  height: 1px;
+  background: var(--kp-rule);
+}
+.kp .payment-steps .is-done::before {
+  content: "✓";
+  border-color: var(--kp-ink);
+  background: var(--kp-ink);
+  color: #fff;
+}
+.kp .payment-steps .is-current {
+  color: var(--kp-ink);
+}
+.kp .payment-steps .is-current::before {
+  border-color: var(--kp-red);
+  color: var(--kp-red);
+}
+.kp .payment-summary {
+  display: grid;
+  margin: 20px 0 0;
+  border: 1px solid var(--kp-rule);
+  border-radius: 4px;
+  text-align: left;
+}
+.kp .payment-summary > div {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.8fr) 1.6fr;
+  gap: 12px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--kp-hair);
+  font-size: 14px;
+}
+.kp .payment-summary > div:first-child {
+  border-top: 0;
+}
+.kp .payment-summary dt {
+  color: var(--kp-ink-2);
+}
+.kp .payment-summary dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--kp-ink);
+}
+.kp .payment-summary .is-due {
+  background: var(--kp-snow);
+}
+.kp .payment-summary .is-due dd {
+  font-variant-numeric: tabular-nums;
+}
+.kp .payment-summary-note {
+  margin: 0;
+  padding: 8px 14px 10px;
+  border-top: 1px solid var(--kp-hair);
+  font-size: 13px;
+  color: var(--kp-ink-2);
+}
+.kp .card-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.kp .card-mark {
+  display: inline-grid;
+  place-items: center;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 4px;
+  background: var(--kp-ink);
+}
+.kp .card-mark svg {
+  height: 16px;
+  width: auto;
+}
+.kp .card-mark-mastercard {
+  background: #1f1f1f;
+}
+.kp .card-mark-text {
+  border: 1px solid var(--kp-rule);
+  background: var(--kp-card);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--kp-ink-2);
+}
+.kp .merchant-info {
+  display: grid;
+  gap: 4px;
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--kp-hair);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--kp-ink-2);
+  text-align: left;
+}
+.kp .merchant-info strong {
+  color: var(--kp-ink);
+}
+.kp .merchant-info nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 6px;
+}
+.kp .merchant-info a {
+  color: var(--kp-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@media (max-width: 520px) {
+  .kp .payment-summary > div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+  .kp .legal-doc-actions .btn {
+    flex: 1;
+    justify-content: center;
+  }
+}

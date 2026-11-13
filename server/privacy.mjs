@@ -17,8 +17,12 @@ export const CONSENT_TYPES = [
   "kvkk_notice",
   "marketing",
   "abroad_transfer",
-  // Ön bilgilendirme formu, tur hizmet sözleşmesi ve iptal-iade koşullarının onayı.
+  // Ön bilgilendirme formunun onayı.
   "pre_info",
+  // Tur hizmet sözleşmesinin (mesafeli satış) onayı.
+  "service_contract",
+  // İptal ve iade koşullarının onayı.
+  "cancellation_terms",
   // Başkası adına bilgi girme beyanı (rezervasyondaki diğer yolcular, yol arkadaşları).
   "others_declaration",
 ];

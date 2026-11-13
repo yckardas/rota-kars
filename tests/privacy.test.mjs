@@ -33,7 +33,7 @@ async function fixture(t) {
     const [d] = await store.listDepartures("ani-cildir");
     const hold = await call("/holds", { body: { departureId: d.id, seats: [seat] }, cookie });
     return (await call("/reservations", {
-      body: { holdToken: hold.json.token, name: "Ayşe Yılmaz", email, phone: "05551112233", passengers: ["Ayşe Yılmaz"], passengerDetails: [{ nationality: "TR", idNumber: "10000000146", gender: "K" }], paymentMode: "deposit", consent: true, marketingConsent: marketing },
+      body: { holdToken: hold.json.token, name: "Ayşe Yılmaz", email, phone: "05551112233", passengers: ["Ayşe Yılmaz"], passengerDetails: [{ nationality: "TR", idNumber: "10000000146", gender: "K" }], paymentMode: "deposit", consents: { preInfo: true, contract: true, cancellation: true, privacy: true }, marketingConsent: marketing },
       cookie,
     })).json;
   };
@@ -44,7 +44,7 @@ test("consents are recorded per type with version, email is stored only as a has
   const { store, book } = await fixture(t);
   await book("ayse@example.com", { marketing: true });
   const consents = await store.db.find("consents");
-  assert.deepEqual(consents.map((c) => c.type).sort(), ["kvkk_notice", "marketing", "pre_info"]);
+  assert.deepEqual(consents.map((c) => c.type).sort(), ["cancellation_terms", "kvkk_notice", "marketing", "pre_info", "service_contract"]);
   assert.ok(consents.every((c) => c.version && c.source === "booking" && c.email_hash));
   assert.ok(!JSON.stringify(consents).includes("ayse@example.com"));
 });

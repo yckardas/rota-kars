@@ -185,6 +185,13 @@ export async function createWorkflow(
             legal_version: LEGAL_VERSION,
             pre_info_accepted_at: r.created_at,
             pre_info_text: extra,
+            // Rezervasyon adımında ayrı ayrı işaretlenen onay kutuları.
+            booking_consents: {
+              pre_info: r.created_at,
+              service_contract: r.created_at,
+              cancellation_terms: r.created_at,
+              kvkk_notice: r.created_at,
+            },
             others_declared: Boolean(legal.othersDeclared),
           },
         );

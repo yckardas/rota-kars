@@ -121,10 +121,21 @@ test("rezervasyonda ön bilgilendirme onayı kaydedilir, e-postaya eklenir; onay
     passengers: ["Ayşe Yılmaz", "Jonas Weber"],
     passengerDetails: [TR, DE],
     paymentMode: "deposit",
-    consent: true,
+    consents: { preInfo: true, contract: true, cancellation: true, privacy: true },
   };
   // Birden çok yolcuda başkası adına bilgi girme beyanı zorunlu.
   assert.equal((await req("/reservations", body)).status, 400);
+  // Onay kutuları ayrı ayrı zorunlu: biri eksikse kayıt açılmaz.
+  assert.equal(
+    (
+      await req("/reservations", {
+        ...body,
+        othersDeclaration: true,
+        consents: { preInfo: true, contract: true, cancellation: true },
+      })
+    ).status,
+    400,
+  );
   const created = await req("/reservations", {
     ...body,
     othersDeclaration: true,
@@ -136,11 +147,17 @@ test("rezervasyonda ön bilgilendirme onayı kaydedilir, e-postaya eklenir; onay
   assert.equal(saved.legal_version, LEGAL_VERSION);
   assert.equal(saved.others_declared, true);
   assert.ok(saved.pre_info_accepted_at);
+  assert.deepEqual(Object.keys(saved.booking_consents).sort(), [
+    "cancellation_terms",
+    "kvkk_notice",
+    "pre_info",
+    "service_contract",
+  ]);
   assert.match(saved.pre_info_text, new RegExp("Ön rezervasyon no: " + ref));
   const consents = (await store.db.find("consents", {}))
     .map((c) => c.type)
     .sort();
-  assert.deepEqual(consents, ["kvkk_notice", "others_declaration", "pre_info"]);
+  assert.deepEqual(consents, ["cancellation_terms", "kvkk_notice", "others_declaration", "pre_info", "service_contract"]);
   const createdMail = (await store.db.find("notification_outbox", {})).find(
     (m) => m.kind === "reservation_created",
   );

@@ -33,7 +33,13 @@ import { createStorage, MEDIA_LIMITS } from "./storage.mjs";
 import { createBackup } from "./backup.mjs";
 import { vehicleModels, fleetVehicles } from "./operations.mjs";
 import { passengerDetail } from "./passenger-id.mjs";
-import { preInfoText, isLateBooking, freeCancelDays } from "./legal.mjs";
+import {
+  preInfoText,
+  contractText,
+  cancellationRules,
+  isLateBooking,
+  freeCancelDays,
+} from "./legal.mjs";
 import { en } from "./catalog-en.mjs";
 import { attachSocialAuth, cookieValue } from "./social-auth.mjs";
 import { createTurnstile } from "./turnstile.mjs";
@@ -87,6 +93,15 @@ const requestSchema = z
   .refine((r) => r.kind !== "hotel" || (r.checkOut && r.checkOut > r.checkIn), {
     message: "Çıkış tarihi giriş tarihinden sonra olmalıdır.",
   });
+// Rezervasyon ve kartla ödeme adımındaki zorunlu onay kutuları (her biri ayrı).
+const legalConsents = z
+  .object({
+    preInfo: z.literal(true),
+    contract: z.literal(true),
+    cancellation: z.literal(true),
+    privacy: z.literal(true),
+  })
+  .strict();
 const bookingSchema = z.object({
   holdToken: z.string().regex(/^[a-f0-9]{48}$/),
   name: clean,
@@ -105,8 +120,9 @@ const bookingSchema = z.object({
     .min(1)
     .max(53),
   paymentMode: z.enum(["deposit", "full"]),
-  // Ön bilgilendirme formu, tur hizmet sözleşmesi ve iptal-iade koşulları onayı.
-  consent: z.literal(true),
+  // Ayrı ayrı işaretlenen onay kutuları: ön bilgilendirme formu, tur hizmet
+  // sözleşmesi, iptal-iade koşulları ve KVKK aydınlatma metni. Hepsi zorunlu.
+  consents: legalConsents,
   // Birden çok yolcuda zorunlu: diğer yolcular adına bilgi girme beyanı.
   othersDeclaration: z.boolean().optional(),
   // İsteğe bağlı ticari elektronik ileti izni (varsayılan kapalı).
@@ -640,28 +656,36 @@ export function createApp(
         priced = await store.members.priceCoupon(q.member?.id, input.couponId, subtotal, d.tour_id),
         total = priced.total,
         deposit = input.paymentMode === "deposit" ? depositFor(total) : total;
+      const data = {
+        tour,
+        date: d.date,
+        startTime: d.start_time,
+        pickup: d.pickup,
+        vehicleName: d.vehicle?.name || "",
+        customer: { name: input.name, email: input.email, phone: input.phone },
+        passengers: input.seats.map((seat, i) => ({
+          name: input.passengers[i]?.name || `${i + 1}. yolcu`,
+          nationality: input.passengers[i]?.nationality || "",
+          seat,
+        })),
+        unitPrice: d.price,
+        count,
+        discount: priced.discount,
+        total,
+        deposit,
+        paymentMode: input.paymentMode,
+        onlinePayment: Boolean(paymentStatus.enabled),
+        depositPercent: paymentStatus.depositPercent,
+      };
       r.json({
         lateBooking: isLateBooking(tour, d.date, d.start_time),
         freeCancelDays: freeCancelDays(tour),
-        text: preInfoText({
-          tour,
-          date: d.date,
-          startTime: d.start_time,
-          pickup: d.pickup,
-          vehicleName: d.vehicle?.name || "",
-          customer: { name: input.name, email: input.email, phone: input.phone },
-          passengers: input.seats.map((seat, i) => ({
-            name: input.passengers[i]?.name || `${i + 1}. yolcu`,
-            nationality: input.passengers[i]?.nationality || "",
-            seat,
-          })),
-          unitPrice: d.price,
-          count,
-          discount: priced.discount,
-          total,
-          deposit,
-          paymentMode: input.paymentMode,
-          onlinePayment: Boolean(paymentStatus.enabled),
+        text: preInfoText(data),
+        // Onay kutularının açılır pencerelerinde gösterilen metinler.
+        contract:
+          "TASLAK · Bu sözleşme rezervasyonunuz onaylandığında (online ödemede ödemeyle birlikte) aşağıdaki hükümlerle kurulur; sözleşme no rezervasyon numaranızdır.\n\n" +
+          contractText({ ...data, reference: "kayıtta verilecek", draft: true }),
+        cancellation: cancellationRules(tour, {
           depositPercent: paymentStatus.depositPercent,
         }),
       });
@@ -940,8 +964,8 @@ export function createApp(
           othersDeclared: input.othersDeclaration === true,
         },
       });
-      await store.privacy.recordConsent({ email: input.email, memberId: q.member?.id, type: "kvkk_notice", source: "booking" });
-      await store.privacy.recordConsent({ email: input.email, memberId: q.member?.id, type: "pre_info", source: "booking" });
+      for (const type of ["kvkk_notice", "pre_info", "service_contract", "cancellation_terms"])
+        await store.privacy.recordConsent({ email: input.email, memberId: q.member?.id, type, source: "booking" });
       if (input.othersDeclaration)
         await store.privacy.recordConsent({ email: input.email, memberId: q.member?.id, type: "others_declaration", source: "booking" });
       if (input.marketingConsent)
@@ -1049,6 +1073,26 @@ export function createApp(
           })
           .parse(q.body);
       r.json(await payments.card(id, card));
+    }),
+  );
+  // Ödeme ekranındaki zorunlu onay kutuları: kart bilgisi alınmadan önce ödeme
+  // oturumuna ve rıza kayıtlarına yazılır (önizleme modunda da).
+  app.post(
+    "/api/payments/consent/:id",
+    route(async (q, r) => {
+      const id = paymentSessionId.parse(q.params.id);
+      legalConsents.parse(q.body);
+      const owner = await payments.consent(id, {
+        ip: String(q.ip || "").replace(/^::ffff:/, ""),
+      });
+      for (const type of ["kvkk_notice", "pre_info", "service_contract", "cancellation_terms"])
+        await store.privacy.recordConsent({
+          email: owner.email,
+          memberId: owner.memberId,
+          type,
+          source: "payment",
+        });
+      r.json({ ok: true });
     }),
   );
   // Bankanın 3D dönüşü: sonuç sayfasına (başarılı) veya kart formuna (yeniden dene) döner.

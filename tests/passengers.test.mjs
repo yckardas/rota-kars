@@ -58,7 +58,7 @@ const booking = (token, extra) => ({
   passengers: ["Ayşe Yılmaz", "Jonas Weber"],
   passengerDetails: [TR, DE],
   paymentMode: "deposit",
-  consent: true,
+  consents: { preInfo: true, contract: true, cancellation: true, privacy: true },
   othersDeclaration: true,
   ...extra,
 });

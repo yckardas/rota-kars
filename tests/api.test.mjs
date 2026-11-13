@@ -67,7 +67,7 @@ test("HTTP concurrent booking race locks a seat only once", async (t) => {
     email: "bad",
     phone: "no",
     passengers: ["A"],
-    consent: true,
+    consents: { preInfo: true, contract: true, cancellation: true, privacy: true },
     paymentMode: "deposit",
   });
   assert.equal(invalid.status, 400);
@@ -78,7 +78,7 @@ test("HTTP concurrent booking race locks a seat only once", async (t) => {
     phone: "05550000000",
     passengers: ["Test Yolcu"],
     passengerDetails: [{ nationality: "TR", idNumber: "10000000146", gender: "K" }],
-    consent: true,
+    consents: { preInfo: true, contract: true, cancellation: true, privacy: true },
     paymentMode: "deposit",
     total: 1,
   });
