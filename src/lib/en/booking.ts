@@ -354,14 +354,10 @@ export const booking: Record<string, string> = {
   "KVKK Aydınlatma Metni": "Privacy Notice (KVKK)",
   "Okudum, onaylıyorum": "I have read it, I accept",
   "Kapat": "Close",
-  "Ödemeye geçmeden önce dört onay kutusunun hepsini işaretleyin.":
-    "Tick all four boxes before you pay.",
   "Ön rezervasyon için dört onay kutusunun hepsini işaretleyin.":
     "Tick all four boxes to make your booking.",
   "Online ödeme yaparsanız rezervasyonunuz ödemeyle birlikte kesinleşir; havale veya nakit ödemede sözleşme acente onayıyla kurulur.":
     "If you pay online, your booking is confirmed with the payment; with bank transfer or cash, the contract is formed when the agency confirms.",
-  "Ödemeden önce ön bilgilendirme formu, tur hizmet sözleşmesi, iptal-iade koşulları ve aydınlatma metni onay kutularını işaretleyin.":
-    "Before paying, tick the boxes for the pre-information form, the tour service agreement, the cancellation terms and the privacy notice.",
   "Onaylarınız kaydedildi. Kartla ödeme, banka onayının ardından açılacak. Kartınızdan çekim yapılmadı; ön rezervasyonunuz kayıtlı, acentemiz sizinle iletişime geçecek.":
     "Your consents have been recorded. Card payment will open once the bank approves. Your card was not charged; your provisional booking is saved and our agency will contact you.",
   "Rezervasyon adımları": "Booking steps",
@@ -383,4 +379,13 @@ export const booking: Record<string, string> = {
     "You will see the card payment screen next.",
   "Ön rezervasyonunuz oluşunca kartla ödeme ekranına geçebilirsiniz. Kartla ödeme banka onayının ardından açılacak; o zamana kadar kartınızdan çekim yapılmaz ve acentemiz havale veya nakit ödeme için sizinle iletişime geçer.":
     "Once your provisional booking is created you can go to the card payment screen. Card payment opens once the bank approves; until then your card is not charged and our agency will contact you for bank transfer or cash payment.",
+  "Sözleşme onayı": "Agreement",
+  "Bu koşulları {when} tarihinde rezervasyonunuzda onayladınız. Ödeme için bir kez daha onaylayın.":
+    "You accepted these terms with your booking on {when}. Please confirm them once more to pay.",
+  "{preInfo}, {contract} ve {cancel} okudum, onaylıyorum.":
+    "I have read and accept the {preInfo}, the {contract} and the {cancel}.",
+  "Ödemeye geçmeden önce sözleşme onay kutusunu işaretleyin.":
+    "Tick the agreement box before you pay.",
+  "Ödemeden önce ön bilgilendirme formu, tur hizmet sözleşmesi ve iptal-iade koşulları onay kutusunu işaretleyin.":
+    "Before paying, tick the box for the pre-information form, the tour service agreement and the cancellation terms.",
 };

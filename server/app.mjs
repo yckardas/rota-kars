@@ -93,7 +93,7 @@ const requestSchema = z
   .refine((r) => r.kind !== "hotel" || (r.checkOut && r.checkOut > r.checkIn), {
     message: "Çıkış tarihi giriş tarihinden sonra olmalıdır.",
   });
-// Rezervasyon ve kartla ödeme adımındaki zorunlu onay kutuları (her biri ayrı).
+// Rezervasyonun son adımındaki zorunlu onay kutuları (her biri ayrı).
 const legalConsents = z
   .object({
     preInfo: z.literal(true),
@@ -1075,17 +1075,18 @@ export function createApp(
       r.json(await payments.card(id, card));
     }),
   );
-  // Ödeme ekranındaki zorunlu onay kutuları: kart bilgisi alınmadan önce ödeme
+  // Ödeme ekranındaki tek birleşik onay (ön bilgilendirme, sözleşme, iptal-iade;
+  // ayrıntılı dört onay rezervasyonda alınır): kart bilgisi alınmadan önce ödeme
   // oturumuna ve rıza kayıtlarına yazılır (önizleme modunda da).
   app.post(
     "/api/payments/consent/:id",
     route(async (q, r) => {
       const id = paymentSessionId.parse(q.params.id);
-      legalConsents.parse(q.body);
+      z.object({ terms: z.literal(true) }).strict().parse(q.body);
       const owner = await payments.consent(id, {
         ip: String(q.ip || "").replace(/^::ffff:/, ""),
       });
-      for (const type of ["kvkk_notice", "pre_info", "service_contract", "cancellation_terms"])
+      for (const type of ["pre_info", "service_contract", "cancellation_terms"])
         await store.privacy.recordConsent({
           email: owner.email,
           memberId: owner.memberId,
