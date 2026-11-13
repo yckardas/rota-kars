@@ -284,6 +284,9 @@ export function createPayments(
           paid: r.net_paid || 0,
         },
         consented: Boolean(s.consents_at),
+        // Ayrıntılı onayların rezervasyonda verildiği an (ödeme ekranında gösterilir).
+        bookingConsentAt:
+          r.booking_consents?.pre_info || r.pre_info_accepted_at || null,
         documents:
           open && legal
             ? {
@@ -299,9 +302,9 @@ export function createPayments(
             : null,
       };
     },
-    // Ödeme ekranındaki zorunlu onay kutuları (ön bilgilendirme, sözleşme,
-    // iptal-iade, aydınlatma). Kart bilgisi alınmadan önce oturuma kaydedilir;
-    // önizleme modunda da kaydedilir. Kart adımı bu kayıt olmadan başlamaz.
+    // Ödeme ekranındaki birleşik onay kutusu (ön bilgilendirme, sözleşme,
+    // iptal-iade). Kart bilgisi alınmadan önce oturuma kaydedilir; önizleme
+    // modunda da kaydedilir. Kart adımı bu kayıt olmadan başlamaz.
     async consent(id, { ip = "" } = {}) {
       const s = await getSession(id);
       if (s.status !== "pending" || s.expires_at < clock())
@@ -320,7 +323,6 @@ export function createPayments(
             pre_info: at,
             service_contract: at,
             cancellation_terms: at,
-            kvkk_notice: at,
             version: LEGAL_VERSION,
             ip: String(ip).slice(0, 64),
           },
@@ -366,7 +368,7 @@ export function createPayments(
       if (!s.consents_at)
         throw new AppError(
           409,
-          "Ödemeden önce ön bilgilendirme formu, tur hizmet sözleşmesi, iptal-iade koşulları ve aydınlatma metni onay kutularını işaretleyin.",
+          "Ödemeden önce ön bilgilendirme formu, tur hizmet sözleşmesi ve iptal-iade koşulları onay kutusunu işaretleyin.",
         );
       const r = await workflow.get(s.reference);
       if (r.status !== "pending_agency" || due(r) !== s.amount)

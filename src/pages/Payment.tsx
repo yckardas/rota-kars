@@ -18,12 +18,8 @@ import { api, post } from "../lib/api";
 import { currency, type Catalog, type Reservation } from "../lib/types";
 import { StatusStamp } from "../components/ReservationTicket";
 import {
-  CONSENT_MISSING,
-  LegalConsents,
-  allConsents,
-  consentsComplete,
-  noConsents,
-  type Consents,
+  PAYMENT_TERMS_MISSING,
+  PaymentTerms,
   type LegalDocuments,
 } from "../components/LegalConsents";
 import {
@@ -59,6 +55,7 @@ type Session = {
     paid: number;
   };
   consented?: boolean;
+  bookingConsentAt?: number | null;
   documents?: LegalDocuments | null;
 };
 // Rezervasyon sonrası ve "Rezervasyonum"da: kalan kaporayı kartla ödeme kartı.
@@ -404,8 +401,8 @@ function MerchantInfo({ catalog }: { catalog: Catalog }) {
     </footer>
   );
 }
-// Vakıfbank kart ödemesi: önce ödenen rezervasyonun özeti ve zorunlu onay
-// kutuları, sonra canlı kart görseli eşliğinde kart bilgisi; 3D Secure için
+// Vakıfbank kart ödemesi: önce ödenen rezervasyonun özeti, kart alanları ve
+// birleşik sözleşme onayı; sonra canlı kart görseli eşliğinde kart bilgisi; 3D Secure için
 // bankaya geçilir. Onaylar kart bilgisi gönderilmeden önce sunucuya kaydedilir.
 export function CardPayment({ catalog }: { catalog: Catalog }) {
   const { t, locale } = useLang();
@@ -414,7 +411,7 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
-    [consents, setConsents] = useState<Consents>(noConsents),
+    [terms, setTerms] = useState(false),
     [consentError, setConsentError] = useState("");
   useEffect(() => {
     api<Session>("/payments/sessions/" + id)
@@ -422,14 +419,14 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
         setS(x);
         if (x.message) setError(x.message);
         // Reddedilen karttan sonra aynı oturuma dönülürse onaylar kayıtlıdır.
-        if (x.consented) setConsents(allConsents);
+        if (x.consented) setTerms(true);
       })
       .catch((e) => setError(e.message));
   }, [id]);
   const preview = s?.provider === "preview";
   function checkConsents(form: HTMLFormElement) {
-    if (consentsComplete(consents)) return true;
-    setConsentError(CONSENT_MISSING);
+    if (terms) return true;
+    setConsentError(PAYMENT_TERMS_MISSING);
     form
       .querySelector<HTMLInputElement>(".legal-consents input:not(:checked)")
       ?.focus();
@@ -441,7 +438,7 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
     setBusy(true);
     try {
       // Onaylar her ödeme denemesinden önce oturuma yazılır (önizlemede de).
-      await post("/payments/consent/" + id, consents);
+      await post("/payments/consent/" + id, { terms: true });
       // Önizleme: kart bilgisi hiçbir yere gönderilmez, form temizlenir.
       if (preview) {
         reset();
@@ -560,13 +557,14 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
             onPay={pay}
             beforePay={checkConsents}
             footer={
-              <LegalConsents
-                value={consents}
+              <PaymentTerms
+                checked={terms}
                 onChange={(next) => {
-                  setConsents(next);
-                  if (consentsComplete(next)) setConsentError("");
+                  setTerms(next);
+                  if (next) setConsentError("");
                 }}
                 documents={s.documents}
+                acceptedAt={s.bookingConsentAt}
                 error={consentError}
                 disabled={busy}
               />
@@ -623,7 +621,7 @@ export function OpenPayment({ catalog }: { catalog: Catalog }) {
     [reference, setReference] = useState(""),
     [amountError, setAmountError] = useState(""),
     [notice, setNotice] = useState(""),
-    [consents, setConsents] = useState<Consents>(noConsents),
+    [terms, setTerms] = useState(false),
     [consentError, setConsentError] = useState("");
   const amount = parseAmount(amountText);
   function checkAmount(form: HTMLFormElement) {
@@ -632,8 +630,8 @@ export function OpenPayment({ catalog }: { catalog: Catalog }) {
       form.querySelector<HTMLInputElement>('[name="amount"]')?.focus();
       return false;
     }
-    if (consentsComplete(consents)) return true;
-    setConsentError(CONSENT_MISSING);
+    if (terms) return true;
+    setConsentError(PAYMENT_TERMS_MISSING);
     form
       .querySelector<HTMLInputElement>(".legal-consents input:not(:checked)")
       ?.focus();
@@ -662,11 +660,11 @@ export function OpenPayment({ catalog }: { catalog: Catalog }) {
           busy={false}
           beforePay={checkAmount}
           footer={
-            <LegalConsents
-              value={consents}
+            <PaymentTerms
+              checked={terms}
               onChange={(next) => {
-                setConsents(next);
-                if (consentsComplete(next)) setConsentError("");
+                setTerms(next);
+                if (next) setConsentError("");
               }}
               error={consentError}
             />

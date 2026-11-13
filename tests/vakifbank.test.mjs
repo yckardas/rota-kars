@@ -64,7 +64,7 @@ async function fixture(t, env = SIM_ENV, options = {}) {
     assert.match(body.redirectUrl, /^\/odeme\/kart\/[a-f0-9]{48}$/);
     return body.redirectUrl.split("/").pop();
   };
-  const ALL = { preInfo: true, contract: true, cancellation: true, privacy: true };
+  const ALL = { terms: true };
   const consent = (sessionId, body = ALL) =>
     api("/payments/consent/" + sessionId, body);
   // Müşteri ödeme ekranında önce onay kutularını işaretler, sonra kartı girer.
@@ -471,22 +471,22 @@ test("ödeme ekranı: onay kutuları işaretlenmeden kart alınmaz, onaylar kayd
   // Onaysız kart denemesi bankaya gitmez.
   const without = await rawCard(id);
   assert.equal(without.status, 409);
-  assert.match((await without.json()).message, /onay kutularını/);
+  assert.match((await without.json()).message, /onay kutusunu/);
   assert.equal((await store.db.find("payment_attempts")).length, 0);
-  // Eksik onay reddedilir.
-  const partial = await consent(id, { preInfo: true, contract: true, cancellation: true });
-  assert.equal(partial.status, 400);
+  // İşaretlenmemiş onay reddedilir.
+  assert.equal((await consent(id, {})).status, 400);
+  assert.equal((await consent(id, { terms: false })).status, 400);
   assert.equal((await sessionOf(api, id)).consented, false);
-  // Dört onay ayrı ayrı oturuma ve rıza kayıtlarına yazılır.
+  // Birleşik onay üç metin için oturuma ve rıza kayıtlarına yazılır.
   assert.equal((await consent(id)).status, 200);
   const saved = await store.db.one("payment_sessions", { _id: id });
   assert.ok(saved.consents_at);
   assert.deepEqual(
     Object.keys(saved.consents).filter((k) => typeof saved.consents[k] === "number").sort(),
-    ["cancellation_terms", "kvkk_notice", "pre_info", "service_contract"],
+    ["cancellation_terms", "pre_info", "service_contract"],
   );
   const ledger = (await store.db.find("consents", { source: "payment" })).map((c) => c.type).sort();
-  assert.deepEqual(ledger, ["cancellation_terms", "kvkk_notice", "pre_info", "service_contract"]);
+  assert.deepEqual(ledger, ["cancellation_terms", "pre_info", "service_contract"]);
   assert.equal((await sessionOf(api, id)).consented, true);
   assert.equal((await rawCard(id)).status, 200);
 });

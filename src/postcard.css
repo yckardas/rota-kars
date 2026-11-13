@@ -4843,3 +4843,20 @@ html:has(.kp) {
     justify-content: center;
   }
 }
+
+/* Kart ekranındaki birleşik sözleşme onayı */
+.kp .payment-terms .consent-item {
+  border-top: 0;
+}
+.kp .consent-privacy-line {
+  margin: 0 0 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--kp-hair);
+  font-size: 13px;
+  color: var(--kp-ink-2);
+}
+.kp .consent-privacy-line a {
+  color: var(--kp-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
