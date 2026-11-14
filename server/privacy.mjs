@@ -75,6 +75,8 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx, pii
         // sürümü (legal_version, pre_info_accepted_at, contract_at) kalır.
         pre_info_text: null,
         contract_text: null,
+        // Transferde müşterinin yazdığı uçuş/sefer bilgisi silinir; tutar ve nokta kalır.
+        ...(r.transfer ? { transfer: { ...r.transfer, info: "" } } : {}),
         anonymized_at: clock(),
       },
     );
