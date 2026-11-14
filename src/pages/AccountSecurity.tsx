@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import { dateLabel } from "../lib/types";
 import { Postmark } from "../components/Postmark";
 import { Link, useLang, useLocalNavigate } from "../lib/i18n";
-import { StatusStamp } from "../components/ReservationTicket";
+import { StatusStamp, TicketBrand } from "../components/ReservationTicket";
 export function AccountSecurity({
   mode,
 }: {
@@ -171,6 +171,7 @@ export function TicketVerification() {
   return (
     <section className="container ticket-verification">
       <article className="ticket-check" aria-busy={!data && !error}>
+        <TicketBrand />
         <div className="ticket-check-head">
           {data && <StatusStamp status={data.status} />}
           {data && (

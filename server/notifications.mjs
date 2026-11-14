@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import nodemailer from "nodemailer";
+import { renderMail } from "./mail-template.mjs";
 export async function createNotifications(db, { clock, tx, env = {}, push = null }) {
   await Promise.all([
     db.index("notification_outbox", { id: 1 }, { unique: true }),
@@ -117,13 +118,8 @@ export async function createNotifications(db, { clock, tx, env = {}, push = null
     async processBatch({
       send = transport
         ? (item) =>
-            transport.sendMail({
-              from: env.MAIL_FROM,
-              to: item.recipient,
-              subject: item.subject,
-              text:
-                item.body + (item.action_url ? "\n\n" + item.action_url : ""),
-            })
+            // Düz metin + logolu HTML (bkz. mail-template.mjs).
+            transport.sendMail({ from: env.MAIL_FROM, ...renderMail(item) })
         : null,
     } = {}) {
       if (!send) return { sent: 0, configured: false };

@@ -18,6 +18,16 @@ const statusLabels: Record<string, string> = {
   cancelled: "İptal edildi",
   expired: "Süresi doldu",
 };
+// Biletin üst satırı: Rota Kars logosu ve site adresi. Ekranda, yazdırılan/PDF
+// bilette ve QR doğrulama sayfasında aynı görünür (yazdırmada site başlığı gizlenir).
+export function TicketBrand() {
+  return (
+    <div className="ticket-brand">
+      <img src="/images/logo.png" alt="Rota Kars Turizm" width="110" height="40" />
+      <span>rotakarsturizm.com</span>
+    </div>
+  );
+}
 // Kartın köşesine basılmış lastik damga: onaylıysa kırmızı, beklerken lacivert,
 // iptal ve süre dolumunda soluk mürekkep.
 export function StatusStamp({ status }: { status: string }) {
@@ -45,6 +55,7 @@ export function ReservationTicket({
   return (
     <article className="reservation-ticket">
       <div className="ticket-message">
+        <TicketBrand />
         <StatusStamp status={r.status} />
         <h2>{tour?.name || r.tourId}</h2>
         <div className="ticket-reference">
