@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useLang } from "../lib/i18n";
+import { TourLink } from "../lib/tour-transition";
 import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { Modal } from "./Modal";
 import type { Story } from "../lib/types";
@@ -10,7 +11,8 @@ export function StoryPlayer({
   story: Story;
   onClose: () => void;
 }) {
-  const [i, setI] = useState(0);
+  const [i, setI] = useState(0),
+    { t } = useLang();
   return (
     <Modal title={story.location} onClose={onClose}>
       <div
@@ -30,13 +32,13 @@ export function StoryPlayer({
           </span>
           <h2>{story.scenes[i].title}</h2>
           <p>{story.scenes[i].text}</p>
-          <Link
-            to={"/turlar/" + story.tourId}
+          <TourLink
+            tourId={story.tourId}
             className="btn btn-white"
             onClick={onClose}
           >
-            Bu rotayı incele
-          </Link>
+            {t("Bu rotayı incele")}
+          </TourLink>
         </div>
         <div className="story-controls">
           <button

@@ -21,6 +21,7 @@ import { api } from "../lib/api";
 import { telHref } from "../lib/phone";
 import { useClearOfLaunchers } from "../lib/launchers";
 import { Postmark } from "../components/Postmark";
+import { enteredViaTransition } from "../lib/tour-transition";
 import {
   currency,
   dateLabel,
@@ -36,7 +37,10 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
     [departures, setDepartures] = useState<Departure[]>([]),
     [activeImage, setActiveImage] = useState(0),
     // Galeride görüntü değişince yeni fotoğraf yerine "oturur" (ilk açılışta değil).
-    [swapped, setSwapped] = useState(false);
+    [swapped, setSwapped] = useState(false),
+    // Karttan geçişle gelindiyse fotoğraf zaten akarak yerine oturdu; kartın giriş
+    // hareketi ayrıca oynamaz (geçiş bitince yeniden başlamaz).
+    [viaTransition] = useState(enteredViaTransition);
   // Rota çizgisi ve ilk hareket damgası ekrana girince canlanır.
   const routeLine = useReveal<HTMLDivElement>(),
     stampRow = useReveal<HTMLDivElement>();
@@ -62,7 +66,11 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
         </Link>
       </div>
     );
+  // Seferler sonradan yüklenir; o ana kadar sayfaya gömülü katalogdaki ilk hareket
+  // gösterilir, böylece damga ve tarih satırı yüklenince yer değiştirmez.
   const next = departures[0],
+    first: { date: string; start_time: string } | undefined =
+      next || (t.next && { date: t.next.date, start_time: t.next.startTime }),
     startingPrice = departures.length
       ? Math.min(...departures.map((d) => d.price))
       : (t.fromPrice ?? t.price),
@@ -80,7 +88,9 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
         <span>{t.name}</span>
       </div>
       <section
-        className="container kp-detail-card"
+        className={
+          "container kp-detail-card" + (viaTransition ? " is-vt-entry" : "")
+        }
         aria-labelledby="tour-title"
       >
         <div className="kp-card">
@@ -181,10 +191,10 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
               {t.season} · {tx("Kars çıkışlı")}
             </span>
             <span>
-              {!t.inquiryOnly && departures.length
+              {!t.inquiryOnly && first
                 ? tx("İlk hareket: {date} · {time}", {
-                    date: dateLabel(departures[0].date),
-                    time: departures[0].start_time,
+                    date: dateLabel(first.date),
+                    time: first.start_time,
                   })
                 : tx("Uygun tarih için bize ulaşın.")}
             </span>
@@ -334,13 +344,13 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
                 <span>{tx("kişi başı başlangıç fiyatı")}</span>
               </div>
             </div>
-            {!t.inquiryOnly && next && (
+            {!t.inquiryOnly && first && (
               <Postmark
-                date={next.date}
-                time={next.start_time}
+                date={first.date}
+                time={first.start_time}
                 label={tx("İlk hareket {date}, {time}", {
-                  date: dateLabel(next.date),
-                  time: next.start_time,
+                  date: dateLabel(first.date),
+                  time: first.start_time,
                 })}
               />
             )}
@@ -354,9 +364,9 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
             <div className="next-departures">
               <CalendarDays size={18} />
               <span>
-                {departures.length
+                {first
                   ? tx("İlk hareket: {date}", {
-                      date: dateLabel(departures[0].date),
+                      date: dateLabel(first.date),
                     })
                   : tx("Uygun tarih için bize ulaşın.")}
               </span>

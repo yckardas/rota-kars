@@ -409,4 +409,6 @@ export const site: Record<string, string> = {
     "last {n} seats",
   "{n} boş koltuk":
     "{n} seats left",
+  "Bu rotayı incele":
+    "Explore this route",
 };

@@ -27,6 +27,7 @@ import {
   useLang,
   type Lang,
 } from "../lib/i18n";
+import { TourLink } from "../lib/tour-transition";
 // Aynı sayfanın öbür dildeki karşılığına giden TR / EN bağlantıları.
 function LangSwitch({ className }: { className: string }) {
   const { lang, t } = useLang(),
@@ -256,9 +257,9 @@ export function Layout({
           <div>
             <h3>{t("Bir rota seçin")}</h3>
             {catalog.tours.map((t) => (
-              <Link key={t.id} to={"/turlar/" + t.id}>
+              <TourLink key={t.id} tourId={t.id}>
                 {t.name}
-              </Link>
+              </TourLink>
             ))}
           </div>
           <div>
