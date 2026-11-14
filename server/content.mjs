@@ -40,6 +40,17 @@ const DEFAULT_TOURS = new Map(tours.map((t) => [t.id, pick(t, TOUR_FIELDS)]));
 const DEFAULT_BUSINESS = pick(business, BUSINESS_FIELDS);
 
 export async function createContent(db, { clock = Date.now } = {}) {
+  // Panelde kayıtlı eski varsayılan Ani setini yenile; özel fotoğraflara dokunma.
+  const ani = DEFAULT_TOURS.get("ani-cildir");
+  await db.update(
+    "site_content",
+    {
+      _id: "tour:ani-cildir",
+      "fields.image": "/images/tours/ani.webp",
+      "fields.gallery": ["/images/tours/ani.webp", "/images/cildir.webp", "/images/kars.webp"],
+    },
+    { "fields.image": ani.image, "fields.gallery": ani.gallery },
+  );
   async function apply() {
     const docs = new Map((await db.find("site_content", {})).map((d) => [d.id, d]));
     for (const tour of tours)
