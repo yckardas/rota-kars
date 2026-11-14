@@ -2235,6 +2235,26 @@ html:has(.kp) {
   background: var(--kp-rule);
   margin-bottom: 30px;
 }
+/* Biletin üst satırı: logo solda, site adresi sağda; ince çizgiyle ayrılır */
+.kp .ticket-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--kp-rule);
+}
+.kp .ticket-brand img {
+  display: block;
+  height: 40px;
+  width: auto;
+}
+.kp .ticket-brand span {
+  color: var(--kp-ink-2);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
 /* Lastik damga: çift çizgili mürekkep çerçeve, hafif eğik basılmış */
 .kp .status-stamp {
   display: inline-block;
@@ -2486,6 +2506,13 @@ html:has(.kp) {
 .kp .ticket-check-head .kp-postmark {
   right: 34px;
   top: 30px;
+}
+/* Doğrulama sayfasında posta damgası sağ üstte: logo satırı ona yer bırakır */
+.kp .ticket-check .ticket-brand {
+  margin-right: 120px;
+}
+.kp .ticket-check .ticket-brand span {
+  display: none;
 }
 /* Sonuç cümlesi damganın yanından akar; posta damgasına sağdan yer bırakır */
 .kp .ticket-check h1 {
