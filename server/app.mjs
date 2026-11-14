@@ -846,11 +846,14 @@ export function createApp(
   const withNextDeparture = (list) =>
     Promise.all(
       list.map(async (t) => {
-        if (t.inquiryOnly) return t;
-        const [d] = await store.listDepartures(t.id).catch(() => []);
+        if (t.inquiryOnly) return { ...t, fromPrice: t.price };
+        const open = await store.listDepartures(t.id).catch(() => []),
+          [d] = open,
+          // Anasayfa, tur kartı ve tur detayı aynı "…’den" fiyatını gösterir.
+          fromPrice = open.length ? Math.min(...open.map((x) => x.price)) : t.price;
         return d
-          ? { ...t, next: { date: d.date, startTime: d.start_time, available: Math.max(0, d.available) } }
-          : t;
+          ? { ...t, fromPrice, next: { date: d.date, startTime: d.start_time, available: Math.max(0, d.available) } }
+          : { ...t, fromPrice };
       }),
     );
   const catalogData = async () => ({

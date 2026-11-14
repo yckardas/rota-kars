@@ -6,7 +6,7 @@ import {
   fleetVehicles,
   fleetVehicleLayout,
 } from "./operations.mjs";
-import { tours } from "./catalog.mjs";
+import { tours, catalogPrices } from "./catalog.mjs";
 export const localDate = (now) =>
   new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Istanbul",
@@ -20,6 +20,31 @@ export const salesClosesAt = (date, startTime, cutoffMinutes = 60) => {
   const time = /^\d{2}:\d{2}$/.test(startTime || "") ? startTime : "00:00";
   return Date.parse(`${date}T${time}:00+03:00`) - cutoffMinutes * 60 * 1000;
 };
+const tourPrice = (tourId) => tours.find((t) => t.id === tourId)?.price ?? 0;
+// Kasım 2026 düzeltmesi: eskiden sefer açılırken fiyat sefere kopyalanıyordu (panel formunun
+// varsayılanı sabit 1.000 TL idi), bu yüzden panelde değişen tur fiyatı seferlere yansımıyordu.
+// Gelecekteki seferlerden varsayılan görünen fiyatlar (1.000 TL ya da turun katalog fiyatı)
+// bir kez serbest bırakılır ve tur fiyatını izler. Bilinçli farklı fiyatlara ve geçmiş seferlere
+// dokunulmaz. Her veritabanında yalnız bir kez çalışır.
+export const LEGACY_FORM_PRICE = 100000;
+export const DEPARTURE_PRICE_MIGRATION = "departure_prices_follow_tour_2026_11";
+export async function migrateDeparturePrices(db, { clock }) {
+  const marker = DEPARTURE_PRICE_MIGRATION;
+  if (await db.one("integration_settings", { _id: marker })) return { released: 0 };
+  let released = 0;
+  for (const [tourId, price] of catalogPrices)
+    released += await db.updateMany(
+      "departures",
+      { tour_id: tourId, date: { $gte: localDate(clock()) }, price: { $in: [LEGACY_FORM_PRICE, price] } },
+      { price: null },
+    );
+  await db.upsert("integration_settings", marker, {
+    id: marker,
+    body: { appliedAt: clock(), released },
+    updated_at: clock(),
+  });
+  return { released };
+}
 export async function createDepartures(
   db,
   { clock, tx, operations, cleanup, env = process.env },
@@ -27,6 +52,7 @@ export async function createDepartures(
   const cutoff = Math.max(0, Number(env.SALES_CUTOFF_MINUTES ?? 60) || 0);
   const enrich = async (row) => {
     const base = await operations.get(row.tour_id),
+      custom = typeof row.price === "number" ? row.price : null,
       vehicle =
         row.vehicle_model && row.passenger_seats
           ? makeVehicle(row.vehicle_model, Number(row.passenger_seats))
@@ -34,6 +60,10 @@ export async function createDepartures(
     const unit = fleetVehicles.find((v) => v.id === row.vehicle_id);
     return {
       ...row,
+      // Fiyatın tek kaynağı turun (panelden düzenlenen) fiyatı; sefer yalnız bilinçli
+      // verilmiş özel fiyatla ondan ayrılır. Toplamlar hep bu alandan hesaplanır.
+      price: custom ?? tourPrice(row.tour_id),
+      custom_price: custom,
       vehicle: unit
         ? {
             ...fleetVehicleLayout(unit, vehicle),
@@ -124,7 +154,7 @@ export async function createDepartures(
         const changed =
           old &&
           (old.date !== input.date ||
-            old.price !== input.price ||
+            old.price !== (input.price ?? tourPrice(input.tourId)) ||
             old.start_time !== input.startTime ||
             old.vehicle.modelId !== input.vehicleModel ||
             old.vehicle.passengerSeats !== input.passengerSeats);
@@ -153,7 +183,8 @@ export async function createDepartures(
         }
         const fields = {
           date: input.date,
-          price: input.price,
+          // null: tur fiyatını izler.
+          price: input.price ?? null,
           active: input.active ? 1 : 0,
           start_time: input.startTime,
           pickup: input.pickup,

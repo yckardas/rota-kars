@@ -84,7 +84,7 @@ export function TourCard({ tour }: { tour: Tour }) {
           )}
         </div>
         <strong>
-          {currency(tour.price)}
+          {currency(tour.fromPrice ?? tour.price)}
           <small>{t("kişi başı")}</small>
         </strong>
       </div>

@@ -410,6 +410,9 @@ export const tours = [
     source: "https://rotakarsturizm.com/tur/van-havzasi-turu/",
   },
 ];
+// Kodda yazılı (panel düzenlemesinden önceki) tur fiyatları; content.mjs katalog
+// nesnelerinin üstüne yazdığı için modül yüklenirken bir kez alınır.
+export const catalogPrices = new Map(tours.map((t) => [t.id, t.price]));
 export const stories = [
   {
     id: "ani",

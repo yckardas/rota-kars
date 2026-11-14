@@ -2,6 +2,8 @@ import { localeOf } from "./i18n";
 export type Tour = {
   // Satışı açık turun ilk seferi (katalogda sunucu ekler).
   next?: { date: string; startTime: string; available: number };
+  // Açık seferlerin en düşük fiyatı (yoksa tur fiyatı); "…’den" gösterimleri bunu kullanır.
+  fromPrice?: number;
   id: string;
   salesOpen: boolean;
   vehicle: Vehicle;
@@ -136,7 +138,10 @@ export type Departure = {
   id: string;
   tour_id: string;
   date: string;
+  // Geçerli kişi başı fiyat (özel fiyat yoksa turun fiyatı).
   price: number;
+  // Bu sefere özel fiyat; null ise sefer tur fiyatını izler.
+  custom_price: number | null;
   active: number;
   available: number;
   start_time: string;

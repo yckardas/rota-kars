@@ -6,7 +6,7 @@ import { createOperations } from "./operations.mjs";
 import { createMembers } from "./members.mjs";
 import { createCampaigns } from "./campaigns.mjs";
 import { createNotifications } from "./notifications.mjs";
-import { createDepartures, localDate } from "./departures.mjs";
+import { createDepartures, localDate, migrateDeparturePrices } from "./departures.mjs";
 import { createInstagramSettings } from "./instagram.mjs";
 import { createWorkflow } from "./workflow.mjs";
 import { createAccountSecurity } from "./account-security.mjs";
@@ -157,6 +157,7 @@ export async function openStore(
   const push = createPush(db, { env, clock, fetchImpl: pushFetch, ...(webPush ? { webPush } : {}) });
   const notifications = await createNotifications(db, { clock, tx, env, push });
   const content = await createContent(db, { clock });
+  await migrateDeparturePrices(db, { clock });
   const accountSecurity = await createAccountSecurity(db, {
     clock,
     tx,
@@ -197,7 +198,7 @@ export async function openStore(
         const date = d.toISOString().slice(0, 10),
           id = `${t.id}-${date}`;
         seedDepartures.push(
-          ifAbsent({ id, tour_id: t.id, date, price: t.price, active: 1 }),
+          ifAbsent({ id, tour_id: t.id, date, price: null, active: 1 }),
         );
       }
     await db.col("departures").bulkWrite(seedDepartures);
