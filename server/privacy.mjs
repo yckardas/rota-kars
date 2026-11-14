@@ -99,6 +99,8 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx, pii
       byEmail,
       reservations,
       requests,
+      // Bekleme listesi ve ön kayıtlar (interest.mjs).
+      interest: byEmail ? await db.find("interest_list", { email: normalized }) : [],
       notifications: byEmail ? await db.find("notification_outbox", { recipient: normalized }) : [],
       consents: await db.find("consents", {
         $or: [{ email_hash: emailHash(normalized) }, ...(memberId ? [{ member_id: memberId }] : [])],
@@ -140,6 +142,16 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx, pii
       createdAt: new Date(r.created_at).toISOString(),
     })),
     requests: data.requests.map((r) => ({ kind: r.kind, body: r.body, createdAt: new Date(r.created_at).toISOString() })),
+    waitlistAndPreRegistrations: (data.interest || []).map((r) => ({
+      kind: r.kind,
+      tour: r.tour_id,
+      departureDate: r.departure_date,
+      name: r.name,
+      phone: r.phone,
+      count: r.count,
+      status: r.status,
+      createdAt: new Date(r.created_at).toISOString(),
+    })),
     messagesSent: data.notifications.map((n) => ({
       subject: n.subject,
       status: n.status,
@@ -179,6 +191,7 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx, pii
     }
     const requestIds = data.requests.map((r) => r.id);
     if (requestIds.length) await db.remove("requests", { _id: { $in: requestIds } });
+    if (data.byEmail) await db.remove("interest_list", { email: data.normalized });
     if (data.byEmail) await db.remove("notification_outbox", { recipient: data.normalized });
     return { anonymized, retainedForLegalObligation: retained, requestsDeleted: requestIds.length };
   }
@@ -291,6 +304,10 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx, pii
         result.passengerIdsPurged++;
       }
       result.requestsDeleted = await db.remove("requests", {
+        created_at: { $lt: now - retention.requestDays * DAY },
+      });
+      // Bekleme listesi ve ön kayıtlar talepler kadar saklanır.
+      result.interestDeleted = await db.remove("interest_list", {
         created_at: { $lt: now - retention.requestDays * DAY },
       });
       result.notificationsDeleted = await db.remove("notification_outbox", {

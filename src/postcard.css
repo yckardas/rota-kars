@@ -5208,3 +5208,54 @@ html:has(.kp) {
     padding: 18px;
   }
 }
+
+/* ---------- Talep toplama ve bekleme listesi ---------- */
+.kp .tour-sales-closed.tour-demand {
+  background: var(--kp-card);
+  color: var(--kp-ink);
+  border: 1px solid var(--kp-red);
+}
+.kp .demand-note p {
+  margin: 0 0 14px;
+  color: var(--kp-ink);
+  line-height: 1.55;
+}
+.kp .demand-progress {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--kp-ink-2);
+}
+.kp .demand-progress progress,
+.rk-admin .interest-progress progress {
+  width: 100%;
+  height: 8px;
+  appearance: none;
+  border: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--kp-hair, #e3e8ee);
+}
+.kp .demand-progress progress::-webkit-progress-bar,
+.rk-admin .interest-progress progress::-webkit-progress-bar {
+  background: var(--kp-hair, #e3e8ee);
+}
+.kp .demand-progress progress::-webkit-progress-value,
+.rk-admin .interest-progress progress::-webkit-progress-value {
+  background: var(--kp-red, #c2342b);
+}
+.kp .demand-progress progress::-moz-progress-bar,
+.rk-admin .interest-progress progress::-moz-progress-bar {
+  background: var(--kp-red, #c2342b);
+}
+.kp .waitlist-note {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px 12px;
+  align-items: start;
+}
+.kp .waitlist-note .btn {
+  grid-column: 2;
+  justify-self: start;
+}

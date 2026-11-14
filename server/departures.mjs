@@ -85,7 +85,8 @@ export async function createDepartures(
       pickup: row.pickup || "Kars merkez · Acente buluşma noktası",
       guide_name: row.guide_name || "",
       guide_phone: row.guide_phone || "",
-      salesOpen: base.salesOpen && Boolean(row.active),
+      // Talep toplama modundaki turda koltuk satılmaz; yalnız ön kayıt alınır.
+      salesOpen: base.salesOpen && base.mode !== "demand" && Boolean(row.active),
     };
   };
   const withCutoff = (d) => {

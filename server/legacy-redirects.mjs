@@ -9,6 +9,8 @@ const TOURS = {
   "gunubirlik-ani-antik-kenti-cildir-golu-ve-kars-sehir-turu": "/turlar/ani-cildir",
   "sarikamis-kayak-turu": "/turlar/sarikamis",
   "gunubirlik-batum-turu": "/turlar/batum",
+  "konaklamali-tiflis-turu": "/turlar/tiflis",
+  "2-gece-konaklamali-tiflis-turu": "/turlar/tiflis",
   "gunubirlik-van-turu": "/turlar/van-gunubirlik",
   "konaklamali-van-turu-tuz-magarasi-ve-ishak-pasa-sarayi-dahil": "/turlar/van",
   "van-havzasi-turu": "/turlar/van-havzasi",

@@ -237,6 +237,11 @@ export async function createOperations(db, { clock, cleanup, tx }) {
       sales_open: tour.inquiryOnly ? 0 : 1,
       vehicle_model: "vip-midibus",
       passenger_seats: 18,
+      // "online": koltuk seçip rezervasyon/ödeme. "demand": talep toplama; yeterli
+      // ön kayıt olunca acente satışı açar (bkz. interest.mjs).
+      mode: tour.demandByDefault ? "demand" : "online",
+      demand_threshold: 14,
+      demand_show_progress: 0,
     });
   const today = () =>
     new Intl.DateTimeFormat("en-CA", {
@@ -252,6 +257,11 @@ export async function createOperations(db, { clock, cleanup, tx }) {
       ...row,
       // Tur bazında transfer fiyatları (bkz. transfer.mjs); hiç ayarlanmadıysa kapalı.
       transfer: row.transfer || emptyTransfer(),
+      mode: row.mode === "demand" ? "demand" : "online",
+      demand: {
+        threshold: Number(row.demand_threshold) || 14,
+        showProgress: Boolean(row.demand_show_progress),
+      },
       salesOpen: Boolean(row.sales_open),
       vehicle: makeVehicle(row.vehicle_model, row.passenger_seats),
     };
@@ -269,6 +279,16 @@ export async function createOperations(db, { clock, cleanup, tx }) {
           };
         }),
       ),
+    // Talep toplama ayarı: mod, kesinleşme eşiği (kişi) ve ilerlemenin sitede görünmesi.
+    async setMode(id, { mode, threshold, showProgress }) {
+      await get(id);
+      await db.update(
+        "tour_operations",
+        { _id: id },
+        { mode, demand_threshold: threshold, demand_show_progress: showProgress ? 1 : 0 },
+      );
+      return get(id);
+    },
     async saveTransfer(id, config) {
       await get(id);
       await db.update("tour_operations", { _id: id }, { transfer: config });

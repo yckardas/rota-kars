@@ -7,6 +7,10 @@ export type Tour = {
   fromPrice?: number;
   // Tur bazında transfer fiyatları (panelden; bkz. lib/transfer.ts).
   transfer?: TransferConfig;
+  // "demand": talep toplama (koltuk satılmaz, ücretsiz ön kayıt). Eşik kişi sayısıdır;
+  // count yalnız panelde "ilerlemeyi göster" açıksa gelir.
+  mode?: "online" | "demand";
+  demand?: { threshold: number; showProgress: boolean; count?: number };
   id: string;
   salesOpen: boolean;
   vehicle: Vehicle;

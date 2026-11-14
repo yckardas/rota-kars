@@ -293,6 +293,42 @@ export const en = {
       itinerary: [],
       note: "Contact us for current dates and availability.",
     },
+    tiflis: {
+      name: "Tbilisi Tour",
+      subtitle: "Three days in the capital of the Caucasus.",
+      category: "Abroad",
+      duration: "3 days · 2 nights",
+      departure: "05:00",
+      end: "Day 3, evening",
+      season: "Route abroad",
+      summary:
+        "A three-day trip from Kars to Tbilisi via the Çıldır–Aktaş border crossing: the narrow streets of the old town, Narikala Fortress, the sulphur baths and Mtskheta, with a guide.",
+      included: [
+        "2 nights' hotel accommodation (breakfast included)",
+        "Transport, professional guiding and agency escort",
+        "On-board refreshments and travel insurance",
+      ],
+      excluded: [
+        "Lunch and dinner",
+        "Museum, fortress and cable car tickets",
+        "Sulphur bath and personal expenses",
+      ],
+      itinerary: [
+        { time: "Day 1 · 05:00", title: "Departure from Kars", text: "Via Çıldır to the Aktaş border crossing, then on through Georgia." },
+        {
+          time: "Day 1 · afternoon",
+          title: "Old Tbilisi",
+          text: "Hotel check-in, then an evening walk around Narikala Fortress, the Abanotubani sulphur baths and Metekhi Church.",
+        },
+        {
+          time: "Day 2",
+          title: "Tbilisi and Mtskheta",
+          text: "Sameba Cathedral, Rustaveli Avenue and the Bridge of Peace, followed by UNESCO-listed Mtskheta and Jvari Monastery.",
+        },
+        { time: "Day 3", title: "Free time and return", text: "Free time at the Dry Bridge market, then the drive back to Kars in the afternoon." },
+      ],
+      note: "The tour goes ahead once there is enough demand. Entry documents (passport or new-type ID card) and border conditions are confirmed by the agency before travel.",
+    },
   },
   stories: {
     ani: {

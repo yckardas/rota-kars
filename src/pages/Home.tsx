@@ -66,7 +66,9 @@ export function Home({ catalog }: { catalog: Catalog }) {
     e.preventDefault();
     const f = new FormData(e.currentTarget),
       tour = String(f.get("tour"));
-    if (tour)
+    // Talep toplamadaki turda koltuk seçilmez: tur sayfasındaki ön kayda gidilir.
+    if (tour && catalog.tours.find((x) => x.id === tour)?.mode === "demand") navigate(`/turlar/${tour}`);
+    else if (tour)
       navigate(
         `/rezervasyon/${tour}?date=${f.get("date") || ""}&guests=${f.get("guests") || 1}`,
       );

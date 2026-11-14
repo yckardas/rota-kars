@@ -790,6 +790,58 @@ export function createApp(
       r.json(await store.operations.update(q.params.id, input));
     }),
   );
+  // Tur bazında satış modu: online satış ya da talep toplama (eşik ve sitede ilerleme).
+  app.post(
+    "/api/admin/operations/:id/mode",
+    requireAdmin,
+    route(async (q, r) => {
+      const id = z.enum(tours.map((t) => t.id)).parse(q.params.id);
+      const input = z
+        .object({
+          mode: z.enum(["online", "demand"]),
+          threshold: z.number().int().min(1).max(200),
+          showProgress: z.boolean(),
+        })
+        .parse(q.body);
+      r.json(await store.operations.setMode(id, input));
+    }),
+  );
+  // Talep toplamayı bitir: online satışı aç ve bekleyen ön kayıtlılara e-postayla haber ver.
+  app.post(
+    "/api/admin/operations/:id/open-sales",
+    requireAdmin,
+    route(async (q, r) => {
+      const id = z.enum(tours.map((t) => t.id)).parse(q.params.id);
+      r.json(await store.interest.openSales(id));
+    }),
+  );
+  app.get(
+    "/api/admin/interest",
+    requireAdmin,
+    route(async (_q, r) => {
+      const ops = await store.operations.list();
+      r.json({
+        items: await store.interest.list(),
+        tours: await Promise.all(
+          ops.map(async (t) => ({
+            id: t.id,
+            name: t.name,
+            mode: t.mode,
+            demand: t.demand,
+            preregCount: await store.interest.demandCount(t.id),
+          })),
+        ),
+      });
+    }),
+  );
+  app.post(
+    "/api/admin/interest/:id",
+    requireAdmin,
+    route(async (q, r) => {
+      const input = z.object({ status: z.enum(["waiting", "notified", "converted", "cancelled"]) }).parse(q.body);
+      r.json(await store.interest.setStatus(z.string().uuid().parse(q.params.id), input.status));
+    }),
+  );
   // Tur bazında transfer fiyat tablosu (grup başına toplam, kuruş).
   app.post(
     "/api/admin/operations/:id/transfer",
@@ -877,6 +929,16 @@ export function createApp(
     Promise.all(
       list.map(async (t) => {
         if (t.inquiryOnly) return { ...t, fromPrice: t.price };
+        // Talep toplama: koltuk satılmaz; ilerleme açıksa ön kayıtlı kişi sayısı da verilir.
+        if (t.mode === "demand")
+          return {
+            ...t,
+            fromPrice: t.price,
+            demand: {
+              ...t.demand,
+              ...(t.demand.showProgress ? { count: await store.interest.demandCount(t.id) } : {}),
+            },
+          };
         const open = await store.listDepartures(t.id).catch(() => []),
           [d] = open,
           // Anasayfa, tur kartı ve tur detayı aynı "…’den" fiyatını gösterir.
@@ -1255,6 +1317,43 @@ export function createApp(
     }),
   );
   app.get("/api/hotels", async (_q, r) => r.json(await store.hotels()));
+  // Bekleme listesi (dolu sefer) ve talep toplama modundaki tura ücretsiz ön kayıt.
+  app.post(
+    "/api/interest",
+    route(async (q, r) => {
+      const input = z
+        .object({
+          kind: z.enum(["waitlist", "prereg"]),
+          tourId: z.enum(tours.map((t) => t.id)),
+          departureId: z.string().min(1).max(100).optional(),
+          preferredDate: z.string().trim().max(60).optional(),
+          count: z.number().int().min(1).max(50),
+          name: clean,
+          email,
+          phone,
+          notes: z.string().trim().max(1000).default(""),
+          consent: z.literal(true),
+        })
+        .parse(q.body);
+      await human(q, "request");
+      r.status(201).json(await store.interest.add(input));
+    }),
+  );
+  // E-postadaki "listeden çık" bağlantısı: tek tıkla, giriş gerektirmeden.
+  app.get(
+    "/api/interest/:token/cancel",
+    route(async (q, r) => {
+      const token = z.string().regex(/^[a-f0-9]{36}$/).parse(q.params.token);
+      const { tourName } = await store.interest.cancelByToken(token);
+      const safe = String(tourName).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+      r.type("html").send(
+        `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Listeden çıkarıldınız · Rota Kars</title></head>` +
+          `<body style="font-family:Arial,sans-serif;background:#e9eef1;color:#1a2846;padding:40px 16px"><main style="max-width:520px;margin:auto;background:#fff;border-radius:5px;padding:28px">` +
+          `<h1 style="font-size:22px;margin:0 0 12px">Listeden çıkarıldınız.</h1><p>${safe} için bekleme / ön kayıt listesinden çıktınız. Size bu konuda e-posta göndermeyeceğiz.</p>` +
+          `<p><a href="/turlar" style="color:#c2342b">Turlara göz atın</a></p></main></body></html>`,
+      );
+    }),
+  );
   app.get("/api/instagram", async (_q, r) => {
     // Instagram API bağlıysa hesabın son videoları gerçek dosyalarıyla gelir;
     // değilse yönetim panelinden girilen paylaşımlar kullanılır.
