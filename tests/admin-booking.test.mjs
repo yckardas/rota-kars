@@ -224,7 +224,7 @@ test("request tracking: status changes and notes are kept with author and time",
   advance(60000);
   r = await s.updateRequest(row.id, { note: "Fiyat WhatsApp'tan gönderildi" }, { name: "Ayşe" });
   assert.equal(r.status, "contacted");
-  assert.deepEqual(r.notes.map((n) => n.text), ["Durum: Arandı", "Fiyat WhatsApp'tan gönderildi"]);
+  assert.deepEqual(r.notes.map((n) => n.text), ["Durum: Müşteri arandı", "Fiyat WhatsApp'tan gönderildi"]);
   assert.equal(r.notes[1].by, "Ayşe");
   assert.equal(r.body.name, "Otel Müşteri");
   assert.equal((await s.overview()).newRequests, 0, "arandı durumundaki talep 'yeni' sayılmaz");

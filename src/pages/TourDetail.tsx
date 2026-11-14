@@ -14,6 +14,7 @@ import {
   ArrowRight,
   Info,
   CalendarDays,
+  BedDouble,
 } from "lucide-react";
 import { Reviews } from "../components/Reviews";
 import { RequestForm } from "../components/RequestForm";
@@ -28,6 +29,7 @@ import {
   dateLabel,
   type Catalog,
   type Departure,
+  type Hotel,
 } from "../lib/types";
 export function TourDetail({ catalog }: { catalog: Catalog }) {
   const { id } = useParams(),
@@ -35,6 +37,8 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
   // t bu sayfada turun kendisi; çeviri işlevi tx.
   const { t: tx } = useLang();
   const [request, setRequest] = useState(false),
+    // Tur öncesi/sonrası konaklama talebi (anlaşmalı oteller listesiyle açılır).
+    [stay, setStay] = useState<Hotel[] | null>(null),
     [departures, setDepartures] = useState<Departure[]>([]),
     [activeImage, setActiveImage] = useState(0),
     // Galeride görüntü değişince yeni fotoğraf yerine "oturur" (ilk açılışta değil).
@@ -278,6 +282,28 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
               </div>
             </div>
             {!t.inquiryOnly && <TransferOffer tourId={t.id} config={t.transfer} />}
+            <section className="tour-extra stay-offer" aria-labelledby="stay-offer-title">
+              <BedDouble size={26} strokeWidth={1.4} aria-hidden="true" />
+              <div>
+                <h2 id="stay-offer-title">{tx("Konaklamayı da ayarlayalım.")}</h2>
+                <p className="muted">
+                  {tx(
+                    "Tur öncesi ya da sonrası Kars’ta kalacak yer mi arıyorsunuz? Tarihinizi, kişi sayınızı ve oda tercihinizi bırakın; anlaşmalı otellerimizle görüşüp size dönelim.",
+                  )}
+                </p>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() =>
+                    api<Hotel[]>("/hotels")
+                      .then(setStay)
+                      .catch(() => setStay([]))
+                  }
+                >
+                  {tx("Konaklama talebi bırakın")}
+                </button>
+              </div>
+            </section>
             <h2>{tx("Yola çıkmadan önce")}</h2>
             <details>
               <summary>
@@ -435,6 +461,16 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
       </div>
       {request && (
         <RequestForm kind="private-tour" onClose={() => setRequest(false)} />
+      )}
+      {stay && (
+        <RequestForm
+          kind="hotel"
+          hotels={stay}
+          tourId={t.id}
+          tourName={t.name}
+          initialCheckIn={first?.date}
+          onClose={() => setStay(null)}
+        />
       )}
     </>
   );

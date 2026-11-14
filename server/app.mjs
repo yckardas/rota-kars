@@ -46,6 +46,7 @@ import { createTurnstile } from "./turnstile.mjs";
 import { fcmHint, webPushEndpointOk } from "./push.mjs";
 import { normalizeInstagramUrl, createInstagramFeed } from "./instagram.mjs";
 import { AppError, REQUEST_STATUS } from "./store.mjs";
+import { BUDGETS, ROOM_TYPES } from "./requests.mjs";
 import { createReviewsService } from "./reviews.mjs";
 import { createPayments, depositFor, VAKIFBANK_RETURN_PATH } from "./payments.mjs";
 import { attachBankSimulator } from "./bank-simulator.mjs";
@@ -85,6 +86,12 @@ const requestSchema = z
     checkOut: ymd.optional(),
     guests: z.number().int().min(1).max(50),
     hotelId: z.string().uuid().optional(),
+    // Konaklama talebinin ayrıntıları (tur sayfasından gelince tourId de olur).
+    tourId: z.enum(tours.map((t) => t.id)).optional(),
+    rooms: z.number().int().min(1).max(20).optional(),
+    roomType: z.enum(Object.keys(ROOM_TYPES)).optional(),
+    children: z.number().int().min(0).max(20).optional(),
+    budget: z.enum(Object.keys(BUDGETS)).optional(),
     notes: z.string().trim().max(2000).default(""),
     consent: z.literal(true),
   })

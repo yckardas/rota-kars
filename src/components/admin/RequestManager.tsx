@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Download, LoaderCircle, Mail, MessageCircle, Phone } from "lucide-react";
 import { api, post } from "../../lib/api";
-import { dateLabel } from "../../lib/types";
+import { dateLabel, type Hotel, type Tour } from "../../lib/types";
 import { downloadCsv } from "../../lib/csv";
 import { isNativeApp } from "../../lib/native";
 
@@ -20,15 +20,43 @@ export type RequestRecord = {
     checkOut?: string;
     guests: number;
     notes: string;
+    // Konaklama talebi ayrıntıları (tur sayfasından gelince tourId de olur).
+    tourId?: string;
+    hotelId?: string;
+    rooms?: number;
+    roomType?: string;
+    children?: number;
+    budget?: string;
   };
 };
+// Durum anahtarları sunucudaki REQUEST_STATUS ile aynı; konaklamada acente otelle
+// görüşüp döndüğü için adlar o akışa göre okunur (server/requests.mjs).
 const STATUS: Record<string, string> = {
   new: "Yeni",
   contacted: "Arandı",
+  in_progress: "Görüşülüyor",
   offered: "Teklif verildi",
   won: "Rezervasyona döndü",
   lost: "Kapandı",
 };
+const HOTEL_STATUS: Record<string, string> = {
+  ...STATUS,
+  contacted: "Müşteri arandı",
+  in_progress: "Otelle görüşülüyor",
+  offered: "Teklif müşteriye iletildi",
+  won: "Konaklama onaylandı",
+  lost: "Olmadı",
+};
+export const requestStatus = (kind: string, status: string) =>
+  (kind === "hotel" ? HOTEL_STATUS : STATUS)[status] || status;
+const ROOM_TYPES: Record<string, string> = {
+  single: "Tek kişilik",
+  double: "Çift kişilik",
+  twin: "İki ayrı yatak",
+  triple: "Üç kişilik",
+  family: "Aile odası",
+};
+const BUDGETS: Record<string, string> = { economy: "Ekonomik", standard: "Orta", premium: "Üst seviye" };
 const KIND: Record<string, string> = {
   hotel: "Konaklama talebi",
   vehicle: "Araç kiralama talebi",
@@ -41,39 +69,50 @@ const wa = (phone: string) => {
 };
 
 // Gelen talepler: durum takibi, not geçmişi, tek dokunuşla arama/WhatsApp.
-export function RequestManager({ initialQuery = "" }: { initialQuery?: string }) {
+export function RequestManager({ initialQuery = "", tours = [] }: { initialQuery?: string; tours?: Tour[] }) {
   const [items, setItems] = useState<RequestRecord[] | null>(null),
+    [hotels, setHotels] = useState<Hotel[]>([]),
+    [kind, setKind] = useState("all"),
     [filter, setFilter] = useState(initialQuery ? "all" : "open"),
     [search, setSearch] = useState(initialQuery),
     [busy, setBusy] = useState(""),
     [error, setError] = useState("");
   useEffect(() => {
-    api<{ requests: RequestRecord[] }>("/admin/dashboard")
-      .then((d) => setItems(d.requests))
+    api<{ requests: RequestRecord[]; hotels: Hotel[] }>("/admin/dashboard")
+      .then((d) => {
+        setItems(d.requests);
+        setHotels(d.hotels || []);
+      })
       .catch((e) => setError(e.message));
   }, []);
   const text = search.trim().toLocaleLowerCase("tr-TR");
   const visible = (items || []).filter(
     (r) =>
       (filter === "open" ? !["won", "lost"].includes(r.status) : filter === "all" ? true : r.status === filter) &&
+      (kind === "all" || r.kind === kind) &&
       (!text || JSON.stringify(r.body).toLocaleLowerCase("tr-TR").includes(text)),
   );
   const exportCsv = () =>
     downloadCsv("talepler.csv", [
-      ["Tarih", "Tür", "Durum", "Ad", "Telefon", "E-posta", "Giriş", "Çıkış", "Kişi", "Not"],
+      ["Tarih", "Tür", "Durum", "Ad", "Telefon", "E-posta", "Giriş", "Çıkış", "Kişi", "Oda", "Tur", "Otel", "Not"],
       ...visible.map((r) => [
         new Date(r.created_at).toLocaleDateString("tr-TR"),
         KIND[r.kind] || r.kind,
-        STATUS[r.status] || r.status,
+        requestStatus(r.kind, r.status),
         r.body.name,
         r.body.phone,
         r.body.email,
         r.body.checkIn,
         r.body.checkOut,
         r.body.guests,
+        r.body.rooms ? `${r.body.rooms} × ${ROOM_TYPES[r.body.roomType || ""] || ""}` : "",
+        tourName(r.body.tourId),
+        hotelName(r.body.hotelId),
         r.body.notes,
       ]),
     ]);
+  const tourName = (id?: string) => (id ? tours.find((t) => t.id === id)?.name || id : ""),
+    hotelName = (id?: string) => (id ? hotels.find((h) => h.id === id)?.name || "" : "");
   async function update(id: string, body: { status?: string; note?: string }) {
     setBusy(id);
     setError("");
@@ -117,12 +156,20 @@ export function RequestManager({ initialQuery = "" }: { initialQuery?: string })
           ["open", "Açık"],
           ["new", "Yeni"],
           ["contacted", "Arandı"],
+          ["in_progress", "Görüşülüyor"],
           ["offered", "Teklif verildi"],
           ["all", "Tümü"],
         ].map(([id, label]) => (
           <button key={id} type="button" className={"chip" + (filter === id ? " active" : "")} aria-pressed={filter === id} onClick={() => setFilter(id)}>
             {label}
             {id === "new" ? ` (${(items || []).filter((r) => r.status === "new").length})` : ""}
+          </button>
+        ))}
+      </div>
+      <div className="status-filters" role="group" aria-label="Talep türü">
+        {[["all", "Tüm türler"], ...Object.entries(KIND)].map(([id, label]) => (
+          <button key={id} type="button" className={"chip" + (kind === id ? " active" : "")} aria-pressed={kind === id} onClick={() => setKind(id)}>
+            {label}
           </button>
         ))}
       </div>
@@ -144,7 +191,20 @@ export function RequestManager({ initialQuery = "" }: { initialQuery?: string })
             <p>
               {r.body.checkIn ? dateLabel(r.body.checkIn) : "Tarih belirtilmedi"}
               {r.body.checkOut ? " — " + dateLabel(r.body.checkOut) : ""} · {r.body.guests} kişi
+              {r.body.children ? ` (${r.body.children} çocuk)` : ""}
             </p>
+            {(r.body.tourId || r.body.rooms || r.body.hotelId || r.body.budget) && (
+              <ul className="request-facts">
+                {r.body.tourId && <li>Tur: {tourName(r.body.tourId)}</li>}
+                {r.body.rooms && (
+                  <li>
+                    Oda: {r.body.rooms} × {ROOM_TYPES[r.body.roomType || ""] || "tercih yok"}
+                  </li>
+                )}
+                {r.body.hotelId && <li>Otel tercihi: {hotelName(r.body.hotelId) || "—"}</li>}
+                {r.body.budget && <li>Bütçe: {BUDGETS[r.body.budget]}</li>}
+              </ul>
+            )}
             <p className="muted">{r.body.notes || "Ek not yok."}</p>
             <div className="passenger-actions">
               {r.body.phone && (
@@ -166,9 +226,9 @@ export function RequestManager({ initialQuery = "" }: { initialQuery?: string })
             <label className="field">
               Durum
               <select value={r.status} disabled={busy === r.id} onChange={(e) => update(r.id, { status: e.target.value })}>
-                {Object.entries(STATUS).map(([id, label]) => (
+                {Object.keys(STATUS).map((id) => (
                   <option key={id} value={id}>
-                    {label}
+                    {requestStatus(r.kind, id)}
                   </option>
                 ))}
               </select>

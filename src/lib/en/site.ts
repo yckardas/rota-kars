@@ -415,4 +415,94 @@ export const site: Record<string, string> = {
     "Pause the scrolling banner",
   "Kayan bandı sürdür":
     "Resume the scrolling banner",
+  "Konaklama talebi":
+    "Accommodation request",
+  "Size özel tur talebi":
+    "Private tour request",
+  "Talebiniz kaydedildi.":
+    "Your request has been received.",
+  "Referans numaranız":
+    "Your reference number",
+  "Bu bir kesin rezervasyon değildir. Anlaşmalı otellerimizle görüşüp müsaitlik ve fiyatla size en kısa sürede dönüyoruz; e-postanıza da bir özet gönderdik.":
+    "This is not a confirmed booking. We will check availability and prices with our partner hotels and get back to you shortly; we have also emailed you a summary.",
+  "Bu bir kesin rezervasyon değildir. Müsaitlik ve fiyat, acente onayından sonra netleşir.":
+    "This is not a confirmed booking. Availability and price are confirmed by the agency.",
+  "Tamam":
+    "OK",
+  "Kars’ta kendinize bir yer ayırın.":
+    "Save yourself a place in Kars.",
+  "Birlikte güzel bir rota çizelim.":
+    "Let’s plan a good route together.",
+  "{tour} turunuz için konaklamayı da biz ayarlayalım. Tercihlerinizi paylaşın, anlaşmalı otellerimizle görüşüp size dönelim.":
+    "Let us arrange your stay for the {tour} tour too. Share your preferences and we will get back to you after checking with our partner hotels.",
+  "Tarihlerinizi paylaşın, anlaşmalı otellerimiz için konaklama seçeneklerinizi birlikte planlayalım.":
+    "Share your dates and we will plan your stay with our partner hotels.",
+  "Tarihinizi ve grubunuzu paylaşın. Size uygun programı birlikte netleştirelim.":
+    "Share your date and group and we will shape the right programme together.",
+  "Otel tercihi":
+    "Hotel preference",
+  "Öneri almak istiyorum":
+    "I’d like a suggestion",
+  "Adınız soyadınız":
+    "Your full name",
+  "Telefon numaranız":
+    "Your phone number",
+  "Giriş tarihi":
+    "Check-in date",
+  "Planlanan tarih":
+    "Planned date",
+  "Çıkış tarihi":
+    "Check-out date",
+  "Kişi sayısı":
+    "Number of guests",
+  "Bunlardan çocuk (isteğe bağlı)":
+    "Of whom children (optional)",
+  "Oda sayısı":
+    "Number of rooms",
+  "Oda tercihi":
+    "Room preference",
+  "Tek kişilik":
+    "Single",
+  "Çift kişilik (büyük yatak)":
+    "Double (one large bed)",
+  "İki ayrı yatak":
+    "Twin beds",
+  "Üç kişilik":
+    "Triple",
+  "Aile odası":
+    "Family room",
+  "Bütçe (isteğe bağlı)":
+    "Budget (optional)",
+  "Fark etmez":
+    "No preference",
+  "Ekonomik":
+    "Economy",
+  "Orta":
+    "Mid-range",
+  "Üst seviye":
+    "Upscale",
+  "Eklemek istedikleriniz":
+    "Anything else",
+  "Konum, kahvaltı, erken giriş gibi tercihleriniz…":
+    "Location, breakfast, early check-in…",
+  "Oda, ulaşım veya tur tercihiniz…":
+    "Room, transport or tour preferences…",
+  "Aydınlatma metnini":
+    "I have read the privacy notice",
+  "okudum. Bilgilerimin talebimin değerlendirilmesi ve size dönüş yapılması için işleneceğini biliyorum.":
+    "and understand my details will be processed to review my request and get back to me.",
+  "Kesin rezervasyon ve ödeme, müsaitlik teyidinden sonra yapılır.":
+    "Booking and payment are finalised after availability is confirmed.",
+  "Kaydediliyor":
+    "Saving",
+  "Talebimi gönder":
+    "Send my request",
+  "Bu aşamada ödeme alınmaz.":
+    "No payment is taken at this stage.",
+  "Konaklamayı da ayarlayalım.":
+    "Let us arrange your stay too.",
+  "Tur öncesi ya da sonrası Kars’ta kalacak yer mi arıyorsunuz? Tarihinizi, kişi sayınızı ve oda tercihinizi bırakın; anlaşmalı otellerimizle görüşüp size dönelim.":
+    "Looking for a place to stay in Kars before or after the tour? Leave your dates, group size and room preference and we will get back to you after checking with our partner hotels.",
+  "Konaklama talebi bırakın":
+    "Request accommodation",
 };

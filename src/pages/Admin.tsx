@@ -445,7 +445,7 @@ function AdminPanel({
         {tab === "daily" && <DailyReport key={key("daily")} catalog={catalog} />}
         {tab === "reports" && <MonthReport key={key("rep")} />}
         {tab === "notifications" && <NotificationManager key={key("notif")} />}
-        {tab === "requests" && <RequestManager key={key("req")} initialQuery={nav.q || ""} />}
+        {tab === "requests" && <RequestManager key={key("req")} initialQuery={nav.q || ""} tours={catalog.tours} />}
         {tab === "hotels" && <HotelManager key={key("hotels")} />}
         {tab === "reviews" && <ReviewAssignments key={key("reviews")} catalog={catalog} />}
         {tab === "operations" && <TourOperations key={key("ops")} onChange={refreshCatalog} />}
