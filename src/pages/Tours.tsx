@@ -39,7 +39,7 @@ export function Tours({ catalog }: { catalog: Catalog }) {
           </label>
           <div className="tour-filters">
             <SlidersHorizontal size={17} />
-            {["Tümü", "Kültür", "Kış", "Yurt dışı", "Konaklamalı"].map((c) => (
+            {["Tümü", "Kültür", "Doğa", "Kış", "Yurt dışı", "Konaklamalı"].map((c) => (
               <button
                 key={c}
                 className={category === c ? "active" : ""}

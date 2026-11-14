@@ -28,6 +28,7 @@ import { ArticleCard } from "../components/ArticleCard";
 import { InterestForm } from "../components/InterestForm";
 import {
   currency,
+  hasPrice,
   dateLabel,
   type Catalog,
   type Departure,
@@ -207,8 +208,12 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
                 </dd>
               </div>
               <div className="kp-fact-price">
-                <dt>{demand ? tx("Tahmini kişi başı") : tx("Kişi başı")}</dt>
-                <dd>{tx("{price}’den", { price: currency(startingPrice) })}</dd>
+                <dt>{demand && hasPrice(startingPrice) ? tx("Tahmini kişi başı") : tx("Kişi başı")}</dt>
+                <dd>
+                  {hasPrice(startingPrice)
+                    ? tx("{price}’den", { price: currency(startingPrice) })
+                    : tx("Fiyat için arayın")}
+                </dd>
               </div>
             </dl>
             {cta("btn")}
@@ -406,8 +411,17 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
             <div className="kp-stamp">
               <div className="booking-price">
                 <span className="kp-stamp-place">{t.name}</span>
-                <strong>{currency(startingPrice)}</strong>
-                <span>{demand ? tx("tahmini kişi başı fiyat") : tx("kişi başı başlangıç fiyatı")}</span>
+                {hasPrice(startingPrice) ? (
+                  <>
+                    <strong>{currency(startingPrice)}</strong>
+                    <span>{demand ? tx("tahmini kişi başı fiyat") : tx("kişi başı başlangıç fiyatı")}</span>
+                  </>
+                ) : (
+                  <>
+                    <strong className="booking-price-ask">{tx("Fiyat için arayın")}</strong>
+                    <span>{tx("Fiyat, tur tarihi kesinleşince duyurulur.")}</span>
+                  </>
+                )}
               </div>
             </div>
             {!t.inquiryOnly && first && (

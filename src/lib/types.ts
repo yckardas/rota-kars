@@ -251,6 +251,8 @@ export const currency = (value: number) =>
     currencyDisplay: "narrowSymbol",
     maximumFractionDigits: 0,
   }).format(value / 100);
+// Fiyatı henüz girilmemiş tur (price 0): tutar yerine "Fiyat için arayın" gösterilir.
+export const hasPrice = (value: number | undefined) => Number(value) > 0;
 export const dateLabel = (s: string) =>
   new Date(s + "T12:00:00").toLocaleDateString(localeOf(), {
     day: "numeric",

@@ -58,11 +58,12 @@ export async function createDepartures(
           ? makeVehicle(row.vehicle_model, Number(row.passenger_seats))
           : base.vehicle;
     const unit = fleetVehicles.find((v) => v.id === row.vehicle_id);
+    const price = custom ?? tourPrice(row.tour_id);
     return {
       ...row,
       // Fiyatın tek kaynağı turun (panelden düzenlenen) fiyatı; sefer yalnız bilinçli
       // verilmiş özel fiyatla ondan ayrılır. Toplamlar hep bu alandan hesaplanır.
-      price: custom ?? tourPrice(row.tour_id),
+      price,
       custom_price: custom,
       vehicle: unit
         ? {
@@ -86,7 +87,8 @@ export async function createDepartures(
       guide_name: row.guide_name || "",
       guide_phone: row.guide_phone || "",
       // Talep toplama modundaki turda koltuk satılmaz; yalnız ön kayıt alınır.
-      salesOpen: base.salesOpen && base.mode !== "demand" && Boolean(row.active),
+      // Fiyatı girilmemiş (0) turun seferi de satılmaz: bedelsiz rezervasyon oluşmasın.
+      salesOpen: base.salesOpen && base.mode !== "demand" && Boolean(row.active) && price > 0,
     };
   };
   const withCutoff = (d) => {
