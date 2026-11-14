@@ -160,6 +160,15 @@ export function ReservationTicket({
             <dt>{t("Buluşma")}</dt>
             <dd>{r.pickup}</dd>
           </div>
+          {r.transfer && (
+            <div>
+              <dt>{t("Transfer")}</dt>
+              <dd>
+                {t(r.transfer.pointLabel)} · {t(r.transfer.directionLabel)}
+                {r.transfer.info ? ` · ${r.transfer.info}` : ""} · {currency(r.transfer.amount)}
+              </dd>
+            </div>
+          )}
         </dl>
       </div>
       <div className="ticket-bottom">

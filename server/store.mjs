@@ -18,6 +18,7 @@ import { createUetds } from "./uetds.mjs";
 import { depositFor } from "./payments.mjs";
 import { createPush } from "./push.mjs";
 import { createContent } from "./content.mjs";
+import { priceTransfer } from "./transfer.mjs";
 export class AppError extends Error {
   constructor(status, message) {
     super(message);
@@ -355,6 +356,7 @@ export async function openStore(
       agent = null,
       notes = "",
       legal = null,
+      transfer = null,
     }) {
       return tx(async () => {
         await cleanup();
@@ -390,7 +392,10 @@ export async function openStore(
             subtotal,
             d.tour_id,
           ),
-          total = discounted.total,
+          // İsteğe bağlı transfer: tur ayarındaki grup fiyatı, kişi sayısına göre.
+          // Kupon yalnız tur bedeline uygulanır; transfer toplamın üstüne eklenir.
+          pricedTransfer = priceTransfer((await operations.get(d.tour_id)).transfer, transfer, seats.length),
+          total = discounted.total + (pricedTransfer?.amount || 0),
           // "Turda ödenecek" yalnız acentenin panelden eklediği kayıtlarda seçilebilir.
           deposit =
             agent && paymentMode === "on_tour"
@@ -446,6 +451,8 @@ export async function openStore(
           created_by: agent?.id || null,
           payment_mode: agent && paymentMode === "on_tour" ? "on_tour" : paymentMode,
           notes: String(notes || "").slice(0, 500),
+          transfer: pricedTransfer,
+          transfer_amount: pricedTransfer?.amount || 0,
         });
 
         await db.updateMany(

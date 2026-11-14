@@ -49,6 +49,7 @@ import { AppError, REQUEST_STATUS } from "./store.mjs";
 import { createReviewsService } from "./reviews.mjs";
 import { createPayments, depositFor, VAKIFBANK_RETURN_PATH } from "./payments.mjs";
 import { attachBankSimulator } from "./bank-simulator.mjs";
+import { priceTransfer, transferChoiceSchema, transferConfigSchema } from "./transfer.mjs";
 const clean = z.string().trim().min(2).max(100),
   email = z.string().trim().email().max(254),
   phone = z
@@ -131,6 +132,8 @@ const bookingSchema = z.object({
     .string()
     .regex(/^[a-f0-9]{32}$/)
     .optional(),
+  // İsteğe bağlı transfer (havalimanı / otogar / gar); fiyat sunucuda hesaplanır.
+  transfer: transferChoiceSchema.optional(),
 });
 // Sitedeki görseller: paketlenmiş /images dosyaları veya bucket'a yüklenen /media dosyaları.
 const localImage = /^(\/images\/[\w.-]+|\/media\/[a-f0-9-]{36}\.(jpg|png|webp|avif))$/;
@@ -642,6 +645,7 @@ export function createApp(
             .string()
             .regex(/^[a-f0-9]{32}$/)
             .optional(),
+          transfer: transferChoiceSchema.optional(),
         })
         .parse(q.body);
       const available = await store.availability(input.departureId);
@@ -654,11 +658,18 @@ export function createApp(
         subtotal,
         available.departure.tour_id,
       );
+      const transfer = priceTransfer(
+        (await store.operations.get(available.departure.tour_id)).transfer,
+        input.transfer,
+        input.count,
+      );
+      const total = quote.total + (transfer?.amount || 0);
       r.json({
         subtotal,
         discount: quote.discount,
-        total: quote.total,
-        deposit: depositFor(quote.total),
+        transfer,
+        total,
+        deposit: depositFor(total),
         depositPercent: paymentStatus.depositPercent,
       });
     }),
@@ -688,6 +699,7 @@ export function createApp(
             .string()
             .regex(/^[a-f0-9]{32}$/)
             .optional(),
+          transfer: transferChoiceSchema.optional(),
         })
         .parse(q.body);
       const { departure: d } = await store.availability(input.departureId);
@@ -696,7 +708,8 @@ export function createApp(
       const count = input.seats.length,
         subtotal = d.price * count,
         priced = await store.members.priceCoupon(q.member?.id, input.couponId, subtotal, d.tour_id),
-        total = priced.total,
+        transfer = priceTransfer((await store.operations.get(d.tour_id)).transfer, input.transfer, count),
+        total = priced.total + (transfer?.amount || 0),
         deposit = input.paymentMode === "deposit" ? depositFor(total) : total;
       const data = {
         tour,
@@ -713,6 +726,7 @@ export function createApp(
         unitPrice: d.price,
         count,
         discount: priced.discount,
+        transfer,
         total,
         deposit,
         paymentMode: input.paymentMode,
@@ -767,6 +781,15 @@ export function createApp(
         })
         .parse(q.body);
       r.json(await store.operations.update(q.params.id, input));
+    }),
+  );
+  // Tur bazında transfer fiyat tablosu (grup başına toplam, kuruş).
+  app.post(
+    "/api/admin/operations/:id/transfer",
+    requireAdmin,
+    route(async (q, r) => {
+      const id = z.enum(tours.map((t) => t.id)).parse(q.params.id);
+      r.json(await store.operations.saveTransfer(id, transferConfigSchema.parse(q.body)));
     }),
   );
   attachAdvancedApi(app, {
