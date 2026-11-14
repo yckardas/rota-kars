@@ -431,10 +431,21 @@ export async function createWorkflow(
               "Hedef koltuk dolu. Eski rezervasyon korunuyor.",
             );
         }
+        // Aynı seferde yalnız koltuk değişir: sözleşmedeki bedel, turun fiyatı sonradan
+        // değişmiş olsa da aynen kalır. Başka sefere taşımada bedel yeni seferin fiyatıyla
+        // hesaplanır; yüzde kuponu yeniden uygulanır, TL kuponu tutarıyla korunur.
         // Transfer bedeli taşımada aynen kalır (kupon yalnız tur bedeline uygulanır).
-        const subtotal = d.price * seats.length,
-          tourTotal = subtotal - Math.round((subtotal * r.discount_percent) / 100),
-          total = tourTotal + (r.transfer_amount || 0);
+        const sameDeparture = r.departure_id === departureId,
+          transfer = r.transfer_amount || 0,
+          kept = r.discount_amount || 0,
+          subtotal = sameDeparture ? (r.subtotal ?? r.total - transfer + kept) : d.price * seats.length,
+          discount = sameDeparture
+            ? kept
+            : r.discount_percent
+              ? Math.round((subtotal * r.discount_percent) / 100)
+              : Math.min(kept, subtotal),
+          tourTotal = subtotal - discount,
+          total = sameDeparture ? r.total : tourTotal + transfer;
         if (r.net_paid > total)
           throw new AppError(
             409,
@@ -463,7 +474,14 @@ export async function createWorkflow(
             subtotal,
             discount_amount: subtotal - tourTotal,
             total,
-            deposit: r.deposit === r.total ? total : depositFor(total),
+            // Turda ödenecek kayıt kapora istemez; tam ödeme tam, kapora %30 kalır.
+            deposit: sameDeparture
+              ? r.deposit
+              : r.payment_mode === "on_tour"
+                ? 0
+                : r.deposit === r.total
+                  ? total
+                  : depositFor(total),
             expires_at: expires,
           },
         );

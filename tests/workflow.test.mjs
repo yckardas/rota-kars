@@ -409,3 +409,44 @@ test("phone passenger list shows bookings by seat with WhatsApp and boarding sta
   assert.equal((await s.workflow.passengerList(d.id)).bookings[0].checkedIn, true);
   await s.workflow.cancel(r.reference).catch(() => {});
 });
+test("seat swap on the same departure keeps the agreed total after the tour price rises", async (t) => {
+  const { s } = await setup(t),
+    // Fiyatı verilmeyen sefer turun fiyatını izler.
+    d = await departure(s, { price: undefined }),
+    r = await booking(s, d);
+  await s.content.saveTour("ani-cildir", { price: r.total + 20000 });
+  assert.equal((await s.departures.get(d.id)).price, r.total + 20000);
+  const moved = await s.workflow.move(r.reference, { departureId: d.id, seats: [2] });
+  assert.deepEqual(moved.seats, [2]);
+  assert.equal(moved.total, r.total, "sözleşmedeki bedel artmaz");
+  assert.equal(moved.deposit, r.deposit);
+});
+test("moving to another departure keeps a fixed-amount coupon", async (t) => {
+  const { s } = await setup(t),
+    d = await departure(s),
+    d2 = await departure(s, { date: "2026-10-18", price: 140000 }),
+    m = await member(s, "kupon@example.com");
+  await s.db.update("members", { _id: m.id }, { email_verified: 1 });
+  await s.campaigns.save({
+    ...(await s.campaigns.get()),
+    sectors: Array.from({ length: 4 }, () => ({ kind: "amount", value: 20000, weight: 1 })),
+  });
+  const { coupon } = await s.members.spin(m.id),
+    r = await booking(s, d, m, 1, { couponId: coupon.id });
+  assert.equal(r.total, 123400 - 20000);
+  const moved = await s.workflow.move(r.reference, { departureId: d2.id, seats: [3] });
+  assert.equal(moved.total, 140000 - 20000, "TL kuponu taşımada düşmez");
+});
+test("pay-on-tour booking has no deposit after a move either", async (t) => {
+  const { s } = await setup(t),
+    d = await departure(s),
+    d2 = await departure(s, { date: "2026-10-18", price: 140000 }),
+    r = await s.adminReserve(
+      { departureId: d.id, seats: [1], name: "Telefon Müşteri", phone: "0555 111 22 33", email: "", passengers: ["Ayşe Yılmaz"], paymentMode: "on_tour", notes: "", confirm: false },
+      { id: "agent-1", name: "Operasyon", role: "operations" },
+    );
+  assert.equal(r.deposit, 0);
+  const moved = await s.workflow.move(r.reference, { departureId: d2.id, seats: [2] });
+  assert.equal(moved.total, 140000);
+  assert.equal(moved.deposit, 0, "turda ödenecek kayıt kapora istemez");
+});

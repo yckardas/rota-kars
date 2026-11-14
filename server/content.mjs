@@ -2,7 +2,9 @@
 // Varsayılanlar catalog.mjs'de kalır; düzenlemeler "site_content" koleksiyonunda tutulur
 // ve açılışta/kayıtta katalogdaki nesnelerin üstüne yazılır. Böylece site, SEO etiketleri,
 // sohbet botu ve bildirimler aynı güncel metni kullanır. (Tek sunucu örneği varsayılır.)
+import { isDeepStrictEqual } from "node:util";
 import { tours, business } from "./catalog.mjs";
+import { en } from "./catalog-en.mjs";
 import { AppError } from "./store.mjs";
 
 export const TOUR_FIELDS = [
@@ -39,6 +41,30 @@ const pick = (obj, keys) => Object.fromEntries(keys.filter((k) => obj[k] !== und
 const DEFAULT_TOURS = new Map(tours.map((t) => [t.id, pick(t, TOUR_FIELDS)]));
 const DEFAULT_BUSINESS = pick(business, BUSINESS_FIELDS);
 
+// /en sürümünün çevirileri (catalog-en.mjs) varsayılan Türkçe metne göre yazılmıştır.
+// Panelden değiştirilen alanın çevirisi eskimiş olur (ör. "fiyata dahil"den çıkarılan bir
+// hizmeti hâlâ vaat eder); o alan için eski çeviri yerine paneldeki güncel metin verilir.
+const fresh = (translated, current, defaults) =>
+  Object.fromEntries(
+    Object.entries(translated).map(([k, v]) => [
+      k,
+      k in defaults && !isDeepStrictEqual(current[k], defaults[k]) ? structuredClone(current[k]) : v,
+    ]),
+  );
+export function currentEn() {
+  return {
+    ...en,
+    business: fresh(en.business, business, DEFAULT_BUSINESS),
+    tours: Object.fromEntries(
+      Object.entries(en.tours).map(([id, x]) => {
+        const tour = tours.find((t) => t.id === id),
+          defaults = DEFAULT_TOURS.get(id);
+        return [id, tour && defaults ? fresh(x, tour, defaults) : x];
+      }),
+    ),
+  };
+}
+
 export async function createContent(db, { clock = Date.now } = {}) {
   // Panelde kayıtlı eski varsayılan Ani setini yenile; özel fotoğraflara dokunma.
   const ani = DEFAULT_TOURS.get("ani-cildir");
@@ -63,7 +89,8 @@ export async function createContent(db, { clock = Date.now } = {}) {
     return {
       current,
       defaults,
-      edited: Boolean(doc),
+      // Yalnız fiyatı kalan kayıt (metin sıfırlanmış) düzenlenmiş içerik sayılmaz.
+      edited: Boolean(doc) && Object.keys(doc.fields || {}).some((k) => k !== "price"),
       updatedAt: doc?.updated_at || null,
       updatedBy: doc?.updated_by || null,
     };
@@ -86,9 +113,15 @@ export async function createContent(db, { clock = Date.now } = {}) {
       await apply();
       return this.tour(id);
     },
-    async resetTour(id) {
+    // keepPrice: paneldeki "Varsayılana dön" yalnız metin ve fotoğrafları geri alır.
+    // Fiyat satışı belirler (varsayılanı 0 olan tur satıştan düşer), o yüzden korunur.
+    async resetTour(id, { keepPrice = false } = {}) {
       if (!DEFAULT_TOURS.has(id)) throw new AppError(404, "Tur bulunamadı.");
-      await db.remove("site_content", { _id: "tour:" + id });
+      const doc = keepPrice ? await db.one("site_content", { _id: "tour:" + id }) : null,
+        price = doc?.fields?.price;
+      if (typeof price === "number" && price !== DEFAULT_TOURS.get(id).price)
+        await db.update("site_content", { _id: "tour:" + id }, { fields: { price } });
+      else await db.remove("site_content", { _id: "tour:" + id });
       await apply();
       return this.tour(id);
     },
