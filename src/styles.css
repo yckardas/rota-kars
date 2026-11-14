@@ -7294,8 +7294,14 @@ input[type="radio"] {
   justify-content: center;
 }
 .departure-repeat,
+.departure-follow-price,
 .weekday-picker {
   grid-column: 1 / -1;
+}
+.departure-follow-price small {
+  display: block;
+  color: var(--muted, #6b7280);
+  font-size: 12px;
 }
 .weekday-picker {
   grid-template-columns: repeat(7, minmax(0, 1fr));

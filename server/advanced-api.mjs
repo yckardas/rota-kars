@@ -149,7 +149,8 @@ export function attachAdvancedApi(
           to: ymd,
           weekdays: z.array(z.number().int().min(0).max(6)).min(1).max(7),
           startTime: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/),
-          price: z.number().int().min(1).max(100000000),
+          // null: tur fiyatını izler; sayı: bu sefere özel fiyat.
+          price: z.number().int().min(1).max(100000000).nullable().default(null),
           pickup: clean,
           guideName: z.string().trim().max(100).default(""),
           guidePhone: z.union([phone, z.literal("")]).default(""),
@@ -197,7 +198,8 @@ export function attachAdvancedApi(
           tourId,
           date: ymd,
           startTime: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/),
-          price: z.number().int().min(1).max(100000000),
+          // null: tur fiyatını izler; sayı: bu sefere özel fiyat.
+          price: z.number().int().min(1).max(100000000).nullable().default(null),
           pickup: clean,
           guideName: z.string().trim().max(100).default(""),
           guidePhone: z.union([phone, z.literal("")]).default(""),

@@ -65,7 +65,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
   const next = departures[0],
     startingPrice = departures.length
       ? Math.min(...departures.map((d) => d.price))
-      : t.price,
+      : (t.fromPrice ?? t.price),
     currentVehicle = next?.vehicle || t.vehicle;
   const mapUrl =
     "https://www.google.com/maps/search/?api=1&query=" +

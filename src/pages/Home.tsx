@@ -135,7 +135,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
                     {placeName(tour)}
                     <small>
                       {tour.salesOpen
-                        ? t("{price}’den", { price: currency(tour.price) })
+                        ? t("{price}’den", { price: currency(tour.fromPrice ?? tour.price) })
                         : t("Şu an satışa kapalı")}
                     </small>
                   </span>

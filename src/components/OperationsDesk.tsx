@@ -105,6 +105,10 @@ export function DepartureManager({
     }
   }
   const listed = showPast ? items : items.filter((d) => d.date >= today());
+  // "Tur fiyatını kullan" seçiliyse fiyat gönderilmez (null): sefer panelden
+  // düzenlenen tur fiyatını izler; değilse bu sefere özel fiyat kaydedilir.
+  const priceOf = (f: FormData) =>
+    f.get("followTour") === "on" ? null : Math.round(Number(f.get("price")) * 100);
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -118,7 +122,7 @@ export function DepartureManager({
           to: f.get("to"),
           weekdays: f.getAll("weekdays").map(Number),
           startTime: f.get("startTime"),
-          price: Math.round(Number(f.get("price")) * 100),
+          price: priceOf(f),
           pickup: f.get("pickup"),
           guideName: f.get("guideName"),
           guidePhone: f.get("guidePhone"),
@@ -139,7 +143,7 @@ export function DepartureManager({
         tourId: f.get("tourId"),
         date: f.get("date"),
         startTime: f.get("startTime"),
-        price: Math.round(Number(f.get("price")) * 100),
+        price: priceOf(f),
         pickup: f.get("pickup"),
         guideName: f.get("guideName"),
         guidePhone: f.get("guidePhone"),
@@ -259,7 +263,10 @@ export function DepartureManager({
                     {d.available} / {d.vehicle?.sellableSeats} koltuk boş
                   </small>
                 </td>
-                <td>{currency(d.price)}</td>
+                <td>
+                  {currency(d.price)}
+                  <small>{d.custom_price == null ? "Tur fiyatı" : "Özel fiyat"}</small>
+                </td>
                 <td>
                   {d.pickup}
                   <small>{d.guide_name || "Rehber atanmadı"}</small>
@@ -334,7 +341,10 @@ function DepartureEditor({
     m = catalog.vehicleModels.find((v) => v.id === model)!,
     [repeat, setRepeat] = useState(false),
     [fleet, setFleet] = useState<FleetVehicle[]>([]),
-    [unitId, setUnitId] = useState(d?.vehicle_id || "");
+    [unitId, setUnitId] = useState(d?.vehicle_id || ""),
+    [tourId, setTourId] = useState(d?.tour_id || catalog.tours[0].id),
+    [followTour, setFollowTour] = useState(d ? d.custom_price == null : true),
+    tourPrice = catalog.tours.find((t) => t.id === tourId)?.price || 0;
   useEffect(() => {
     api<FleetVehicle[]>("/admin/vehicles")
       .then(setFleet)
@@ -357,7 +367,8 @@ function DepartureEditor({
           Tur
           <select
             name="tourId"
-            defaultValue={d?.tour_id || catalog.tours[0].id}
+            value={tourId}
+            onChange={(e) => setTourId(e.target.value)}
           >
             {catalog.tours.map((t) => (
               <option
@@ -416,17 +427,31 @@ function DepartureEditor({
             required
           />
         </label>
-        <label className="field">
-          Kişi başı fiyat (TL)
+        <label className="checkbox-label departure-follow-price">
           <input
-            name="price"
-            type="number"
-            step="0.01"
-            min="0.01"
-            defaultValue={(d?.price || 100000) / 100}
-            required
+            type="checkbox"
+            name="followTour"
+            checked={followTour}
+            onChange={(e) => setFollowTour(e.target.checked)}
           />
+          <span>
+            Tur fiyatını kullan ({currency(tourPrice)})
+            <small>Turun fiyatı panelden değişince bu sefer de güncellenir.</small>
+          </span>
         </label>
+        {!followTour && (
+          <label className="field">
+            Bu sefere özel kişi başı fiyat (TL)
+            <input
+              name="price"
+              type="number"
+              step="0.01"
+              min="0.01"
+              defaultValue={(d?.custom_price || d?.price || tourPrice) / 100}
+              required
+            />
+          </label>
+        )}
         <label className="field">
           Araç
           <select
