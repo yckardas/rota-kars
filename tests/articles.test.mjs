@@ -42,26 +42,30 @@ test("Turkish titles become clean addresses", () => {
   assert.equal(slugify("  Şile & Ağrı  "), "sile-agri");
 });
 
-test("seed drafts stay hidden until the agency publishes them", async (t) => {
-  const { call, html, root } = await fixture(t);
-  const drafts = (await call("/admin/articles")).json;
-  assert.ok(drafts.length >= 3);
-  assert.ok(drafts.every((a) => a.status === "draft"));
-  assert.deepEqual((await call("/articles")).json, []);
-  assert.equal((await call("/articles/cildir-golunde-atli-kizak")).status, 404);
+test("the first three articles are published once; drafts stay hidden until published", async (t) => {
+  const { store, call, html, root } = await fixture(t);
+  const listed = (await call("/articles")).json;
+  assert.equal(listed.length, 3, "acentenin isteğiyle ilk üç yazı yayında");
+  assert.equal((await html("/rehber/cildir-golunde-atli-kizak")).status, 200);
+  assert.equal((await call("/articles?tur=sarikamis")).json.length, 2);
+  assert.equal((await call("/articles?kategori=rehber")).json.length, 1);
+
+  // Panelde düzenlenmiş taslağa tek seferlik yayın dokunmaz.
+  const { createArticles } = await import("../server/articles.mjs");
+  const { articleSeed } = await import("../server/articles-seed.mjs");
+  const kizak = (await call("/admin/articles")).json.find((a) => a.slug === "cildir-golunde-atli-kizak");
+  await call("/admin/articles", { ...kizak, status: "draft", summary: kizak.summary + " Düzenlendi." });
+  await store.db.remove("integration_settings", { _id: "articles_publish_2026_11" });
+  await createArticles(store.db, { clock: () => Date.now() + 1000, seed: articleSeed });
+  assert.equal((await call("/articles/cildir-golunde-atli-kizak")).status, 404, "düzenlenen taslak taslak kalır");
   assert.equal((await html("/rehber/cildir-golunde-atli-kizak")).status, 404, "taslak sayfa dizine girmez");
+  assert.doesNotMatch(await (await fetch(root + "/sitemap.xml")).text(), /cildir-golunde-atli-kizak/);
   assert.equal((await html("/rehber")).status, 200);
 
-  const kizak = drafts.find((a) => a.slug === "cildir-golunde-atli-kizak");
   const published = await call("/admin/articles", { ...kizak, status: "published" });
   assert.equal(published.status, 200, JSON.stringify(published.json));
   assert.ok(published.json.publishedAt);
-  const list = (await call("/articles")).json;
-  assert.equal(list.length, 1);
-  assert.equal(list[0].slug, "cildir-golunde-atli-kizak");
-  assert.equal((await call("/articles?tur=ani-cildir")).json.length, 1);
-  assert.equal((await call("/articles?tur=sarikamis")).json.length, 0);
-  assert.equal((await call("/articles?kategori=rehber")).json.length, 0);
+  assert.equal((await call("/articles?tur=ani-cildir")).json.length, 2);
   const full = (await call("/articles/cildir-golunde-atli-kizak")).json;
   assert.match(full.body, /## Ne zaman gidilir\?/);
 
@@ -78,7 +82,6 @@ test("seed drafts stay hidden until the agency publishes them", async (t) => {
   const back = await call("/admin/articles", { ...kizak, status: "draft" });
   assert.equal(back.json.publishedAt, published.json.publishedAt);
   assert.equal((await html("/rehber/cildir-golunde-atli-kizak")).status, 404);
-  assert.doesNotMatch(await (await fetch(root + "/sitemap.xml")).text(), /cildir-golunde-atli-kizak/);
 });
 
 test("panel validates articles and keeps addresses unique", async (t) => {

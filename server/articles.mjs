@@ -71,6 +71,21 @@ export async function createArticles(db, { clock, seed = [] }) {
       }
     await db.upsert("integration_settings", marker, { id: marker, body: { appliedAt: clock(), count: seed.length }, updated_at: clock() });
   }
+  // Kasım 2026: acente ilk üç yazının yayına alınmasını istedi. Panelde dokunulmamış
+  // (oluşturulduğundan beri değişmemiş) taslaklar bir kez yayına alınır.
+  const publishMarker = "articles_publish_2026_11";
+  if (seed.length && !(await db.one("integration_settings", { _id: publishMarker }))) {
+    let published = 0;
+    for (const a of seed) {
+      const row = await db.one("articles", { slug: a.slug });
+      if (row && row.status === "draft" && row.updated_at === row.created_at) {
+        // Kapak da güncel seçime çekilir (yeni, büyük çözünürlüklü fotoğraflar).
+        await db.update("articles", { _id: row.id }, { status: "published", published_at: clock(), cover: a.cover });
+        published++;
+      }
+    }
+    await db.upsert("integration_settings", publishMarker, { id: publishMarker, body: { appliedAt: clock(), published }, updated_at: clock() });
+  }
   async function refresh() {
     const rows = await db.find("articles", { status: "published" }, { sort: { published_at: -1 } });
     published.clear();

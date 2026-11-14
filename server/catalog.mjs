@@ -420,10 +420,9 @@ export const tours = [
     demandByDefault: true,
     duration: "3 gün · 2 gece",
     location: "Kars · Çıldır · Tiflis",
-    // Tiflis fotoğrafı panelden (Site içerikleri) yüklenene kadar acentenin kendi aracı.
-    image: "/images/rota-bus.webp",
-    gallery: ["/images/rota-bus.webp"],
-    price: 850000,
+    image: "/images/tours/tiflis.webp",
+    gallery: ["/images/tours/tiflis.webp"],
+    price: 900000,
     departure: "05:00",
     end: "3. gün akşam",
     inquiryOnly: false,

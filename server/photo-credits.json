@@ -58,5 +58,35 @@
     "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
     "source": "https://commons.wikimedia.org/wiki/File:Akhtamar_Island_on_Lake_Van_with_the_Armenian_Cathedral_of_the_Holy_Cross.jpg",
     "changes": "Resized for web; displayed cropped to card."
+  },
+  {
+    "id": "tiflis",
+    "path": "/images/tours/tiflis.webp",
+    "title": "Looking out towards the Mother of Georgia statue",
+    "author": "shankar s.",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Looking_out_towards_the_Mother_of_Georgia_statue_(29707092441).jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "cildir-kizak",
+    "path": "/images/rehber/cildir-kizak.webp",
+    "title": "Frozen Çıldır Lake",
+    "author": "Linda M Caldwell",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Frozen_%C3%87%C4%B1ld%C4%B1r_Lake.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped."
+  },
+  {
+    "id": "cildir-kis",
+    "path": "/images/rehber/cildir-kis.webp",
+    "title": "Cildir Lake-2",
+    "author": "Kangal3632",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Cildir_Lake-2.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped."
   }
 ]

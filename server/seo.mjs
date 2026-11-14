@@ -445,7 +445,7 @@ export function pageMeta(path, base) {
 
 // Sayfanın en büyük görseli JS beklenmeden indirilmeye başlasın (LCP). İstemcideki
 // srcset ile aynı varyantlar verilir; tarayıcı ikinci kez indirmez.
-const RESPONSIVE = /^\/images\/(tours\/[\w-]+|ani|rota-bus|stay)\.webp$/;
+const RESPONSIVE = /^\/images\/((?:tours|rehber)\/[\w-]+|ani|rota-bus|stay)\.webp$/;
 const preloadTag = (src) =>
   RESPONSIVE.test(src)
     ? `<link rel="preload" as="image" fetchpriority="high" href="${attr(src)}" imagesrcset="${attr(src.replace(/\.webp$/, "-800.webp"))} 800w, ${attr(src)} 1400w" imagesizes="100vw">`

@@ -1,6 +1,6 @@
 // Fotoğraflar /images altında WebP olarak iki boyda tutulur: tam boy (≤1400 px)
 // ve "-800" ekli kart boyu. Tarayıcı ekran genişliğine göre uygun olanı seçer.
-const RESPONSIVE = /^\/images\/(tours\/[\w-]+|ani|rota-bus|stay)\.webp$/;
+const RESPONSIVE = /^\/images\/((?:tours|rehber)\/[\w-]+|ani|rota-bus|stay)\.webp$/;
 
 export function responsive(src: string, sizes = "(max-width: 760px) 100vw, 33vw") {
   if (!RESPONSIVE.test(src)) return { src };
