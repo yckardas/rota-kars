@@ -16,7 +16,7 @@ import { useClearOfLaunchers } from "../lib/launchers";
 import { api } from "../lib/api";
 import { today } from "../lib/types";
 import { TourCard } from "../components/TourCard";
-import { placeName } from "../lib/place";
+import { distinctPlacesFirst, heroTours, placeName } from "../lib/place";
 import { develop } from "../lib/reveal";
 import { Reviews, GoogleMark } from "../components/Reviews";
 import { whatsappLink } from "../lib/whatsapp";
@@ -60,7 +60,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
   const { t, locale } = useLang();
   const heroCard = useRef<HTMLDivElement>(null);
   useClearOfLaunchers(heroCard);
-  const insetTours = catalog.tours.filter((t) => !t.inquiryOnly).slice(0, 4);
+  const insetTours = heroTours(catalog.tours);
   const navigate = useLocalNavigate();
   function search(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -244,17 +244,17 @@ export function Home({ catalog }: { catalog: Catalog }) {
           className={"tour-grid" + (filtered ? " is-refiltered" : "")}
           key={filter}
         >
-          {catalog.tours
+          {/* Bütün turlar ana sayfada; aynı yere giden ikinci, üçüncü tur sona kalır. */}
+          {distinctPlacesFirst(catalog.tours)
             // Kategoriler /en altında katalogda İngilizce gelir.
             .filter(
               (tour) => filter === "Tüm rotalar" || tour.category === t(filter),
             )
-            .slice(0, 6)
             .map((tour) => (
               <TourCard key={tour.id} tour={tour} />
             ))}
         </div>
-        {/* Telefonda ana sayfa 3 turla kısa kalır; gerisi tur listesinde. */}
+        {/* Telefonda ana sayfa 6 turla kısa kalır; gerisi tur listesinde. */}
         <Link className="tours-all-link" to="/turlar">
           {t("Bütün turları görün ({n})", { n: catalog.tours.length })}{" "}
           <ArrowRight size={16} />
