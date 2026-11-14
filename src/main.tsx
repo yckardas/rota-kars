@@ -40,6 +40,7 @@ import { Services } from "./pages/Services";
 // Müşterilerin çoğu bu sayfaları hiç açmaz: ayrı paketlerde, gerekince yüklenir.
 const Guide = lazy(() => import("./pages/Guide").then((m) => ({ default: m.Guide })));
 const ArticlePage = lazy(() => import("./pages/Guide").then((m) => ({ default: m.ArticlePage })));
+const Discover = lazy(() => import("./pages/Discover").then((m) => ({ default: m.Discover })));
 const Admin = lazy(() =>
   import("./pages/Admin").then((m) => ({ default: m.Admin })),
 );
@@ -216,6 +217,7 @@ function App() {
           />
           <Route path="rezervasyonum" element={<Lookup catalog={shown!} />} />
           <Route path="konaklama" element={<Hotels />} />
+          <Route path="kesfet/:slug" element={<Discover catalog={shown!} />} />
           <Route path="rehber" element={<Guide />} />
           <Route path="rehber/:slug" element={<ArticlePage catalog={shown!} />} />
           <Route path="hakkimizda" element={<About />} />

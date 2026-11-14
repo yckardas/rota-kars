@@ -103,11 +103,11 @@ export function ArticlePage({ catalog }: { catalog: Catalog }) {
       </div>
       <article className="container article-page">
         <header className="article-head">
-          <small>
-            {t(ARTICLE_CATEGORIES[article.category])} · {dateOf(article.publishedAt)}
-          </small>
           <h1>{article.title}</h1>
           <p className="article-summary">{article.summary}</p>
+          <p className="article-meta">
+            {t(ARTICLE_CATEGORIES[article.category])} · {dateOf(article.publishedAt)}
+          </p>
         </header>
         <figure className="article-cover">
           <img {...responsive(article.cover, "(max-width: 900px) 100vw, 860px")} alt="" fetchPriority="high" />

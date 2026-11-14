@@ -3,4 +3,5 @@
 import { site } from "./site";
 import { booking } from "./booking";
 import { member } from "./member";
-export const en: Record<string, string> = { ...site, ...booking, ...member };
+import { discover } from "./discover";
+export const en: Record<string, string> = { ...site, ...booking, ...member, ...discover };

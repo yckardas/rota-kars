@@ -184,6 +184,13 @@ const STATIC = {
       "Çıldır Gölü'nde atlı kızak, Sarıkamış'ta kar motoru, Ani'nin tarihi ve Kars kışına hazırlık: Rota Kars ekibinden gezi rehberleri ve öneriler.",
     crumb: "Rehber",
   },
+  "/kesfet/ani": {
+    title: `Ani Harabeleri: tarihi, yürüyüş rotası ve gezi ipuçları | ${SITE}`,
+    description:
+      "Bin bir kilise şehri Ani: Bagratlılardan Selçuklulara bin yıllık hikâye, Aslanlı Kapı'dan Ebu'l Menucehr Camii'ne örnek yürüyüş rotası ve gitmeden bilmeniz gerekenler.",
+    crumb: "Ani'yi keşfet",
+    image: "/images/tours/ani.webp",
+  },
   "/gorsel-kaynaklari": {
     title: `Görsel kaynakları | ${SITE}`,
     description:
@@ -218,6 +225,11 @@ const EN_STATIC = {
   "/hakkimizda": {
     title: `About us | ${SITE}`,
     description: `Rota Kars Turizm, a TÜRSAB-licensed (No. ${business.tursabNo}) group A travel agency serving Kars since ${business.founded}.`,
+  },
+  "/kesfet/ani": {
+    title: `Ani ruins: history, walking route and travel tips | ${SITE}`,
+    description:
+      "Ani, the city of a thousand and one churches: a thousand-year story from the Bagratids to the Seljuks, a sample walking route from the Lion Gate to the Mosque of Manuchihr, and tips before you go.",
   },
   "/iletisim": {
     title: `Contact and address | ${SITE}`,
@@ -277,6 +289,18 @@ export function pageMeta(path, base) {
         publisher: { "@id": base + "/#agency" },
       });
     if (m.crumb) graph.push(crumbs(base, [{ name: m.crumb, path: p }]));
+    if (p === "/kesfet/ani")
+      graph.push({
+        "@type": "TouristAttraction",
+        name: "Ani Arkeolojik Alanı",
+        alternateName: "Ani Harabeleri",
+        description: m.description,
+        image: base + "/images/tours/ani.webp",
+        url: base + p,
+        geo: { "@type": "GeoCoordinates", latitude: 40.5075, longitude: 43.5728 },
+        address: { "@type": "PostalAddress", addressLocality: "Ocaklı, Merkez", addressRegion: "Kars", addressCountry: "TR" },
+        isAccessibleForFree: false,
+      });
     if (p === "/turlar")
       graph.push({
         "@type": "ItemList",
@@ -306,8 +330,8 @@ export function pageMeta(path, base) {
       alternate: EN_STATIC[p] ? "/en" + (p === "/" ? "" : p) : null,
       title: m.title,
       description: m.description,
-      image: DEFAULT_IMAGE,
-      lcp: p === "/" ? "/images/ani.webp" : null,
+      image: m.image || DEFAULT_IMAGE,
+      lcp: p === "/" ? "/images/ani.webp" : m.image || null,
       graph,
     };
   }
