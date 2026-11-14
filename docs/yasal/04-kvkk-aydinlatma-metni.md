@@ -33,7 +33,7 @@ Mevcut metin (`src/pages/OtherPages.tsx` → `Information`) iyi bir temel: veri 
 - Adres: Yeni Mah. Cumhuriyet Cad. Köşk Apt. No: 26 İç Kapı No: 13, Merkez / Kars
 - MERSİS: 0735187296600001
 - E-posta: info@rotakarsturizm.com · KEP: rotakarsturizm@hs01.kep.tr
-- Telefon: 0474 223 91 63
+- Telefon: 0474 223 65 44
 
 ### 2. Hangi kişisel verileri işliyoruz
 

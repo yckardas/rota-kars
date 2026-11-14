@@ -1,6 +1,6 @@
 export const business = {
   name: "Rota Kars Turizm",
-  phone: "0474 223 91 63",
+  phone: "0474 223 65 44",
   mobile: "0545 935 34 10",
   email: "info@rotakarsturizm.com",
   address:

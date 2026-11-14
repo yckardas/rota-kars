@@ -21,7 +21,7 @@ Rota Kars Turizm Taşımacılık Seyahat Acentası Limited Şirketi ("Acente")
 Acenta unvanı: Rota Kars Turizm · T.C. Kültür ve Turizm Bakanlığı A Grubu Seyahat Acentası belge no 13948
 Adres: Yeni Mah. Cumhuriyet Cad. Köşk Apt. No: 26 İç Kapı No: 13, Merkez / Kars
 MERSİS: 0735187296600001 · Kars V.D. 7351872966 · Kars Ticaret Sicili 8625
-Tel: 0474 223 91 63 · 0545 935 34 10 · E-posta: info@rotakarsturizm.com · KEP: rotakarsturizm@hs01.kep.tr
+Tel: 0474 223 65 44 · 0545 935 34 10 · E-posta: info@rotakarsturizm.com · KEP: rotakarsturizm@hs01.kep.tr
 
 **1.2. Müşteri (tüketici)**
 {{musteri.ad_soyad}} · {{musteri.eposta}} · {{musteri.telefon}} ("Müşteri")
