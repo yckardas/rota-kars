@@ -88,7 +88,8 @@ BUCKET="${{buffered-basket.BUCKET}}"
 
 ## Güvenlik kontrol listesi (yayın öncesi)
 
-- **`TRUST_PROXY=1` zorunlu.** Railway'in önündeki tek proxy gerçek istemci IP'sini ekler; bu ayar olmadan tüm kullanıcılar tek IP gibi görünür.
+- **`TRUST_PROXY=1` zorunlu.** Limitler için istemci IP'si Railway uç sunucusunun her istekte yeniden yazdığı `X-Real-IP` başlığından okunur (`CLIENT_IP_HEADER`, varsayılan `x-real-ip`). Yalnız `req.ip` kullanıldığında Railway'in iç katmanı yüzünden uç sunucunun adresi görünüyordu: aynı uçtan geçen herkes tek kovayı paylaşıyor, yeni bağlantı açan limiti aşıyordu.
+- **Form e-postaları:** Talep ve ön kayıt formlarının müşteriye otomatik yanıtı formdaki serbest metni (ad, not) içermez ve bir adrese günde en fazla `FORM_MAIL_PER_DAY` (varsayılan 3) kez gider. Turnstile anahtarları yoksa yayında açılışta uyarı yazılır.
 - **Giriş denemeleri:** IP başına (IPv6'da /64 blok), hesap başına (8 hatalı deneme) ve IP'den bağımsız toplam (`LOGIN_GLOBAL_LIMIT`, varsayılan 200 / 15 dk) sınır vardır. Yönetici hesapları yanlış parola veya yanlış 2FA koduyla 5 denemede 15 dk kilitlenir; kilitli ve olmayan hesaplar aynı mesajı alır.
 - **Yetki:** Rol kontrolü yolları normalize ederek yapılır ve Express birebir eşleşir (büyük/küçük harf ve sondaki `/` ile sahibe özel uçlara erişilemez).
 - **KVKK:** Üye, e-postası doğrulanmadıkça yalnız kendi üyeliğine bağlı kayıtları indirip silebilir; aynı e-postayla yapılmış misafir kayıtları ona verilmez.

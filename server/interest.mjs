@@ -8,6 +8,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { tours } from "./catalog.mjs";
 import { AppError } from "./store.mjs";
 import { localDate } from "./departures.mjs";
+import { formMailPerDay } from "./requests.mjs";
 
 export const INTEREST_STATUS = {
   waiting: "Bekliyor",
@@ -91,14 +92,22 @@ export async function createInterest(db, { clock, tx, departures, operations, no
             ? `${tourName(input.tourId)} · ${departure.date} ${departure.start_time} seferi için bekleme listesine`
             : `${tourName(input.tourId)} için ön kayda`;
         if (!existing) {
-          await notifications.enqueue({
+          // Alıcı başına günlük otomatik yanıt sınırı (farklı turlara art arda kayıtla bir
+          // adrese e-posta yağdırılamaz); kayıt ve acente bildirimi yine yapılır. Sayıma
+          // yeni eklenen kayıt da dahildir.
+          const recentToSameEmail = await db.count("interest_list", {
+            email,
+            created_at: { $gt: clock() - 24 * 3600000 },
+          });
+          if (recentToSameEmail <= formMailPerDay(env))
+            await notifications.enqueue({
             email,
             subject:
               input.kind === "waitlist"
                 ? `Rota Kars · Bekleme listesindesiniz (${reference})`
                 : `Rota Kars · Ön kaydınız alındı (${reference})`,
             body:
-              `Merhaba ${input.name},\n${what} ${input.count} kişi olarak eklendiniz. Referans: ${reference}\n\n` +
+              `Merhaba,\n${what} ${input.count} kişi olarak eklendiniz. Referans: ${reference}\n\n` +
               (input.kind === "waitlist"
                 ? "Bu seferde yer açılınca size hemen e-posta göndereceğiz. Yer, ilk rezervasyonu tamamlayana ayrılır; koltuk tutulmaz ve ödeme alınmaz."
                 : "Bu ücretsiz bir ön kayıttır; ödeme alınmaz. Yeterli talep oluşunca tur kesinleşir, tarihleri ve rezervasyon bağlantısını size e-postayla göndeririz.") +

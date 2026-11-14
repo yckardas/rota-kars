@@ -13,6 +13,10 @@ if (process.env.NODE_ENV === "production") {
     console.warn(
       "TRUST_PROXY=1 ayarlı değil: Railway gibi bir proxy arkasında istemci IP'si ve https doğru algılanmaz (giriş sınırları, güvenli çerezler).",
     );
+  if (!process.env.TURNSTILE_SITE_KEY || !process.env.TURNSTILE_SECRET_KEY)
+    console.warn(
+      "TURNSTILE_SITE_KEY / TURNSTILE_SECRET_KEY ayarlı değil: üyelik, rezervasyon ve talep formlarında bot koruması KAPALI (sahte rezervasyonla koltuk tutma, form e-postası, parola denemesi).",
+    );
   if (!/^https:\/\//.test(process.env.PUBLIC_BASE_URL || ""))
     console.warn(
       "PUBLIC_BASE_URL ayarlı değil: e-posta ve bilet bağlantılarında https://rotakarsturizm.com kullanılacak.",

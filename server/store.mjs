@@ -21,7 +21,7 @@ import { createContent } from "./content.mjs";
 import { createArticles } from "./articles.mjs";
 import { articleSeed } from "./articles-seed.mjs";
 import { createInterest } from "./interest.mjs";
-import { describeRequest, REQUEST_KINDS, statusLabel } from "./requests.mjs";
+import { describeRequest, formMailPerDay, REQUEST_KINDS, statusLabel } from "./requests.mjs";
 import { applyStandardTransfer, priceTransfer } from "./transfer.mjs";
 export class AppError extends Error {
   constructor(status, message) {
@@ -535,6 +535,14 @@ export async function openStore(
     },
     async request(kind, body) {
       const id = randomUUID();
+      // Alıcı başına günlük otomatik yanıt sınırı: form, bir adrese e-posta yağdırmak için
+      // kullanılamaz. Talep yine kaydedilir ve acenteye bildirilir.
+      const recentToSameEmail = body?.email
+        ? await db.count("requests", {
+            "body.email": body.email,
+            created_at: { $gt: clock() - 24 * 3600000 },
+          })
+        : 0;
       await db.insert("requests", id, {
         id,
         kind,
@@ -546,14 +554,15 @@ export async function openStore(
       const label = REQUEST_KINDS[kind] || "Yeni talep",
         tourName = tours.find((t) => t.id === body?.tourId)?.name || "",
         hotelName = body?.hotelId ? (await db.one("hotels", { _id: body.hotelId }))?.name || "" : "",
-        summary = describeRequest(body || {}, { tourName, hotelName });
+        summary = describeRequest(body || {}, { tourName, hotelName }),
+        customerSummary = describeRequest(body || {}, { tourName, hotelName, forCustomer: true });
       // Müşteriye "talebiniz alındı" e-postası: referans ve acentenin döneceği bilgisi.
-      if (body?.email)
+      if (body?.email && recentToSameEmail < formMailPerDay(env))
         await notifications.enqueue({
           email: body.email,
           subject: `Rota Kars · ${label} alındı (${reference})`,
           body:
-            `Merhaba ${body.name},\n${label.toLocaleLowerCase("tr-TR")} kaydedildi. Referans: ${reference}\n\n${summary}\n\n` +
+            `Merhaba,\n${label.toLocaleLowerCase("tr-TR")} kaydedildi. Referans: ${reference}\n\n${customerSummary}\n\n` +
             (kind === "hotel"
               ? "Bu bir kesin rezervasyon değildir. Anlaşmalı otellerimizle görüşüp müsaitlik ve fiyatla size en kısa sürede dönüyoruz."
               : "Bu bir kesin rezervasyon değildir. Ekibimiz en kısa sürede sizinle iletişime geçecek."),

@@ -453,3 +453,42 @@ test("Turnstile: forms require a server-verified token when keys are configured"
   assert.equal(off.siteKey, null);
   assert.equal(await off.verify(undefined), true);
 });
+
+test("rate limits key on the proxy's X-Real-IP, not on the edge hop address", async (t) => {
+  const { createApp } = await import("../server/app.mjs");
+  const { openStore } = await import("../server/store.mjs");
+  const { once } = await import("node:events");
+  const run = async (env) => {
+    const store = await openStore(":memory:");
+    const server = createApp(store, { env }).listen(0, "127.0.0.1");
+    await once(server, "listening");
+    t.after(async () => {
+      await new Promise((r) => server.close(r));
+      await store.db.close();
+    });
+    // /auth/start/* "login" kovasına sayılır (IP başına 15 dakikada 10).
+    return (headers) =>
+      fetch(`http://127.0.0.1:${server.address().port}/api/auth/start/google`, { redirect: "manual", headers }).then(
+        (r) => r.status,
+      );
+  };
+  const hit = await run({ TRUST_PROXY: "1" });
+  // Farklı istemciler (uç sunucu aynı olsa da) ayrı kovaya düşer.
+  const distinct = [];
+  for (let i = 0; i < 12; i++)
+    distinct.push(await hit({ "X-Real-IP": `203.0.113.${i}`, "X-Forwarded-For": `203.0.113.${i}, 10.0.0.1` }));
+  assert.ok(!distinct.includes(429), distinct.join(","));
+  // Aynı istemci, X-Forwarded-For'u değiştirse de aynı kovada kalır.
+  const same = [];
+  for (let i = 0; i < 12; i++) same.push(await hit({ "X-Real-IP": "198.51.100.7", "X-Forwarded-For": `10.9.0.${i}` }));
+  assert.ok(same.slice(10).every((s) => s === 429), same.join(","));
+  // IPv6 istemciler /64 blok olarak sayılır; geçersiz başlık yok sayılır.
+  const v6 = [];
+  for (let i = 0; i < 11; i++) v6.push(await hit({ "X-Real-IP": `2001:db8:1:2::${i + 1}` }));
+  assert.equal(v6.at(-1), 429, v6.join(","));
+  // TRUST_PROXY kapalıyken başlık sahtelenip limit aşılamaz.
+  const direct = await run({});
+  const spoofed = [];
+  for (let i = 0; i < 12; i++) spoofed.push(await direct({ "X-Real-IP": `192.0.2.${i}` }));
+  assert.ok(spoofed.slice(10).every((s) => s === 429), spoofed.join(","));
+});

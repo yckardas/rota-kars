@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { isIP } from "node:net";
 import express from "express";
 import QRCode from "qrcode";
 import compression from "compression";
@@ -148,8 +149,18 @@ const localImage = /^(\/images\/[\w.-]+|\/media\/[a-f0-9-]{36}\.(jpg|png|webp|av
 const localVideo = /^(\/videos\/[A-Za-z0-9_-]+\.(mp4|webm)|\/media\/[a-f0-9-]{36}\.(mp4|webm))$/;
 // Limitler için istemci anahtarı: IPv6'da tek kişi genelde bütün bir /64 bloğa
 // sahiptir; adres değiştirerek limit aşılmasın diye /64 öneki kullanılır.
+// İstemci IP'si: Railway uç sunucusu X-Real-IP başlığını her istekte gerçek istemci
+// adresiyle yeniden yazar (istemcinin gönderdiği kopya ezilir). req.ip ise Railway'in
+// iç katmanı yüzünden uç sunucunun adresini verebiliyor; o zaman aynı uçtan geçen
+// herkes tek kovayı paylaşır, yeni bağlantı açan da limiti aşar. Başlık yalnız
+// TRUST_PROXY=1 iken okunur; CLIENT_IP_HEADER ile değiştirilir, boş bırakılırsa kapanır.
+const clientIp = (req) => {
+  const header = req.app?.get("client ip header");
+  const fromHeader = header ? String(req.headers[header] || "").split(",")[0].trim() : "";
+  return (isIP(fromHeader) ? fromHeader : String(req.ip || "")).replace(/^::ffff:/, "");
+};
 const clientKey = (req) => {
-  const ip = String(req.ip || "").replace(/^::ffff:/, "");
+  const ip = clientIp(req);
   if (!ip.includes(":")) return ip;
   const parts = ip.split("::")[0].split(":");
   return parts.slice(0, 4).join(":") + "::/64";
@@ -306,7 +317,10 @@ export function createApp(
     }
     next();
   });
-  if (env.TRUST_PROXY === "1") app.set("trust proxy", 1);
+  if (env.TRUST_PROXY === "1") {
+    app.set("trust proxy", 1);
+    app.set("client ip header", String(env.CLIENT_IP_HEADER ?? "x-real-ip").trim().toLowerCase());
+  }
   // CSRF: istek yalnız sitenin kendi adresinden gelebilir. Ayarlı site adresleri her
   // zaman kabul edilir (TRUST_PROXY eksik olsa da https girişi kırılmaz).
   const configuredOrigins = [env.PUBLIC_BASE_URL, env.SITE_URL]
@@ -413,7 +427,7 @@ export function createApp(
     next();
   });
   const human = (q, action) =>
-    turnstile.verify(q.body?.turnstileToken, String(q.ip || "").replace(/^::ffff:/, ""), action);
+    turnstile.verify(q.body?.turnstileToken, clientIp(q), action);
   const route = (fn) => async (req, res, next) => {
     try {
       await fn(req, res);
@@ -452,7 +466,7 @@ export function createApp(
       if (q.method === "GET" && !exported) return;
       if (/\/api\/admin\/(login|logout)$/.test(path)) return;
       store.adminAuth
-        .audit(q.admin, exported ? "export" : q.method.toLowerCase(), { path }, q.ip)
+        .audit(q.admin, exported ? "export" : q.method.toLowerCase(), { path }, clientIp(q))
         .catch(() => {});
     });
     next();
@@ -1237,7 +1251,7 @@ export function createApp(
       const id = paymentSessionId.parse(q.params.id);
       z.object({ terms: z.literal(true) }).strict().parse(q.body);
       const owner = await payments.consent(id, {
-        ip: String(q.ip || "").replace(/^::ffff:/, ""),
+        ip: clientIp(q),
       });
       for (const type of ["pre_info", "service_contract", "cancellation_terms"])
         await store.privacy.recordConsent({
@@ -1255,7 +1269,7 @@ export function createApp(
     route(async (q, r) => {
       const result = await payments.completeCard(
         q.body || {},
-        String(q.ip || "").replace(/^::ffff:/, ""),
+        clientIp(q),
       );
       if (!result.sessionId) return r.redirect(303, "/");
       const prefix = result.lang === "en" ? "/en" : "";
@@ -1697,7 +1711,7 @@ export function createApp(
         q.admin,
         "kvkk_erase",
         { target: createHash("sha256").update(target.toLowerCase()).digest("hex").slice(0, 12), ...result },
-        q.ip,
+        clientIp(q),
       );
       r.json(result);
     }),

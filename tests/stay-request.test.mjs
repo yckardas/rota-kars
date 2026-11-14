@@ -66,10 +66,28 @@ test("stay request from a tour page keeps room details and notifies both sides",
   assert.match(customer.body, /Tur: Ani, Çıldır ve Kars/);
   assert.match(customer.body, /Oda: 1 × Üç kişilik/);
   assert.match(customer.body, /kesin rezervasyon değildir/);
+  // Formdaki serbest metin (ad, not) müşteriye giden otomatik yanıta girmez; acente görür.
+  assert.doesNotMatch(customer.body, /Merkeze yakın|Konaklama Misafir/);
   const agency = outbox.find((m) => m.recipient === "ekip@rotakars.test");
   assert.match(agency.subject, /Konaklama talebi: TL-.* · Ani, Çıldır ve Kars/);
   assert.match(agency.body, /Kişi: 3 \(1 çocuk dahil\)/);
   assert.match(agency.body, /Bütçe: Orta/);
+  assert.match(agency.body, /Not: Merkeze yakın olsun\./);
+  assert.match(agency.body, /Ad: Konaklama Misafir/);
+});
+
+test("request form cannot be used to flood one address: customer replies are capped per day", async (t) => {
+  const { store, call } = await fixture(t);
+  for (let i = 0; i < 5; i++) {
+    const r = await call("/requests", { ...stay, notes: "Hesabınız askıya alındı: https://evil.example/" + i });
+    assert.equal(r.status, 201, JSON.stringify(r.json));
+  }
+  const outbox = await store.db.find("notification_outbox", {});
+  const toCustomer = outbox.filter((m) => m.recipient === "misafir@example.com");
+  assert.equal(toCustomer.length, 3, "günde en fazla 3 otomatik yanıt");
+  assert.ok(toCustomer.every((m) => !/evil\.example/.test(m.body)));
+  assert.equal(outbox.filter((m) => m.recipient === "ekip@rotakars.test").length, 5, "acente her talebi görür");
+  assert.equal((await store.dashboard()).requests.length, 5);
 });
 
 test("invalid room details are rejected", async (t) => {
