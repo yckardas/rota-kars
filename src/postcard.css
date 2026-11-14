@@ -5178,3 +5178,33 @@ html:has(.kp) {
     font-size: 15px;
   }
 }
+
+/* Tur sayfası · konaklama talebi bölümü */
+.kp .stay-offer {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+  margin: 30px 0 34px;
+  padding: 22px 24px;
+  border: 1px solid var(--kp-rule);
+  border-radius: 5px;
+  background: var(--kp-card);
+}
+.kp .stay-offer > svg {
+  flex: none;
+  color: var(--kp-red);
+  margin-top: 4px;
+}
+.kp .stay-offer h2 {
+  margin: 0 0 8px;
+}
+.kp .stay-offer p {
+  margin: 0 0 16px;
+}
+@media (max-width: 560px) {
+  .kp .stay-offer {
+    flex-direction: column;
+    gap: 10px;
+    padding: 18px;
+  }
+}

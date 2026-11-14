@@ -18,6 +18,7 @@ import { createUetds } from "./uetds.mjs";
 import { depositFor } from "./payments.mjs";
 import { createPush } from "./push.mjs";
 import { createContent } from "./content.mjs";
+import { describeRequest, REQUEST_KINDS, statusLabel } from "./requests.mjs";
 import { priceTransfer } from "./transfer.mjs";
 export class AppError extends Error {
   constructor(status, message) {
@@ -25,13 +26,7 @@ export class AppError extends Error {
     this.status = status;
   }
 }
-export const REQUEST_STATUS = {
-  new: "Yeni",
-  contacted: "Arandı",
-  offered: "Teklif verildi",
-  won: "Rezervasyona döndü",
-  lost: "Kapandı",
-};
+export { REQUEST_STATUS } from "./requests.mjs";
 export async function openStore(
   path = undefined,
   {
@@ -539,17 +534,26 @@ export async function openStore(
         created_at: clock(),
       });
       const reference = "TL-" + id.slice(0, 8).toUpperCase();
-      const label =
-        { hotel: "Konaklama talebi", "private-tour": "Özel tur talebi", vehicle: "Araç kiralama talebi" }[kind] ||
-        "Yeni talep";
+      const label = REQUEST_KINDS[kind] || "Yeni talep",
+        tourName = tours.find((t) => t.id === body?.tourId)?.name || "",
+        hotelName = body?.hotelId ? (await db.one("hotels", { _id: body.hotelId }))?.name || "" : "",
+        summary = describeRequest(body || {}, { tourName, hotelName });
+      // Müşteriye "talebiniz alındı" e-postası: referans ve acentenin döneceği bilgisi.
+      if (body?.email)
+        await notifications.enqueue({
+          email: body.email,
+          subject: `Rota Kars · ${label} alındı (${reference})`,
+          body:
+            `Merhaba ${body.name},\n${label.toLocaleLowerCase("tr-TR")} kaydedildi. Referans: ${reference}\n\n${summary}\n\n` +
+            (kind === "hotel"
+              ? "Bu bir kesin rezervasyon değildir. Anlaşmalı otellerimizle görüşüp müsaitlik ve fiyatla size en kısa sürede dönüyoruz."
+              : "Bu bir kesin rezervasyon değildir. Ekibimiz en kısa sürede sizinle iletişime geçecek."),
+          kind: "request_received",
+          dedupeKey: "request-received:" + id,
+        });
       await notifications.notifyAgency({
-        subject: `${label}: ${reference}`,
-        body:
-          `${label} · ${reference}\n` +
-          Object.entries(body || {})
-            .filter(([, v]) => v !== "" && v != null && typeof v !== "object")
-            .map(([k, v]) => `${k}: ${String(v).slice(0, 500)}`)
-            .join("\n"),
+        subject: `${label}: ${reference}${tourName ? " · " + tourName : ""}`,
+        body: `${label} · ${reference}\n${summary}`,
         actionUrl: (env.PUBLIC_BASE_URL || "") + "/yonetim?sekme=requests",
         pushUrl: "/yonetim?sekme=requests",
         kind: "request_" + kind,
@@ -635,7 +639,7 @@ export async function openStore(
         const set = { updated_at: clock() };
         if (status && status !== row.status) {
           set.status = status;
-          notes.push({ at: clock(), by: actor?.name || "Yönetici", text: "Durum: " + REQUEST_STATUS[status] });
+          notes.push({ at: clock(), by: actor?.name || "Yönetici", text: "Durum: " + statusLabel(row.kind, status) });
         }
         if (note) notes.push({ at: clock(), by: actor?.name || "Yönetici", text: String(note).slice(0, 1000) });
         set.notes = notes.slice(-50);

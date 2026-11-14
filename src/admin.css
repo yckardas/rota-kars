@@ -1509,3 +1509,18 @@
   align-items: center;
   justify-content: space-between;
 }
+
+/* Talep kartı: konaklama ayrıntıları (tur, oda, otel, bütçe) */
+.rk-admin .request-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 2px 0 8px;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--ink, #1a2846);
+}
+.rk-admin .request-card.status-in_progress {
+  border-color: #c9b98f;
+}
