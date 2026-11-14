@@ -43,7 +43,7 @@ Kaynak kısaltmaları:
 | KEP adresi | rotakarsturizm@hs01.kep.tr | BF | ⚠️ Yalnız bilgi formunda |
 | UETS adresi | 25818-46233-07292 | BF | ⚠️ Yalnız bilgi formunda; sitede yayımlanması gerekmez |
 | E-posta | info@rotakarsturizm.com | BF | ✅ Sitedeki ile aynı |
-| İşyeri telefonu | 0474 223 91 63 | BF | ✅ Sitedeki ile aynı |
+| İşyeri telefonu | 0474 223 65 44 | BF | ✅ Sitedeki ile aynı |
 | Yetkili cep telefonu | 0545 935 34 10 | BF | ✅ Sitedeki `mobile` ile aynı |
 
 ## Sitede bulunup belgelerde olmayanlar

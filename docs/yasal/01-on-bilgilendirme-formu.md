@@ -19,7 +19,7 @@
 | MERSİS no | 0735187296600001 |
 | Vergi dairesi / no | Kars / 7351872966 |
 | Ticaret sicil | Kars Ticaret Sicili Müdürlüğü, 8625 |
-| Telefon | 0474 223 91 63 · 0545 935 34 10 |
+| Telefon | 0474 223 65 44 · 0545 935 34 10 |
 | E-posta | info@rotakarsturizm.com |
 | KEP | rotakarsturizm@hs01.kep.tr |
 
@@ -108,7 +108,7 @@ Tura katılmanıza engel bir durum çıkarsa, tur başlangıcından en az 7 gün
 
 ## 10. Şikâyet ve uyuşmazlık
 
-- Şikâyetlerinizi önce acenteye iletebilirsiniz: info@rotakarsturizm.com · 0474 223 91 63. Tur sırasında yaşanan sorunları rehbere veya acenteye hemen bildirmeniz çözümü kolaylaştırır.
+- Şikâyetlerinizi önce acenteye iletebilirsiniz: info@rotakarsturizm.com · 0474 223 65 44. Tur sırasında yaşanan sorunları rehbere veya acenteye hemen bildirmeniz çözümü kolaylaştırır.
 - Ticaret Bakanlığı'nca her yıl belirlenen parasal sınırlar içinde **tüketici hakem heyetlerine**, bu sınırları aşan uyuşmazlıklarda **tüketici mahkemelerine** başvurabilirsiniz. Başvuru, yerleşim yerinizdeki veya işlemin yapıldığı yerdeki hakem heyetine yapılabilir; e-Devlet'teki TÜBİS üzerinden de başvurulabilir.
 - Arabuluculuk: tüketici mahkemesinde dava açmadan önce, kanunda belirtilen hâllerde arabulucuya başvurmak dava şartıdır. *[avukat: güncel parasal sınırlar ve arabuluculuk şartı]*
 

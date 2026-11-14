@@ -30,7 +30,7 @@ Bugün:
 | Ticaret sicili | Kars Ticaret Sicili Müdürlüğü · Sicil No 8625 |
 | Meslek odası | Kars Ticaret ve Sanayi Odası · Oda Sicil No 8625 |
 | Vergi dairesi / no | Kars Vergi Dairesi · 7351872966 |
-| Telefon | 0474 223 91 63 · 0545 935 34 10 |
+| Telefon | 0474 223 65 44 · 0545 935 34 10 |
 | E-posta | info@rotakarsturizm.com |
 | KEP | rotakarsturizm@hs01.kep.tr |
 | Sermaye *(isteğe bağlı)* | 400.000,00 TL |

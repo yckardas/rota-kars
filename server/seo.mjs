@@ -57,7 +57,7 @@ const agency = (base) => ({
   logo: base + "/images/logo.png",
   image: base + "/images/rota-bus.webp",
   description: DEFAULT_DESCRIPTION,
-  telephone: "+90 474 223 91 63",
+  telephone: "+90 474 223 65 44",
   email: business.email,
   foundingDate: String(business.founded),
   address: {
@@ -80,7 +80,7 @@ const agency = (base) => ({
   contactPoint: [
     {
       "@type": "ContactPoint",
-      telephone: "+90 474 223 91 63",
+      telephone: "+90 474 223 65 44",
       contactType: "customer service",
       availableLanguage: ["Turkish"],
     },
