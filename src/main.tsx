@@ -162,17 +162,18 @@ function App() {
                     <div>
                       <h2>{photo.title}</h2>
                       <p>{photo.author}</p>
-                      <a href={photo.source} target="_blank" rel="noreferrer">
-                        Özgün fotoğraf
-                      </a>{" "}
-                      ·{" "}
-                      <a
-                        href={photo.licenseUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {photo.license}
-                      </a>
+                      {photo.source && (
+                        <a href={photo.source} target="_blank" rel="noreferrer">
+                          Özgün fotoğraf
+                        </a>
+                      )}
+                      {photo.source && photo.licenseUrl && " · "}
+                      {photo.licenseUrl && (
+                        <a href={photo.licenseUrl} target="_blank" rel="noreferrer">
+                          {photo.license}
+                        </a>
+                      )}
+                      {photo.changes && <p>{photo.changes}</p>}
                     </div>
                   </article>
                 ))}

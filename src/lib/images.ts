@@ -2,6 +2,8 @@
 // ve "-800" ekli kart boyu. Tarayıcı ekran genişliğine göre uygun olanı seçer.
 const RESPONSIVE = /^\/images\/((?:tours|rehber)\/[\w-]+|ani|rota-bus|stay)\.webp$/;
 
+export const isIllustrativePhoto = (src: string) => src.endsWith("-temsili.webp");
+
 export function responsive(src: string, sizes = "(max-width: 760px) 100vw, 33vw") {
   if (!RESPONSIVE.test(src)) return { src };
   const small = src.replace(/\.webp$/, "-800.webp");

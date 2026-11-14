@@ -3,7 +3,7 @@
 // HTML'de doğru meta etiketlerini görsün diye şablona enjekte edilir.
 import { publishedArticle, publishedArticles } from "./articles.mjs";
 import { business, tours, services } from "./catalog.mjs";
-import { en } from "./catalog-en.mjs";
+import { currentEn } from "./content.mjs";
 import { legacyRedirects } from "./legacy-redirects.mjs";
 
 const SITE = "Rota Kars Turizm";
@@ -255,7 +255,7 @@ export function pageMeta(path, base) {
     if (inner.status !== 200) return { ...inner, path: path };
     const tr = inner.path,
       tourId = tr.match(/^\/turlar\/([^/]+)$/)?.[1],
-      tour = tourId && en.tours[tourId],
+      tour = tourId && currentEn().tours[tourId],
       fixed = EN_STATIC[tr];
     return {
       ...inner,

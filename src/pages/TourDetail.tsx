@@ -1,5 +1,5 @@
 import { InstagramSection } from "../components/InstagramSection";
-import { responsive } from "../lib/images";
+import { isIllustrativePhoto, responsive } from "../lib/images";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { develop, useReveal } from "../lib/reveal";
 import { useParams } from "react-router-dom";
@@ -114,6 +114,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
   const mapUrl =
     "https://www.google.com/maps/search/?api=1&query=" +
     encodeURIComponent(t.location + " " + t.name);
+  const coverImage = t.gallery[activeImage] || t.image;
   return (
     <>
       <div className="container breadcrumb">
@@ -139,9 +140,9 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
               <img
                 key={activeImage}
                 className={swapped ? "kp-swap" : undefined}
-                style={{ viewTransitionName: "tour-" + t.id }}
+                style={viaTransition ? { viewTransitionName: "tour-photo" } : undefined}
                 {...responsive(
-                  t.gallery[activeImage] || t.image,
+                  coverImage,
                   "(max-width: 760px) 100vw, 62vw",
                 )}
                 alt={t.name}
@@ -149,9 +150,14 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
                 height="720"
               />
               <div className="kp-title">
-                <h1 id="tour-title">{t.name}</h1>
+                <h1 id="tour-title" style={viaTransition ? { viewTransitionName: "tour-title" } : undefined}>
+                  {t.name}
+                </h1>
                 <p>{t.subtitle}</p>
               </div>
+              {isIllustrativePhoto(coverImage) && (
+                <small className="kp-photo-disclosure">{tx("Temsili · Yapay zekâ")}</small>
+              )}
               {!t.salesOpen && !t.inquiryOnly && (
                 <span className="tour-sales-closed">
                   {tx("Şu an satışa kapalı")}
@@ -159,7 +165,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
               )}
             </div>
             {t.gallery.length > 1 && (
-              <div className="kp-insets kp-insets-stack">
+              <div className={"kp-insets kp-insets-stack" + (t.gallery.length > 3 ? " kp-insets-mosaic" : "")}>
                 {t.gallery.map((img, i) => (
                   <button
                     key={img}
@@ -179,6 +185,9 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
                       loading="lazy"
                       decoding="async"
                     />
+                    {isIllustrativePhoto(img) && (
+                      <small className="kp-photo-disclosure">{tx("Temsili · Yapay zekâ")}</small>
+                    )}
                   </button>
                 ))}
               </div>

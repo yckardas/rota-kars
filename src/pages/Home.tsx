@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { responsive } from "../lib/images";
+import { isIllustrativePhoto, responsive } from "../lib/images";
 import { Link, useLang, useLocalNavigate } from "../lib/i18n";
 import {
   ArrowRight,
@@ -7,6 +7,8 @@ import {
   Armchair,
   ExternalLink,
   ChevronRight,
+  Image as ImageIcon,
+  Snowflake,
   Star,
   Check,
 } from "lucide-react";
@@ -24,6 +26,7 @@ import { SeatMap } from "../components/SeatMap";
 import { StoryPlayer } from "../components/StoryPlayer";
 import { InstagramSection } from "../components/InstagramSection";
 import { FeatureMarquee } from "../components/FeatureMarquee";
+import { Postmark } from "../components/Postmark";
 export function Home({ catalog }: { catalog: Catalog }) {
   const [filter, setFilter] = useState("Tüm rotalar"),
     [filtered, setFiltered] = useState(false),
@@ -90,6 +93,17 @@ export function Home({ catalog }: { catalog: Catalog }) {
                 width="1280"
                 height="720"
               />
+              <div className="kp-hero-postage" aria-hidden="true">
+                <span className="kp-hero-paper" />
+                <div className="kp-hero-ink">
+                  <Postmark
+                    className="kp-postmark kp-home-postmark"
+                    date={today()}
+                    place={t("KARS’TAN")}
+                  />
+                  <span className="kp-hero-postal-lines" />
+                </div>
+              </div>
               <div className="kp-title">
                 <h1 id="kp-hero-title">{t("Kars’tan selamlar.")}</h1>
                 <p>
@@ -116,7 +130,9 @@ export function Home({ catalog }: { catalog: Catalog }) {
                 >
                   <img
                     {...responsive(
-                      i === 0 && tour.gallery[1] ? tour.gallery[1] : tour.image,
+                      i === 0 && tour.gallery[1] && !isIllustrativePhoto(tour.gallery[1])
+                        ? tour.gallery[1]
+                        : tour.image,
                       "(max-width: 760px) 25vw, 16vw",
                     )}
                     {...develop}
@@ -260,7 +276,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
           <ArrowRight size={16} />
         </Link>
       </section>
-      <section className="story-section">
+      <section className="story-section" id="kesif-kartpostallari">
         <div className="container">
           <div className="story-intro">
             <h2>
@@ -273,7 +289,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
               {t("Kars’ı yakından tanımaya buradan başlayın.")}
             </p>
             <span className="story-format">
-              {t("Fotoğraflarla kısa rota hikâyeleri")}
+              {t("Fotoğraf, video ve animasyonla kısa rota hikâyeleri")}
             </span>
           </div>
           <div className="story-grid">
@@ -290,7 +306,13 @@ export function Home({ catalog }: { catalog: Catalog }) {
                   decoding="async"
                 />
                 <span className="story-play">
-                  <Play size={17} fill="currentColor" />
+                  {s.scenes[0]?.video ? (
+                    <Play size={17} fill="currentColor" aria-hidden="true" />
+                  ) : s.scenes[0]?.motion ? (
+                    <Snowflake size={18} aria-hidden="true" />
+                  ) : (
+                    <ImageIcon size={18} aria-hidden="true" />
+                  )}
                 </span>
                 <span className="story-card-copy">
                   <strong>{s.title}</strong>

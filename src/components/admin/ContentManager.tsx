@@ -50,7 +50,8 @@ export function ContentManager({
     <>
       <p className="muted">
         Sitedeki tur metinlerini, fotoğraflarını ve iletişim bilgilerini buradan güncelleyin. Kaydedince site hemen
-        güncellenir; "Varsayılana dön" ile ilk hâline dönebilirsiniz.
+        güncellenir; "Varsayılana dön" ile ilk hâline dönebilirsiniz. İngilizce sayfada (/en) değiştirdiğiniz alanlar,
+        eski çeviri yerine burada yazdığınız metinle görünür.
       </p>
       <label className="field content-picker">
         Düzenlenecek içerik
@@ -123,7 +124,7 @@ function TourEditor({ id, onSaved }: { id: string; onSaved: () => void }) {
     set("itinerary", next);
   };
   async function save(reset = false) {
-    if (reset && !window.confirm("Bu turun metin ve fotoğrafları ilk hâline dönsün mü?")) return;
+    if (reset && !window.confirm("Bu turun metin ve fotoğrafları ilk hâline dönsün mü? Fiyat değişmez.")) return;
     setBusy(true);
     setError("");
     setNotice("");

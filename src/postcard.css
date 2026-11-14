@@ -321,6 +321,11 @@ html:has(.kp) {
 .kp-insets-stack .kp-inset[aria-pressed="true"]::after {
   box-shadow: inset 0 0 0 4px var(--kp-red);
 }
+@media (min-width: 951px) {
+  .kp-insets-stack.kp-insets-mosaic {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 
 /* Kartın alt beyaz bandı: arama veya tur bilgisi */
 .kp-strip {
@@ -498,17 +503,10 @@ html:has(.kp) {
     transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.kp .tour-card:hover {
-  transform: translateY(-4px) rotate(-0.4deg);
-  box-shadow: var(--kp-shadow);
-}
 .kp .tour-card-image {
   border-radius: 0;
   height: auto;
   aspect-ratio: 4 / 3;
-}
-.kp .tour-card:hover .tour-card-image > img {
-  transform: scale(1.03);
 }
 .kp .tour-card-inset {
   position: absolute;
@@ -525,6 +523,39 @@ html:has(.kp) {
   height: 100%;
   object-fit: cover;
 }
+.kp-photo-disclosure {
+  position: absolute;
+  z-index: 2;
+  top: 6px;
+  right: 6px;
+  max-width: calc(100% - 12px);
+  padding: 3px 5px;
+  color: var(--kp-ink);
+  background: var(--kp-card);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.kp-main-view > .kp-photo-disclosure {
+  top: auto;
+  bottom: 12px;
+  right: 12px;
+  font-size: 12px;
+}
+.kp img[src$="/ani-aziz-gregor.webp"] {
+  object-position: center top;
+}
+.kp img[src$="/cildir-atli-kizak.webp"] {
+  object-position: left center;
+}
+.kp-detail-card .kp-main-view:has(> img[src$="/cildir-atli-kizak.webp"], > .kp-photo-disclosure) .kp-title {
+  top: clamp(12px, 2vw, 30px);
+  bottom: auto;
+}
+.kp-detail-card .kp-main-view:has(> img[src$="/cildir-atli-kizak.webp"], > .kp-photo-disclosure)::after {
+  inset: 0 0 52%;
+  background: linear-gradient(rgba(12, 20, 38, 0.5), transparent);
+}
 .kp .tour-card-ribbon {
   position: absolute;
   left: 0;
@@ -535,6 +566,55 @@ html:has(.kp) {
   font-size: 22px;
   line-height: 1;
   padding: 9px 14px 10px;
+}
+.kp .tour-card-discover {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: absolute;
+  right: 10px;
+  bottom: 16px;
+  padding: 8px 10px;
+  color: var(--kp-ink);
+  background: var(--kp-card);
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 2px;
+  opacity: 0;
+}
+.kp .tour-card:focus-visible .tour-card-discover {
+  opacity: 1;
+}
+@media (hover: hover) and (pointer: fine) {
+  .kp .tour-card:hover {
+    box-shadow: var(--kp-shadow);
+  }
+  .kp .tour-card:hover .tour-card-discover {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .kp .tour-card-inset,
+  .kp .tour-card-discover {
+    transition: transform 0.42s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+  }
+  .kp .tour-card-discover {
+    transform: translateY(6px);
+  }
+  .kp .tour-card:focus-visible .tour-card-inset {
+    transform: translate(-5px, 4px) rotate(5deg);
+  }
+  .kp .tour-card:focus-visible .tour-card-discover {
+    transform: none;
+  }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .kp .tour-card:hover .tour-card-inset {
+    transform: translate(-5px, 4px) rotate(5deg);
+  }
+  .kp .tour-card:hover .tour-card-discover {
+    transform: none;
+  }
 }
 .kp .tour-sales-closed {
   position: absolute;
@@ -754,6 +834,98 @@ html:has(.kp) {
 .kp .story-card-copy > span {
   font-size: 13px;
   color: #e9eef5;
+}
+
+.kp .story-player {
+  min-height: 0;
+  padding: 12px;
+  gap: 10px;
+  color: var(--kp-ink);
+  background: var(--kp-card);
+}
+.kp .story-tracks > span {
+  background: var(--kp-rule);
+}
+.kp .story-tracks > span.seen {
+  background: var(--kp-red);
+}
+.story-media {
+  position: relative;
+  overflow: hidden;
+  height: clamp(190px, 43dvh, 430px);
+  background: var(--kp-ink);
+}
+.story-media > img,
+.story-media > video {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.story-media > img {
+  object-fit: cover;
+}
+.story-media > video {
+  object-fit: contain;
+}
+.kp .story-player-copy {
+  margin: 0;
+  padding: 8px 10px 0;
+}
+.story-location {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--kp-red);
+  font-size: 13px;
+}
+.kp .story-player h2 {
+  margin: 5px 0;
+  font-size: clamp(26px, 5vw, 38px);
+}
+.kp .story-player p {
+  color: var(--kp-ink-2);
+  line-height: 1.55;
+}
+.kp .story-controls {
+  padding: 0 10px;
+}
+.kp .story-controls .icon-btn {
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--kp-rule);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .kp .modal[open]:has(.story-player) {
+    animation: kp-story-open 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .story-media > img {
+    animation: kp-story-photo 0.55s ease-out;
+  }
+  .story-media-snow > img {
+    animation: kp-story-photo 3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .story-media-snow::after {
+    content: "";
+    position: absolute;
+    inset: -30% 0 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(circle at 35% 30%, #fffd 0 1.4px, transparent 2.5px),
+      radial-gradient(circle at 72% 62%, #fff9 0 1px, transparent 2px);
+    background-size: 101px 103px, 71px 81px;
+    animation: kp-story-snow 3.8s ease-out both;
+  }
+}
+@keyframes kp-story-open {
+  from { opacity: 0.4; transform: translateY(20px) rotate(-1deg); }
+}
+@keyframes kp-story-photo {
+  from { transform: scale(1.09); }
+}
+@keyframes kp-story-snow {
+  from { opacity: 0; transform: translateY(-32px); }
+  24% { opacity: 0.9; }
+  to { opacity: 0; transform: translate(24px, 64px); }
 }
 
 /* Araç ve koltuk: kartın arka yüzü, sağda koltuk planı */
@@ -978,9 +1150,42 @@ html:has(.kp) {
     transform: none;
   }
 }
-.kp-hero .kp-card,
 .kp-detail-card .kp-card {
   animation: kp-settle 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.kp-hero .kp-title h1 {
+  animation: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .kp-hero .kp-main-view {
+    animation: kp-settle 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .kp-hero .kp-main-view > img {
+    animation: kp-photo-settle 1.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .kp-hero .kp-title h1 {
+    animation: kp-unfold-band 0.66s 0.46s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .kp-hero .kp-inset {
+    animation: kp-inset-settle 0.64s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+  .kp-hero .kp-inset:nth-child(1) { animation-delay: 440ms; }
+  .kp-hero .kp-inset:nth-child(2) { animation-delay: 560ms; }
+  .kp-hero .kp-inset:nth-child(3) { animation-delay: 680ms; }
+  .kp-hero .kp-inset:nth-child(4) { animation-delay: 800ms; }
+}
+@keyframes kp-photo-settle {
+  from { transform: scale(1.18); }
+}
+@keyframes kp-unfold-band {
+  from {
+    clip-path: inset(0 38% 0 0);
+    transform: translateX(-22px);
+  }
+  to { clip-path: inset(0); }
+}
+@keyframes kp-inset-settle {
+  from { transform: translateY(15px) scale(0.88) rotate(4deg); }
 }
 .kp-title h1 {
   animation: kp-band 0.8s 0.15s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -1323,6 +1528,114 @@ html:has(.kp) {
 }
 .kp-pm-time {
   font: 600 13px var(--font);
+}
+.kp-hero-postage {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.kp-hero-paper {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, var(--kp-card) 55%, var(--sky));
+  box-shadow: 12px 0 44px rgba(12, 20, 38, 0.28);
+}
+.kp-hero-paper::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 9px;
+  background: repeating-linear-gradient(
+    -35deg, var(--kp-red) 0 12px, var(--kp-card) 12px 20px,
+    var(--kp-ink) 20px 32px, var(--kp-card) 32px 40px
+  );
+}
+.kp-hero-ink {
+  --pm-rot: -13deg;
+  position: absolute;
+  top: clamp(12px, 2vw, 28px);
+  left: clamp(16px, 3vw, 42px);
+  width: clamp(80px, 10vw, 132px);
+  color: #fff;
+  transform: rotate(var(--pm-rot));
+  filter: drop-shadow(0 1px 2px rgba(12, 20, 38, 0.65));
+}
+.kp-home-postmark {
+  position: relative;
+  inset: auto;
+  display: block;
+  width: 100%;
+  height: auto;
+  color: inherit;
+  opacity: 1;
+  transform: none;
+  mix-blend-mode: normal;
+}
+.kp-hero-postal-lines {
+  position: absolute;
+  top: 27%;
+  left: 92%;
+  width: 48%;
+  height: 45%;
+  background: repeating-linear-gradient(
+    to bottom, currentColor 0 1px, transparent 1px 24%
+  );
+  opacity: 0.78;
+  transform: skewY(8deg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .kp-hero-paper {
+    display: block;
+    animation: kp-hero-uncover 1.5s both;
+  }
+  .kp-hero-ink {
+    animation: kp-hero-post 1.5s both;
+  }
+  .kp-hero-postal-lines {
+    animation: kp-hero-postal-lines 1.5s both;
+  }
+}
+@keyframes kp-hero-uncover {
+  0%, 27% {
+    transform: translateX(0);
+    animation-timing-function: cubic-bezier(0.58, 0, 0.22, 1);
+  }
+  73%, 100% {
+    transform: translateX(115%);
+    visibility: hidden;
+  }
+}
+@keyframes kp-hero-post {
+  0%, 7% {
+    top: 45%;
+    left: 47%;
+    opacity: 0;
+    color: var(--kp-red);
+    transform: translate(-50%, -62%) rotate(-28deg) scale(2.4);
+  }
+  24%, 33% {
+    top: 45%;
+    left: 47%;
+    opacity: 1;
+    color: var(--kp-red);
+    transform: translate(-50%, -50%) rotate(-13deg) scale(1.61);
+    animation-timing-function: cubic-bezier(0.5, 0, 0.18, 1);
+  }
+  76% {
+    color: #fff;
+    transform: rotate(var(--pm-rot)) scale(1.05);
+  }
+}
+@keyframes kp-hero-postal-lines {
+  0%, 23% { clip-path: inset(0 100% 0 0); }
+  45%, 100% { clip-path: inset(0); }
+}
+@media (max-width: 700px) {
+  .kp-hero-postal-lines {
+    width: 36%;
+  }
 }
 /* Buluşma kartı ve sık sorulanlar */
 .kp .tour-meeting {
@@ -4277,6 +4590,26 @@ html:has(.kp) {
   opacity: 0;
   filter: saturate(0.4) brightness(1.08);
 }
+.js-motion .kp .tour-card-image > img.kp-develop,
+.js-motion .kp .tour-card-inset img.kp-develop,
+.js-motion .kp .kp-hero .kp-inset img.kp-develop {
+  opacity: 1;
+  filter: none;
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .kp .tour-card-image > img,
+  .js-motion .kp .tour-card-image > img.kp-develop {
+    transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .kp .tour-card:hover .tour-card-image > img {
+    transform: scale(1.055);
+  }
+}
+@media (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce) {
+  .kp .tour-card:hover .tour-card-image > img {
+    transform: none;
+  }
+}
 
 /* --- Tur kartından tur sayfasına: fotoğraf akar --- */
 ::view-transition-group(*) {
@@ -4285,6 +4618,20 @@ html:has(.kp) {
 }
 ::view-transition-old(root) {
   animation-duration: 0.2s;
+}
+::view-transition-group(tour-photo),
+::view-transition-group(tour-title) {
+  animation-duration: 0.56s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+::view-transition-image-pair(tour-photo),
+::view-transition-image-pair(tour-title) {
+  overflow: clip;
+}
+::view-transition-old(tour-photo),
+::view-transition-new(tour-photo) {
+  height: 100%;
+  object-fit: cover;
 }
 /* Geçişle gelindiyse sayfanın kendi giriş hareketleri oynamaz: fotoğraf akışı ve
    sayfanın yumuşak yer değiştirmesi tek hareket olarak kalır. (Eskiden bu kural

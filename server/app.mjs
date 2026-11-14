@@ -40,7 +40,7 @@ import {
   isLateBooking,
   freeCancelDays,
 } from "./legal.mjs";
-import { en } from "./catalog-en.mjs";
+import { currentEn } from "./content.mjs";
 import { attachSocialAuth, cookieValue } from "./social-auth.mjs";
 import { createTurnstile } from "./turnstile.mjs";
 import { fcmHint, webPushEndpointOk } from "./push.mjs";
@@ -961,7 +961,7 @@ export function createApp(
       fleet,
       cancellationPolicy,
       payment: paymentStatus,
-      translations: { en },
+      translations: { en: currentEn() },
       preview: true,
       demo: env.DEMO_MODE === "1",
       turnstileSiteKey: turnstile.siteKey,
@@ -1761,7 +1761,7 @@ export function createApp(
   app.post(
     "/api/admin/content/tours/:id/reset",
     requireAdmin,
-    route(async (q, r) => r.json(await store.content.resetTour(tourParam(q)))),
+    route(async (q, r) => r.json(await store.content.resetTour(tourParam(q), { keepPrice: true }))),
   );
   const https = (host) =>
     z.union([

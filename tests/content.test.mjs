@@ -124,3 +124,43 @@ test("monthly CSV opens in Excel (BOM, semicolons) and neutralises formulas", as
   assert.ok(!/;"=/.test(text));
   assert.equal((await fetch(root + "/api/admin/reports/month.csv?month=2030-13", { headers: { Cookie: owner } })).status, 400);
 });
+
+test("panel reset restores text and photos but keeps the edited tour price", async (t) => {
+  const { call, ops, root } = await fixture(t);
+  const before = (await call("/admin/content/tours/ani-cildir", { cookie: ops })).json;
+  await call("/admin/content/tours/ani-cildir", {
+    body: { ...before.current, name: "Geçici ad", price: before.defaults.price + 50000 },
+    cookie: ops,
+  });
+  const reset = await call("/admin/content/tours/ani-cildir/reset", { body: {}, cookie: ops });
+  assert.equal(reset.status, 200);
+  assert.equal(reset.json.current.name, before.defaults.name);
+  assert.equal(reset.json.current.price, before.defaults.price + 50000, "fiyat sıfırlanmaz");
+  const ani = (await (await fetch(root + "/api/catalog")).json()).tours.find((x) => x.id === "ani-cildir");
+  assert.equal(ani.price, before.defaults.price + 50000);
+  assert.equal(ani.name, before.defaults.name);
+  // Yalnız fiyatı kalan kayıt "düzenlenmiş metin" sayılmaz; ikinci sıfırlama bir şey değiştirmez.
+  assert.equal(reset.json.edited, false);
+});
+
+test("English site drops a stale translation for fields edited in the panel", async (t) => {
+  const { call, ops, root } = await fixture(t);
+  const enTour = async () => (await (await fetch(root + "/api/catalog")).json()).translations.en.tours["ani-cildir"];
+  const enTitle = async () =>
+    (await (await fetch(root + "/en/turlar/ani-cildir", { headers: { Accept: "text/html" } })).text()).match(/<title>([^<]*)/)[1];
+  const before = (await call("/admin/content/tours/ani-cildir", { cookie: ops })).json,
+    original = await enTour();
+  assert.notEqual(original.name, before.current.name, "çeviri varsayılan içerikte İngilizce");
+  await call("/admin/content/tours/ani-cildir", {
+    body: { ...before.current, name: "Ani ve Çıldır Kış Rotası", included: ["Rehber", "Sıcak çay"] },
+    cookie: ops,
+  });
+  const edited = await enTour();
+  assert.equal(edited.name, "Ani ve Çıldır Kış Rotası", "değişen alan eski çeviriyi göstermez");
+  assert.deepEqual(edited.included, ["Rehber", "Sıcak çay"]);
+  assert.equal(edited.subtitle, original.subtitle, "dokunulmayan alan İngilizce kalır");
+  assert.deepEqual(edited.itinerary, original.itinerary);
+  assert.match(await enTitle(), /^Ani ve Çıldır Kış Rotası: /);
+  await call("/admin/content/tours/ani-cildir/reset", { body: {}, cookie: ops });
+  assert.equal((await enTour()).name, original.name, "varsayılana dönünce çeviri geri gelir");
+});

@@ -332,12 +332,18 @@ function DepartureEditor({
   cancel: () => void;
   remove?: () => void;
 }) {
-  const [model, setModel] = useState(
-      d?.vehicle?.modelId || catalog.vehicleModels[0].id,
-    ),
-    [capacity, setCapacity] = useState(
-      d?.vehicle?.passengerSeats || catalog.vehicleModels[0].seats,
-    ),
+  // Yeni sefer, turun "Tur ve araç planı"ndaki araçla açılır; listenin ilk sınıfıyla
+  // (4 kişilik binek) değil. Plan yoksa ilk sınıfa düşülür.
+  const planOf = (id: string) => {
+    const v = catalog.tours.find((t) => t.id === id)?.vehicle,
+      known = catalog.vehicleModels.find((x) => x.id === v?.modelId);
+    return known && v
+      ? { model: known.id, capacity: v.passengerSeats }
+      : { model: catalog.vehicleModels[0].id, capacity: catalog.vehicleModels[0].seats };
+  };
+  const initial = planOf(d?.tour_id || catalog.tours[0].id);
+  const [model, setModel] = useState(d?.vehicle?.modelId || initial.model),
+    [capacity, setCapacity] = useState(d?.vehicle?.passengerSeats || initial.capacity),
     m = catalog.vehicleModels.find((v) => v.id === model)!,
     [repeat, setRepeat] = useState(false),
     [fleet, setFleet] = useState<FleetVehicle[]>([]),
@@ -368,7 +374,15 @@ function DepartureEditor({
           <select
             name="tourId"
             value={tourId}
-            onChange={(e) => setTourId(e.target.value)}
+            onChange={(e) => {
+              setTourId(e.target.value);
+              // Yeni seferde tur değişince araç da o turun planına geçer (filodan araç seçilmediyse).
+              if (!d && !unitId) {
+                const plan = planOf(e.target.value);
+                setModel(plan.model);
+                setCapacity(plan.capacity);
+              }
+            }}
           >
             {catalog.tours.map((t) => (
               <option

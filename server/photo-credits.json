@@ -1,5 +1,202 @@
 [
   {
+    "id": "mardin-kartpostal",
+    "path": "/images/tours/mardin-kartpostal.webp",
+    "title": "Old Minarets of Mardin",
+    "author": "Mukaddes30",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Old_Minarets_of_Mardin.jpg",
+    "changes": "Yapay zekâ destekli renk ve ışık düzenlemesi, WebP dönüşümü ve ekrana göre kırpma. / AI-assisted color and light grading, WebP conversion and responsive cropping."
+  },
+  {
+    "id": "halfeti-kartpostal",
+    "path": "/images/tours/halfeti-kartpostal.webp",
+    "title": "Halfeti on the Euphrates",
+    "author": "Bernard Gagnon",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Halfeti_on_the_Euphrates.jpg",
+    "changes": "Yapay zekâ destekli renk ve ışık düzenlemesi, WebP dönüşümü ve ekrana göre kırpma. / AI-assisted color and light grading, WebP conversion and responsive cropping."
+  },
+  {
+    "id": "nahcivan-kartpostal",
+    "path": "/images/tours/nahcivan-kartpostal.webp",
+    "title": "Momina Khatun Tomb",
+    "author": "Urek Meniashvili",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Momina_Khatun_Tomb.jpg",
+    "changes": "Yapay zekâ destekli renk ve ışık düzenlemesi, WebP dönüşümü ve ekrana göre kırpma. / AI-assisted color and light grading, WebP conversion and responsive cropping."
+  },
+  {
+    "id": "kemaliye-kartpostal",
+    "path": "/images/tours/kemaliye-kartpostal.webp",
+    "title": "Kemaliye Taş Yolu and Karanlik Kanyon",
+    "author": "Bodrumlu60",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Kemaliye_Ta%C5%9F_Yolu_and_Karanlik_Kanyon.jpg",
+    "changes": "Yapay zekâ destekli renk ve ışık düzenlemesi, WebP dönüşümü ve ekrana göre kırpma. / AI-assisted color and light grading, WebP conversion and responsive cropping."
+  },
+  {
+    "id": "uzungol-kartpostal",
+    "path": "/images/tours/uzungol-kartpostal.webp",
+    "title": "Uzungöl lake and town",
+    "author": "İhsan Deniz Kılıçoğlu",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Uzung%C3%B6l_lake_and_town.jpg",
+    "changes": "Yapay zekâ destekli renk ve ışık düzenlemesi, WebP dönüşümü ve ekrana göre kırpma. / AI-assisted color and light grading, WebP conversion and responsive cropping."
+  },
+  {
+    "id": "narman-kartpostal",
+    "path": "/images/tours/narman-kartpostal.webp",
+    "title": "Narman Erzurum",
+    "author": "Aykun Oymakas",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Narman_Erzurum.jpg",
+    "changes": "Yapay zekâ destekli renk ve ışık düzenlemesi, WebP dönüşümü ve ekrana göre kırpma. / AI-assisted color and light grading, WebP conversion and responsive cropping."
+  },
+  {
+    "id": "savsat-karagol-kartpostal",
+    "path": "/images/tours/savsat-karagol-kartpostal.webp",
+    "title": "Karagöl in Şavşat 10",
+    "author": "BSRF",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Karag%C3%B6l_in_%C5%9Eav%C5%9Fat_10.jpg",
+    "changes": "Yapay zekâ destekli renk ve ışık düzenlemesi, WebP dönüşümü ve ekrana göre kırpma. / AI-assisted color and light grading, WebP conversion and responsive cropping."
+  },
+  {
+    "id": "baku-kartpostal",
+    "path": "/images/tours/baku-kartpostal.webp",
+    "title": "View From Maidens Tower (221090097)",
+    "author": "Francisco Anzola",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:View_From_Maidens_Tower_(221090097).jpeg",
+    "changes": "Yapay zekâ destekli renk ve ışık düzenlemesi, WebP dönüşümü ve ekrana göre kırpma. / AI-assisted color and light grading, WebP conversion and responsive cropping."
+  },
+  {
+    "id": "sarikamis-kar",
+    "path": "/images/tours/sarikamis-kar.webp",
+    "title": "Allahuekber mountain",
+    "author": "Nurseva",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "source": "https://commons.wikimedia.org/wiki/File:Allahuekber_mountain.jpg",
+    "changes": "Yapay zekâ destekli renk ve ışık düzenlemesi, WebP dönüşümü ve ekrana göre kırpma."
+  },
+  {
+    "id": "batum-sahil",
+    "path": "/images/tours/batum-sahil.webp",
+    "title": "Batumi Skyline (31)",
+    "author": "herr.eichhorn",
+    "license": "CC BY-SA 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0/",
+    "source": "https://commons.wikimedia.org/wiki/File:Batumi_Skyline_(31).jpg",
+    "changes": "Yapay zekâ destekli renk ve ışık düzenlemesi, WebP dönüşümü ve ekrana göre kırpma."
+  },
+  {
+    "id": "batum-bulvar",
+    "path": "/images/tours/batum-bulvar.webp",
+    "title": "Batumi boulevard",
+    "author": "Nika Composer",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+    "source": "https://commons.wikimedia.org/wiki/File:Batumi_boulevard.jpg",
+    "changes": "Yapay zekâ destekli renk ve ışık düzenlemesi, WebP dönüşümü ve ekrana göre kırpma."
+  },
+  {
+    "id": "van-akdamar",
+    "path": "/images/tours/van-akdamar.webp",
+    "title": "Akhtamar Island on Lake Van with the Armenian Cathedral of the Holy Cross",
+    "author": "gozturk",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "source": "https://commons.wikimedia.org/wiki/File:Akhtamar_Island_on_Lake_Van_with_the_Armenian_Cathedral_of_the_Holy_Cross.jpg",
+    "changes": "Yapay zekâ destekli renk ve ışık düzenlemesi, WebP dönüşümü ve ekrana göre kırpma."
+  },
+  {
+    "id": "muradiye-selalesi",
+    "path": "/images/tours/muradiye-selalesi.webp",
+    "title": "Muradiye-Waterfall 02",
+    "author": "TobiasGr",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+    "source": "https://commons.wikimedia.org/wiki/File:Muradiye-Waterfall_02.JPG",
+    "changes": "Yapay zekâ destekli renk ve ışık düzenlemesi, WebP dönüşümü ve ekrana göre kırpma."
+  },
+  {
+    "id": "ishak-pasa-sarayi",
+    "path": "/images/tours/ishak-pasa-sarayi.webp",
+    "title": "Ishak Pasha Palace - panoramio",
+    "author": "Raki_Man",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+    "source": "https://commons.wikimedia.org/wiki/File:Ishak_Pasha_Palace_-_panoramio.jpg",
+    "changes": "Yapay zekâ destekli renk ve ışık düzenlemesi, WebP dönüşümü ve ekrana göre kırpma."
+  },
+  {
+    "id": "nemrut-krater",
+    "path": "/images/tours/nemrut-krater.webp",
+    "title": "Lake Nemrut, blue and green lakes",
+    "author": "Gogo2020g",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "source": "https://commons.wikimedia.org/wiki/File:Lake_Nemrut%2C_blue_and_green_lakes.jpg",
+    "changes": "Yapay zekâ destekli renk ve ışık düzenlemesi, WebP dönüşümü ve ekrana göre kırpma."
+  },
+  {
+    "id": "ahlat-selcuklu",
+    "path": "/images/tours/ahlat-selcuklu.webp",
+    "title": "Ancient tombstones in the historical cemetery of Selcuk Turks from 12th century, in the town of Ahlat, Turkey",
+    "author": "Mehmetkrckrc",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "source": "https://commons.wikimedia.org/wiki/File:Ancient_tombstones_in_the_historical_cemetery_of_Selcuk_Turks_from_12th_century%2C_in_the_town_of_Ahlat%2C_Turkey.jpg",
+    "changes": "Yapay zekâ destekli renk ve ışık düzenlemesi, WebP dönüşümü ve ekrana göre kırpma."
+  },
+  {
+    "id": "tiflis-eski-sehir",
+    "path": "/images/tours/tiflis-eski-sehir.webp",
+    "title": "Old Tbilisi town in Tbilisi, Georgia",
+    "author": "GeoO",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "source": "https://commons.wikimedia.org/wiki/File:Old_Tbilisi_town_in_Tbilisi%2C_Georgia.jpg",
+    "changes": "Yapay zekâ destekli renk ve ışık düzenlemesi, WebP dönüşümü ve ekrana göre kırpma."
+  },
+  {
+    "id": "sarikamis-kayak-temsili",
+    "path": "/images/tours/sarikamis-kayak-temsili.webp",
+    "title": "Sarıçamlar arasında kayak",
+    "author": "Rota Kars · Yapay zekâyla üretilen temsili görsel",
+    "changes": "Kayak deneyimini canlandırır. Belirli bir pistin fotoğrafı değildir."
+  },
+  {
+    "id": "ani-aziz-gregor",
+    "path": "/images/tours/ani-aziz-gregor.webp",
+    "title": "20110419 Saint Gregory (Tigran Honents) Ani Turkey",
+    "author": "Ggia",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+    "source": "https://commons.wikimedia.org/wiki/File:20110419_Saint_Gregory_(Tigran_Honents)_Ani_Turkey.jpg",
+    "changes": "Yapay zekâyla renk ve ışık düzenlemesi, WebP dönüşümü ve ekrana göre kırpma. / AI-assisted color and light grading, WebP conversion and responsive cropping."
+  },
+  {
+    "id": "cildir-atli-kizak",
+    "path": "/images/tours/cildir-atli-kizak.webp",
+    "title": "Atlı Kızak in Çıldır Lake",
+    "author": "Ringofener",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "source": "https://commons.wikimedia.org/wiki/File:Atl%C4%B1_K%C4%B1zak_in_%C3%87%C4%B1ld%C4%B1r_Lake.jpg",
+    "changes": "Yapay zekâyla renk ve ışık düzenlemesi, WebP dönüşümü ve ekrana göre kırpma. / AI-assisted color and light grading, WebP conversion and responsive cropping."
+  },
+  {
     "id": "ani",
     "path": "/images/tours/ani.webp",
     "title": "Landscape with Cathedral of Ani",

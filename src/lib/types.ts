@@ -41,7 +41,13 @@ export type Story = {
   title: string;
   image: string;
   location: string;
-  scenes: { title: string; text: string }[];
+  scenes: {
+    title: string;
+    text: string;
+    image?: string;
+    video?: string;
+    motion?: "snow";
+  }[];
 };
 export type VehicleModel = {
   id: string;
@@ -121,9 +127,9 @@ export type Catalog = {
     path: string;
     title: string;
     author: string;
-    license: string;
-    licenseUrl: string;
-    source: string;
+    license?: string;
+    licenseUrl?: string;
+    source?: string;
     changes: string;
   }[];
   // İngilizce sürüm metinleri (server/catalog-en.mjs).
