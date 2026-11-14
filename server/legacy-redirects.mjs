@@ -14,6 +14,13 @@ const TOURS = {
   "gunubirlik-van-turu": "/turlar/van-gunubirlik",
   "konaklamali-van-turu-tuz-magarasi-ve-ishak-pasa-sarayi-dahil": "/turlar/van",
   "van-havzasi-turu": "/turlar/van-havzasi",
+  "butik-mardin-turu-diyarbakir-mardin-midyat": "/turlar/butik-mardin",
+  "guneydogu-turu": "/turlar/guneydogu",
+  "nahcivan-turu": "/turlar/nahcivan",
+  "konaklamali-karadeniz-turu": "/turlar/karadeniz",
+  "narman-peri-bacalari-tortum-selalesi-turu": "/turlar/narman-tortum",
+  "savsat-karagol-turu": "/turlar/savsat-karagol",
+  "buyuk-azerbaycan-turu-nahcivan-baku": "/turlar/buyuk-azerbaycan",
 };
 
 const PAGES = {

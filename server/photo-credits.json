@@ -88,5 +88,295 @@
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
     "source": "https://commons.wikimedia.org/wiki/File:Cildir_Lake-2.jpg",
     "changes": "Resized and converted to WebP; displayed cropped."
+  },
+  {
+    "id": "mardin",
+    "path": "/images/tours/mardin.webp",
+    "title": "Old Minarets of Mardin",
+    "author": "Mukaddes30",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Old_Minarets_of_Mardin.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "deyrulzafaran",
+    "path": "/images/tours/deyrulzafaran.webp",
+    "title": "Mor Hananyo Monastery 12",
+    "author": "Izabela Miszczak",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Mor_Hananyo_Monastery_12.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "midyat",
+    "path": "/images/tours/midyat.webp",
+    "title": "Tarihi Midyat Evleri",
+    "author": "Hamdigumus",
+    "license": "CC0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "source": "https://commons.wikimedia.org/wiki/File:Tarihi_Midyat_Evleri.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "ongozlu",
+    "path": "/images/tours/ongozlu.webp",
+    "title": "Dicle Bridge 2016",
+    "author": "Hedda Gabler",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Dicle_Bridge_2016.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "halfeti",
+    "path": "/images/tours/halfeti.webp",
+    "title": "Halfeti on the Euphrates",
+    "author": "Bernard Gagnon",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Halfeti_on_the_Euphrates.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "balikligol",
+    "path": "/images/tours/balikligol.webp",
+    "title": "Balıklıgöl, Urfa 2015",
+    "author": "Hamdigumus",
+    "license": "CC0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "source": "https://commons.wikimedia.org/wiki/File:Bal%C4%B1kl%C4%B1g%C3%B6l,_Urfa_2015.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "gobeklitepe",
+    "path": "/images/tours/gobeklitepe.webp",
+    "title": "Göbekli Tepe, Urfa",
+    "author": "Teomancimit",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:G%C3%B6bekli_Tepe,_Urfa.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "zeugma",
+    "path": "/images/tours/zeugma.webp",
+    "title": "Gaziantep Zeugma Museum Gypsy mosaic 7066",
+    "author": "Dosseman",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Gaziantep_Zeugma_Museum_Gypsy_mosaic_7066.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "nahcivan",
+    "path": "/images/tours/nahcivan.webp",
+    "title": "Momina Khatun Tomb",
+    "author": "Urek Meniashvili",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Momina_Khatun_Tomb.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "nuh-turbesi",
+    "path": "/images/tours/nuh-turbesi.webp",
+    "title": "Tomb of Noah, 2011",
+    "author": "Toghrul Rahimli",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Tomb_of_Noah,_2011.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "han-sarayi",
+    "path": "/images/tours/han-sarayi.webp",
+    "title": "Palace of Nakhchivan Khans",
+    "author": "Toghrul Rahimli",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Palace_of_Nakhchivan_Khans.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "kemaliye",
+    "path": "/images/tours/kemaliye.webp",
+    "title": "Kemaliye Taş Yolu and Karanlik Kanyon",
+    "author": "Bodrumlu60",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Kemaliye_Ta%C5%9F_Yolu_and_Karanlik_Kanyon.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "cifte-minareli",
+    "path": "/images/tours/cifte-minareli.webp",
+    "title": "Sivas Çifte Minareli Medrese",
+    "author": "Maurice Flesier",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Sivas_%C3%87ifte_Minareli_Medrese.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "divrigi",
+    "path": "/images/tours/divrigi.webp",
+    "title": "Divrigi complex DSCF3028",
+    "author": "R Prazeres",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Divrigi_complex_DSCF3028.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "gok-medrese",
+    "path": "/images/tours/gok-medrese.webp",
+    "title": "Sivas Gök Medrese gate in 2004 2302",
+    "author": "Dosseman",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Sivas_G%C3%B6k_Medrese_gate_in_2004_2302.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "uzungol",
+    "path": "/images/tours/uzungol.webp",
+    "title": "Uzungöl lake and town",
+    "author": "İhsan Deniz Kılıçoğlu",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Uzung%C3%B6l_lake_and_town.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "firtina",
+    "path": "/images/tours/firtina.webp",
+    "title": "CamliHemsinRifatSonmez",
+    "author": "RifatSonmez",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:CamliHemsinRifatSonmez.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "ayder",
+    "path": "/images/tours/ayder.webp",
+    "title": "Rize, Ayder Yaylası",
+    "author": "Phoenix2351",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Rize,_Ayder_Yaylas%C4%B1.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "rize-cay",
+    "path": "/images/tours/rize-cay.webp",
+    "title": "Tea Rize",
+    "author": "sly06",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Tea_Rize.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "narman",
+    "path": "/images/tours/narman.webp",
+    "title": "Narman Erzurum",
+    "author": "Aykun Oymakas",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Narman_Erzurum.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "tortum",
+    "path": "/images/tours/tortum.webp",
+    "title": "Tortum Waterfalls",
+    "author": "Zeynel Cebeci",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Tortum_Waterfalls.JPG",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "tortum-golu",
+    "path": "/images/tours/tortum-golu.webp",
+    "title": "Tortum gölü 1",
+    "author": "Fatih Demir",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Tortum_g%C3%B6l%C3%BC_1.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "oltu-kalesi",
+    "path": "/images/tours/oltu-kalesi.webp",
+    "title": "Oltu Kalesi, Oltu Castle, Olti Castle",
+    "author": "BySterio",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Oltu_Kalesi,_Oltu_Castle,_Olti_Castle.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "savsat-karagol",
+    "path": "/images/tours/savsat-karagol.webp",
+    "title": "Karagöl in Şavşat 10",
+    "author": "BSRF",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Karag%C3%B6l_in_%C5%9Eav%C5%9Fat_10.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "savsat-yavuzkoy",
+    "path": "/images/tours/savsat-yavuzkoy.webp",
+    "title": "Şavşat - Yavuzköy ve Düzenli Köyü",
+    "author": "Memetali-net",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:%C5%9Eav%C5%9Fat_-_Yavuzk%C3%B6y_ve_D%C3%BCzenli_K%C3%B6y%C3%BC.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "savsat-evleri",
+    "path": "/images/tours/savsat-evleri.webp",
+    "title": "Şavşat Evleri - Artvin",
+    "author": "Tembelpanda",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:%C5%9Eav%C5%9Fat_Evleri_-_Artvin.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "baku",
+    "path": "/images/tours/baku.webp",
+    "title": "View From Maidens Tower (221090097)",
+    "author": "Francisco Anzola",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:View_From_Maidens_Tower_(221090097).jpeg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "kiz-kalesi",
+    "path": "/images/tours/kiz-kalesi.webp",
+    "title": "Torre de la Doncella, Baku, Azerbaiyán, 2016-09-26, DD 212-214 HDR",
+    "author": "Diego Delso",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Torre_de_la_Doncella,_Baku,_Azerbaiy%C3%A1n,_2016-09-26,_DD_212-214_HDR.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "gobustan",
+    "path": "/images/tours/gobustan.webp",
+    "title": "Gobustan mud volcanoes 08",
+    "author": "Bernard Gagnon",
+    "license": "CC BY 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Gobustan_mud_volcanoes_08.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped to card."
   }
 ]

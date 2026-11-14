@@ -55,6 +55,16 @@ function mentions(text) {
   if (has("sarikamis") || has("kayak") || w.includes("ski"))
     ids.push("sarikamis");
   if (has("batum") || has("gurcistan")) ids.push("batum");
+  if (has("guneydogu") || has("urfa") || has("sanliurfa") || has("antep") || has("gaziantep") || has("gobekli") || has("halfeti"))
+    ids.push("guneydogu");
+  else if (has("mardin") || has("midyat") || has("diyarbakir")) ids.push("butik-mardin");
+  if (has("baku") || has("azerbaycan")) ids.push("buyuk-azerbaycan");
+  else if (has("nahcivan")) ids.push("nahcivan");
+  if (has("sivas") || has("divrigi") || has("kemaliye")) ids.push("sivas-kemaliye");
+  if (has("karadeniz") || has("trabzon") || has("uzungol") || has("ayder") || has("rize"))
+    ids.push("karadeniz");
+  if (has("narman") || has("tortum") || has("oltu") || has("peribaca")) ids.push("narman-tortum");
+  if (has("savsat") || has("karagol")) ids.push("savsat-karagol");
   if (has("havza") || has("nemrut") || has("ahlat") || has("tatvan"))
     ids.push("van-havzasi");
   else if (w.includes("van") || has("akdamar") || has("ishak")) {
@@ -114,7 +124,7 @@ export const knowledge = [
   `Hizmetler: ${services.map((s) => s.title + ": " + s.text).join(" | ")}`,
   ...catalogTours.map(
     (t) =>
-      `${t.name}: ${tl(t.price)} örnek kişi başı, ${t.duration}, ${t.location}. Dahil: ${t.included.join(", ")}. Ekstra: ${t.excluded.join(", ")}. ${t.summary} ${t.note}`,
+      `${t.name}: ${t.price > 0 ? `${tl(t.price)} örnek kişi başı` : "fiyat acenteden sorulur"}, ${t.duration}, ${t.location}. Dahil: ${t.included.join(", ")}. Ekstra: ${t.excluded.join(", ")}. ${t.summary} ${t.note}`,
   ),
 ].join("\n");
 export function createChatService(
@@ -401,6 +411,11 @@ export function createChatService(
         "kisi",
       )
     ) {
+      if (t && !(t.price > 0))
+        return reply(
+          `${t.name} için fiyat tur tarihi kesinleşince duyurulur. Güncel fiyatı acentemizden öğrenebilir, tur sayfasından ücretsiz ön kayıt bırakabilirsiniz.`,
+          { handoff: true, actions: [link("Tur detayları", `/turlar/${t.id}`), link("İletişim", "/iletisim")] },
+        );
       if (t) {
         const total = t.price * count;
         return reply(

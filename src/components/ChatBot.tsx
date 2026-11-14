@@ -374,8 +374,14 @@ export function ChatBot({ whatsapp }: { whatsapp: string }) {
                           <strong>{c.name}</strong>
                           <small>{c.duration}</small>
                           <b>
-                            {currency(c.price)}
-                            <em> kişi başı</em>
+                            {c.price > 0 ? (
+                              <>
+                                {currency(c.price)}
+                                <em> kişi başı</em>
+                              </>
+                            ) : (
+                              <em>Fiyat için arayın</em>
+                            )}
                           </b>
                         </span>
                         <ArrowUpRight size={14} />

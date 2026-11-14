@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { Link, localeOf, useLang } from "../lib/i18n";
 import { useOpenTour } from "../lib/tour-transition";
 import { responsive } from "../lib/images";
-import { currency, type Tour } from "../lib/types";
+import { currency, hasPrice, type Tour } from "../lib/types";
 import { placeName } from "../lib/place";
 import { develop } from "../lib/reveal";
 // Tek görüntülü hatıra kartı: büyük manzara, köşede ikinci görüntü, kırmızı yer şeridi.
@@ -76,10 +76,16 @@ export function TourCard({ tour }: { tour: Tour }) {
             </p>
           )}
         </div>
-        <strong>
-          {currency(tour.fromPrice ?? tour.price)}
-          <small>{tour.mode === "demand" ? t("tahmini kişi başı") : t("kişi başı")}</small>
-        </strong>
+        {hasPrice(tour.fromPrice ?? tour.price) ? (
+          <strong>
+            {currency(tour.fromPrice ?? tour.price)}
+            <small>{tour.mode === "demand" ? t("tahmini kişi başı") : t("kişi başı")}</small>
+          </strong>
+        ) : (
+          <strong className="tour-card-ask">
+            <small>{t("Fiyat için arayın")}</small>
+          </strong>
+        )}
       </div>
     </Link>
   );

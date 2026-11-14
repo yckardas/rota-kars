@@ -589,6 +589,12 @@ html:has(.kp) {
   color: var(--kp-ink-2);
   margin-top: 4px;
 }
+/* Fiyatı henüz girilmemiş tur: tutar yerine kısa bir çağrı. */
+.kp .tour-card-info > strong.tour-card-ask small {
+  margin-top: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
 
 /* ---------- Ana sayfa bölümleri ---------- */
 .kp .feature-strip {
@@ -1104,6 +1110,11 @@ html:has(.kp) {
   font-weight: 400;
   font-size: 40px;
   color: var(--kp-gold);
+}
+.kp .booking-price strong.booking-price-ask {
+  display: block;
+  font-size: 26px;
+  line-height: 1.15;
 }
 .kp .booking-price > span,
 .kp .aside-benefits > span,

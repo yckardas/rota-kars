@@ -36,7 +36,8 @@ const lower = (s) => s.toLocaleLowerCase("tr-TR");
 export function tourTitle(t) {
   const name = /\btur/i.test(lower(t.name)) ? t.name : `${t.name} turu`;
   const duration = lower(t.name).includes(lower(t.duration)) ? "" : ` · ${t.duration}`;
-  return `${name}${duration}, ${tl(t.price)} | ${SITE}`;
+  // Fiyatı henüz girilmemiş turda (price 0) başlığa tutar yazılmaz.
+  return `${name}${duration}${t.price > 0 ? `, ${tl(t.price)}` : ""} | ${SITE}`;
 }
 export const DEFAULT_SITE_URL = "https://rotakarsturizm.com";
 // Bağlantılarda kullanılan site adresi. Üretimde Host başlığına asla güvenilmez
@@ -127,7 +128,7 @@ const tourLd = (base, t) => ({
         })),
       }
     : undefined,
-  offers: {
+  offers: t.price > 0 ? {
     "@type": "Offer",
     price: (t.price / 100).toFixed(2),
     priceCurrency: "TRY",
@@ -136,7 +137,7 @@ const tourLd = (base, t) => ({
       ? "https://schema.org/PreOrder"
       : "https://schema.org/InStock",
     seller: { "@id": base + "/#agency" },
-  },
+  } : undefined,
 });
 
 const STATIC = {
@@ -353,7 +354,7 @@ export function pageMeta(path, base) {
       type: "product",
       title: tourTitle(tour),
       description: clip(
-        `${tour.name} (${tour.duration}, ${tour.location}): ${tour.summary} Kişi başı ${tl(tour.price)}'den başlayan fiyatlarla.`,
+        `${tour.name} (${tour.duration}, ${tour.location}): ${tour.summary}${tour.price > 0 ? ` Kişi başı ${tl(tour.price)}'den başlayan fiyatlarla.` : ""}`,
       ),
       image: tour.image,
       lcp: tour.image,

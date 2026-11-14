@@ -13,7 +13,12 @@ test("old tour URLs map to the matching new tour, others to the tour list", () =
   assert.equal(legacyTarget("/tur/gunubirlik-batum-turu/"), "/turlar/batum");
   assert.equal(legacyTarget("/tur/gunubirlik-ani-antik-kenti-cildir-golu-ve-kars-sehir-turu"), "/turlar/ani-cildir");
   assert.equal(legacyTarget("/tur/konaklamali-van-turu-tuz-magarasi-ve-ishak-pasa-sarayi-dahil/"), "/turlar/van");
-  assert.equal(legacyTarget("/tur/nahcivan-turu/"), "/turlar");
+  // Kasım 2026'da kataloğa eklenen turlar kendi sayfalarına gider.
+  assert.equal(legacyTarget("/tur/nahcivan-turu/"), "/turlar/nahcivan");
+  assert.equal(legacyTarget("/tur/butik-mardin-turu-diyarbakir-mardin-midyat"), "/turlar/butik-mardin");
+  assert.equal(legacyTarget("/tur/savsat-karagol-turu"), "/turlar/savsat-karagol");
+  // Katalogda birebir karşılığı olmayan tur genel listeye gider.
+  assert.equal(legacyTarget("/tur/guneydogu-turu-3-gunluk/"), "/turlar");
   assert.equal(legacyTarget("/tur/konaklamali-batum-turu/"), "/turlar");
 });
 

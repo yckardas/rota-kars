@@ -11,7 +11,7 @@ import {
   Check,
 } from "lucide-react";
 import type { Catalog, ReviewsResponse, Story } from "../lib/types";
-import { currency } from "../lib/types";
+import { currency, hasPrice } from "../lib/types";
 import { useClearOfLaunchers } from "../lib/launchers";
 import { api } from "../lib/api";
 import { today } from "../lib/types";
@@ -126,9 +126,11 @@ export function Home({ catalog }: { catalog: Catalog }) {
                   <span className="kp-inset-label">
                     {placeName(tour)}
                     <small>
-                      {tour.salesOpen
-                        ? t("{price}’den", { price: currency(tour.fromPrice ?? tour.price) })
-                        : t("Şu an satışa kapalı")}
+                      {!tour.salesOpen
+                        ? t("Şu an satışa kapalı")
+                        : hasPrice(tour.fromPrice ?? tour.price)
+                          ? t("{price}’den", { price: currency(tour.fromPrice ?? tour.price) })
+                          : t("Fiyat için arayın")}
                     </small>
                   </span>
                   <span className="kp-inset-check" aria-hidden="true">
@@ -222,7 +224,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
           </Link>
         </div>
         <div className="tour-filters">
-          {["Tüm rotalar", "Kültür", "Kış", "Yurt dışı", "Konaklamalı"].map(
+          {["Tüm rotalar", "Kültür", "Doğa", "Kış", "Yurt dışı", "Konaklamalı"].map(
             (f) => (
               <button
                 key={f}
