@@ -4179,8 +4179,11 @@ html:has(.kp) {
 ::view-transition-old(root) {
   animation-duration: 0.2s;
 }
-:root:active-view-transition .kp-detail-card .kp-card,
-:root:active-view-transition .kp-detail-card .kp-title {
+/* Geçişle gelindiyse sayfanın kendi giriş hareketleri oynamaz: fotoğraf akışı ve
+   sayfanın yumuşak yer değiştirmesi tek hareket olarak kalır. (Eskiden bu kural
+   :active-view-transition'a bağlıydı; geçiş bitince animasyonlar baştan oynuyordu.) */
+.kp-detail-card.is-vt-entry .kp-card,
+.kp-detail-card.is-vt-entry .kp-title h1 {
   animation: none;
 }
 .kp .kp-main-view img.kp-swap {

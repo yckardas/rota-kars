@@ -5,6 +5,7 @@ import { useClearOfLaunchers } from "../lib/launchers";
 import { responsive } from "../lib/images";
 import { useLocation, useParams, useSearchParams } from "react-router-dom";
 import { Link, localPath, useLang } from "../lib/i18n";
+import { TourLink } from "../lib/tour-transition";
 import {
   ArrowLeft,
   ArrowRight,
@@ -664,9 +665,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
       : t("Koltuk {n}", { n: selected.join(", ") });
   return (
     <div className="container booking-page">
-      <Link className="back-link" to={"/turlar/" + tour.id}>
+      <TourLink className="back-link" tourId={tour.id}>
         <ArrowLeft size={15} /> {t("Tur detayına dön")}
-      </Link>
+      </TourLink>
       <div className="booking-page-title">
         <div>
           <h1>{t("Yolculuğunuzu planlayın.")}</h1>
