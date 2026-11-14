@@ -1,6 +1,7 @@
 // Sunucu tarafı SEO: her sayfa için başlık, açıklama, canonical, Open Graph,
 // JSON-LD, robots.txt ve sitemap.xml. SPA olduğu için arama motorları ilk
 // HTML'de doğru meta etiketlerini görsün diye şablona enjekte edilir.
+import { publishedArticle, publishedArticles } from "./articles.mjs";
 import { business, tours, services } from "./catalog.mjs";
 import { en } from "./catalog-en.mjs";
 import { legacyRedirects } from "./legacy-redirects.mjs";
@@ -177,6 +178,12 @@ const STATIC = {
       "Aydınlatma metni, çerez politikası, iptal ve iade koşulları, ön bilgilendirme formu ve tur hizmet sözleşmesi.",
     crumb: "Bilgilendirme",
   },
+  "/rehber": {
+    title: `Kars rehberi: aktiviteler, gezi notları ve öneriler | ${SITE}`,
+    description:
+      "Çıldır Gölü'nde atlı kızak, Sarıkamış'ta kar motoru, Ani'nin tarihi ve Kars kışına hazırlık: Rota Kars ekibinden gezi rehberleri ve öneriler.",
+    crumb: "Rehber",
+  },
   "/gorsel-kaynaklari": {
     title: `Görsel kaynakları | ${SITE}`,
     description:
@@ -329,6 +336,39 @@ export function pageMeta(path, base) {
       graph,
     };
   }
+  const articleMatch = p.match(/^\/rehber\/([a-z0-9-]+)$/);
+  const article = articleMatch && publishedArticle(articleMatch[1]);
+  if (article) {
+    graph.push(
+      {
+        "@type": "BlogPosting",
+        headline: article.title,
+        description: article.summary,
+        image: base + article.cover,
+        url: base + p,
+        inLanguage: "tr-TR",
+        datePublished: new Date(article.publishedAt).toISOString(),
+        dateModified: new Date(article.updatedAt).toISOString(),
+        author: { "@id": base + "/#agency" },
+        publisher: { "@id": base + "/#agency" },
+      },
+      crumbs(base, [
+        { name: "Rehber", path: "/rehber" },
+        { name: article.title, path: p },
+      ]),
+    );
+    return {
+      status: 200,
+      index: true,
+      path: p,
+      type: "article",
+      title: `${article.title} | ${SITE}`,
+      description: clip(article.summary),
+      image: article.cover,
+      lcp: article.cover,
+      graph,
+    };
+  }
   const serviceMatch = p.match(/^\/hizmetler\/([^/]+)$/);
   const service = serviceMatch && services.find((s) => s.id === serviceMatch[1]);
   if (service) {
@@ -475,6 +515,7 @@ export function sitemapXml(base) {
     ...Object.keys(STATIC),
     ...tours.map((t) => `/turlar/${t.id}`),
     ...services.map((s) => `/hizmetler/${s.id}`),
+    ...publishedArticles().map((a) => `/rehber/${a.slug}`),
     // İngilizce sürüm: çevrilmiş sayfalar.
     ...Object.keys(EN_STATIC).map((p) => (p === "/" ? "/en" : "/en" + p)),
     ...tours.map((t) => `/en/turlar/${t.id}`),

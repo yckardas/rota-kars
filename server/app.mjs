@@ -50,6 +50,7 @@ import { BUDGETS, ROOM_TYPES } from "./requests.mjs";
 import { createReviewsService } from "./reviews.mjs";
 import { createPayments, depositFor, VAKIFBANK_RETURN_PATH } from "./payments.mjs";
 import { attachBankSimulator } from "./bank-simulator.mjs";
+import { ARTICLE_CATEGORIES } from "./articles.mjs";
 import { priceTransfer, transferChoiceSchema, transferConfigSchema } from "./transfer.mjs";
 const clean = z.string().trim().min(2).max(100),
   email = z.string().trim().email().max(254),
@@ -1317,6 +1318,19 @@ export function createApp(
     }),
   );
   app.get("/api/hotels", async (_q, r) => r.json(await store.hotels()));
+  // Rehber yazıları (yalnız yayındakiler). ?kategori= ve ?tur= ile süzülür.
+  app.get(
+    "/api/articles",
+    route(async (q, r) => {
+      const category = typeof q.query.kategori === "string" ? q.query.kategori : undefined,
+        tourId = typeof q.query.tur === "string" ? q.query.tur : undefined;
+      r.json(await store.articles.listPublic({ category, tourId }));
+    }),
+  );
+  app.get(
+    "/api/articles/:slug",
+    route(async (q, r) => r.json(await store.articles.getPublic(z.string().max(100).parse(q.params.slug)))),
+  );
   // Bekleme listesi (dolu sefer) ve talep toplama modundaki tura ücretsiz ön kayıt.
   app.post(
     "/api/interest",
@@ -1828,6 +1842,47 @@ export function createApp(
         })
         .parse(q.body);
       r.json(await store.upsertHotel(hotel));
+    }),
+  );
+  app.get(
+    "/api/admin/articles",
+    requireAdmin,
+    route(async (_q, r) => r.json(await store.articles.adminList())),
+  );
+  // Yazı kaydı: yeni ya da düzenleme (id ile). Gövde Markdown alt kümesidir.
+  const articleImage =
+    /^(\/images\/[\w-]+(?:\/[\w-]+)*\.(?:webp|jpe?g|png)|\/media\/[0-9a-f-]{36}\.(?:jpg|png|webp|avif))$/;
+  app.post(
+    "/api/admin/articles",
+    requireAdmin,
+    route(async (q, r) => {
+      const input = z
+        .object({
+          id: z.string().uuid().optional(),
+          slug: z
+            .string()
+            .trim()
+            .max(80)
+            .regex(/^([a-z0-9]+(?:-[a-z0-9]+)*)?$/, "Adres yalnız küçük harf, rakam ve tire içerebilir.")
+            .default(""),
+          title: z.string().trim().min(5).max(140),
+          summary: z.string().trim().min(20).max(320),
+          category: z.enum(Object.keys(ARTICLE_CATEGORIES)),
+          cover: z.string().regex(articleImage, "Kapak görseli sitedeki ya da yüklenen bir görsel olmalı."),
+          body: z.string().trim().min(50).max(30000),
+          tourIds: z.array(z.enum(tours.map((t) => t.id))).max(10).default([]),
+          status: z.enum(["draft", "published"]),
+        })
+        .parse(q.body);
+      r.json(await store.articles.save(input, q.admin));
+    }),
+  );
+  app.delete(
+    "/api/admin/articles/:id",
+    requireAdmin,
+    route(async (q, r) => {
+      await store.articles.remove(z.string().uuid().parse(q.params.id));
+      r.status(204).end();
     }),
   );
   app.delete(

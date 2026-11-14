@@ -264,3 +264,23 @@ export const today = () =>
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
+// Rehber yazısı (server/articles.mjs). body yalnız yazı sayfasında gelir.
+export type Article = {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string;
+  category: "aktivite" | "rehber" | "kultur";
+  cover: string;
+  tourIds: string[];
+  publishedAt: number | null;
+  updatedAt: number;
+  body?: string;
+  status?: "draft" | "published";
+  author?: string | null;
+};
+export const ARTICLE_CATEGORIES: Record<Article["category"], string> = {
+  aktivite: "Aktivite",
+  rehber: "Gezi rehberi",
+  kultur: "Tarih ve kültür",
+};
