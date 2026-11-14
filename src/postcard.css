@@ -5259,3 +5259,179 @@ html:has(.kp) {
   grid-column: 2;
   justify-self: start;
 }
+
+/* ---------- Rehber (/rehber) ve yazı sayfası ---------- */
+.kp .guide-page {
+  padding: 56px 0 80px;
+}
+.kp .guide-page h1 {
+  margin: 0 0 12px;
+}
+.kp .guide-lead {
+  max-width: 640px;
+  margin: 0 0 26px;
+  font-size: 17px;
+}
+.kp .guide-filters {
+  margin-bottom: 22px;
+}
+.kp .article-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 22px;
+}
+.kp .article-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--kp-card);
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow-sm);
+  color: var(--kp-ink);
+  text-decoration: none;
+}
+.kp .article-card-image {
+  display: block;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: #dde5eb;
+}
+.kp .article-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.kp .article-card:hover .article-card-image img {
+  transform: scale(1.05);
+}
+.kp .article-card-body {
+  display: grid;
+  gap: 8px;
+  padding: 18px 20px 22px;
+}
+.kp .article-card-body small {
+  color: var(--kp-red);
+  font-size: 12px;
+  font-weight: 600;
+}
+.kp .article-card-body strong {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 22px;
+  line-height: 1.25;
+}
+.kp .article-card-body span {
+  color: var(--kp-ink-2);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.kp .article-card:focus-visible {
+  outline: 2px solid var(--kp-red);
+  outline-offset: 3px;
+}
+.kp .guide-empty {
+  padding: 40px 0;
+}
+.kp .article-page {
+  max-width: 860px;
+  padding: 18px 0 40px;
+}
+.kp .article-head small {
+  color: var(--kp-red);
+  font-size: 13px;
+  font-weight: 600;
+}
+.kp .article-head h1 {
+  margin: 10px 0 14px;
+  font-size: clamp(34px, 4.4vw, 52px);
+  line-height: 1.12;
+}
+.kp .article-summary {
+  margin: 0 0 26px;
+  font-size: 19px;
+  line-height: 1.55;
+  color: var(--kp-ink-2);
+}
+.kp .article-cover {
+  margin: 0 0 34px;
+  border-radius: 5px;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  background: #dde5eb;
+}
+.kp .article-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.kp .article-body {
+  max-width: 68ch;
+  font-size: 17px;
+  line-height: 1.75;
+  color: var(--kp-ink);
+}
+.kp .article-body h2 {
+  margin: 38px 0 12px;
+  font-size: 28px;
+  line-height: 1.25;
+}
+.kp .article-body h3 {
+  margin: 28px 0 10px;
+  font-size: 22px;
+}
+.kp .article-body p,
+.kp .article-body ul,
+.kp .article-body ol {
+  margin: 0 0 18px;
+}
+.kp .article-body ul,
+.kp .article-body ol {
+  padding-left: 22px;
+}
+.kp .article-body li {
+  margin-bottom: 8px;
+}
+.kp .article-body a {
+  color: var(--kp-red);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.kp .article-body blockquote {
+  margin: 24px 0;
+  padding: 4px 0 4px 18px;
+  border-left: 3px solid var(--kp-red);
+  font-family: var(--display);
+  font-size: 21px;
+  line-height: 1.5;
+}
+.kp .article-body figure {
+  margin: 26px 0;
+}
+.kp .article-body figure img {
+  width: 100%;
+  border-radius: 5px;
+}
+.kp .article-body figcaption {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--kp-ink-2);
+}
+.kp .article-back {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 18px;
+}
+.kp .article-tours,
+.kp .tour-articles {
+  padding-top: 20px;
+}
+@media (max-width: 640px) {
+  .kp .guide-page {
+    padding: 36px 0 60px;
+  }
+  .kp .article-body {
+    font-size: 16px;
+  }
+}

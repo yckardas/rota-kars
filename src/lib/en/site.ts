@@ -565,4 +565,36 @@ export const site: Record<string, string> = {
     "Only {n} seats are left on this departure.",
   "Bekleme listesine katılın; yer açılınca size hemen e-posta gönderelim.":
     "Join the waiting list and we’ll email you as soon as seats open.",
+  "Rehber":
+    "Guide",
+  "Kars rehberi ve aktiviteler":
+    "Kars guide and activities",
+  "Aktivite":
+    "Activity",
+  "Gezi rehberi":
+    "Travel guide",
+  "Tarih ve kültür":
+    "History and culture",
+  "Kars’ı yakından tanıyın.":
+    "Get to know Kars.",
+  "Buzun üstünde atlı kızaktan Sarıkamış’ın ormanlarına, Ani’nin taşlarından kış hazırlığına: ekibimizden gezi notları.":
+    "From horse sleighs on the ice to the forests of Sarıkamış, the stones of Ani and winter packing tips: travel notes from our team.",
+  "Rehber yazılarımız şimdilik yalnız Türkçe.":
+    "Our guide articles are in Turkish for now.",
+  "Konu":
+    "Topic",
+  "Yeni yazılar yolda. Bu arada turlarımıza göz atabilirsiniz.":
+    "New articles are on the way. Meanwhile, have a look at our tours.",
+  "Turları gör":
+    "See the tours",
+  "Bu yazı bulunamadı.":
+    "This article was not found.",
+  "Rehbere dön":
+    "Back to the guide",
+  "Tüm rehber yazıları":
+    "All guide articles",
+  "Bu yazıdaki rotalar":
+    "Routes in this article",
+  "Yola çıkmadan okuyun.":
+    "Read before you go.",
 };

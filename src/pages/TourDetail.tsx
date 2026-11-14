@@ -24,6 +24,7 @@ import { useClearOfLaunchers } from "../lib/launchers";
 import { Postmark } from "../components/Postmark";
 import { enteredViaTransition } from "../lib/tour-transition";
 import { TransferOffer } from "../components/TourExtras";
+import { ArticleCard } from "../components/ArticleCard";
 import { InterestForm } from "../components/InterestForm";
 import {
   currency,
@@ -31,6 +32,7 @@ import {
   type Catalog,
   type Departure,
   type Hotel,
+  type Article,
 } from "../lib/types";
 export function TourDetail({ catalog }: { catalog: Catalog }) {
   const { id } = useParams(),
@@ -43,6 +45,8 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
     // Talep toplama modundaki tur için ücretsiz ön kayıt formu.
     [prereg, setPrereg] = useState(false),
     [departures, setDepartures] = useState<Departure[]>([]),
+    // Bu rotayla ilişkilendirilmiş rehber yazıları (panelden).
+    [articles, setArticles] = useState<Article[]>([]),
     [activeImage, setActiveImage] = useState(0),
     // Galeride görüntü değişince yeni fotoğraf yerine "oturur" (ilk açılışta değil).
     [swapped, setSwapped] = useState(false),
@@ -65,6 +69,12 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
         .catch(() => setDepartures([]));
     else setDepartures([]);
   }, [t]);
+  useEffect(() => {
+    if (!id) return;
+    api<Article[]>("/articles?tur=" + encodeURIComponent(id))
+      .then(setArticles)
+      .catch(() => setArticles([]));
+  }, [id]);
   if (!t)
     return (
       <div className="container empty-state">
@@ -466,6 +476,16 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
           </a>
         </aside>
       </div>
+      {articles.length > 0 && (
+        <section className="container section tour-articles" aria-labelledby="tour-articles-title">
+          <h2 id="tour-articles-title">{tx("Yola çıkmadan okuyun.")}</h2>
+          <div className="article-grid">
+            {articles.slice(0, 3).map((a) => (
+              <ArticleCard key={a.id} article={a} />
+            ))}
+          </div>
+        </section>
+      )}
       <InstagramSection profileUrl={catalog.business.instagram} />
       <Reviews tourId={t.id} />
       <div

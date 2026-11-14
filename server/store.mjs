@@ -18,6 +18,8 @@ import { createUetds } from "./uetds.mjs";
 import { depositFor } from "./payments.mjs";
 import { createPush } from "./push.mjs";
 import { createContent } from "./content.mjs";
+import { createArticles } from "./articles.mjs";
+import { articleSeed } from "./articles-seed.mjs";
 import { createInterest } from "./interest.mjs";
 import { describeRequest, REQUEST_KINDS, statusLabel } from "./requests.mjs";
 import { priceTransfer } from "./transfer.mjs";
@@ -154,6 +156,8 @@ export async function openStore(
   const push = createPush(db, { env, clock, fetchImpl: pushFetch, ...(webPush ? { webPush } : {}) });
   const notifications = await createNotifications(db, { clock, tx, env, push });
   const content = await createContent(db, { clock });
+  // Rehber yazıları; ilk yazılar panelde taslak olarak açılır.
+  const articles = await createArticles(db, { clock, seed: articleSeed });
   await migrateDeparturePrices(db, { clock });
   const accountSecurity = await createAccountSecurity(db, {
     clock,
@@ -234,6 +238,7 @@ export async function openStore(
     notifications,
     push,
     content,
+    articles,
     accountSecurity,
     members,
     db,

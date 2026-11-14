@@ -157,6 +157,7 @@ export function Layout({
             <NavLink to="/turlar">{t("Turlarımız")}</NavLink>
             <NavLink to="/hizmetler">{t("Hizmetler")}</NavLink>
             <NavLink to="/konaklama">{t("Konaklama")}</NavLink>
+            <NavLink to="/rehber">{t("Rehber")}</NavLink>
             <NavLink to="/hakkimizda">{t("Hakkımızda")}</NavLink>
             <NavLink to="/iletisim">{t("İletişim")}</NavLink>
             <LangSwitch className="lang-switch-menu" />
@@ -265,6 +266,7 @@ export function Layout({
           <div>
             <h3>{t("Yolculuğunuz için")}</h3>
             <Link to="/konaklama">{t("Konaklama seçenekleri")}</Link>
+            <Link to="/rehber">{t("Kars rehberi ve aktiviteler")}</Link>
             <Link to="/hakkimizda">{t("Rota Kars hakkında")}</Link>
             <Link to="/rezervasyonum">{t("Ön rezervasyon sorgulama")}</Link>
             <Link to="/bilgilendirme#iptal">{t("İptal ve iade koşulları")}</Link>

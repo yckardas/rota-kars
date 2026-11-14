@@ -1568,3 +1568,103 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+
+/* Rehber yazıları: liste + düzenleyici, gövde yanında canlı önizleme */
+.rk-admin .article-admin {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.rk-admin .article-admin-list ul {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.rk-admin .article-admin-list li button {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--mortar);
+  border-radius: 4px;
+  cursor: pointer;
+  font: inherit;
+}
+.rk-admin .article-admin-list li button.active {
+  border-color: var(--red, #c2342b);
+}
+.rk-admin .article-admin-list small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.rk-admin .article-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+.rk-admin .article-cover-field {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.rk-admin .article-cover-field img {
+  width: 140px;
+  height: 88px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex: none;
+}
+.rk-admin .article-cover-field > div {
+  display: grid;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.rk-admin .article-body-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+.rk-admin .article-body-editor textarea {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.rk-admin .article-preview {
+  max-height: 560px;
+  overflow: auto;
+  padding: 12px 16px;
+  border: 1px dashed var(--mortar);
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.rk-admin .article-preview h2 {
+  font-size: 19px;
+  margin: 18px 0 6px;
+}
+.rk-admin .article-preview img {
+  max-width: 100%;
+  border-radius: 4px;
+}
+.rk-admin .article-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.rk-admin .article-actions > span {
+  flex: 1;
+}
+@media (max-width: 1100px) {
+  .rk-admin .article-admin,
+  .rk-admin .article-body-editor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
