@@ -4,14 +4,9 @@ import { Link, useLang, useLocalNavigate } from "../lib/i18n";
 import {
   ArrowRight,
   Play,
-  Compass,
-  ShieldCheck,
   Armchair,
   ExternalLink,
   ChevronRight,
-  Sparkles,
-  Banknote,
-  HeartHandshake,
   Star,
   Check,
 } from "lucide-react";
@@ -28,12 +23,7 @@ import { whatsappLink } from "../lib/whatsapp";
 import { SeatMap } from "../components/SeatMap";
 import { StoryPlayer } from "../components/StoryPlayer";
 import { InstagramSection } from "../components/InstagramSection";
-const featureIcons: Record<string, typeof Compass> = {
-  sparkles: Sparkles,
-  shield: ShieldCheck,
-  lira: Banknote,
-  heart: HeartHandshake,
-};
+import { FeatureMarquee } from "../components/FeatureMarquee";
 export function Home({ catalog }: { catalog: Catalog }) {
   const [filter, setFilter] = useState("Tüm rotalar"),
     [filtered, setFiltered] = useState(false),
@@ -219,20 +209,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
           </p>
         </div>
       </section>
-      <div className="container feature-strip">
-        {catalog.features.map((f) => {
-          const Icon = featureIcons[f.icon] || Compass;
-          return (
-            <div className="feature" key={f.title}>
-              <Icon size={24} strokeWidth={1.4} />
-              <div>
-                <strong>{f.title}</strong>
-                <span>{f.text}</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <FeatureMarquee features={catalog.features} />
       <section className="container section tours-section" id="turlar">
         <div className="section-heading">
           <div>

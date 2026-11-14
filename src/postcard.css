@@ -625,6 +625,75 @@ html:has(.kp) {
   border-left: 1px solid var(--kp-hair);
 }
 
+/* Kayan güven bandı (FeatureMarquee). Varsayılan ve "hareketi azalt"ta sabit dörtlü
+   düzen: iz (track) görünmez kutu olur, kopyalar ve düğme gizlenir. Kayma yalnız
+   hareket tercihi olmayanlarda açılır. */
+.kp .feature-strip.is-marquee .feature-viewport,
+.kp .feature-strip.is-marquee .feature-track {
+  display: contents;
+}
+.kp .feature-strip.is-marquee .is-clone,
+.kp .feature-strip.is-marquee .feature-toggle {
+  display: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .kp .feature-strip.is-marquee {
+    position: relative;
+    display: block;
+    padding: 22px 0;
+  }
+  .kp .feature-strip.is-marquee .feature-viewport {
+    display: block;
+    overflow: hidden;
+    /* Kenarlarda yumuşak giriş/çıkış */
+    mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+  }
+  .kp .feature-strip.is-marquee .feature-track {
+    display: flex;
+    width: max-content;
+    animation: kp-marquee 46s linear infinite;
+  }
+  .kp .feature-strip.is-marquee .feature,
+  .kp .feature-strip.is-marquee .is-clone {
+    display: flex;
+    flex: 0 0 auto;
+    width: clamp(260px, 25vw, 330px);
+    border-left: 1px solid var(--kp-hair);
+  }
+  .kp .feature-strip.is-marquee:hover .feature-track,
+  .kp .feature-strip.is-marquee:focus-within .feature-track,
+  .kp .feature-strip.is-marquee.is-paused .feature-track {
+    animation-play-state: paused;
+  }
+  .kp .feature-strip.is-marquee .feature-toggle {
+    position: absolute;
+    right: 6px;
+    bottom: 6px;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--kp-hair);
+    border-radius: 4px;
+    background: var(--kp-card);
+    color: var(--kp-ink-2);
+    cursor: pointer;
+  }
+  .kp .feature-strip.is-marquee .feature-toggle:hover {
+    color: var(--kp-ink);
+  }
+  .kp .feature-strip.is-marquee .feature-toggle:focus-visible {
+    outline: 2px solid var(--kp-red);
+    outline-offset: 2px;
+  }
+}
+@keyframes kp-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 /* Hikâyeler: kartpostal olarak */
 .kp .story-section {
   padding: 70px 0;
