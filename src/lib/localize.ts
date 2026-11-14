@@ -25,7 +25,17 @@ export function localizeCatalog(catalog: Catalog): Catalog {
     }),
     stories: catalog.stories.map((s) => {
       const x = en.stories?.[s.id];
-      return x ? ({ ...s, ...x } as typeof s) : s;
+      return x
+        ? {
+            ...s,
+            title: x.title ?? s.title,
+            location: x.location ?? s.location,
+            scenes: s.scenes.map((scene, i) => ({
+              ...scene,
+              ...x.scenes?.[i],
+            })),
+          }
+        : s;
     }),
   };
 }

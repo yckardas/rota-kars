@@ -20,15 +20,16 @@ export function Postmark({
   date: string;
   time?: string;
   place?: string;
-  label: string;
+  label?: string;
   className?: string;
 }) {
   return (
     <svg
       className={className}
       viewBox="0 0 132 132"
-      role="img"
+      role={label ? "img" : undefined}
       aria-label={label}
+      aria-hidden={label ? undefined : true}
     >
       <circle cx="66" cy="66" r="60" />
       <circle cx="66" cy="66" r="42" />

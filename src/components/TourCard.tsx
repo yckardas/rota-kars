@@ -1,7 +1,8 @@
 import { useRef } from "react";
+import { ArrowUpRight } from "lucide-react";
 import { Link, localeOf, useLang } from "../lib/i18n";
 import { useOpenTour } from "../lib/tour-transition";
-import { responsive } from "../lib/images";
+import { isIllustrativePhoto, responsive } from "../lib/images";
 import { currency, hasPrice, type Tour } from "../lib/types";
 import { placeName } from "../lib/place";
 import { develop } from "../lib/reveal";
@@ -11,12 +12,13 @@ export function TourCard({ tour }: { tour: Tour }) {
   const inset = tour.gallery.find((g) => g !== tour.image);
   const { t } = useLang(),
     openTour = useOpenTour(),
-    photo = useRef<HTMLImageElement>(null);
+    photo = useRef<HTMLImageElement>(null),
+    ribbon = useRef<HTMLSpanElement>(null);
   return (
     <Link
       className="tour-card"
       to={"/turlar/" + tour.id}
-      onClick={(e) => openTour(e, tour.id, photo.current)}
+      onClick={(e) => openTour(e, tour.id, photo.current, ribbon.current)}
     >
       <div className="tour-card-image">
         <img
@@ -38,9 +40,15 @@ export function TourCard({ tour }: { tour: Tour }) {
               loading="lazy"
               decoding="async"
             />
+            {isIllustrativePhoto(inset) && (
+              <small className="kp-photo-disclosure">{t("Temsili · Yapay zekâ")}</small>
+            )}
           </span>
         )}
-        <span className="tour-card-ribbon">{placeName(tour)}</span>
+        <span className="tour-card-ribbon" ref={ribbon}>{placeName(tour)}</span>
+        <span className="tour-card-discover" aria-hidden="true">
+          {t("Turu keşfet")} <ArrowUpRight size={16} />
+        </span>
         {!tour.salesOpen ? (
           <span className="tour-sales-closed">{t("Şu an satışa kapalı")}</span>
         ) : (

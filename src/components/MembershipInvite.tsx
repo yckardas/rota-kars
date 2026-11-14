@@ -67,7 +67,7 @@ export function MembershipInvite() {
     if (seen) return;
     let done = false;
     const show = () => {
-      if (done) return;
+      if (done || document.querySelector("dialog[open]")) return;
       done = true;
       cleanup();
       setOpen(true);

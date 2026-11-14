@@ -38,6 +38,7 @@ export const site: Record<string, string> = {
   // Ana sayfa
   "Ani Antik Kenti’nin kış manzarası": "Winter view of the ancient city of Ani",
   "Kars’tan selamlar.": "Greetings from Kars.",
+  "KARS’TAN": "FROM KARS",
   "Kendi VIP aracımızla, küçük gruplarla, rehberli günler. Bir manzara seçin, gerisini birlikte planlayalım.":
     "Guided days in small groups, aboard our own VIP vehicle. Pick a view, and we’ll plan the rest together.",
   "Rota seçin": "Choose a route",
@@ -58,6 +59,8 @@ export const site: Record<string, string> = {
     "Pay the deposit securely by card; your booking is confirmed instantly.",
   "Sizin için bir rota var.": "There’s a route for you.",
   "Bütün turları görün": "See all tours",
+  "Turu keşfet": "Explore the tour",
+  "Temsili · Yapay zekâ": "Illustrative · AI",
   "Tüm rotalar": "All routes",
   Tümü: "All",
   Kültür: "Culture",
@@ -74,6 +77,9 @@ export const site: Record<string, string> = {
   "Kars’ı yakından tanımaya buradan başlayın.":
     "Start getting to know Kars right here.",
   "Fotoğraflarla kısa rota hikâyeleri": "Short route stories in photos",
+  "Fotoğraf, video ve animasyonla kısa rota hikâyeleri": "Short route stories in photos, video and animation",
+  "Önceki sahne": "Previous scene",
+  "Sonraki sahne": "Next scene",
   "Hikâyeyi keşfet": "Explore the story",
   "Yolculuğunuza uygun,": "A seat that fits your trip,",
   "size ayrılmış bir yer.": "set aside just for you.",

@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Link as RouterLink, useLocation } from "react-router-dom";
+import { Link as RouterLink, useLocation, useNavigationType } from "react-router-dom";
 import {
   Phone,
   Instagram,
@@ -27,7 +27,7 @@ import {
   useLang,
   type Lang,
 } from "../lib/i18n";
-import { TourLink } from "../lib/tour-transition";
+import { TourLink, takeTourReturnScroll } from "../lib/tour-transition";
 // Aynı sayfanın öbür dildeki karşılığına giden TR / EN bağlantıları.
 function LangSwitch({ className }: { className: string }) {
   const { lang, t } = useLang(),
@@ -64,10 +64,16 @@ export function Layout({
 }) {
   const [open, setOpen] = useState(false),
     location = useLocation();
+  const navigationType = useNavigationType();
   useEffect(() => {
     setOpen(false);
   }, [location.pathname]);
   useEffect(() => {
+    const returnTop = navigationType === "POP" ? takeTourReturnScroll(location.key) : undefined;
+    if (returnTop !== undefined) {
+      window.scrollTo({ top: returnTop, behavior: "instant" });
+      return;
+    }
     let id = "";
     try {
       id = decodeURIComponent(location.hash.slice(1));
@@ -94,7 +100,7 @@ export function Layout({
       cancelAnimationFrame(frame);
       clearTimeout(timer);
     };
-  }, [location.pathname, location.hash, location.key]);
+  }, [location.pathname, location.hash, location.key, navigationType]);
   useEffect(() => {
     if (!open) return;
     // Menü açılınca odak ilk bağlantıya gider; Escape menüyü kapatıp odağı düğmeye verir.
