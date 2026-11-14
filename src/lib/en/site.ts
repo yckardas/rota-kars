@@ -411,4 +411,8 @@ export const site: Record<string, string> = {
     "{n} seats left",
   "Bu rotayı incele":
     "Explore this route",
+  "Kayan bandı durdur":
+    "Pause the scrolling banner",
+  "Kayan bandı sürdür":
+    "Resume the scrolling banner",
 };
