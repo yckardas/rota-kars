@@ -6,6 +6,8 @@ import { responsive } from "../lib/images";
 import { useLocation, useParams, useSearchParams } from "react-router-dom";
 import { Link, localPath, useLang } from "../lib/i18n";
 import { TourLink } from "../lib/tour-transition";
+import { TransferPicker } from "../components/TransferPicker";
+import { offersTransfer, type PricedTransfer, type TransferChoice } from "../lib/transfer";
 import {
   ArrowLeft,
   ArrowRight,
@@ -136,9 +138,12 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     [quote, setQuote] = useState<{
       subtotal: number;
       discount: number;
+      transfer?: PricedTransfer | null;
       total: number;
       deposit: number;
     } | null>(null),
+    // İsteğe bağlı transfer (yolcu adımında seçilir; fiyatı sunucu hesaplar).
+    [transfer, setTransfer] = useState<TransferChoice | null>(null),
     [couponError, setCouponError] = useState(""),
     [extendBusy, setExtendBusy] = useState(false),
     [extendError, setExtendError] = useState(""),
@@ -210,12 +215,14 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     post<{
       subtotal: number;
       discount: number;
+      transfer?: PricedTransfer | null;
       total: number;
       deposit: number;
     }>("/reservations/quote", {
       departureId,
       count,
       ...(couponId ? { couponId } : {}),
+      ...(transfer ? { transfer: { point: transfer.point, direction: transfer.direction } } : {}),
     })
       .then((data) => {
         if (active) setQuote(data);
@@ -229,7 +236,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     return () => {
       active = false;
     };
-  }, [departureId, count, couponId, member]);
+  }, [departureId, count, couponId, member, transfer?.point, transfer?.direction]);
   // 3. adım: sunucunun ürettiği ön bilgilendirme formu (kayıtta aynı metin saklanır).
   useEffect(() => {
     if (step !== 2 || !departureId) return;
@@ -251,6 +258,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         }),
         paymentMode: mode,
         ...(couponId ? { couponId } : {}),
+        ...(transfer ? { transfer } : {}),
       },
     )
       .then((data) => {
@@ -544,6 +552,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         ...(count > 1 ? { othersDeclaration } : {}),
         marketingConsent,
         ...(couponId ? { couponId } : {}),
+        ...(transfer ? { transfer } : {}),
         turnstileToken: human.token,
       });
       holdRef.current = null;
@@ -1267,6 +1276,14 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   />
                 </label>
               </div>
+              {tour?.transfer && offersTransfer(tour.transfer) && (
+                <TransferPicker
+                  config={tour.transfer}
+                  count={count}
+                  value={transfer}
+                  onChange={setTransfer}
+                />
+              )}
               <div className="flow-error" role="alert">
                 {error}
               </div>
@@ -1628,9 +1645,22 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                 </div>
               )}
             </div>
+            {quote?.transfer && (
+              <div className="summary-transfer">
+                <span>
+                  {t("Transfer · {point}", { point: t(quote.transfer.pointLabel) })}
+                  <small>
+                    {t(quote.transfer.directionLabel)} · {t(quote.transfer.tierLabel)}
+                  </small>
+                </span>
+                <strong>+{currency(quote.transfer.amount)}</strong>
+              </div>
+            )}
             <div className="summary-total">
               <span>
-                {quote && quote.discount > 0
+                {quote?.transfer
+                  ? t("Toplam (tur ve transfer)")
+                  : quote && quote.discount > 0
                   ? catalog.demo
                     ? t("İndirim sonrası örnek tur bedeli")
                     : t("İndirim sonrası tur bedeli")

@@ -3,7 +3,9 @@ import { responsive } from "../lib/images";
 import { Bus, Check, LoaderCircle } from "lucide-react";
 import { api, post } from "../lib/api";
 import { SeatMap } from "./SeatMap";
-import type { Catalog, Tour, VehicleModel } from "../lib/types";
+import type { Tour, VehicleModel } from "../lib/types";
+import { TransferEditor } from "./admin/TransferEditor";
+import { emptyTransfer } from "../lib/transfer";
 export function TourOperations({ onChange }: { onChange: () => void }) {
   const [tours, setTours] = useState<Tour[]>([]),
     [models, setModels] = useState<VehicleModel[]>([]),
@@ -92,6 +94,7 @@ export function TourOperations({ onChange }: { onChange: () => void }) {
             busy={busy === t.id}
             save={save}
             toggle={() => toggle(t)}
+            onTransferSaved={onChange}
           />
         ))}
       </div>
@@ -104,18 +107,21 @@ function OperationRow({
   busy,
   save,
   toggle,
+  onTransferSaved,
 }: {
   tour: Tour;
   models: VehicleModel[];
   busy: boolean;
   save: (e: FormEvent<HTMLFormElement>, id: string) => void;
   toggle: () => void;
+  onTransferSaved: () => void;
 }) {
   const [modelId, setModelId] = useState(t.vehicle.modelId || "vip-midibus"),
     [capacity, setCapacity] = useState(t.vehicle.passengerSeats),
     model = models.find((m) => m.id === modelId);
   return (
-    <form className="tour-operation" onSubmit={(e) => save(e, t.id)}>
+    <div className="tour-operation">
+    <form onSubmit={(e) => save(e, t.id)}>
       <div className="operation-tour">
         <img {...responsive(t.image, "160px")} alt="" loading="lazy" />
         <div>
@@ -186,5 +192,12 @@ function OperationRow({
         <SeatMap vehicle={t.vehicle} interactive={false} />
       </details>
     </form>
+    <TransferEditor
+      tourId={t.id}
+      tourName={t.name}
+      config={t.transfer || emptyTransfer()}
+      onSaved={onTransferSaved}
+    />
+    </div>
   );
 }

@@ -1,3 +1,4 @@
+import { transferLine } from "./transfer.mjs";
 import { randomBytes, randomUUID } from "node:crypto";
 import { AppError } from "./store.mjs";
 import { fromJson } from "./database.mjs";
@@ -88,6 +89,7 @@ export async function createWorkflow(
       subject: "Rota Kars · " + text,
       body:
         `Merhaba ${r.name},\n${r.reference} · ${tours.find((t) => t.id === r.tourId)?.name || r.tourId}\nTarih: ${r.date} · Saat: ${r.start_time}\nBuluşma: ${r.pickup}\n${text}\nKoltuklar: ${r.seats.join(", ")}.` +
+        (r.transfer ? `\n${transferLine(r.transfer)}.` : "") +
         (extra ? "\n\n" + "—".repeat(24) + "\n\n" + extra : ""),
       actionUrl: (env.PUBLIC_BASE_URL || "") + "/bilet/" + r.ticket_token,
       kind: event,
@@ -108,6 +110,7 @@ export async function createWorkflow(
         `Tarih: ${r.date} ${r.start_time} · Koltuk: ${r.seats.join(", ")}`,
         `Müşteri: ${r.name} · ${r.phone} · ${r.email}`,
         `Tutar: ${(r.total / 100).toFixed(2)} TL · Durum: ${r.status}`,
+        r.transfer && `${transferLine(r.transfer)} · ${(r.transfer.amount / 100).toFixed(2)} TL`,
         waLink(r.phone) && `WhatsApp: ${waLink(r.phone)}`,
       ]
         .filter(Boolean)
@@ -428,8 +431,10 @@ export async function createWorkflow(
               "Hedef koltuk dolu. Eski rezervasyon korunuyor.",
             );
         }
+        // Transfer bedeli taşımada aynen kalır (kupon yalnız tur bedeline uygulanır).
         const subtotal = d.price * seats.length,
-          total = subtotal - Math.round((subtotal * r.discount_percent) / 100);
+          tourTotal = subtotal - Math.round((subtotal * r.discount_percent) / 100),
+          total = tourTotal + (r.transfer_amount || 0);
         if (r.net_paid > total)
           throw new AppError(
             409,
@@ -456,7 +461,7 @@ export async function createWorkflow(
             seats,
             vehicle_json: d.vehicle,
             subtotal,
-            discount_amount: subtotal - total,
+            discount_amount: subtotal - tourTotal,
             total,
             deposit: r.deposit === r.total ? total : depositFor(total),
             expires_at: expires,
@@ -758,6 +763,8 @@ export async function createWorkflow(
           passengers: r.passengers,
           passengerDetails: r.passenger_details,
           notes: r.notes || "",
+          // Rehberin telefonunda: karşılanacak misafirler (havalimanı/otogar/gar).
+          transfer: r.transfer ? transferLine(r.transfer) : "",
           checkedIn: Boolean(r.checked_in_at),
           ticketToken: r.status === "confirmed" ? r.ticket_token : null,
         })),

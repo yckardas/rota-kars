@@ -5008,3 +5008,173 @@ html:has(.kp) {
   gap: 12px 18px;
   margin-top: 12px;
 }
+
+/* ---------- Transfer (rezervasyon, tur sayfası) ---------- */
+.kp .transfer-picker {
+  margin: 26px 0 8px;
+  padding: 0;
+  border: 1px solid var(--kp-rule);
+  border-radius: 4px;
+  background: var(--kp-card);
+}
+.kp .transfer-picker.is-on {
+  border-color: var(--kp-red);
+  box-shadow: inset 0 0 0 1px var(--kp-red);
+}
+.kp .transfer-toggle {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 16px 18px;
+  cursor: pointer;
+}
+.kp .transfer-toggle input,
+.kp .transfer-point input,
+.kp .transfer-direction input {
+  accent-color: var(--kp-red);
+  margin-top: 3px;
+}
+.kp .transfer-toggle strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--kp-ink);
+}
+.kp .transfer-toggle small {
+  display: block;
+  margin-top: 3px;
+  font-size: 13px;
+  color: var(--kp-ink-2);
+}
+.kp .transfer-options {
+  display: grid;
+  gap: 14px;
+  padding: 0 18px 18px;
+}
+.kp .transfer-points {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.kp .transfer-point {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 4px 8px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--kp-rule);
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--kp-ink);
+  cursor: pointer;
+}
+.kp .transfer-point:has(input:checked) {
+  border-color: var(--kp-red);
+}
+.kp .transfer-point svg {
+  color: var(--kp-ink-2);
+}
+.kp .transfer-point b {
+  grid-column: 1 / -1;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 19px;
+  color: var(--kp-gold);
+  font-variant-numeric: tabular-nums;
+}
+.kp .transfer-point.is-unavailable,
+.kp .transfer-direction.is-unavailable {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.kp .transfer-point.is-unavailable b {
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--kp-ink-2);
+}
+.kp .transfer-directions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+.kp .transfer-direction {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 14px;
+  color: var(--kp-ink);
+  cursor: pointer;
+}
+.kp .transfer-options .field {
+  margin: 0;
+}
+.kp .summary-transfer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  font-size: 13px;
+  color: var(--kp-ink);
+}
+.kp .summary-transfer small {
+  display: block;
+  margin-top: 2px;
+  color: var(--kp-ink-2);
+}
+.kp .summary-transfer strong {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 18px;
+  color: var(--kp-gold);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.kp .transfer-offer {
+  margin: 34px 0 10px;
+}
+.kp .transfer-offer-table {
+  display: grid;
+  margin: 16px 0 14px;
+  border-top: 1px solid var(--kp-rule);
+}
+.kp .transfer-offer-table > div {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.6fr) repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: center;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--kp-hair);
+  font-size: 14px;
+  color: var(--kp-ink);
+}
+.kp .transfer-offer-table [role="rowheader"] {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.kp .transfer-offer-table [role="rowheader"] svg {
+  color: var(--kp-ink-2);
+  flex: none;
+}
+.kp .transfer-offer-head {
+  font-size: 12px !important;
+  color: var(--kp-ink-2) !important;
+}
+.kp .transfer-offer-table .price {
+  font-family: var(--display);
+  font-size: 17px;
+  color: var(--kp-gold);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 640px) {
+  .kp .transfer-points {
+    grid-template-columns: 1fr;
+  }
+  .kp .transfer-offer-table > div {
+    grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr));
+    font-size: 13px;
+  }
+  .kp .transfer-offer-table .price {
+    font-size: 15px;
+  }
+}

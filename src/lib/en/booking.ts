@@ -405,4 +405,50 @@ export const booking: Record<string, string> = {
     "Tick the agreement box before you pay.",
   "Ödemeden önce ön bilgilendirme formu, tur hizmet sözleşmesi ve iptal-iade koşulları onay kutusunu işaretleyin.":
     "Before paying, tick the box for the pre-information form, the tour service agreement and the cancellation terms.",
+  "Transfer":
+    "Transfer",
+  "Transfer ekleyin":
+    "Add a transfer",
+  "Havalimanı, otogar ya da gardan sizi alalım. Fiyat {tier} grubunuzun toplamıdır.":
+    "We pick you up at the airport, bus station or train station. The price is the total for your group ({tier}).",
+  "2–4 kişi":
+    "2–4 people",
+  "5 kişi ve üzeri":
+    "5 or more people",
+  "Karşılama noktası":
+    "Pick-up point",
+  "Kars Harakani Havalimanı":
+    "Kars Harakani Airport",
+  "Kars Otogarı":
+    "Kars bus station",
+  "Kars Garı":
+    "Kars train station",
+  "Yok":
+    "Not offered",
+  "Transfer yönü":
+    "Transfer direction",
+  "Gelişte: noktadan tur buluşmasına":
+    "On arrival: from the point to the tour meeting point",
+  "Dönüşte: turdan noktaya":
+    "On return: from the tour to the point",
+  "Gidiş-dönüş":
+    "Both ways",
+  "Uçuş / sefer bilgisi ve saati (isteğe bağlı)":
+    "Flight / trip details and time (optional)",
+  "Örn. TK2690 · 10:40 varış":
+    "E.g. TK2690 · arriving 10:40",
+  "Transfer · {point}":
+    "Transfer · {point}",
+  "Toplam (tur ve transfer)":
+    "Total (tour and transfer)",
+  "Sizi kapıdan alalım.":
+    "We’ll pick you up.",
+  "Havalimanı, otogar ya da gardan tur buluşmasına, dönüşte de geri. Fiyat grubunuzun toplamıdır; rezervasyonda ekleyebilirsiniz.":
+    "From the airport, bus station or train station to the tour meeting point, and back on return. The price is the total for your group; add it while booking.",
+  "Tek yön transfer fiyatları":
+    "One-way transfer prices",
+  "Tek yön":
+    "One way",
+  "Tarih seçip transfer ekleyin":
+    "Pick a date and add a transfer",
 };

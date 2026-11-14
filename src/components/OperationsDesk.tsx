@@ -775,6 +775,12 @@ export function ReservationManager({
                     </small>
                     <small>{r.passengers.join(", ")}</small>
                     {r.notes && <small className="row-note">Not: {r.notes}</small>}
+                    {r.transfer && (
+                      <small className="row-note">
+                        Transfer: {r.transfer.pointLabel} · {r.transfer.directionLabel}
+                        {r.transfer.info ? ` · ${r.transfer.info}` : ""}
+                      </small>
+                    )}
                   </td>
                   <td>
                     {tourName(r.tourId)}
@@ -946,6 +952,12 @@ function BookingControls({
               </ul>
             )}
             {r.notes && <p className="row-note">Not: {r.notes}</p>}
+            {r.transfer && (
+              <p className="row-note">
+                Transfer: {r.transfer.pointLabel} · {r.transfer.directionLabel} · {r.transfer.tierLabel}
+                {r.transfer.info ? ` · ${r.transfer.info}` : ""} · {currency(r.transfer.amount)}
+              </p>
+            )}
             {Boolean(r.cancellation_requested_at) && r.status !== "cancelled" && (
               <p className="error">Müşteri iptal talep etti ({stamp(r.cancellation_requested_at)}).</p>
             )}

@@ -400,6 +400,7 @@ type PassengerData = {
     passengers: string[];
     passengerDetails?: { nationality: string; idNumber: string; gender: "K" | "E" }[];
     notes: string;
+    transfer?: string;
     checkedIn: boolean;
     ticketToken: string | null;
   }[];
@@ -429,7 +430,7 @@ function printManifest(data: PassengerData) {
           contact: i === 0 ? `${b.name} · ${b.phone}` : "",
           reference: b.reference,
           status: STATUS[b.status] || b.status,
-          notes: i === 0 ? b.notes : "",
+          notes: i === 0 ? [b.notes, b.transfer].filter(Boolean).join(" · ") : "",
         })),
       )
       .sort((a, b) => a.seat - b.seat);
@@ -533,6 +534,7 @@ export function PassengerList({ departureId, onClose }: { departureId: string; o
                   b.passengers.length > 1 && <p className="passenger-names">{b.passengers.join(" · ")}</p>
                 )}
                 {b.notes && <p className="passenger-notes">Not: {b.notes}</p>}
+                {b.transfer && <p className="passenger-notes">{b.transfer}</p>}
                 <small>{b.reference}</small>
                 <div className="passenger-actions">
                   <a className="btn btn-outline btn-small" href={"tel:" + b.phone.replace(/[^\d+]/g, "")}>

@@ -1,9 +1,12 @@
 import { localeOf } from "./i18n";
+import type { PricedTransfer, TransferConfig } from "./transfer";
 export type Tour = {
   // Satışı açık turun ilk seferi (katalogda sunucu ekler).
   next?: { date: string; startTime: string; available: number };
   // Açık seferlerin en düşük fiyatı (yoksa tur fiyatı); "…’den" gösterimleri bunu kullanır.
   fromPrice?: number;
+  // Tur bazında transfer fiyatları (panelden; bkz. lib/transfer.ts).
+  transfer?: TransferConfig;
   id: string;
   salesOpen: boolean;
   vehicle: Vehicle;
@@ -189,6 +192,8 @@ export type Reservation = {
   vehicle?: Vehicle | null;
   subtotal?: number;
   discount_amount?: number;
+  transfer?: PricedTransfer | null;
+  transfer_amount?: number;
   reference: string;
   departure_id: string;
   email: string;

@@ -22,6 +22,7 @@ import { telHref } from "../lib/phone";
 import { useClearOfLaunchers } from "../lib/launchers";
 import { Postmark } from "../components/Postmark";
 import { enteredViaTransition } from "../lib/tour-transition";
+import { TransferOffer } from "../components/TourExtras";
 import {
   currency,
   dateLabel,
@@ -276,6 +277,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
                 </a>
               </div>
             </div>
+            {!t.inquiryOnly && <TransferOffer tourId={t.id} config={t.transfer} />}
             <h2>{tx("Yola çıkmadan önce")}</h2>
             <details>
               <summary>

@@ -1,3 +1,4 @@
+import { emptyTransfer } from "./transfer.mjs";
 import { AppError } from "./store.mjs";
 import { tours, vehicle as defaultVehicle } from "./catalog.mjs";
 export const vehicleModels = [
@@ -249,6 +250,8 @@ export async function createOperations(db, { clock, cleanup, tx }) {
     if (!row) throw new AppError(404, "Tur bulunamadı.");
     return {
       ...row,
+      // Tur bazında transfer fiyatları (bkz. transfer.mjs); hiç ayarlanmadıysa kapalı.
+      transfer: row.transfer || emptyTransfer(),
       salesOpen: Boolean(row.sales_open),
       vehicle: makeVehicle(row.vehicle_model, row.passenger_seats),
     };
@@ -266,6 +269,11 @@ export async function createOperations(db, { clock, cleanup, tx }) {
           };
         }),
       ),
+    async saveTransfer(id, config) {
+      await get(id);
+      await db.update("tour_operations", { _id: id }, { transfer: config });
+      return (await get(id)).transfer;
+    },
     update(id, { salesOpen, vehicleModel, passengerSeats }) {
       const vehicle = makeVehicle(vehicleModel, passengerSeats);
       return tx(async () => {

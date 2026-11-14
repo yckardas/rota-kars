@@ -2,6 +2,7 @@
 // Aynı metin rezervasyonun 3. adımında gösterilir, onaylandığı anda rezervasyon
 // kaydına yazılır ve müşteriye e-postayla gider. Kaynak taslaklar: docs/yasal/.
 // Metin değişirse LEGAL_VERSION yükseltilir; kayıtta hangi sürümün onaylandığı kalır.
+import { transferLine } from "./transfer.mjs";
 import { business } from "./catalog.mjs";
 
 export const LEGAL_VERSION = "2026-11";
@@ -123,6 +124,7 @@ export function preInfoText(data, b = business) {
     section("5. Fiyat ve ödeme", [
       `Kişi başı fiyat: ${tl(data.unitPrice)} × ${data.count} kişi`,
       data.discount ? `Kupon indirimi: -${tl(data.discount)}` : "",
+      data.transfer ? `${transferLine(data.transfer)}: ${tl(data.transfer.amount)} (grup başına)` : "",
       `Toplam (KDV dahil): ${tl(data.total)}`,
       full
         ? `Ödeme tercihi: tam ödeme (${tl(data.total)})`
@@ -202,7 +204,7 @@ export function contractText(data, b = business) {
       `Yolcular ve koltuklar: ${data.passengers.map((p) => `${p.name}${p.seat != null ? " (" + p.seat + ")" : ""}`).join(", ")}`,
     ]),
     section("Madde 4. Fiyat ve ödeme", [
-      `Toplam bedel ${tl(data.total)} (KDV dahil); kişi başı ${tl(data.unitPrice)} × ${data.count} kişi${data.discount ? `, kupon indirimi ${tl(data.discount)}` : ""}.`,
+      `Toplam bedel ${tl(data.total)} (KDV dahil); kişi başı ${tl(data.unitPrice)} × ${data.count} kişi${data.discount ? `, kupon indirimi ${tl(data.discount)}` : ""}${data.transfer ? `, ek hizmet olarak ${transferLine(data.transfer).replace(/^Transfer: /, "transfer (")}) ${tl(data.transfer.amount)}` : ""}.`,
       `Onay için toplam bedelin %${pct}'u kapora olarak ödenir; kalan bedel en geç tur günü hareketten önce ödenir. Müşteri dilerse bedelin tamamını baştan ödeyebilir.`,
       "Ödemeler sitedeki güvenli ödeme formunda kartla (Vakıfbank sanal POS, 3D Secure), Acente'nin banka hesabına havale/EFT ile veya Acente ofisinde nakit yapılır. Kart bilgileri Acente'nin veritabanına yazılmaz ve saklanmaz.",
       "Sözleşme kurulduktan sonra toplam bedel artırılmaz.",
@@ -270,6 +272,7 @@ export function legalDataFromReservation(
       : r.total,
     count: r.seats.length,
     discount: r.discount_amount || 0,
+    transfer: r.transfer || null,
     total: r.total,
     deposit: r.deposit,
     paymentMode: r.payment_mode,
