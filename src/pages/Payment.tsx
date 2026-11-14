@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useRef,
   useState,
   type FormEvent,
   type InputHTMLAttributes,
@@ -17,6 +18,7 @@ import { CreditCard, LoaderCircle, LockKeyhole, ShieldCheck } from "lucide-react
 import { api, post } from "../lib/api";
 import { currency, type Catalog, type Reservation } from "../lib/types";
 import { StatusStamp } from "../components/ReservationTicket";
+import { Modal } from "../components/Modal";
 import {
   PAYMENT_TERMS_MISSING,
   PaymentTerms,
@@ -491,6 +493,51 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
   }
   const open = s && s.status === "pending" && !s.expired,
     sum = s?.summary;
+  // Geri tuşu uyarısı: ödeme açıkken müşteri sayfayla ilk etkileşiminde geçmişe
+  // bir "bekçi" kaydı eklenir (tarayıcılar etkileşimsiz eklenen kayıtları geri
+  // tuşunda atlar). Geri basılınca sayfadan çıkmak yerine rezervasyonun ön
+  // aşamada olduğu ve kaldığı yerden devam edebileceği söylenir.
+  const [leaving, setLeaving] = useState(false),
+    guardRef = useRef(false),
+    armedOnceRef = useRef(false),
+    openRef = useRef(false);
+  openRef.current = Boolean(open);
+  function armGuard() {
+    if (guardRef.current || !openRef.current) return;
+    guardRef.current = true;
+    window.history.pushState({ ...window.history.state, paymentGuard: true }, "");
+  }
+  useEffect(() => {
+    if (!open) return;
+    // Yalnızca ilk etkileşimde kurulur; sonrasında "Ödemeye devam et" kurar
+    // (uyarıdaki "Sayfadan ayrıl" tıklaması bekçiyi yeniden kurmasın).
+    const arm = () => {
+      if (armedOnceRef.current) return;
+      armedOnceRef.current = true;
+      armGuard();
+    };
+    const onPop = (e: PopStateEvent) => {
+      if (!guardRef.current || e.state?.paymentGuard) return;
+      guardRef.current = false;
+      if (openRef.current) setLeaving(true);
+    };
+    // Tarayıcının "kullanıcı etkileşimi" saydığı olaylar.
+    const kinds = ["pointerdown", "mousedown", "touchend", "click", "keydown"];
+    for (const k of kinds) window.addEventListener(k, arm, true);
+    window.addEventListener("popstate", onPop);
+    return () => {
+      for (const k of kinds) window.removeEventListener(k, arm, true);
+      window.removeEventListener("popstate", onPop);
+    };
+  }, [open]);
+  function stay() {
+    setLeaving(false);
+    armGuard();
+  }
+  function leave() {
+    setLeaving(false);
+    window.history.back();
+  }
   const day = sum
     ? new Intl.DateTimeFormat(locale, {
         day: "numeric",
@@ -662,6 +709,31 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
         )}
         <MerchantInfo catalog={catalog} />
       </article>
+      {leaving && s && (
+        <Modal title={t("Ödeme sayfasından ayrılıyorsunuz")} onClose={stay}>
+          <div className="leave-payment">
+            <p>
+              {t(
+                "{reference} numaralı rezervasyonunuz ön aşamada: koltuklarınız sizin için ayrıldı, ödemeyi tamamladığınızda rezervasyonunuz kesinleşir.",
+                { reference: s.reference },
+              )}
+            </p>
+            <p className="muted">
+              {t(
+                "Ayrılırsanız da kaldığınız yerden devam edebilirsiniz: rezervasyon sayfasındaki \"Ödemeye devam et\" düğmesiyle ya da Rezervasyonum sayfasından. Ödenmeyen ön rezervasyonlar en geç 24 saat içinde iptal olur.",
+              )}
+            </p>
+          </div>
+          <div className="legal-doc-actions">
+            <button type="button" className="btn btn-outline" onClick={leave}>
+              {t("Sayfadan ayrıl")}
+            </button>
+            <button type="button" className="btn" onClick={stay}>
+              <CreditCard size={17} /> {t("Ödemeye devam et")}
+            </button>
+          </div>
+        </Modal>
+      )}
     </section>
   );
 }
