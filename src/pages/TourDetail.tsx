@@ -14,7 +14,6 @@ import {
   ArrowRight,
   Info,
   CalendarDays,
-  BedDouble,
 } from "lucide-react";
 import { Reviews } from "../components/Reviews";
 import { RequestForm } from "../components/RequestForm";
@@ -24,6 +23,7 @@ import { useClearOfLaunchers } from "../lib/launchers";
 import { Postmark } from "../components/Postmark";
 import { enteredViaTransition } from "../lib/tour-transition";
 import { TransferOffer } from "../components/TourExtras";
+import { discoverFor } from "../lib/discover";
 import { ArticleCard } from "../components/ArticleCard";
 import { InterestForm } from "../components/InterestForm";
 import {
@@ -252,6 +252,21 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
               </div>
             </section>
           )}
+          {discoverFor(t.id).length > 0 && (
+            <section className="discover-links" aria-label={tx("Rotadaki yerleri keşfedin")}>
+              {discoverFor(t.id).map((d) => (
+                <Link key={d.slug} className="discover-link" to={"/kesfet/" + d.slug}>
+                  <img {...responsive(d.image, "160px")} alt="" loading="lazy" decoding="async" />
+                  <span>
+                    <strong>
+                      {tx(d.linkLabel)} <ArrowRight size={16} />
+                    </strong>
+                    <small>{tx(d.teaser)}</small>
+                  </span>
+                </Link>
+              ))}
+            </section>
+          )}
           <section className="inclusions">
             <div>
               <h3>{tx("Fiyata dahil")}</h3>
@@ -307,7 +322,6 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
             </div>
             {!t.inquiryOnly && !demand && <TransferOffer tourId={t.id} config={t.transfer} />}
             <section className="tour-extra stay-offer" aria-labelledby="stay-offer-title">
-              <BedDouble size={26} strokeWidth={1.4} aria-hidden="true" />
               <div>
                 <h2 id="stay-offer-title">{tx("Konaklamayı da ayarlayalım.")}</h2>
                 <p className="muted">

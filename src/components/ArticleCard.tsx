@@ -11,9 +11,10 @@ export function ArticleCard({ article: a }: { article: Article }) {
         <img {...responsive(a.cover, "(max-width: 760px) 100vw, 33vw")} alt="" loading="lazy" decoding="async" />
       </span>
       <span className="article-card-body">
-        <small>{t(ARTICLE_CATEGORIES[a.category])}</small>
         <strong>{a.title}</strong>
         <span>{a.summary}</span>
+        {/* Konu başlığın altında: tasarım kuralı gereği üst etiket (eyebrow) yok. */}
+        <small>{t(ARTICLE_CATEGORIES[a.category])}</small>
       </span>
     </Link>
   );

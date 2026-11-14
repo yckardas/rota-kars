@@ -5190,11 +5190,6 @@ html:has(.kp) {
   border-radius: 5px;
   background: var(--kp-card);
 }
-.kp .stay-offer > svg {
-  flex: none;
-  color: var(--kp-red);
-  margin-top: 4px;
-}
 .kp .stay-offer h2 {
   margin: 0 0 8px;
 }
@@ -5311,7 +5306,7 @@ html:has(.kp) {
   padding: 18px 20px 22px;
 }
 .kp .article-card-body small {
-  color: var(--kp-red);
+  color: var(--kp-ink-2);
   font-size: 12px;
   font-weight: 600;
 }
@@ -5337,13 +5332,14 @@ html:has(.kp) {
   max-width: 860px;
   padding: 18px 0 40px;
 }
-.kp .article-head small {
-  color: var(--kp-red);
+.kp .article-meta {
+  margin: -14px 0 24px;
+  color: var(--kp-ink-2);
   font-size: 13px;
   font-weight: 600;
 }
 .kp .article-head h1 {
-  margin: 10px 0 14px;
+  margin: 0 0 14px;
   font-size: clamp(34px, 4.4vw, 52px);
   line-height: 1.12;
 }
@@ -5433,5 +5429,329 @@ html:has(.kp) {
   }
   .kp .article-body {
     font-size: 16px;
+  }
+}
+
+/* ---------- Keşif sayfası (/kesfet/ani) ---------- */
+.kp .discover-layout {
+  display: grid;
+  gap: 26px;
+  padding-top: 34px;
+  padding-bottom: 70px;
+}
+.kp .discover-intro .lead-copy + .lead-copy {
+  margin-top: 14px;
+}
+.kp .discover-facts dd {
+  font-family: inherit;
+}
+.kp .discover-walk .muted {
+  margin: 0 0 22px;
+  font-size: 15px;
+}
+.kp .walk-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.kp .walk-map {
+  margin: 0;
+  padding: 10px;
+  background: var(--kp-card);
+  border: 1px solid var(--kp-rule);
+  border-radius: 5px;
+  transform: rotate(-0.6deg);
+}
+.kp .walk-map svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #f4f7f9;
+  border-radius: 3px;
+}
+.kp .walk-river {
+  fill: none;
+  stroke: #b9c9d6;
+  stroke-width: 14;
+  stroke-linecap: round;
+}
+.kp .walk-river-label,
+.kp .walk-wall-label {
+  fill: var(--kp-ink-2);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+.kp .walk-wall {
+  fill: none;
+  stroke: var(--kp-ink-2);
+  stroke-width: 3;
+  stroke-dasharray: 10 6;
+  opacity: 0.55;
+}
+.kp .walk-route {
+  fill: none;
+  stroke: var(--kp-red);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+.kp .walk-stop {
+  cursor: pointer;
+}
+.kp .walk-stop circle {
+  fill: var(--kp-card);
+  stroke: var(--kp-red);
+  stroke-width: 2.5;
+  transition: fill 0.2s ease;
+}
+.kp .walk-stop text {
+  fill: var(--kp-red);
+  font-size: 13px;
+  font-weight: 600;
+  text-anchor: middle;
+  pointer-events: none;
+  transition: fill 0.2s ease;
+}
+.kp .walk-stop circle,
+.kp .walk-stop text {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.kp .walk-stop.is-active circle {
+  fill: var(--kp-red);
+}
+.kp .walk-stop.is-active text {
+  fill: #fff;
+}
+.kp .walk-stops {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.kp .walk-stops li {
+  padding: 8px 0 10px 14px;
+  border-left: 2px solid var(--kp-hair);
+  transition: border-color 0.2s ease;
+}
+.kp .walk-stops li.is-active {
+  border-left-color: var(--kp-red);
+}
+.kp .walk-stops button {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--kp-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.kp .walk-stops button b {
+  color: var(--kp-red);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.kp .walk-stops button span {
+  font-family: var(--display);
+  font-size: 19px;
+}
+.kp .walk-stops button:focus-visible {
+  outline: 2px solid var(--kp-red);
+  outline-offset: 3px;
+}
+.kp .walk-stops p {
+  margin: 4px 0 0 24px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--kp-ink-2);
+}
+/* Ekrana girince rota çizilir, duraklar sırayla yerine oturur (içerik baştan görünür). */
+.js-motion .kp .walk-grid.kp-await:not(.is-in) .walk-route {
+  stroke-dashoffset: 1;
+}
+.kp .walk-grid.kp-await.is-in .walk-route {
+  animation: kp-route-draw 2.6s 0.2s cubic-bezier(0.45, 0, 0.2, 1) both;
+}
+.js-motion .kp .walk-grid.kp-await:not(.is-in) .walk-stop circle {
+  transform: scale(0.55);
+}
+.kp .walk-grid.kp-await.is-in .walk-stop circle,
+.kp .walk-grid.kp-await.is-in .walk-stop text {
+  animation: kp-stop-pop 0.42s calc(0.35s + var(--i, 0) * 0.32s) cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+@keyframes kp-route-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes kp-stop-pop {
+  from {
+    transform: scale(0.55);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+.kp .discover-tips h2,
+.kp .discover-cta h2 {
+  margin: 0 0 16px;
+}
+.kp .discover-tip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+.kp .discover-tip {
+  padding: 20px 22px;
+  background: var(--kp-card);
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow-sm);
+}
+.kp .discover-tip h3 {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 0 0 8px;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 20px;
+}
+.kp .discover-tip h3 svg {
+  color: var(--kp-red);
+  flex: none;
+}
+.kp .discover-tip p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--kp-ink-2);
+}
+.kp .discover-cta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
+  gap: 34px;
+  align-items: center;
+  padding: 34px 40px;
+  background: var(--kp-card);
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow-sm);
+}
+.kp .discover-cta .lead-copy {
+  margin: 0 0 18px;
+}
+/* Tur sayfasında "Ani'yi keşfet" bağlantısı: küçük manzara + kısa tanıtım. */
+.kp .discover-links {
+  display: grid;
+  gap: 12px;
+  margin: 4px 0 28px;
+}
+.kp .discover-link {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 10px;
+  background: var(--kp-card);
+  border: 1px solid var(--kp-rule);
+  border-radius: 5px;
+  color: var(--kp-ink);
+  text-decoration: none;
+  transition: border-color 0.2s ease;
+}
+.kp .discover-link:hover,
+.kp .discover-link:focus-visible {
+  border-color: var(--kp-red);
+}
+.kp .discover-link img {
+  width: 104px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 3px;
+  flex: none;
+}
+.kp .discover-link strong {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 21px;
+}
+.kp .discover-link strong svg {
+  color: var(--kp-red);
+}
+.kp .discover-link small {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--kp-ink-2);
+  line-height: 1.5;
+}
+@media (max-width: 860px) {
+  .kp .walk-grid,
+  .kp .discover-cta {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .kp .discover-cta {
+    padding: 26px 22px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .js-motion .kp .walk-grid.kp-await:not(.is-in) .walk-route {
+    stroke-dashoffset: 0;
+  }
+  .js-motion .kp .walk-grid.kp-await:not(.is-in) .walk-stop circle {
+    transform: none;
+  }
+  .kp .walk-map {
+    transform: none;
+  }
+}
+/* Keşif · tanıtım: metnin yanında masaya bırakılmış fotoğraf (en çok 1° eğik). */
+.kp .discover-intro {
+  display: flow-root;
+}
+.kp .discover-photo {
+  float: right;
+  width: min(42%, 380px);
+  margin: 6px 0 18px 32px;
+  padding: 10px 10px 12px;
+  background: var(--kp-card);
+  border: 1px solid var(--kp-rule);
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow-sm);
+  transform: rotate(0.8deg);
+}
+.kp .discover-photo img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 3px;
+}
+.kp .discover-photo figcaption {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--kp-ink-2);
+}
+@media (max-width: 760px) {
+  .kp .discover-photo {
+    float: none;
+    width: 100%;
+    margin: 0 0 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kp .discover-photo {
+    transform: none;
   }
 }
