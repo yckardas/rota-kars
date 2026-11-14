@@ -22,7 +22,7 @@ import { createArticles } from "./articles.mjs";
 import { articleSeed } from "./articles-seed.mjs";
 import { createInterest } from "./interest.mjs";
 import { describeRequest, REQUEST_KINDS, statusLabel } from "./requests.mjs";
-import { priceTransfer } from "./transfer.mjs";
+import { applyStandardTransfer, priceTransfer } from "./transfer.mjs";
 export class AppError extends Error {
   constructor(status, message) {
     super(message);
@@ -149,6 +149,7 @@ export async function openStore(
     cleanup,
     tx,
   });
+  await applyStandardTransfer(db, { clock });
   await Promise.all([
     db.index("push_devices", { admin_id: 1 }),
     db.index("push_log", { created_at: 1 }),

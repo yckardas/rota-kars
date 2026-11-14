@@ -1,5 +1,5 @@
-// İlk rehber yazıları. Panelde TASLAK olarak açılır; acente okuyup düzenledikten
-// sonra yayına alır (bkz. articles.mjs). Fiyat ve kesin tarih bilerek yazılmadı.
+// İlk rehber yazıları. Önce taslak olarak eklendi; Kasım 2026'da acentenin isteğiyle
+// yayına alındı (bkz. articles.mjs). Fiyat ve kesin tarih bilerek yazılmadı.
 export const articleSeed = [
   {
     slug: "cildir-golunde-atli-kizak",
@@ -7,7 +7,7 @@ export const articleSeed = [
     summary:
       "Kış gelince donan Çıldır Gölü'nün üstünde atlı kızakla yol almak, Kars'ın en sevilen deneyimlerinden. Ne zaman gidilir, nelere dikkat edilir?",
     category: "aktivite",
-    cover: "/images/cildir.webp",
+    cover: "/images/rehber/cildir-kizak.webp",
     tourIds: ["ani-cildir"],
     body: `Kars ile Ardahan arasında uzanan Çıldır Gölü, kışın en soğuk haftalarında baştan sona donar. Göl beyaz bir ovaya döndüğünde kıyıdaki köylerden atlı kızaklar buzun üstüne çıkar. Rüzgârın sesi, atların nefesi ve uçsuz bucaksız beyazlık: Kars'a kışın gelenlerin en çok anlattığı anlardan biri budur.
 
@@ -63,7 +63,7 @@ Sarıkamış kışının tadını çıkarmak için sıcak tutan, su geçirmez gi
     summary:
       "Kars kışı soğuk ama güzel. Katmanlı giyimden ayakkabıya, telefon pilinden güneş gözlüğüne kadar kış gezisi için kısa bir hazırlık listesi.",
     category: "rehber",
-    cover: "/images/kars.webp",
+    cover: "/images/rehber/cildir-kis.webp",
     tourIds: ["ani-cildir", "sarikamis"],
     body: `Kars, Türkiye'nin en soğuk şehirlerinden biri. Kışın sıcaklık eksi yirmilerin altına inebilir, ama hava çoğu gün açık ve güneşlidir. Doğru hazırlıkla Ani'nin karlı surları, donmuş Çıldır Gölü ve Sarıkamış'ın ormanları tadından yenmez.
 

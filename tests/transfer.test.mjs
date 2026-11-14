@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { once } from "node:events";
 import { createApp } from "../server/app.mjs";
 import { openStore } from "../server/store.mjs";
-import { emptyTransfer, tierFor, priceTransfer } from "../server/transfer.mjs";
+import { emptyTransfer, tierFor, priceTransfer, applyStandardTransfer, STANDARD_TRANSFER_RELEASE } from "../server/transfer.mjs";
 
 const config = () => {
   const c = emptyTransfer();
@@ -56,14 +56,18 @@ test("tiers follow the party size", () => {
 
 test("panel saves the per-tour table; the catalog exposes it", async (t) => {
   const { call } = await fixture(t);
-  assert.equal((await call("/catalog")).json.tours.find((x) => x.id === "ani-cildir").transfer.enabled, false);
+  // Açılışta acentenin standart fiyatları (300 / 750 / 1.200 TL, gidiş-dönüş iki katı).
+  const start = (await call("/catalog")).json.tours.find((x) => x.id === "ani-cildir").transfer;
+  assert.equal(start.enabled, true);
+  assert.deepEqual(start.oneWay.bus, { 1: 30000, "2-4": 75000, "5+": 120000 });
+  assert.deepEqual(start.roundTrip.train, { 1: 60000, "2-4": 150000, "5+": 240000 });
   const saved = await call("/admin/operations/ani-cildir/transfer", config());
   assert.equal(saved.status, 200, JSON.stringify(saved.json));
   const tour = (await call("/catalog")).json.tours.find((x) => x.id === "ani-cildir");
   assert.equal(tour.transfer.enabled, true);
   assert.equal(tour.transfer.oneWay.airport["2-4"], 90000);
   // Başka tura dokunulmaz; geçersiz fiyat reddedilir.
-  assert.equal((await call("/catalog")).json.tours.find((x) => x.id === "sarikamis").transfer.enabled, false);
+  assert.equal((await call("/catalog")).json.tours.find((x) => x.id === "sarikamis").transfer.oneWay.airport["2-4"], 75000);
   const bad = config();
   bad.oneWay.airport["1"] = -5;
   assert.equal((await call("/admin/operations/ani-cildir/transfer", bad)).status, 400);
@@ -127,4 +131,17 @@ test("reservation stores the transfer, totals include it and a move keeps it", a
   const moved = await store.workflow.move(r.reference, { departureId: next.id, seats: [5, 6] });
   assert.equal(moved.total, next.price * 2 + 170000);
   assert.equal(moved.transfer.amount, 170000);
+});
+
+test("standard prices are written once and never over panel-edited tables", async (t) => {
+  const { store, call } = await fixture(t);
+  await call("/admin/operations/ani-cildir/transfer", config());
+  await store.db.update("tour_operations", { _id: "sarikamis" }, { transfer: emptyTransfer() });
+  await store.db.remove("integration_settings", { _id: STANDARD_TRANSFER_RELEASE });
+  const run = await applyStandardTransfer(store.db, { clock: () => Date.now() });
+  assert.equal(run.applied, 1, "yalnız hiç ayarlanmamış tur");
+  const tours = (await call("/catalog")).json.tours;
+  assert.equal(tours.find((x) => x.id === "ani-cildir").transfer.oneWay.airport["2-4"], 90000, "panel fiyatı korunur");
+  assert.equal(tours.find((x) => x.id === "sarikamis").transfer.oneWay.airport["1"], 30000);
+  assert.equal((await applyStandardTransfer(store.db, { clock: () => Date.now() })).applied, 0, "bir kez çalışır");
 });

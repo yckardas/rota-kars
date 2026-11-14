@@ -71,3 +71,35 @@ export function priceTransfer(config, choice, count) {
 // Sözleşme, e-posta ve panel için tek satır özet.
 export const transferLine = (t) =>
   t ? `Transfer: ${t.pointLabel} · ${t.directionLabel} · ${t.tierLabel}${t.info ? ` · ${t.info}` : ""}` : "";
+
+// Kasım 2026: acentenin verdiği standart transfer fiyatları (grup başına toplam):
+// 1 kişi 300 TL, 2–4 kişi 750 TL, 5+ kişi 1.200 TL; üç noktada da aynı. Gidiş-dönüş
+// tek yönün iki katı. Her veritabanında bir kez çalışır ve yalnız transferi hiç
+// ayarlanmamış turlara yazılır; panelden girilmiş fiyatlara dokunmaz.
+export const STANDARD_TRANSFER_RELEASE = "transfer_prices_2026_11";
+export const standardTransfer = () => {
+  const one = { 1: 30000, "2-4": 75000, "5+": 120000 },
+    both = { 1: 60000, "2-4": 150000, "5+": 240000 };
+  return {
+    enabled: true,
+    oneWay: Object.fromEntries(TRANSFER_POINTS.map((p) => [p.id, { ...one }])),
+    roundTrip: Object.fromEntries(TRANSFER_POINTS.map((p) => [p.id, { ...both }])),
+  };
+};
+const untouched = (t) =>
+  !t || (!t.enabled && [t.oneWay, t.roundTrip].every((table) => Object.values(table || {}).every((tiers) => Object.values(tiers).every((v) => !v))));
+export async function applyStandardTransfer(db, { clock }) {
+  if (await db.one("integration_settings", { _id: STANDARD_TRANSFER_RELEASE })) return { applied: 0 };
+  let applied = 0;
+  for (const row of await db.find("tour_operations", {}))
+    if (untouched(row.transfer)) {
+      await db.update("tour_operations", { _id: row.tour_id }, { transfer: standardTransfer() });
+      applied++;
+    }
+  await db.upsert("integration_settings", STANDARD_TRANSFER_RELEASE, {
+    id: STANDARD_TRANSFER_RELEASE,
+    body: { appliedAt: clock(), applied },
+    updated_at: clock(),
+  });
+  return { applied };
+}
