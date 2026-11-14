@@ -285,7 +285,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     window.history.pushState({ ...window.history.state, bookingStep: n }, "");
     window.scrollTo({ top: 120, behavior: "smooth" });
   }
-  // Ön rezervasyon zaten açıldıysa ilk adıma dönülür ve "Ödemeye dön" uyarısı öne çıkar.
+  // Ön rezervasyon zaten açıldıysa ilk adıma dönülür ve "Ödemeye devam et" uyarısı öne çıkar.
   function showPending() {
     setHold(null);
     setStep(0);
@@ -774,18 +774,18 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   <Info size={20} />
                   <div>
                     <strong>
-                      {t("{reference} numaralı ön rezervasyonunuz oluşturuldu.", {
+                      {t("Ödeme sayfasından ayrıldınız; {reference} numaralı rezervasyonunuz ön aşamada.", {
                         reference: pending.reference,
                       })}
                     </strong>
                     <p>
                       {t(
-                        "Koltuklarınız sizin için ayrıldı. Kapora ya da tam ödeme seçimini ödeme sayfasında değiştirebilirsiniz; yeni rezervasyon yapmanıza gerek yok.",
+                        "Koltuklarınız sizin için ayrıldı; ödemeyi tamamladığınızda rezervasyonunuz kesinleşir. Kaldığınız yerden devam edebilirsiniz, yeni rezervasyon yapmanıza gerek yok. Kapora ya da tam ödeme seçimini ödeme sayfasında değiştirebilirsiniz.",
                       )}
                     </p>
                     <div className="button-row">
                       <a className="btn" href={pending.payUrl}>
-                        <CreditCard size={17} /> {t("Ödemeye dön")}
+                        <CreditCard size={17} /> {t("Ödemeye devam et")}
                       </a>
                       <button
                         type="button"

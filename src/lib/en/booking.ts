@@ -91,11 +91,17 @@ export const booking: Record<string, string> = {
   "Sonraki adımda kartla": "By card in the next step",
   "Ödemeye geç": "Continue to payment",
   "Bu adıma dön": "Back to this step",
-  "{reference} numaralı ön rezervasyonunuz oluşturuldu.":
-    "Your pre-booking {reference} has been created.",
-  "Koltuklarınız sizin için ayrıldı. Kapora ya da tam ödeme seçimini ödeme sayfasında değiştirebilirsiniz; yeni rezervasyon yapmanıza gerek yok.":
-    "Your seats are held for you. You can switch between deposit and full payment on the payment page; there is no need to book again.",
-  "Ödemeye dön": "Back to payment",
+  "Ödeme sayfasından ayrıldınız; {reference} numaralı rezervasyonunuz ön aşamada.":
+    "You left the payment page; your booking {reference} is a pre-booking for now.",
+  "Koltuklarınız sizin için ayrıldı; ödemeyi tamamladığınızda rezervasyonunuz kesinleşir. Kaldığınız yerden devam edebilirsiniz, yeni rezervasyon yapmanıza gerek yok. Kapora ya da tam ödeme seçimini ödeme sayfasında değiştirebilirsiniz.":
+    "Your seats are held for you; your booking is confirmed once you complete the payment. You can pick up where you left off, with no need to book again. You can switch between deposit and full payment on the payment page.",
+  "Ödemeye devam et": "Continue with payment",
+  "Ödeme sayfasından ayrılıyorsunuz": "You are leaving the payment page",
+  "{reference} numaralı rezervasyonunuz ön aşamada: koltuklarınız sizin için ayrıldı, ödemeyi tamamladığınızda rezervasyonunuz kesinleşir.":
+    "Your booking {reference} is a pre-booking for now: your seats are held for you, and the booking is confirmed once you complete the payment.",
+  'Ayrılırsanız da kaldığınız yerden devam edebilirsiniz: rezervasyon sayfasındaki "Ödemeye devam et" düğmesiyle ya da Rezervasyonum sayfasından. Ödenmeyen ön rezervasyonlar en geç 24 saat içinde iptal olur.':
+    'If you leave, you can still pick up where you left off: with the "Continue with payment" button on the booking page or from the My booking page. Unpaid pre-bookings are cancelled within 24 hours at the latest.',
+  "Sayfadan ayrıl": "Leave the page",
   "Başka bir rezervasyon yapacağım": "I want to make another booking",
   "Ödeme planı": "Payment plan",
   "%{pct} kapora": "{pct}% deposit",

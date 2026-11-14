@@ -4693,6 +4693,19 @@ html:has(.kp) {
   border-top: 1px solid var(--kp-hair);
 }
 
+/* Ödeme ekranından geri tuşuyla çıkarken gösterilen uyarı */
+.kp .leave-payment {
+  padding: 4px 24px 16px;
+  max-width: 520px;
+}
+.kp .leave-payment p {
+  margin: 0 0 10px;
+  line-height: 1.6;
+}
+.kp .leave-payment p.muted {
+  font-size: 14px;
+}
+
 /* --- Ödeme ekranı: adımlar, rezervasyon özeti, kart işaretleri, künye --- */
 .kp .payment-steps {
   display: flex;
