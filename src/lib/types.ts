@@ -12,6 +12,8 @@ export type Tour = {
   mode?: "online" | "demand";
   demand?: { threshold: number; showProgress: boolean; count?: number };
   id: string;
+  // Yurt dışı tur (katalogda yalnız yurt dışı turlarda bulunur).
+  abroad?: boolean;
   salesOpen: boolean;
   vehicle: Vehicle;
   name: string;

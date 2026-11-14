@@ -4690,7 +4690,7 @@ html:has(.kp) {
   }
 }
 @media (max-width: 700px) {
-  .kp .tours-section .tour-grid > :nth-child(n + 4) {
+  .kp .tours-section .tour-grid > :nth-child(n + 7) {
     display: none;
   }
   .kp .tours-all-link {
