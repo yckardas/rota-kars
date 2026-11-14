@@ -409,6 +409,62 @@ export const tours = [
     note: "Güncel tarih ve kontenjan için bizimle iletişime geçin.",
     source: "https://rotakarsturizm.com/tur/van-havzasi-turu/",
   },
+  {
+    id: "tiflis",
+    name: "Tiflis Turu",
+    subtitle: "Kafkasya'nın başkentinde üç gün.",
+    category: "Yurt dışı",
+    // Yurt dışı tur: kesintisiz iptal süresi 5 gün (server/legal.mjs).
+    abroad: true,
+    // Yeterli talep olursa yapılır: açılışta talep toplama modunda (ücretsiz ön kayıt).
+    demandByDefault: true,
+    duration: "3 gün · 2 gece",
+    location: "Kars · Çıldır · Tiflis",
+    // Tiflis fotoğrafı panelden (Site içerikleri) yüklenene kadar acentenin kendi aracı.
+    image: "/images/rota-bus.webp",
+    gallery: ["/images/rota-bus.webp"],
+    price: 850000,
+    departure: "05:00",
+    end: "3. gün akşam",
+    inquiryOnly: false,
+    season: "Yurt dışı rota",
+    summary:
+      "Kars'tan Çıldır Aktaş sınır kapısı üzerinden Gürcistan'ın başkenti Tiflis'e uzanan üç günlük programda eski şehrin dar sokaklarını, Narikala Kalesi'ni, kükürt hamamlarını ve Mtskheta'yı rehber eşliğinde keşfedin.",
+    included: [
+      "2 gece otel konaklaması (kahvaltı dahil)",
+      "Ulaşım, profesyonel rehberlik ve acente refakati",
+      "Araç içi ikram ve seyahat sigortası",
+    ],
+    excluded: [
+      "Öğle ve akşam yemekleri",
+      "Müze, kale ve teleferik girişleri",
+      "Kükürt hamamı ve kişisel harcamalar",
+    ],
+    itinerary: [
+      {
+        time: "1. gün · 05:00",
+        title: "Kars'tan hareket",
+        text: "Çıldır üzerinden Aktaş sınır kapısı. Sınır işlemlerinin ardından Gürcistan'da yolculuk.",
+      },
+      {
+        time: "1. gün · öğleden sonra",
+        title: "Eski Tiflis",
+        text: "Otele yerleşme, Narikala Kalesi, Abanotubani kükürt hamamları ve Metekhi Kilisesi çevresinde akşam yürüyüşü.",
+      },
+      {
+        time: "2. gün",
+        title: "Tiflis ve Mtskheta",
+        text: "Sameba Katedrali, Rustaveli Caddesi ve Barış Köprüsü; ardından UNESCO listesindeki Mtskheta ve Jvari Manastırı.",
+      },
+      {
+        time: "3. gün",
+        title: "Serbest zaman ve dönüş",
+        text: "Kuru Köprü pazarında serbest zaman, öğleden sonra Kars'a dönüş yolculuğu.",
+      },
+    ],
+    note: "Tur yeterli talep olursa kesinleşir. Giriş belgeleri (pasaport veya yeni tip kimlik kartı) ve sınır koşulları seyahat öncesinde acente tarafından teyit edilir.",
+    source: "https://rotakarsturizm.com/tur/konaklamali-tiflis-turu/",
+  },
 ];
 // Kodda yazılı (panel düzenlemesinden önceki) tur fiyatları; content.mjs katalog
 // nesnelerinin üstüne yazdığı için modül yüklenirken bir kez alınır.

@@ -18,6 +18,7 @@ import { createUetds } from "./uetds.mjs";
 import { depositFor } from "./payments.mjs";
 import { createPush } from "./push.mjs";
 import { createContent } from "./content.mjs";
+import { createInterest } from "./interest.mjs";
 import { describeRequest, REQUEST_KINDS, statusLabel } from "./requests.mjs";
 import { priceTransfer } from "./transfer.mjs";
 export class AppError extends Error {
@@ -209,6 +210,7 @@ export async function openStore(
     env,
     pii,
   });
+  const interest = await createInterest(db, { clock, tx, departures, operations, notifications, env });
   const uetds = createUetds(db, {
     env,
     fetchImpl: uetdsFetch,
@@ -224,6 +226,7 @@ export async function openStore(
     workflow,
     companions,
     uetds,
+    interest,
     campaigns,
     instagramSettings,
     adminAuth,

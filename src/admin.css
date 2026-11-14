@@ -1524,3 +1524,47 @@
 .rk-admin .request-card.status-in_progress {
   border-color: #c9b98f;
 }
+
+/* Bekleme ve ön kayıt: tur bazında satış modu kartları */
+.rk-admin .interest-tours {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  margin: 16px 0 22px;
+}
+.rk-admin .interest-tour {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--mortar);
+  border-radius: 4px;
+}
+.rk-admin .interest-tour.is-demand {
+  border-color: #c9b98f;
+}
+.rk-admin .interest-tour h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.rk-admin .interest-tour .field {
+  margin: 0;
+}
+.rk-admin .interest-demand-fields {
+  display: grid;
+  gap: 8px;
+}
+.rk-admin .interest-demand-fields .field {
+  margin: 0;
+}
+.rk-admin .interest-progress {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+.rk-admin .interest-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

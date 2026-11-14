@@ -28,6 +28,7 @@ import {
   BarChart3,
   CalendarDays,
   Inbox,
+  BellRing,
   Gift,
   Mail,
   Star,
@@ -38,6 +39,7 @@ import { MonthReport } from "../components/admin/MonthReport";
 import { ContentManager } from "../components/admin/ContentManager";
 import { Overview } from "../components/admin/Overview";
 import { RequestManager } from "../components/admin/RequestManager";
+import { InterestManager } from "../components/admin/InterestManager";
 import { HotelManager } from "../components/admin/HotelManager";
 import { CommandPalette } from "../components/admin/CommandPalette";
 import { FeedbackProvider, useFeedback } from "../components/admin/feedback";
@@ -75,6 +77,7 @@ const ALL_TABS = [
   ["departures", "Sefer planı", CalendarDays, "Operasyon"],
   ["daily", "Günlük operasyon", ClipboardCheck, "Operasyon"],
   ["requests", "Gelen talepler", Inbox, "Operasyon"],
+  ["interest", "Bekleme ve ön kayıt", BellRing, "Operasyon"],
   ["reports", "Aylık rapor", BarChart3, "Satış"],
   ["campaigns", "Kampanyalar", Gift, "Satış"],
   ["notifications", "Bildirim kuyruğu", Mail, "Satış"],
@@ -447,6 +450,7 @@ function AdminPanel({
         {tab === "notifications" && <NotificationManager key={key("notif")} />}
         {tab === "requests" && <RequestManager key={key("req")} initialQuery={nav.q || ""} tours={catalog.tours} />}
         {tab === "hotels" && <HotelManager key={key("hotels")} />}
+        {tab === "interest" && <InterestManager key={key("interest")} onChange={refreshCatalog} />}
         {tab === "reviews" && <ReviewAssignments key={key("reviews")} catalog={catalog} />}
         {tab === "operations" && <TourOperations key={key("ops")} onChange={refreshCatalog} />}
         {tab === "instagram" && <InstagramManager key={key("ig")} catalog={catalog} />}

@@ -41,8 +41,12 @@ export function TourCard({ tour }: { tour: Tour }) {
           </span>
         )}
         <span className="tour-card-ribbon">{placeName(tour)}</span>
-        {!tour.salesOpen && (
+        {!tour.salesOpen ? (
           <span className="tour-sales-closed">{t("Şu an satışa kapalı")}</span>
+        ) : (
+          tour.mode === "demand" && (
+            <span className="tour-sales-closed tour-demand">{t("Ön kayıt açık")}</span>
+          )
         )}
       </div>
       <div className="tour-card-info">
@@ -50,7 +54,11 @@ export function TourCard({ tour }: { tour: Tour }) {
           <h3>{tour.name}</h3>
           <p>
             {tour.duration} · {t("Kars çıkışlı")}
-            {tour.inquiryOnly ? " · " + t("tarih için arayın") : ""}
+            {tour.inquiryOnly
+              ? " · " + t("tarih için arayın")
+              : tour.mode === "demand"
+                ? " · " + t("yeterli talep olursa")
+                : ""}
           </p>
           {tour.next && (
             <p className={"tour-card-next" + (tour.next.available <= 3 ? " is-few" : "")}>
@@ -70,7 +78,7 @@ export function TourCard({ tour }: { tour: Tour }) {
         </div>
         <strong>
           {currency(tour.fromPrice ?? tour.price)}
-          <small>{t("kişi başı")}</small>
+          <small>{tour.mode === "demand" ? t("tahmini kişi başı") : t("kişi başı")}</small>
         </strong>
       </div>
     </Link>

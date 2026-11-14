@@ -7,6 +7,7 @@ import { useLocation, useParams, useSearchParams } from "react-router-dom";
 import { Link, localPath, useLang } from "../lib/i18n";
 import { TourLink } from "../lib/tour-transition";
 import { TransferPicker } from "../components/TransferPicker";
+import { InterestForm } from "../components/InterestForm";
 import { offersTransfer, type PricedTransfer, type TransferChoice } from "../lib/transfer";
 import {
   ArrowLeft,
@@ -144,6 +145,8 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     } | null>(null),
     // İsteğe bağlı transfer (yolcu adımında seçilir; fiyatı sunucu hesaplar).
     [transfer, setTransfer] = useState<TransferChoice | null>(null),
+    // Dolu sefer için bekleme listesi ya da talep toplamadaki tur için ön kayıt formu.
+    [interest, setInterest] = useState<"prereg" | "waitlist" | null>(null),
     [couponError, setCouponError] = useState(""),
     [extendBusy, setExtendBusy] = useState(false),
     [extendError, setExtendError] = useState(""),
@@ -843,6 +846,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                       <option key={d.id} value={d.id}>
                         {dateLabel(d.date)} · {d.start_time} ·{" "}
                         {currency(d.price)}
+                        {d.available <= 0 ? " · " + t("dolu") : ""}
                       </option>
                     ))}
                   </select>
@@ -878,7 +882,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   </p>
                 </div>
               )}
-              {loaded && !departures.length && (
+              {loaded && !departures.length && tour?.mode !== "demand" && (
                 <div className="info-note">
                   <Info size={18} />
                   <p>
@@ -887,6 +891,30 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                       {t("Acente ile görüşün.")}
                     </a>
                   </p>
+                </div>
+              )}
+              {tour?.mode === "demand" && (
+                <div className="info-note waitlist-note">
+                  <Info size={18} />
+                  <p>{t("Bu tur yeterli talep olursa yapılacak; şu an koltuk satılmıyor. Ücretsiz ön kayıt bırakın, tur kesinleşince size haber verelim.")}</p>
+                  <button type="button" className="btn btn-small" onClick={() => setInterest("prereg")}>
+                    {t("Ücretsiz ön kayıt bırakın")}
+                  </button>
+                </div>
+              )}
+              {/* Kendi koltuk ayırmanız sayıyı düşürmesin: yalnız seçim yapılmadan önce. */}
+              {departure && !hold && !selected.length && departure.available < count && (
+                <div className="info-note waitlist-note" role="status">
+                  <Info size={18} />
+                  <p>
+                    {departure.available <= 0
+                      ? t("Bu seferde yer kalmadı.")
+                      : t("Bu seferde {n} kişilik yer kaldı.", { n: departure.available })}{" "}
+                    {t("Bekleme listesine katılın; yer açılınca size hemen e-posta gönderelim.")}
+                  </p>
+                  <button type="button" className="btn btn-small" onClick={() => setInterest("waitlist")}>
+                    {t("Yer açılınca haber ver")}
+                  </button>
                 </div>
               )}
               <div className="seat-selection">
@@ -1686,6 +1714,17 @@ export function Booking({ catalog }: { catalog: Catalog }) {
           </div>
         </aside>
       </div>
+      {interest && tour && (
+        <InterestForm
+          kind={interest}
+          tourId={tour.id}
+          tourName={tour.name}
+          departureId={interest === "waitlist" ? departure?.id : undefined}
+          departureLabel={departure ? `${dateLabel(departure.date)} · ${departure.start_time}` : undefined}
+          initialCount={count}
+          onClose={() => setInterest(null)}
+        />
+      )}
     </div>
   );
 }

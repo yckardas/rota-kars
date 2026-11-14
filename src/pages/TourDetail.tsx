@@ -24,6 +24,7 @@ import { useClearOfLaunchers } from "../lib/launchers";
 import { Postmark } from "../components/Postmark";
 import { enteredViaTransition } from "../lib/tour-transition";
 import { TransferOffer } from "../components/TourExtras";
+import { InterestForm } from "../components/InterestForm";
 import {
   currency,
   dateLabel,
@@ -39,6 +40,8 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
   const [request, setRequest] = useState(false),
     // Tur öncesi/sonrası konaklama talebi (anlaşmalı oteller listesiyle açılır).
     [stay, setStay] = useState<Hotel[] | null>(null),
+    // Talep toplama modundaki tur için ücretsiz ön kayıt formu.
+    [prereg, setPrereg] = useState(false),
     [departures, setDepartures] = useState<Departure[]>([]),
     [activeImage, setActiveImage] = useState(0),
     // Galeride görüntü değişince yeni fotoğraf yerine "oturur" (ilk açılışta değil).
@@ -56,7 +59,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
   useClearOfLaunchers(strip, "actionVisible");
   useEffect(() => {
     setActiveImage(0);
-    if (t && !t.inquiryOnly)
+    if (t && !t.inquiryOnly && t.mode !== "demand")
       api<Departure[]>(`/tours/${t.id}/departures`)
         .then(setDepartures)
         .catch(() => setDepartures([]));
@@ -80,6 +83,23 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
       ? Math.min(...departures.map((d) => d.price))
       : (t.fromPrice ?? t.price),
     currentVehicle = next?.vehicle || t.vehicle;
+  // Talep toplama: koltuk satılmaz; yeterli ön kayıt olunca acente satışı açar.
+  const demand = t.mode === "demand" && !t.inquiryOnly;
+  // Ana çağrı düğmesi her yerde aynı: bilgi al, ön kayıt ya da tarih/koltuk seç.
+  const cta = (className: string, short = false) =>
+    t.inquiryOnly ? (
+      <button className={className} onClick={() => setRequest(true)}>
+        {short ? tx("Bilgi alın") : tx("Bu tur için bilgi alın")}
+      </button>
+    ) : demand ? (
+      <button className={className} onClick={() => setPrereg(true)}>
+        {short ? tx("Ön kayıt") : tx("Ücretsiz ön kayıt bırakın")}
+      </button>
+    ) : (
+      <Link className={className} to={"/rezervasyon/" + t.id}>
+        {tx("Tarih ve koltuk seç")} <ArrowRight size={short ? 16 : 17} />
+      </Link>
+    );
   const mapUrl =
     "https://www.google.com/maps/search/?api=1&query=" +
     encodeURIComponent(t.location + " " + t.name);
@@ -177,26 +197,20 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
                 </dd>
               </div>
               <div className="kp-fact-price">
-                <dt>{tx("Kişi başı")}</dt>
+                <dt>{demand ? tx("Tahmini kişi başı") : tx("Kişi başı")}</dt>
                 <dd>{tx("{price}’den", { price: currency(startingPrice) })}</dd>
               </div>
             </dl>
-            {t.inquiryOnly ? (
-              <button className="btn" onClick={() => setRequest(true)}>
-                {tx("Bu tur için bilgi alın")}
-              </button>
-            ) : (
-              <Link className="btn" to={"/rezervasyon/" + t.id}>
-                {tx("Tarih ve koltuk seç")} <ArrowRight size={17} />
-              </Link>
-            )}
+            {cta("btn")}
           </div>
           <p className="kp-printed">
             <span>
               {t.season} · {tx("Kars çıkışlı")}
             </span>
             <span>
-              {!t.inquiryOnly && first
+              {demand
+                ? tx("Yeterli talep olursa kesinleşir.")
+                : !t.inquiryOnly && first
                 ? tx("İlk hareket: {date} · {time}", {
                     date: dateLabel(first.date),
                     time: first.start_time,
@@ -281,7 +295,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
                 </a>
               </div>
             </div>
-            {!t.inquiryOnly && <TransferOffer tourId={t.id} config={t.transfer} />}
+            {!t.inquiryOnly && !demand && <TransferOffer tourId={t.id} config={t.transfer} />}
             <section className="tour-extra stay-offer" aria-labelledby="stay-offer-title">
               <BedDouble size={26} strokeWidth={1.4} aria-hidden="true" />
               <div>
@@ -369,7 +383,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
               <div className="booking-price">
                 <span className="kp-stamp-place">{t.name}</span>
                 <strong>{currency(startingPrice)}</strong>
-                <span>{tx("kişi başı başlangıç fiyatı")}</span>
+                <span>{demand ? tx("tahmini kişi başı fiyat") : tx("kişi başı başlangıç fiyatı")}</span>
               </div>
             </div>
             {!t.inquiryOnly && first && (
@@ -383,12 +397,31 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
               />
             )}
           </div>
-          <p>
-            {tx("Size uyan günü seçin.")}
-            <br />
-            {tx("Yolculuğunuzun yerini şimdiden belirleyin.")}
-          </p>
-          {!t.inquiryOnly && (
+          {demand ? (
+            <div className="demand-note">
+              <p>
+                {tx("Bu tur yeterli talep olursa yapılacak. Ücretsiz ön kayıt bırakın; tur kesinleşince size haber verip rezervasyonu açalım.")}
+              </p>
+              {t.demand?.count !== undefined && (
+                <div className="demand-progress">
+                  <span>
+                    {tx("{count} / {threshold} kişi hazır", {
+                      count: Math.min(t.demand.count, t.demand.threshold),
+                      threshold: t.demand.threshold,
+                    })}
+                  </span>
+                  <progress max={t.demand.threshold} value={Math.min(t.demand.count, t.demand.threshold)} />
+                </div>
+              )}
+            </div>
+          ) : (
+            <p>
+              {tx("Size uyan günü seçin.")}
+              <br />
+              {tx("Yolculuğunuzun yerini şimdiden belirleyin.")}
+            </p>
+          )}
+          {!t.inquiryOnly && !demand && (
             <div className="next-departures">
               <CalendarDays size={18} />
               <span>
@@ -400,15 +433,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
               </span>
             </div>
           )}
-          {t.inquiryOnly ? (
-            <button className="btn block" onClick={() => setRequest(true)}>
-              {tx("Bu tur için bilgi alın")}
-            </button>
-          ) : (
-            <Link className="btn block" to={"/rezervasyon/" + t.id}>
-              {tx("Tarih ve koltuk seç")} <ArrowRight size={17} />
-            </Link>
-          )}
+          {cta("btn block")}
           <div className="aside-benefits">
             <span>
               <Armchair size={15} />
@@ -416,9 +441,11 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
             </span>
             <span>
               <Check size={15} />
-              {catalog.payment.enabled
-                ? tx("Kaporayı ödeyince anında onay")
-                : tx("Acente onaylı rezervasyon")}
+              {demand
+                ? tx("Ön kayıt ücretsizdir, ödeme alınmaz")
+                : catalog.payment.enabled
+                  ? tx("Kaporayı ödeyince anında onay")
+                  : tx("Acente onaylı rezervasyon")}
             </span>
           </div>
           {catalog.demo ? (
@@ -447,20 +474,15 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
       >
         <div>
           <strong>{currency(startingPrice)}</strong>
-          <small>{tx("kişi başı başlangıç")}</small>
+          <small>{demand ? tx("tahmini kişi başı") : tx("kişi başı başlangıç")}</small>
         </div>
-        {t.inquiryOnly ? (
-          <button className="btn" onClick={() => setRequest(true)}>
-            {tx("Bilgi alın")}
-          </button>
-        ) : (
-          <Link className="btn" to={"/rezervasyon/" + t.id}>
-            {tx("Tarih ve koltuk seç")} <ArrowRight size={16} />
-          </Link>
-        )}
+        {cta("btn", true)}
       </div>
       {request && (
         <RequestForm kind="private-tour" onClose={() => setRequest(false)} />
+      )}
+      {prereg && (
+        <InterestForm kind="prereg" tourId={t.id} tourName={t.name} onClose={() => setPrereg(false)} />
       )}
       {stay && (
         <RequestForm

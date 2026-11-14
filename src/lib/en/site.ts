@@ -505,4 +505,64 @@ export const site: Record<string, string> = {
     "Looking for a place to stay in Kars before or after the tour? Leave your dates, group size and room preference and we will get back to you after checking with our partner hotels.",
   "Konaklama talebi bırakın":
     "Request accommodation",
+  "Yer açılınca haber ver":
+    "Tell me when a seat opens",
+  "Ücretsiz ön kayıt":
+    "Free pre-registration",
+  "Bekleme listesindesiniz.":
+    "You’re on the waiting list.",
+  "Ön kaydınız alındı.":
+    "Your pre-registration is in.",
+  "Bu seferde yer açılınca size hemen e-posta göndereceğiz. Yer, ilk rezervasyonu tamamlayana ayrılır.":
+    "We’ll email you as soon as a seat opens on this departure. The seat goes to whoever books first.",
+  "Yeterli talep oluşunca tur kesinleşir; tarihleri ve rezervasyon bağlantısını e-postanıza göndeririz.":
+    "The tour goes ahead once there is enough demand; we’ll email you the dates and a booking link.",
+  "Bu seferde yer kalmadı.":
+    "This departure is full.",
+  "Bu tur yeterli talep olursa yapılacak.":
+    "This tour goes ahead once there is enough demand.",
+  "{tour} · {departure} için bekleme listesine katılın; yer açılınca sizi ilk haberdar edenlerden olalım.":
+    "Join the waiting list for {tour} · {departure}; we’ll let you know as soon as a seat opens.",
+  "{tour} için ücretsiz ön kayıt bırakın. Ödeme alınmaz; tur kesinleşince size haber verip rezervasyonu açarız.":
+    "Pre-register for {tour} for free. No payment is taken; once the tour is confirmed we’ll let you know and open bookings.",
+  "Tercih ettiğiniz dönem (isteğe bağlı)":
+    "Preferred period (optional)",
+  "Örn. Mart 2027, hafta sonu":
+    "E.g. March 2027, a weekend",
+  "okudum. Bilgilerimin bu tur için bana haber verilmesi amacıyla işleneceğini biliyorum.":
+    "and understand my details will be used to notify me about this tour.",
+  "Koltuk tutulmaz ve ödeme alınmaz; e-postadaki bağlantıyla istediğiniz an listeden çıkabilirsiniz.":
+    "No seat is held and no payment is taken; leave the list anytime with the link in the email.",
+  "Haber ver":
+    "Notify me",
+  "Ön kaydımı bırak":
+    "Pre-register",
+  "Ön kayıt":
+    "Pre-register",
+  "Ücretsiz ön kayıt bırakın":
+    "Pre-register for free",
+  "Tahmini kişi başı":
+    "Estimated per person",
+  "Yeterli talep olursa kesinleşir.":
+    "Goes ahead once there is enough demand.",
+  "tahmini kişi başı fiyat":
+    "estimated price per person",
+  "Bu tur yeterli talep olursa yapılacak. Ücretsiz ön kayıt bırakın; tur kesinleşince size haber verip rezervasyonu açalım.":
+    "This tour goes ahead once there is enough demand. Pre-register for free; once it’s confirmed we’ll let you know and open bookings.",
+  "{count} / {threshold} kişi hazır":
+    "{count} / {threshold} people in",
+  "tahmini kişi başı":
+    "estimated per person",
+  "Ön kayıt ücretsizdir, ödeme alınmaz":
+    "Pre-registration is free, no payment taken",
+  "Ön kayıt açık":
+    "Pre-registration open",
+  "yeterli talep olursa":
+    "runs with enough demand",
+  "Bu tur yeterli talep olursa yapılacak; şu an koltuk satılmıyor. Ücretsiz ön kayıt bırakın, tur kesinleşince size haber verelim.":
+    "This tour goes ahead once there is enough demand; seats aren’t on sale yet. Pre-register for free and we’ll let you know when it’s confirmed.",
+  "Bu seferde {n} kişilik yer kaldı.":
+    "Only {n} seats are left on this departure.",
+  "Bekleme listesine katılın; yer açılınca size hemen e-posta gönderelim.":
+    "Join the waiting list and we’ll email you as soon as seats open.",
 };
