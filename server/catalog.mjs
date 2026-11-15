@@ -92,14 +92,17 @@ export const fleet = {
 };
 export const cancellationPolicy =
   "Ödeme yapılmamış ön rezervasyonları istediğiniz zaman ücretsiz iptal edebilirsiniz. Onaylanmış rezervasyonlarda yurt içi turlarda hareketten 3 gün, yurt dışı turlarda 5 gün öncesine kadar iptal ederseniz kapora dahil ödediğiniz tutarın tamamı iade edilir. Bu süreden sonraki iptallerde kapora iade edilmez, fazlası iade edilir; haber vermeden katılmamada ödenen tutar iade edilmez. Turu biz iptal edersek tutarın tamamını geri alırsınız ya da başka bir tarihe geçersiniz.";
+// Turların standart aracı: 18 misafir koltuklu VIP minibüs (Sprinter / Crafter 19+1).
+// Kasım 2026 müşteri düzeltmesi: en arka sıra dörtlü, koltuklar 18 numarayla biter.
 export const vehicle = {
-  id: "vip-18-plus-1",
-  name: "VIP midibüs",
-  passengerSeats: 18,
+  id: "vip-19-plus-1",
+  name: "VIP minibüs",
+  passengerSeats: 19,
   driverSeats: 1,
   guideSeats: 1,
-  sellableSeats: 17,
-  // Sütunlar: sol çift koltuk, koridor, sağ tekli koltuk. İlk sıranın sağı kapı.
+  sellableSeats: 18,
+  // Sütunlar: sol çift koltuk, koridor, sağ tekli koltuk. İlk sıranın sağı kapı;
+  // en arka sıra koridorsuz dörtlü.
   layout: [
     ["driver", null, null, "guide"],
     [1, 2, null, "door"],
@@ -107,10 +110,10 @@ export const vehicle = {
     [6, 7, null, 8],
     [9, 10, null, 11],
     [12, 13, null, 14],
-    [15, 16, null, 17],
+    [15, 16, 17, 18],
   ],
   description:
-    "18 yolcu + 1 şoför. Şoför yanındaki ön koltuk rehbere ayrılır. 17 koltuk rezervasyona açıktır.",
+    "18 misafir koltuğu + rehber + şoför. Şoför yanındaki ön koltuk rehbere ayrılır. 18 koltuk rezervasyona açıktır.",
 };
 export const tours = [
   {
@@ -146,8 +149,8 @@ export const tours = [
     itinerary: [
       {
         time: "08:30",
-        title: "Kars’ta buluşma",
-        text: "Kars merkezden hareket ve rehberinizle tanışma.",
+        title: "Kars’ta alınış",
+        text: "Kars merkezde evinizden ya da otelinizden alınış ve rehberinizle tanışma.",
       },
       {
         time: "Sabah",
@@ -418,25 +421,26 @@ export const tours = [
   {
     id: "tiflis",
     name: "Tiflis Turu",
-    subtitle: "Kafkasya'nın başkentinde üç gün.",
+    subtitle: "Kafkasya'nın başkentinde iki gün.",
     category: "Yurt dışı",
     // Yurt dışı tur: kesintisiz iptal süresi 5 gün (server/legal.mjs).
     abroad: true,
-    // Yeterli talep olursa yapılır: açılışta talep toplama modunda (ücretsiz ön kayıt).
-    demandByDefault: true,
-    duration: "3 gün · 2 gece",
-    location: "Kars · Çıldır · Tiflis",
+    duration: "2 gün · 1 gece",
+    location: "Kars · Türkgözü · Tiflis",
     image: "/images/tours/tiflis-eski-sehir.webp",
-    gallery: ["/images/tours/tiflis-eski-sehir.webp", "/images/tours/tiflis.webp"],
-    price: 900000,
+    gallery: [
+      "/images/tours/tiflis-eski-sehir.webp",
+      "/images/tours/tiflis.webp",
+    ],
+    price: 500000,
     departure: "05:00",
-    end: "3. gün akşam",
+    end: "2. gün akşam",
     inquiryOnly: false,
     season: "Yurt dışı rota",
     summary:
-      "Kars'tan Çıldır Aktaş sınır kapısı üzerinden Gürcistan'ın başkenti Tiflis'e uzanan üç günlük programda eski şehrin dar sokaklarını, Narikala Kalesi'ni, kükürt hamamlarını ve Mtskheta'yı rehber eşliğinde keşfedin.",
+      "Kars'tan Türkgözü sınır kapısı üzerinden Gürcistan'ın başkenti Tiflis'e uzanan iki günlük programda eski şehrin dar sokaklarını, Narikala Kalesi'ni, kükürt hamamlarını ve Mtskheta'yı rehber eşliğinde keşfedin. Dönüş de Türkgözü'nden.",
     included: [
-      "2 gece otel konaklaması (kahvaltı dahil)",
+      "1 gece otel konaklaması (kahvaltı dahil)",
       "Ulaşım, profesyonel rehberlik ve acente refakati",
       "Araç içi ikram ve seyahat sigortası",
     ],
@@ -449,7 +453,7 @@ export const tours = [
       {
         time: "1. gün · 05:00",
         title: "Kars'tan hareket",
-        text: "Çıldır üzerinden Aktaş sınır kapısı. Sınır işlemlerinin ardından Gürcistan'da yolculuk.",
+        text: "Türkgözü sınır kapısından çıkış. Sınır işlemlerinin ardından Gürcistan'da yolculuk.",
       },
       {
         time: "1. gün · öğleden sonra",
@@ -457,17 +461,17 @@ export const tours = [
         text: "Otele yerleşme, Narikala Kalesi, Abanotubani kükürt hamamları ve Metekhi Kilisesi çevresinde akşam yürüyüşü.",
       },
       {
-        time: "2. gün",
+        time: "2. gün · sabah",
         title: "Tiflis ve Mtskheta",
         text: "Sameba Katedrali, Rustaveli Caddesi ve Barış Köprüsü; ardından UNESCO listesindeki Mtskheta ve Jvari Manastırı.",
       },
       {
-        time: "3. gün",
-        title: "Serbest zaman ve dönüş",
-        text: "Kuru Köprü pazarında serbest zaman, öğleden sonra Kars'a dönüş yolculuğu.",
+        time: "2. gün · akşam",
+        title: "Türkgözü'nden dönüş",
+        text: "Öğleden sonra yola çıkış, Türkgözü sınır kapısından giriş ve Kars'a dönüş.",
       },
     ],
-    note: "Tur yeterli talep olursa kesinleşir. Giriş belgeleri (pasaport veya yeni tip kimlik kartı) ve sınır koşulları seyahat öncesinde acente tarafından teyit edilir.",
+    note: "Çıkış ve dönüş Türkgözü sınır kapısından yapılır. Giriş belgeleri (pasaport veya yeni tip kimlik kartı) ve sınır koşulları seyahat öncesinde acente tarafından teyit edilir.",
     source: "https://rotakarsturizm.com/tur/konaklamali-tiflis-turu/",
   },
   // Kasım 2026'da acentenin gönderdiği tur broşürlerinden eklenen rotalar. Hepsi açılışta
@@ -560,7 +564,7 @@ export const tours = [
       "/images/tours/zeugma.webp",
       "/images/tours/mardin.webp",
     ],
-    price: 1300000,
+    price: 1500000,
     departure: "22:00",
     end: "4. günün gecesi 03:00",
     inquiryOnly: false,
@@ -869,7 +873,6 @@ export const tours = [
     name: "Şavşat Karagöl Turu",
     subtitle: "Ormanın içinde saklı bir göl.",
     category: "Doğa",
-    demandByDefault: true,
     duration: "Günübirlik",
     location: "Kars · Susuz · Şavşat",
     image: "/images/tours/savsat-karagol-kartpostal.webp",
@@ -928,7 +931,6 @@ export const tours = [
     category: "Yurt dışı",
     // Yurt dışı tur: kesintisiz iptal süresi 5 gün (server/legal.mjs).
     abroad: true,
-    demandByDefault: true,
     duration: "3 gün · 2 gece",
     location: "Kars · Nahçıvan · Bakü",
     image: "/images/tours/baku-kartpostal.webp",
@@ -938,7 +940,7 @@ export const tours = [
       "/images/tours/gobustan.webp",
       "/images/tours/nahcivan.webp",
     ],
-    price: 0,
+    price: 2000000,
     departure: "Acente onayı",
     end: "3. gün",
     inquiryOnly: false,
@@ -981,7 +983,7 @@ export const tours = [
         text: "Gobustan Milli Parkı, çamur volkanları ve Bibi Heybet Camii.",
       },
     ],
-    note: "Girişler yeni tip kimlik kartıyla yapılır. 18 yaşından küçüklerin (bebekler dahil) kimlik kartında fotoğraf bulunması zorunludur; anne ya da babasıyla seyahat etmeyen 18 yaş altı yolcular için muvafakatname gerekir. Sınırda kişi başı 1.250 TL yurt dışı çıkış harcı ödenir. Uçuş saatleri ve günlere göre gezi sırası tur tarihinden önce teyit edilir.",
+    note: "Tur ücreti kişi başı 20.000 TL ya da 400 USD'dir. Girişler yeni tip kimlik kartıyla yapılır. 18 yaşından küçüklerin (bebekler dahil) kimlik kartında fotoğraf bulunması zorunludur; anne ya da babasıyla seyahat etmeyen 18 yaş altı yolcular için muvafakatname gerekir. Sınırda kişi başı 1.250 TL yurt dışı çıkış harcı ödenir. Uçuş saatleri ve günlere göre gezi sırası tur tarihinden önce teyit edilir.",
     source:
       "https://rotakarsturizm.com/tur/buyuk-azerbaycan-turu-nahcivan-baku/",
   },

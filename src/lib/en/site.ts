@@ -63,6 +63,7 @@ export const site: Record<string, string> = {
   "Temsili · Yapay zekâ": "Illustrative · AI",
   "Tüm rotalar": "All routes",
   Tümü: "All",
+  Günübirlik: "Day trips",
   Kültür: "Culture",
   Doğa: "Nature",
   "Fiyat için arayın": "Call for price",
@@ -155,8 +156,8 @@ export const site: Record<string, string> = {
   "Fiyata dahil": "Included in the price",
   "Ekstra hizmetler": "Extras",
   "Buluşalım, yola çıkalım.": "Let’s meet and set off.",
-  "Kars merkez · Kesin buluşma noktası acente tarafından paylaşılır":
-    "Kars city center · The agency will share the exact meeting point",
+  "Kars merkezde ev, otel ve yakın noktalardan alıp bırakma":
+    "Pick-up and drop-off from homes, hotels and nearby points in central Kars",
   "Tarihinizi acenteyle planlayın.": "Plan your date with our agency.",
   "Rehber: {name}": "Guide: {name}",
   "Tur bölgesini haritada aç": "Open the tour area on the map",
@@ -211,7 +212,7 @@ export const site: Record<string, string> = {
     "At Rota Kars Turizm, we offer Kars-based tours, private group programs and tourist transport.",
   "Bir şehri tanımanın en güzel yolu, hikâyesini bilen insanlarla yürümek. Ani’den Çıldır’a, Sarıkamış’tan komşu rotalara uzanan programlarımızda bu yaklaşımı benimsiyoruz.":
     "The best way to know a city is to walk it with people who know its story. That’s the spirit of our programs, from Ani to Çıldır and from Sarıkamış to neighboring routes.",
-  "Küçük gruplar için VIP midibüslerle ulaşımı, rehberli geziyi ve konaklama planlamasını bir arada ele alıyoruz.":
+  "Küçük gruplar için VIP minibüslerle ulaşımı, rehberli geziyi ve konaklama planlamasını bir arada ele alıyoruz.":
     "For small groups, we bring together VIP minibus transport, guided sightseeing and accommodation planning.",
   "Özel tur planlayın": "Plan a private tour",
   "Araç kiralama talebi": "Vehicle rental request",

@@ -5497,7 +5497,7 @@ html:has(.kp) {
 }
 .kp .transfer-offer-table > div {
   display: grid;
-  grid-template-columns: minmax(150px, 1.6fr) repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(150px, 1.6fr) repeat(4, minmax(0, 1fr));
   gap: 10px;
   align-items: center;
   padding: 11px 0;
@@ -5528,9 +5528,15 @@ html:has(.kp) {
   .kp .transfer-points {
     grid-template-columns: 1fr;
   }
+  /* Telefonda nokta adı üstte tam satır, dört kişi grubu altında. */
   .kp .transfer-offer-table > div {
-    grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    row-gap: 6px;
     font-size: 13px;
+  }
+  .kp .transfer-offer-table [role="rowheader"],
+  .kp .transfer-offer-head [role="columnheader"]:first-child {
+    grid-column: 1 / -1;
   }
   .kp .transfer-offer-table .price {
     font-size: 15px;

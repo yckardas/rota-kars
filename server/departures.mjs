@@ -20,6 +20,10 @@ export const salesClosesAt = (date, startTime, cutoffMinutes = 60) => {
   const time = /^\d{2}:\d{2}$/.test(startTime || "") ? startTime : "00:00";
   return Date.parse(`${date}T${time}:00+03:00`) - cutoffMinutes * 60 * 1000;
 };
+// Kasım 2026 müşteri düzeltmesi: sabit buluşma noktası yerine Kars merkezde ev ve otelden alınış.
+export const DEFAULT_PICKUP =
+  "Kars merkezde ev, otel ve yakın noktalardan alıp bırakma";
+export const OLD_DEFAULT_PICKUP = "Kars merkez · Acente buluşma noktası";
 const tourPrice = (tourId) => tours.find((t) => t.id === tourId)?.price ?? 0;
 // Kasım 2026 düzeltmesi: eskiden sefer açılırken fiyat sefere kopyalanıyordu (panel formunun
 // varsayılanı sabit 1.000 TL idi), bu yüzden panelde değişen tur fiyatı seferlere yansımıyordu.
@@ -83,7 +87,7 @@ export async function createDepartures(
           .find((t) => t.id === row.tour_id)
           ?.departure.match(/^\d{2}:\d{2}$/)?.[0] ||
         "08:30",
-      pickup: row.pickup || "Kars merkez · Acente buluşma noktası",
+      pickup: row.pickup || DEFAULT_PICKUP,
       guide_name: row.guide_name || "",
       guide_phone: row.guide_phone || "",
       // Talep toplama modundaki turda koltuk satılmaz; yalnız ön kayıt alınır.

@@ -1,4 +1,4 @@
-import { emptyTransfer } from "./transfer.mjs";
+import { normalizeTransfer } from "./transfer.mjs";
 import { AppError } from "./store.mjs";
 import { tours, vehicle as defaultVehicle } from "./catalog.mjs";
 export const vehicleModels = [
@@ -24,7 +24,7 @@ export const vehicleModels = [
   {
     id: "vip-midibus",
     shape: "midibus",
-    name: "VIP midibüs · Sprinter / Crafter sınıfı",
+    name: "VIP minibüs · Sprinter / Crafter sınıfı",
     min: 12,
     max: 19,
     seats: 18,
@@ -196,7 +196,8 @@ export function makeVehicle(modelId, passengerSeats) {
     passengerSeats > model.max
   )
     throw new AppError(400, "Araç modeline uygun bir yolcu kapasitesi seçin.");
-  if (modelId === "vip-midibus" && passengerSeats === 18)
+  // 19+1 Sprinter / Crafter: turların standart 18 misafir koltuklu düzeni (arka sıra dörtlü).
+  if (modelId === "vip-midibus" && passengerSeats === 19)
     return {
       ...defaultVehicle,
       modelId,
@@ -236,7 +237,7 @@ export async function createOperations(db, { clock, cleanup, tx }) {
       tour_id: tour.id,
       sales_open: tour.inquiryOnly ? 0 : 1,
       vehicle_model: "vip-midibus",
-      passenger_seats: 18,
+      passenger_seats: 19,
       // "online": koltuk seçip rezervasyon/ödeme. "demand": talep toplama; yeterli
       // ön kayıt olunca acente satışı açar (bkz. interest.mjs).
       mode: tour.demandByDefault ? "demand" : "online",
@@ -256,7 +257,7 @@ export async function createOperations(db, { clock, cleanup, tx }) {
     return {
       ...row,
       // Tur bazında transfer fiyatları (bkz. transfer.mjs); hiç ayarlanmadıysa kapalı.
-      transfer: row.transfer || emptyTransfer(),
+      transfer: normalizeTransfer(row.transfer),
       mode: row.mode === "demand" ? "demand" : "online",
       demand: {
         threshold: Number(row.demand_threshold) || 14,

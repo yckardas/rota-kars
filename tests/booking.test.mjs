@@ -21,16 +21,18 @@ const person = (holdToken) => ({
   passengers: ["Birinci Yolcu"],
   paymentMode: "deposit",
 });
-test("18+1 model has guide excluded and exactly seventeen sellable seats", async () => {
+test("18-guest minibus (19+1) has the guide excluded and a four-seat back row ending at 18", async () => {
   const { s, id } = await fixture();
   try {
     const a = await s.availability(id);
-    assert.equal(a.vehicle.passengerSeats, 18);
+    assert.equal(a.vehicle.passengerSeats, 19);
     assert.equal(a.vehicle.driverSeats, 1);
     assert.equal(a.vehicle.guideSeats, 1);
-    assert.equal(a.seats.length, 17);
+    assert.equal(a.seats.length, 18);
+    assert.equal(a.vehicle.name, "VIP minibüs");
     assert.equal(a.vehicle.layout[0][3], "guide");
-    for (const seats of [[0], [18], ["guide"], ["driver"], [1, 1], [], [1.5]])
+    assert.deepEqual(a.vehicle.layout.at(-1), [15, 16, 17, 18]);
+    for (const seats of [[0], [19], ["guide"], ["driver"], [1, 1], [], [1.5]])
       await assert.rejects(
         async () => await s.hold(id, seats),
         (e) => e.status === 400,
@@ -51,7 +53,7 @@ test("competing holds reject an already locked seat atomically", async () => {
       (await s.availability(id)).seats.find((x) => x.number === 2).status,
       "available",
     );
-    assert.equal((await s.listDepartures("ani-cildir"))[0].available, 16);
+    assert.equal((await s.listDepartures("ani-cildir"))[0].available, 17);
   } finally {
     await s.db.close();
   }

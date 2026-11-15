@@ -3,6 +3,7 @@ import { Search, SlidersHorizontal } from "lucide-react";
 import { TourCard } from "../components/TourCard";
 import type { Catalog } from "../lib/types";
 import { useLang } from "../lib/i18n";
+import { TOUR_FILTERS, matchesTourFilter } from "../lib/tourFilters";
 export function Tours({ catalog }: { catalog: Catalog }) {
   const [q, setQ] = useState(""),
     [category, setCategory] = useState("Tümü"),
@@ -11,7 +12,7 @@ export function Tours({ catalog }: { catalog: Catalog }) {
   // Kategoriler /en altında katalogda İngilizce gelir.
   const tours = catalog.tours.filter(
     (tour) =>
-      (category === "Tümü" || tour.category === t(category)) &&
+      (category === "Tümü" || matchesTourFilter(tour, category, t)) &&
       `${tour.name} ${tour.location}`
         .toLocaleLowerCase("tr")
         .includes(q.toLocaleLowerCase("tr")),
@@ -39,7 +40,7 @@ export function Tours({ catalog }: { catalog: Catalog }) {
           </label>
           <div className="tour-filters">
             <SlidersHorizontal size={17} />
-            {["Tümü", "Kültür", "Doğa", "Kış", "Yurt dışı", "Konaklamalı"].map((c) => (
+            {["Tümü", ...TOUR_FILTERS].map((c) => (
               <button
                 key={c}
                 className={category === c ? "active" : ""}

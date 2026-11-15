@@ -299,7 +299,7 @@ export function About() {
           </p>
           <p>
             {t(
-              "Küçük gruplar için VIP midibüslerle ulaşımı, rehberli geziyi ve konaklama planlamasını bir arada ele alıyoruz.",
+              "Küçük gruplar için VIP minibüslerle ulaşımı, rehberli geziyi ve konaklama planlamasını bir arada ele alıyoruz.",
             )}
           </p>
           <div className="button-row">

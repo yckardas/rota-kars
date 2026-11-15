@@ -204,8 +204,8 @@ test("chat answers locally without an API key and offers WhatsApp handoff", asyn
       content: "Araçta kaç koltuk var, rehber nerede oturuyor?",
     },
   ]);
-  assert.match(seats.text, /18\+1/);
-  assert.match(seats.text, /17/);
+  assert.match(seats.text, /19\+1 VIP minibüs/);
+  assert.match(seats.text, /18 misafir koltuğu/);
   const batum = await chat.reply([
     {
       role: "user",

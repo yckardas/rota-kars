@@ -58,7 +58,7 @@ export const en = {
   vehicle: {
     name: "VIP minibus",
     description:
-      "18 passengers + 1 driver. The front seat next to the driver is reserved for the guide. 17 seats are open for booking.",
+      "18 guest seats + guide + driver. The front seat next to the driver is reserved for the guide. 18 seats are open for booking.",
   },
   tours: {
     "ani-cildir": {
@@ -82,8 +82,8 @@ export const en = {
       itinerary: [
         {
           time: "08:30",
-          title: "Meet in Kars",
-          text: "Departure from central Kars and meeting your guide.",
+          title: "Pick-up in Kars",
+          text: "Pick-up from your home or hotel in central Kars and meeting your guide.",
         },
         {
           time: "Morning",
@@ -295,16 +295,16 @@ export const en = {
     },
     tiflis: {
       name: "Tbilisi Tour",
-      subtitle: "Three days in the capital of the Caucasus.",
+      subtitle: "Two days in the capital of the Caucasus.",
       category: "Abroad",
-      duration: "3 days · 2 nights",
+      duration: "2 days · 1 night",
       departure: "05:00",
-      end: "Day 3, evening",
+      end: "Day 2, evening",
       season: "Route abroad",
       summary:
-        "A three-day trip from Kars to Tbilisi via the Çıldır–Aktaş border crossing: the narrow streets of the old town, Narikala Fortress, the sulphur baths and Mtskheta, with a guide.",
+        "A two-day trip from Kars to Tbilisi via the Türkgözü border crossing: the narrow streets of the old town, Narikala Fortress, the sulphur baths and Mtskheta, with a guide. The return is via Türkgözü too.",
       included: [
-        "2 nights' hotel accommodation (breakfast included)",
+        "1 night's hotel accommodation (breakfast included)",
         "Transport, professional guiding and agency escort",
         "On-board refreshments and travel insurance",
       ],
@@ -314,20 +314,28 @@ export const en = {
         "Sulphur bath and personal expenses",
       ],
       itinerary: [
-        { time: "Day 1 · 05:00", title: "Departure from Kars", text: "Via Çıldır to the Aktaş border crossing, then on through Georgia." },
+        {
+          time: "Day 1 · 05:00",
+          title: "Departure from Kars",
+          text: "Exit via the Türkgözü border crossing, then on through Georgia after border formalities.",
+        },
         {
           time: "Day 1 · afternoon",
           title: "Old Tbilisi",
           text: "Hotel check-in, then an evening walk around Narikala Fortress, the Abanotubani sulphur baths and Metekhi Church.",
         },
         {
-          time: "Day 2",
+          time: "Day 2 · morning",
           title: "Tbilisi and Mtskheta",
           text: "Sameba Cathedral, Rustaveli Avenue and the Bridge of Peace, followed by UNESCO-listed Mtskheta and Jvari Monastery.",
         },
-        { time: "Day 3", title: "Free time and return", text: "Free time at the Dry Bridge market, then the drive back to Kars in the afternoon." },
+        {
+          time: "Day 2 · evening",
+          title: "Return via Türkgözü",
+          text: "Afternoon departure, entry at the Türkgözü border crossing and the drive back to Kars.",
+        },
       ],
-      note: "The tour goes ahead once there is enough demand. Entry documents (passport or new-type ID card) and border conditions are confirmed by the agency before travel.",
+      note: "Exit and return are via the Türkgözü border crossing. Entry documents (passport or new-type ID card) and border conditions are confirmed by the agency before travel.",
     },
     "butik-mardin": {
       name: "Boutique Mardin Tour",
@@ -722,7 +730,7 @@ export const en = {
           text: "Gobustan National Park, the mud volcanoes and the Bibi-Heybat Mosque.",
         },
       ],
-      note: "Entry is with the new-type Turkish ID card. The ID cards of travellers under 18 (infants included) must carry a photo; under-18s not travelling with their mother or father need a notarised letter of consent. A departure tax of 1,250 TL per person is paid at the border. Flight times and the order of visits by day are confirmed before the tour date.",
+      note: "The tour price is 20,000 TL or 400 USD per person. Entry is with the new-type Turkish ID card. The ID cards of travellers under 18 (infants included) must carry a photo; under-18s not travelling with their mother or father need a notarised letter of consent. A departure tax of 1,250 TL per person is paid at the border. Flight times and the order of visits by day are confirmed before the tour date.",
     },
   },
   stories: {

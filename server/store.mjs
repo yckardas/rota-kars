@@ -23,6 +23,7 @@ import { articleSeed } from "./articles-seed.mjs";
 import { createInterest } from "./interest.mjs";
 import { describeRequest, formMailPerDay, REQUEST_KINDS, statusLabel } from "./requests.mjs";
 import { applyStandardTransfer, priceTransfer } from "./transfer.mjs";
+import { applyCustomerCorrections } from "./corrections.mjs";
 export class AppError extends Error {
   constructor(status, message) {
     super(message);
@@ -36,6 +37,9 @@ export async function openStore(
     clock = Date.now,
     seed = true,
     env = process.env,
+    // Canlı veriye yönelik tek seferlik düzeltmeler (bkz. corrections.mjs) yalnız gerçek
+    // veritabanında çalışır; testler örnek seferlerle kendi senaryolarını kurar.
+    dataReleases = env.NODE_ENV === "production" || env.DATA_RELEASES === "1",
     pushFetch = fetch,
     webPush,
     uetdsFetch = fetch,
@@ -150,6 +154,14 @@ export async function openStore(
     tx,
   });
   await applyStandardTransfer(db, { clock });
+  if (dataReleases) {
+    const corrections = await applyCustomerCorrections(db, { clock });
+    if (corrections.applied)
+      console.log(
+        "Müşteri düzeltmeleri uygulandı:",
+        JSON.stringify(corrections),
+      );
+  }
   await Promise.all([
     db.index("push_devices", { admin_id: 1 }),
     db.index("push_log", { created_at: 1 }),
