@@ -64,11 +64,11 @@ test("date questions use authoritative availability and identify preview dates",
       store,
     });
     let r = await chat.reply([user("Ani için tarihler neler?")]);
-    assert.match(r.text, /17 uygun koltuk/);
+    assert.match(r.text, /18 uygun koltuk/);
     const d = (await store.listDepartures("ani-cildir"))[0];
     await store.hold(d.id, [1]);
     r = await chat.reply([user("Ani için tarihler neler?")]);
-    assert.match(r.text, /16 uygun koltuk/);
+    assert.match(r.text, /17 uygun koltuk/);
     assert.match(r.text, /örnek/i);
   } finally {
     await store.db.close();

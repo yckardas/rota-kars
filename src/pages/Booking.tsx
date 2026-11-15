@@ -225,7 +225,15 @@ export function Booking({ catalog }: { catalog: Catalog }) {
       departureId,
       count,
       ...(couponId ? { couponId } : {}),
-      ...(transfer ? { transfer: { point: transfer.point, direction: transfer.direction } } : {}),
+      ...(transfer
+        ? {
+            transfer: {
+              point: transfer.point,
+              destination: transfer.destination,
+              direction: transfer.direction,
+            },
+          }
+        : {}),
     })
       .then((data) => {
         if (active) setQuote(data);
@@ -239,7 +247,15 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     return () => {
       active = false;
     };
-  }, [departureId, count, couponId, member, transfer?.point, transfer?.direction]);
+  }, [
+    departureId,
+    count,
+    couponId,
+    member,
+    transfer?.point,
+    transfer?.destination,
+    transfer?.direction,
+  ]);
   // 3. adım: sunucunun ürettiği ön bilgilendirme formu (kayıtta aynı metin saklanır).
   useEffect(() => {
     if (step !== 2 || !departureId) return;
@@ -1678,7 +1694,11 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                 <span>
                   {t("Transfer · {point}", { point: t(quote.transfer.pointLabel) })}
                   <small>
-                    {t(quote.transfer.directionLabel)} · {t(quote.transfer.tierLabel)}
+                    {quote.transfer.destinationLabel
+                      ? `${t(quote.transfer.destinationLabel)} · `
+                      : ""}
+                    {t(quote.transfer.directionLabel)} ·{" "}
+                    {t(quote.transfer.tierLabel)}
                   </small>
                 </span>
                 <strong>+{currency(quote.transfer.amount)}</strong>

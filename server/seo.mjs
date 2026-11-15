@@ -8,7 +8,7 @@ import { legacyRedirects } from "./legacy-redirects.mjs";
 
 const SITE = "Rota Kars Turizm";
 const DEFAULT_DESCRIPTION =
-  "Kars merkezli TÜRSAB A grubu seyahat acentesi. Ani, Çıldır, Sarıkamış, Batum ve Van turları; 18+1 VIP midibüste online koltuk seçimi, şoförlü araç kiralama ve transfer.";
+  "Kars merkezli TÜRSAB A grubu seyahat acentesi. Ani, Çıldır, Sarıkamış, Batum ve Van turları; 18 koltuklu VIP minibüste online koltuk seçimi, şoförlü araç kiralama ve transfer.";
 const DEFAULT_IMAGE = "/images/ani.webp";
 
 const clip = (s, n = 158) => {

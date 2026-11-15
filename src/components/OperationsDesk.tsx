@@ -33,6 +33,7 @@ import {
   type Departure,
   type FleetVehicle,
   type Reservation,
+  DEFAULT_PICKUP,
 } from "../lib/types";
 import { SeatMap } from "./SeatMap";
 import { PassengerList } from "./admin/MobileApp";
@@ -526,7 +527,7 @@ function DepartureEditor({
           Buluşma noktası
           <input
             name="pickup"
-            defaultValue={d?.pickup || "Kars merkez · Acente buluşma noktası"}
+            defaultValue={d?.pickup || DEFAULT_PICKUP}
             minLength={2}
             maxLength={100}
             required
@@ -791,7 +792,11 @@ export function ReservationManager({
                     {r.notes && <small className="row-note">Not: {r.notes}</small>}
                     {r.transfer && (
                       <small className="row-note">
-                        Transfer: {r.transfer.pointLabel} · {r.transfer.directionLabel}
+                        Transfer: {r.transfer.pointLabel}
+                        {r.transfer.destinationLabel
+                          ? ` ↔ ${r.transfer.destinationLabel}`
+                          : ""}{" "}
+                        · {r.transfer.directionLabel}
                         {r.transfer.info ? ` · ${r.transfer.info}` : ""}
                       </small>
                     )}
@@ -968,8 +973,13 @@ function BookingControls({
             {r.notes && <p className="row-note">Not: {r.notes}</p>}
             {r.transfer && (
               <p className="row-note">
-                Transfer: {r.transfer.pointLabel} · {r.transfer.directionLabel} · {r.transfer.tierLabel}
-                {r.transfer.info ? ` · ${r.transfer.info}` : ""} · {currency(r.transfer.amount)}
+                Transfer: {r.transfer.pointLabel}
+                {r.transfer.destinationLabel
+                  ? ` ↔ ${r.transfer.destinationLabel}`
+                  : ""}{" "}
+                · {r.transfer.directionLabel} · {r.transfer.tierLabel}
+                {r.transfer.info ? ` · ${r.transfer.info}` : ""} ·{" "}
+                {currency(r.transfer.amount)}
               </p>
             )}
             {Boolean(r.cancellation_requested_at) && r.status !== "cancelled" && (

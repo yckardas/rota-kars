@@ -1,5 +1,5 @@
 // Bekleme listesi (dolu sefer, yer açılınca herkese haber) ve talep toplama modu
-// (Tiflis gibi yeterli talep olursa yapılan turlar için ücretsiz ön kayıt).
+// (Güneydoğu gibi yeterli talep olursa yapılan turlar için ücretsiz ön kayıt).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { once } from "node:events";
@@ -60,32 +60,32 @@ const person = (extra = {}) => ({
   ...extra,
 });
 
-test("Tiflis starts in demand mode: no seat sales, free pre-registration instead", async (t) => {
+test("Güneydoğu starts in demand mode: no seat sales, free pre-registration instead", async (t) => {
   const { store, call, departure, outbox } = await fixture(t);
-  const tiflis = (await call("/catalog")).json.tours.find((x) => x.id === "tiflis");
-  assert.equal(tiflis.mode, "demand");
-  assert.equal(tiflis.demand.threshold, 14);
-  assert.equal(tiflis.demand.count, undefined, "ilerleme varsayılan olarak gizli");
-  assert.equal(tiflis.next, undefined);
-  const d = await departure("tiflis");
+  const demandTour = (await call("/catalog")).json.tours.find((x) => x.id === "guneydogu");
+  assert.equal(demandTour.mode, "demand");
+  assert.equal(demandTour.demand.threshold, 14);
+  assert.equal(demandTour.demand.count, undefined, "ilerleme varsayılan olarak gizli");
+  assert.equal(demandTour.next, undefined);
+  const d = await departure("guneydogu");
   await assert.rejects(store.hold(d.id, [1]), (e) => e.status === 409, "talep toplamada koltuk satılmaz");
 
-  const r = await call("/interest", { kind: "prereg", tourId: "tiflis", preferredDate: "Mart 2027", ...person() });
+  const r = await call("/interest", { kind: "prereg", tourId: "guneydogu", preferredDate: "Mart 2027", ...person() });
   assert.equal(r.status, 201, JSON.stringify(r.json));
   assert.match(r.json.reference, /^BK-/);
   // Aynı e-posta yeniden gönderirse yeni kayıt açılmaz, kişi sayısı güncellenir.
-  const again = await call("/interest", { kind: "prereg", tourId: "tiflis", ...person({ count: 3 }) });
+  const again = await call("/interest", { kind: "prereg", tourId: "guneydogu", ...person({ count: 3 }) });
   assert.equal(again.json.updated, true);
-  assert.equal(await store.interest.demandCount("tiflis"), 3);
+  assert.equal(await store.interest.demandCount("guneydogu"), 3);
   const mails = await outbox();
   assert.equal(mails.filter((m) => m.recipient === "onkayit@example.com").length, 1);
   assert.match(mails.find((m) => m.recipient === "onkayit@example.com").body, /ücretsiz bir ön kayıttır; ödeme alınmaz/);
-  assert.match(mails.find((m) => m.recipient === "ekip@rotakars.test").subject, /Ön kayıt: Tiflis Turu · 2 kişi/);
+  assert.match(mails.find((m) => m.recipient === "ekip@rotakars.test").subject, /Ön kayıt: Güneydoğu Turu · 2 kişi/);
 
   // Panelden ilerleme açılınca sitede sayı görünür.
-  const mode = await call("/admin/operations/tiflis/mode", { mode: "demand", threshold: 10, showProgress: true });
+  const mode = await call("/admin/operations/guneydogu/mode", { mode: "demand", threshold: 10, showProgress: true });
   assert.equal(mode.status, 200, JSON.stringify(mode.json));
-  const shown = (await call("/catalog")).json.tours.find((x) => x.id === "tiflis");
+  const shown = (await call("/catalog")).json.tours.find((x) => x.id === "guneydogu");
   assert.deepEqual(shown.demand, { threshold: 10, showProgress: true, count: 3 });
   // Online satıştaki tura ön kayıt alınmaz.
   assert.equal((await call("/interest", { kind: "prereg", tourId: "ani-cildir", ...person() })).status, 409);
@@ -93,18 +93,18 @@ test("Tiflis starts in demand mode: no seat sales, free pre-registration instead
 
 test("opening sales notifies every pre-registered guest with a booking link", async (t) => {
   const { store, call, departure, outbox } = await fixture(t);
-  await call("/interest", { kind: "prereg", tourId: "tiflis", ...person() });
-  await call("/interest", { kind: "prereg", tourId: "tiflis", ...person({ email: "ikinci@example.com", count: 4 }) });
-  assert.equal((await call("/admin/operations/tiflis/open-sales", {})).status, 409, "sefer olmadan satış açılmaz");
-  const d = await departure("tiflis");
-  const opened = await call("/admin/operations/tiflis/open-sales", {});
+  await call("/interest", { kind: "prereg", tourId: "guneydogu", ...person() });
+  await call("/interest", { kind: "prereg", tourId: "guneydogu", ...person({ email: "ikinci@example.com", count: 4 }) });
+  assert.equal((await call("/admin/operations/guneydogu/open-sales", {})).status, 409, "sefer olmadan satış açılmaz");
+  const d = await departure("guneydogu");
+  const opened = await call("/admin/operations/guneydogu/open-sales", {});
   assert.equal(opened.status, 200, JSON.stringify(opened.json));
   assert.equal(opened.json.notified, 2);
   const sale = (await outbox()).filter((m) => m.kind === "interest_open");
   assert.equal(sale.length, 2);
-  assert.equal(sale[0].action_url, "https://rotakarsturizm.com/rezervasyon/tiflis");
+  assert.equal(sale[0].action_url, "https://rotakarsturizm.com/rezervasyon/guneydogu");
   assert.match(sale[0].body, /2026-10-24 05:00/);
-  assert.equal((await call("/catalog")).json.tours.find((x) => x.id === "tiflis").mode, "online");
+  assert.equal((await call("/catalog")).json.tours.find((x) => x.id === "guneydogu").mode, "online");
   assert.ok(await store.hold(d.id, [1]), "satış açılınca koltuk seçilebilir");
   const list = (await call("/admin/interest")).json;
   assert.ok(list.items.every((i) => i.status === "notified"));
@@ -143,18 +143,18 @@ test("waitlist on a full departure: everyone waiting hears when seats free up", 
 
 test("guests can leave the list from the e-mail link; KVKK export and erase include it", async (t) => {
   const { store, call } = await fixture(t);
-  await call("/interest", { kind: "prereg", tourId: "tiflis", ...person() });
+  await call("/interest", { kind: "prereg", tourId: "guneydogu", ...person() });
   const [row] = await store.interest.list();
   const left = await call(`/interest/${row.token}/cancel`);
   assert.equal(left.status, 200);
   assert.match(left.text, /Listeden çıkarıldınız/);
   assert.equal((await store.interest.list())[0].status, "cancelled");
-  assert.equal(await store.interest.demandCount("tiflis"), 0);
+  assert.equal(await store.interest.demandCount("guneydogu"), 0);
   assert.equal((await call("/interest/" + "0".repeat(36) + "/cancel")).status, 404);
 
   const exported = await store.privacy.exportByEmail("onkayit@example.com");
   assert.equal(exported.waitlistAndPreRegistrations.length, 1);
-  assert.equal(exported.waitlistAndPreRegistrations[0].tour, "tiflis");
+  assert.equal(exported.waitlistAndPreRegistrations[0].tour, "guneydogu");
   await store.privacy.eraseByEmail("onkayit@example.com");
   assert.equal((await store.interest.list()).length, 0, "silme talebinde ilgi listesi kaydı da silinir");
 });

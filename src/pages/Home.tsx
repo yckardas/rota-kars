@@ -27,6 +27,7 @@ import { StoryPlayer } from "../components/StoryPlayer";
 import { InstagramSection } from "../components/InstagramSection";
 import { FeatureMarquee } from "../components/FeatureMarquee";
 import { Postmark } from "../components/Postmark";
+import { TOUR_FILTERS, matchesTourFilter } from "../lib/tourFilters";
 export function Home({ catalog }: { catalog: Catalog }) {
   const [filter, setFilter] = useState("Tüm rotalar"),
     [filtered, setFiltered] = useState(false),
@@ -240,20 +241,18 @@ export function Home({ catalog }: { catalog: Catalog }) {
           </Link>
         </div>
         <div className="tour-filters">
-          {["Tüm rotalar", "Kültür", "Doğa", "Kış", "Yurt dışı", "Konaklamalı"].map(
-            (f) => (
-              <button
-                key={f}
-                className={filter === f ? "active" : ""}
-                onClick={() => {
-                  setFiltered(true);
-                  setFilter(f);
-                }}
-              >
-                {t(f)}
-              </button>
-            ),
-          )}
+          {["Tüm rotalar", ...TOUR_FILTERS].map((f) => (
+            <button
+              key={f}
+              className={filter === f ? "active" : ""}
+              onClick={() => {
+                setFiltered(true);
+                setFilter(f);
+              }}
+            >
+              {t(f)}
+            </button>
+          ))}
         </div>
         {/* Filtre değişince kartlar sırayla yerine "oturur" (ilk yüklemede değil). */}
         <div
@@ -264,7 +263,8 @@ export function Home({ catalog }: { catalog: Catalog }) {
           {distinctPlacesFirst(catalog.tours)
             // Kategoriler /en altında katalogda İngilizce gelir.
             .filter(
-              (tour) => filter === "Tüm rotalar" || tour.category === t(filter),
+              (tour) =>
+                filter === "Tüm rotalar" || matchesTourFilter(tour, filter, t),
             )
             .map((tour) => (
               <TourCard key={tour.id} tour={tour} />

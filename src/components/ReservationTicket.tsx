@@ -164,8 +164,13 @@ export function ReservationTicket({
             <div>
               <dt>{t("Transfer")}</dt>
               <dd>
-                {t(r.transfer.pointLabel)} · {t(r.transfer.directionLabel)}
-                {r.transfer.info ? ` · ${r.transfer.info}` : ""} · {currency(r.transfer.amount)}
+                {t(r.transfer.pointLabel)}
+                {r.transfer.destinationLabel
+                  ? ` ↔ ${t(r.transfer.destinationLabel)}`
+                  : ""}{" "}
+                · {t(r.transfer.directionLabel)}
+                {r.transfer.info ? ` · ${r.transfer.info}` : ""} ·{" "}
+                {currency(r.transfer.amount)}
               </dd>
             </div>
           )}

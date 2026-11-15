@@ -294,3 +294,6 @@ export const ARTICLE_CATEGORIES: Record<Article["category"], string> = {
   rehber: "Gezi rehberi",
   kultur: "Tarih ve kültür",
 };
+// Seferin varsayılan buluşma bilgisi (sunucudaki server/departures.mjs ile aynı).
+export const DEFAULT_PICKUP =
+  "Kars merkezde ev, otel ve yakın noktalardan alıp bırakma";

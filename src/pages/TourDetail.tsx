@@ -34,6 +34,7 @@ import {
   type Departure,
   type Hotel,
   type Article,
+  DEFAULT_PICKUP,
 } from "../lib/types";
 export function TourDetail({ catalog }: { catalog: Catalog }) {
   const { id } = useParams(),
@@ -310,12 +311,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
             <div className="tour-meeting">
               <MapPin size={24} />
               <div>
-                <strong>
-                  {next?.pickup ||
-                    tx(
-                      "Kars merkez · Kesin buluşma noktası acente tarafından paylaşılır",
-                    )}
-                </strong>
+                <strong>{tx(next?.pickup || DEFAULT_PICKUP)}</strong>
                 <p>
                   {next
                     ? `${dateLabel(next.date)} · ${next.start_time}`
