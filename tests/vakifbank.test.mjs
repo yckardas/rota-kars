@@ -549,3 +549,24 @@ test("ödeme planı değişince kayıttaki ön bilgilendirme formu yeni planla y
   assert.match(after.pre_info_text, /%30 kapora/);
   assert.equal((await sessionOf(api, id)).amount, after.deposit);
 });
+
+test("aynı rezervasyonun iki ödeme oturumu aynı anda sonuçlansa da bankaya tek çekim gider", async (t) => {
+  const { store, form, r, start, throughBank } = await fixture(t);
+  const s1 = await start(),
+    s2 = await start();
+  const backA = await throughBank(s1);
+  // Yarış durumu: iki sekme kartı aynı anda girmiş, ikinci deneme birincinin yerini alamamış.
+  const [a] = await store.db.find("payment_attempts", { session_id: s1 });
+  await store.db.update("payment_attempts", { _id: a.id }, { status: "paused" });
+  const backB = await throughBank(s2);
+  await store.db.update("payment_attempts", { _id: a.id }, { status: "3d" });
+  await Promise.all([
+    form("/api/payments/vakifbank/return", backA),
+    form("/api/payments/vakifbank/return", backB),
+  ]);
+  const succeeded = await store.db.find("payment_attempts", { reference: r.reference, status: "succeeded" });
+  assert.equal(succeeded.length, 1, "yalnız bir satış");
+  const after = await store.workflow.get(r.reference);
+  assert.equal(after.net_paid, r.deposit);
+  assert.equal(await store.db.count("payment_locks", {}), 0, "kilit başarılı çekimden sonra kalkar");
+});

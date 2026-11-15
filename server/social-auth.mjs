@@ -23,7 +23,9 @@ export function safeNext(value) {
   try {
     const url = new URL(value, "https://rotakarsturizm.invalid");
     if (url.origin !== "https://rotakarsturizm.invalid") return null;
-    return url.pathname + url.search + url.hash;
+    // Normalleşme sonrası da kontrol: "/.//evil.com" → "//evil.com" (protokolsüz dış adres).
+    const path = url.pathname + url.search + url.hash;
+    return /^\/(?![\/\\])/.test(path) ? path : null;
   } catch {
     return null;
   }

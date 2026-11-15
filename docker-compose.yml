@@ -4,7 +4,7 @@ services:
   app:
     build: .
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     env_file:
       - path: .env
         required: false
@@ -24,10 +24,12 @@ services:
     restart: unless-stopped
   # MongoDB: Railway'deki gibi tek düğüm. Bilgisayardan `npm run dev` ile
   # bağlanmak için MONGODB_URI=mongodb://127.0.0.1:27017/
+  # Port yalnız bu bilgisayara (127.0.0.1) açılır: Mongo kimlik doğrulamasız çalışır,
+  # yerel ağdaki başka bir cihaz veritabanına erişememeli.
   mongo:
     image: mongo:8.0
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
     volumes:
       - mongo-data:/data/db
     healthcheck:

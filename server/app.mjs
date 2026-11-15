@@ -1030,9 +1030,12 @@ export function createApp(
           400,
           `Tek rezervasyonda en fazla ${guestMax} koltuk seçebilirsiniz. Daha büyük gruplar için WhatsApp'tan yazın.`,
         );
-      // Aynı IP'nin eşzamanlı tuttuğu toplam koltuk sınırlıdır.
+      // Aynı IP'nin eşzamanlı tuttuğu toplam koltuk sınırlıdır. Kota, veritabanı
+      // beklenmeden (aynı olay döngüsü adımında) ayrılır: paralel istekler aynı eski
+      // sayıyı okuyup sınırı birlikte aşamaz. Tutma başarısız olursa ayrılan pay geri verilir.
       const now = Date.now(),
-        mine = (activeHolds.get(clientKey(q)) || []).filter((h) => h.expiresAt > now),
+        key = clientKey(q),
+        mine = (activeHolds.get(key) || []).filter((h) => h.expiresAt > now),
         heldSeats = mine.reduce((n, h) => n + h.seats, 0),
         ipMax = Number(env.IP_MAX_HELD_SEATS || 20);
       if (heldSeats + input.seats.length > ipMax)
@@ -1040,13 +1043,19 @@ export function createApp(
           429,
           "Aynı anda çok fazla koltuk tutuluyor. Önceki seçimlerinizi tamamlayın ya da birkaç dakika sonra deneyin.",
         );
-      const hold = await store.hold(input.departureId, input.seats);
-      mine.push({
-        token: hold.token,
-        seats: input.seats.length,
-        expiresAt: hold.expiresAt,
-      });
-      activeHolds.set(clientKey(q), mine);
+      const pending = { token: null, seats: input.seats.length, expiresAt: now + 15 * 60000 };
+      mine.push(pending);
+      activeHolds.set(key, mine);
+      let hold;
+      try {
+        hold = await store.hold(input.departureId, input.seats);
+      } catch (e) {
+        const list = activeHolds.get(key);
+        if (list) activeHolds.set(key, list.filter((h) => h !== pending));
+        throw e;
+      }
+      pending.token = hold.token;
+      pending.expiresAt = hold.expiresAt;
       if (activeHolds.size > 5000)
         for (const [k, v] of activeHolds)
           if (!v.some((h) => h.expiresAt > now)) activeHolds.delete(k);

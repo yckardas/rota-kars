@@ -281,6 +281,25 @@ test("account verification and reset are purpose-bound, hashed, single-use, expi
     (e) => e.status === 410,
   );
 });
+test("repeated anonymous reset requests do not revoke the owner's link and are capped per hour", async (t) => {
+  const { s, advance } = await setup(t),
+    m = await member(s);
+  const resetTokens = async () =>
+    (await s.notifications.list()).items
+      .filter((x) => x.kind === "auth_reset")
+      .map((x) => new URL(x.action_url).searchParams.get("token"));
+  await s.accountSecurity.requestReset(m.email, "https://example.com");
+  const [mine] = await resetTokens();
+  for (let i = 0; i < 5; i++) await s.accountSecurity.requestReset(m.email, "https://example.com");
+  assert.equal((await resetTokens()).length, 3, "saatte en fazla 3 sıfırlama e-postası");
+  await s.accountSecurity.reset(mine, "owner-new-password-1");
+  assert.ok(await s.members.login(m.email, "owner-new-password-1"));
+  for (const other of (await resetTokens()).filter((x) => x !== mine))
+    await assert.rejects(s.accountSecurity.reset(other, "x-password-12345"), (e) => e.status === 410);
+  advance(3600001);
+  await s.accountSecurity.requestReset(m.email, "https://example.com");
+  assert.equal((await resetTokens()).length, 4, "bir saat sonra yeniden istenebilir");
+});
 test("notification queue stays unsent without SMTP, retries and deduplicates scheduled reminders", async (t) => {
   const { s, advance } = await setup(t),
     d = await departure(s),

@@ -185,6 +185,20 @@ export function createPayments(
     );
   // Sonuç bilinmiyor veya kart çekildiği halde rezervasyona işlenemedi: oturum askıya
   // alınır, acente banka panelinden kontrol edip elle sonuçlandırır.
+  // Rezervasyon başına tek banka çekimi: iki ödeme oturumu (iki sekme) aynı anda
+  // sonuçlansa da yalnız biri bankaya satış gönderir. Sonucu bilinmeyen çekimde kilit
+  // süresi dolana kadar açılmaz; acente kontrol etmeden ikinci çekim yapılmaz.
+  const SALE_LOCK_MS = 30 * 60000;
+  const lockSale = async (reference, attemptId) => {
+    const now = clock(),
+      lock = { attempt_id: attemptId, expires_at: now + SALE_LOCK_MS };
+    if (await db.insertIfAbsent("payment_locks", reference, lock)) return true;
+    return Boolean(
+      await db.update("payment_locks", { _id: reference, expires_at: { $lt: now } }, lock),
+    );
+  };
+  const unlockSale = (reference, attemptId) =>
+    db.remove("payment_locks", { _id: reference, attempt_id: attemptId });
   const unverified = async (attempt, reason) => {
     await db.update(
       "payment_attempts",
@@ -618,6 +632,13 @@ export function createPayments(
           "Ödeme oturumunun süresi doldu. Kart bilgilerinizi yeniden girin.",
         );
       }
+      if (!(await lockSale(attempt.reference, id))) {
+        await failAttempt(id, "sale_in_progress");
+        return done(
+          false,
+          "Bu rezervasyon için başka bir ödeme şu anda bankada işleniyor. Kartınızdan çekim yapılmadı; birkaç dakika sonra sayfayı yenileyin.",
+        );
+      }
       // Yalnız hâlâ bu ödemeyi bekleyen rezervasyon çekilir; oturumu başka bir deneme
       // aldıysa veya tutar değiştiyse çekim yapılmaz.
       const r = await workflow.get(attempt.reference);
@@ -630,6 +651,7 @@ export function createPayments(
           { attempt_id: id },
         ));
       if (!owned) {
+        await unlockSale(attempt.reference, id);
         await failAttempt(id, "not_payable");
         return done(
           false,
@@ -650,6 +672,7 @@ export function createPayments(
         return unverified(attempt, "sale_unreachable");
       }
       if (!sale.ok) {
+        await unlockSale(attempt.reference, id);
         await failAttempt(id, "declined", {
           result_code: sale.resultCode.slice(0, 8),
         });
@@ -689,6 +712,7 @@ export function createPayments(
         // Banka kartı çekti ama rezervasyona işlenemedi: ödeme asla kaybolmaz.
         return unverified(attempt, "charged_not_applied");
       }
+      await unlockSale(attempt.reference, id);
       await db.update(
         "payment_attempts",
         { _id: id },
