@@ -4,6 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { openStore } from "../server/store.mjs";
 import {
+  applyAniMinibus,
   applyCustomerCorrections,
   CORRECTIONS_RELEASE,
 } from "../server/corrections.mjs";
@@ -190,4 +191,30 @@ test("past dates are not opened when the release runs late", async (t) => {
     .sort();
   assert.deepEqual(dates, ["2026-11-28", "2026-11-29"]);
   assert.equal(await store.db.one("departures", { tour_id: "tiflis" }), null);
+});
+
+test("Ani's Egea departures move to the 18-guest minibus, once", async (t) => {
+  const now = Date.UTC(2026, 10, 15, 9);
+  const store = await openStore(":memory:", { clock: () => now, seed: false, dataReleases: false });
+  t.after(() => store.db.close());
+  const { db } = store;
+  const egea = { vehicle_model: "binek", passenger_seats: 4, pickup: DEFAULT_PICKUP };
+  for (const d of [
+    row("ani-cildir", "2026-12-01", egea),
+    row("ani-cildir", "2026-12-02", egea),
+    row("ani-cildir", "2026-11-10", egea),
+    row("sarikamis", "2026-12-01", egea),
+  ])
+    await db.insert("departures", d.id, d);
+  await store.hold("ani-cildir-2026-12-02", [2]);
+  const run = await applyAniMinibus(db, { clock: () => now });
+  assert.deepEqual(run, { applied: true, changed: 2 });
+  const [first, second] = await store.listDepartures("ani-cildir");
+  assert.equal(first.vehicle.name, "VIP minibüs");
+  assert.equal(first.vehicle.sellableSeats, 18);
+  assert.deepEqual(first.vehicle.layout.at(-1), [15, 16, 17, 18]);
+  assert.equal(second.available, 17, "ayrılmış koltuk yerinde kalır");
+  assert.equal((await db.one("departures", { _id: "ani-cildir-2026-11-10" })).vehicle_model, "binek", "geçmiş sefere dokunulmaz");
+  assert.equal((await db.one("departures", { _id: "sarikamis-2026-12-01" })).vehicle_model, "binek", "başka tura dokunulmaz");
+  assert.equal((await applyAniMinibus(db, { clock: () => now })).applied, false);
 });
