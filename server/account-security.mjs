@@ -7,13 +7,26 @@ export async function createAccountSecurity(
   { clock, tx, members, notifications },
 ) {
   await db.index("account_tokens", { member_id: 1, purpose: 1 });
+  // Parola sıfırlamada yeni bağlantı eskisini iptal etmez: e-postayı bilen biri tekrar
+  // tekrar istek göndererek kişinin elindeki bağlantıyı geçersiz kılamasın. Tüm
+  // bağlantılar bir saatte düşer, başarılı sıfırlama hepsini kapatır. Bir hesaba saatte
+  // en fazla RESET_PER_HOUR sıfırlama e-postası gider.
+  const RESET_PER_HOUR = 3;
   async function issue(member, purpose, baseUrl) {
     return tx(async () => {
-      await db.updateMany(
-        "account_tokens",
-        { member_id: member.id, purpose, used_at: null },
-        { used_at: clock() },
-      );
+      if (purpose === "reset") {
+        const active = await db.count("account_tokens", {
+          member_id: member.id,
+          purpose,
+          expires_at: { $gt: clock() },
+        });
+        if (active >= RESET_PER_HOUR) return { queued: false, deliveryConfigured: notifications.configured };
+      } else
+        await db.updateMany(
+          "account_tokens",
+          { member_id: member.id, purpose, used_at: null },
+          { used_at: clock() },
+        );
       const token = randomBytes(32).toString("hex");
       await db.insert("account_tokens", digest(token), {
         token_hash: digest(token),

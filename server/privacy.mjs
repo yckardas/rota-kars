@@ -102,8 +102,13 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx, pii
       // Bekleme listesi ve ön kayıtlar (interest.mjs).
       interest: byEmail ? await db.find("interest_list", { email: normalized }) : [],
       notifications: byEmail ? await db.find("notification_outbox", { recipient: normalized }) : [],
+      // E-posta ile eşleşen (misafir) onaylar yalnız adres doğrulandıysa verilir; aksi
+      // halde başkasının adresiyle üye olan kişi geçmiş onayları görebilirdi.
       consents: await db.find("consents", {
-        $or: [{ email_hash: emailHash(normalized) }, ...(memberId ? [{ member_id: memberId }] : [])],
+        $or: [
+          ...(byEmail ? [{ email_hash: emailHash(normalized) }] : []),
+          ...(memberId ? [{ member_id: memberId }] : []),
+        ],
       }),
     };
   }

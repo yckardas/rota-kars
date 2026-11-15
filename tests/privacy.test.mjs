@@ -129,6 +129,9 @@ test("registering with someone else's email does not expose or delete their gues
   assert.equal(exp.status, 200);
   assert.equal(exp.json.reservations.length, 0, "unverified member sees no guest bookings");
   assert.ok(!exp.text.includes(guest.reference));
+  // Kurbanın misafir rezervasyonundaki onaylar da görünmez; yalnız saldırganın kendi kaydı.
+  assert.ok(exp.json.consents.length > 0);
+  assert.ok(exp.json.consents.every((c) => c.source === "register"), JSON.stringify(exp.json.consents));
   await call("/member/delete", { body: { confirm: "SİL" }, cookie: attacker.cookie });
   const kept = await store.db.one("reservations", { reference: guest.reference });
   assert.equal(kept.name, "Ayşe Yılmaz", "victim's booking is untouched");

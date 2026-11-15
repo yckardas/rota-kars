@@ -389,6 +389,32 @@ test("guests cannot hold more than the guest seat cap or flood holds", async (t)
   assert.equal((await post("/holds", { departureId: d.id, seats: [1, 2, 3] })).status, 201);
   assert.equal((await post("/holds", { departureId: d.id, seats: [4, 5] })).status, 429);
 });
+test("parallel hold requests cannot overrun the per-IP seat quota", async (t) => {
+  const store = await openStore(":memory:");
+  const app = createApp(store, {
+    env: { GUEST_MAX_SEATS: "2", IP_MAX_HELD_SEATS: "4" },
+    reviewsService: { get: async () => ({ status: "not_configured", reviews: [] }) },
+  });
+  const server = app.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(async () => {
+    await new Promise((r) => server.close(r));
+    await store.db.close();
+  });
+  const base = `http://127.0.0.1:${server.address().port}/api`;
+  const [d] = await (await fetch(base + "/tours/ani-cildir/departures")).json();
+  const statuses = await Promise.all(
+    [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10], [11, 12]].map((seats) =>
+      fetch(base + "/holds", {
+        method: "POST",
+        body: JSON.stringify({ departureId: d.id, seats }),
+        headers: { "Content-Type": "application/json", "X-Rota-Client": "web" },
+      }).then((r) => r.status),
+    ),
+  );
+  assert.equal(statuses.filter((s) => s === 201).length, 2, statuses.join(","));
+  assert.equal((await store.db.find("seat_locks")).length, 4, "en fazla 4 koltuk tutuldu");
+});
 test("security headers on every response, CSP only in production; health checks the database", async (t) => {
   const store = await openStore(":memory:");
   const start = async (env) => {
