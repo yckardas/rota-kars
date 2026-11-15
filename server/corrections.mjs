@@ -158,3 +158,23 @@ export async function applyCustomerCorrections(db, { clock }) {
   });
   return { applied: true, ...report };
 }
+
+// 15 Kasım 2026 (ikinci düzeltme): Ani-Çıldır'ın Aralık seferlerine panelde 4+1 binek araç
+// (Egea) atanmıştı; müşteri bu seferlerin de 18 misafir koltuklu VIP minibüsle (19+1)
+// yapılmasını istedi. Gelecekteki binek seferler minibüse geçer; 1-3 numaralı koltuklar
+// minibüste de vardır, ayrılmış koltuk varsa yerinde kalır. Bir kez çalışır.
+export const ANI_MINIBUS_RELEASE = "ani_minibus_2026_11_15";
+export async function applyAniMinibus(db, { clock }) {
+  if (await db.one("integration_settings", { _id: ANI_MINIBUS_RELEASE })) return { applied: false };
+  const changed = await db.updateMany(
+    "departures",
+    { tour_id: "ani-cildir", vehicle_model: "binek", date: { $gte: localDate(clock()) } },
+    { vehicle_model: "vip-midibus", passenger_seats: 19, vehicle_id: "" },
+  );
+  await db.upsert("integration_settings", ANI_MINIBUS_RELEASE, {
+    id: ANI_MINIBUS_RELEASE,
+    body: { appliedAt: clock(), changed },
+    updated_at: clock(),
+  });
+  return { applied: true, changed };
+}
