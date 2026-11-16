@@ -108,14 +108,11 @@ test("kapora ödenince tahsilat kaydedilir ve rezervasyon otomatik onaylanır", 
   const session = await (await req("/payments/sessions/" + id)).json();
   assert.equal(session.status, "paid");
   assert.equal(session.reservationStatus, "confirmed");
-  // Ödendikten sonra yeni ödeme başlatılamaz.
-  assert.equal(
-    (
-      await req("/payments/start", {
-        reference: r.reference,
-        email: "ayse@example.com",
-      })
-    ).status,
-    409,
-  );
+  // Kapora ödendikten sonra yeni oturum yalnız kalan bakiye içindir (kapora ikinci kez alınmaz).
+  const rest = await req("/payments/start", {
+    reference: r.reference,
+    email: "ayse@example.com",
+  });
+  assert.equal(rest.status, 200);
+  assert.equal((await rest.json()).amount, after.total - after.net_paid);
 });

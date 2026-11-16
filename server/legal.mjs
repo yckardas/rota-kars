@@ -44,6 +44,37 @@ export function minParticipantRule(tour) {
   return `Asgari katılımcı sayısı: ${n} kişi. Bu sayıya ulaşılamazsa acente turu en geç hareketten ${notice} önce bildirerek iptal edebilir; bu durumda ödediğiniz tutarın tamamı kesintisiz iade edilir ya da dilerseniz başka bir tarihe geçersiniz.`;
 }
 
+// İptalde iade hesabı (iptal ve iade koşullarıyla aynı kural): süre, iptal talebinin
+// acenteye ulaştığı an ile hareket saati arasında hesaplanır. Süre içinde ödenen
+// tutarın tamamı, süre geçtiyse kapora (toplam bedelin %30'u) düşülerek iade edilir.
+// Acentenin iptalinde (asgari katılımcı, hava, yol...) kesinti yoktur.
+export function cancellationQuote({
+  tour,
+  date,
+  startTime,
+  total,
+  netPaid,
+  requestedAt = null,
+  now = Date.now(),
+  depositPercent = DEFAULT_DEPOSIT_PERCENT,
+}) {
+  const start = Date.parse(`${date}T${startTime || "00:00"}:00+03:00`),
+    freeUntil = start - freeCancelHours(tour) * 3600000,
+    at = requestedAt || now,
+    late = Number.isFinite(start) && at > freeUntil,
+    deposit = Math.round((Number(total) * depositPercent) / 100),
+    paid = Math.max(0, Number(netPaid) || 0),
+    retained = late ? Math.min(paid, deposit) : 0;
+  return {
+    netPaid: paid,
+    freeUntil,
+    late,
+    deposit,
+    customer: { retained, refund: paid - retained },
+    agency: { retained: 0, refund: paid },
+  };
+}
+
 export function legalEntity(b = business) {
   return [
     `Ticaret unvanı: ${b.legalName}`,

@@ -1249,6 +1249,16 @@ export function createApp(
       r.json(await payments.start(input.reference, input.email, { lang: input.lang }));
     }),
   );
+  // Acentenin gönderdiği ödeme bağlantısı (/odeme/bakiye/:token): bilet belirteciyle.
+  app.post(
+    "/api/payments/start-ticket",
+    route(async (q, r) => {
+      const input = z
+        .object({ token: z.string().min(16).max(128), lang: z.enum(["tr", "en"]).optional() })
+        .parse(q.body);
+      r.json(await payments.startByTicket(input.token, { lang: input.lang }));
+    }),
+  );
   // Vakıfbank kart ödemesi. Kart bilgisi veritabanına ve loglara yazılmaz; 3D
   // Secure süresince bellekte şifreli tutulur (server/vakifbank.mjs).
   const paymentSessionId = z.string().regex(/^[a-f0-9]{48}$/);
@@ -1393,6 +1403,101 @@ export function createApp(
         clientIp: clientIp(q),
       });
       r.status(result.status === "succeeded" ? 200 : 202).json(result);
+    }),
+  );
+  // İptal penceresi: kurallara göre iade tutarı ve karta bugün iade yapılabilirliği.
+  app.get(
+    "/api/admin/reservations/:reference/cancel-quote",
+    requireAdmin,
+    route(async (q, r) =>
+      r.json({
+        ...(await payments.cancelQuote(q.params.reference)),
+        canRefundCard: q.admin.role === "owner",
+      }),
+    ),
+  );
+  // İptal, isteğe bağlı olarak iadeyle birlikte. Karta iade bankaya gider (yalnız
+  // sahip); havale / nakit / POS iadesi dışarıda yapılmış işlemin kaydıdır. Karta
+  // iade bugün yapılamayacaksa iptal yapılmadan reddedilir.
+  app.post(
+    "/api/admin/reservations/:reference/cancel",
+    requireAdmin,
+    route(async (q, r) => {
+      const input = z
+        .object({
+          refund: z
+            .object({
+              amount: z.number().int().min(1).max(100000000),
+              method: z.enum(["card", "cash", "bank_transfer", "pos"]),
+              externalReference: z.string().trim().min(3).max(100).optional(),
+            })
+            .optional(),
+        })
+        .parse(q.body || {});
+      const reference = q.params.reference,
+        refund = input.refund,
+        before = await store.workflow.get(reference);
+      if (refund) {
+        if (refund.amount > before.net_paid)
+          throw new AppError(409, "İade tutarı net tahsilatı aşamaz.");
+        if (refund.method === "card") {
+          ownerOnly(q);
+          await payments.checkCardRefund(reference, refund.amount);
+        } else if (!refund.externalReference)
+          throw new AppError(400, "Havale, nakit veya POS iadesi için dekont / makbuz referansı girin.");
+      }
+      const amountText = refund ? (refund.amount / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 }) + " TL" : "";
+      const cancelled = await store.workflow.cancel(reference, {
+        refundNote: refund
+          ? refund.method === "card"
+            ? `${amountText} ödediğiniz karta iade ediliyor; hesabınıza yansıma süresi bankanıza bağlıdır.`
+            : `${amountText} iadeniz acente tarafından yapıldı.`
+          : "",
+      });
+      let refundResult = null;
+      if (refund?.method === "card")
+        try {
+          refundResult = await payments.refundToCard(reference, {
+            amount: refund.amount,
+            admin: q.admin,
+            clientIp: clientIp(q),
+          });
+        } catch (e) {
+          refundResult = { status: "failed", amount: 0, message: e.message };
+        }
+      else if (refund) {
+        await store.workflow.payment(reference, {
+          amount: refund.amount,
+          method: refund.method,
+          externalReference: refund.externalReference,
+          kind: "refund",
+        });
+        refundResult = { status: "succeeded", amount: refund.amount, message: "İade kaydedildi." };
+      }
+      r.json({
+        reservation: await receipt(refund ? await store.workflow.get(reference) : cancelled, q, env),
+        refund: refundResult,
+      });
+    }),
+  );
+  // Müşteriye kartla ödeme bağlantısı: adresi döner; send=email ise e-postayla gönderir.
+  app.post(
+    "/api/admin/reservations/:reference/payment-link",
+    requireAdmin,
+    route(async (q, r) => {
+      const input = z.object({ send: z.enum(["email"]).optional() }).parse(q.body || {});
+      if (!payments.provider) throw new AppError(503, "Online kartla ödeme şu an kapalı.");
+      const res = await store.workflow.get(q.params.reference),
+        amount = payments.dueAmount(res);
+      if (!amount) throw new AppError(409, "Bu rezervasyonda kartla ödenecek tutar yok.");
+      // PUBLIC_BASE_URL yoksa (yerel) adres isteğin geldiği siteden tamamlanır.
+      const link = payments.paymentLink(res),
+        url = link.startsWith("/") ? siteBase(q, env) + link : link;
+      r.json({
+        url,
+        amount,
+        ...(input.send === "email" ? await store.workflow.sendPaymentLink(res.reference, url) : {}),
+      });
     }),
   );
   app.post(

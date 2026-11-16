@@ -14,6 +14,7 @@ import { tours } from "./catalog.mjs";
 import { localDate } from "./departures.mjs";
 import {
   LEGAL_VERSION,
+  cancellationQuote,
   cancellationRules,
   contractText,
   legalDataFromReservation,
@@ -172,9 +173,17 @@ export function createPayments(
     if (!s) throw new AppError(404, "Ödeme oturumu bulunamadı.");
     return s;
   };
-  const due = (r) => Math.max(0, r.deposit - r.net_paid);
+  // Online ödenebilecek tutar: ön rezervasyonda kalan kapora, onaylanmış
+  // rezervasyonda kalan bakiye (kapora ödendikten sonra "kalanı kartla öde").
+  const payable = (r) => ["pending_agency", "confirmed"].includes(r.status);
+  const due = (r) =>
+    r.status === "confirmed"
+      ? Math.max(0, r.balance_due)
+      : Math.max(0, r.deposit - r.net_paid);
   // Tahsilatı rezervasyona işler; kapora karşılandıysa rezervasyon otomatik onaylanır.
   const applyPayment = async (s, externalReference) => {
+    // Onaylanmış rezervasyona gelen ödeme kalan bakiyedir (kapora değil).
+    const balance = (await workflow.get(s.reference)).status === "confirmed";
     await workflow.payment(s.reference, {
       amount: s.amount,
       method: "online:" + provider.name,
@@ -183,6 +192,15 @@ export function createPayments(
     const r = await workflow.get(s.reference);
     if (r.status === "pending_agency" && r.net_paid >= r.deposit)
       await workflow.confirm(s.reference, { via: "online", depositPercent: DEPOSIT_PERCENT });
+    else if (balance)
+      await notifications
+        ?.notifyAgency({
+          subject: `Kalan ödeme kartla alındı: ${r.reference}`,
+          body: `${r.reference} rezervasyonunun kalan ${tl(s.amount)} tutarı müşteri tarafından kartla ödendi.\nNet tahsilat ${tl(r.net_paid)} · Kalan ${tl(r.balance_due)}.`,
+          kind: "balance_paid",
+          dedupeKey: "balance-paid:" + s.id,
+        })
+        .catch(() => {});
     await db.update(
       "payment_sessions",
       { _id: s.id },
@@ -361,7 +379,7 @@ export function createPayments(
             ? "banka tarafından onaylandı ama rezervasyona işlenemedi."
             : "için bankadan yanıt alınamadı.") +
           `\nKart: ${refund.masked_pan || "-"}\nİşlem: ${refund.id} (satış ${refund.transaction_ref})` +
-          "\nVakıfbank üye işyeri panelinden kontrol edin ve yönetimde rezervasyonun Karta iade sekmesinden sonuçlandırın. Sonuçlandırılana kadar bu rezervasyonda yeni kart iadesi yapılamaz.",
+          "\nVakıfbank üye işyeri panelinden kontrol edin ve yönetimde rezervasyonun İade sekmesindeki Karta iade bölümünden sonuçlandırın. Sonuçlandırılana kadar bu rezervasyonda yeni kart iadesi yapılamaz.",
         kind: "card_refund_unverified",
         dedupeKey: "card-refund-unverified:" + refund.id,
       })
@@ -370,9 +388,67 @@ export function createPayments(
       status,
       refund: publicRefund({ ...refund, status, ...extra }),
       message: recorded
-        ? "Banka iadeyi onayladı ama rezervasyona işlenemedi. İade askıya alındı; Karta iade sekmesinden sonuçlandırın."
+        ? "Banka iadeyi onayladı ama rezervasyona işlenemedi. İade askıya alındı; İade sekmesindeki Karta iade bölümünden sonuçlandırın."
         : "Bankadan yanıt alınamadı. İade askıya alındı ve acenteye bildirildi; banka panelinden kontrol edip sonuçlandırın.",
     };
+  };
+  // İade tutarını kartla alınmış tahsilatlara dağıtır. Bugün alınan ödeme bankada
+  // yalnız tamamıyla iptal edilebilir; kısmi iade önceki günlerin ödemelerinden yapılır.
+  // left > 0 ise tutar bugün karta iade edilemez.
+  const planCardRefund = (cp, amount) => {
+    let left = amount;
+    const steps = [],
+      open = cp.payments.filter((p) => p.refundable > 0);
+    for (const p of open.filter((x) => x.sameDay).sort((a, b) => b.amount - a.amount))
+      if (left >= p.amount) {
+        steps.push({ paymentId: p.id, amount: p.amount, cancel: true });
+        left -= p.amount;
+      }
+    for (const p of open.filter((x) => !x.sameDay).sort((a, b) => b.paidAt - a.paidAt)) {
+      if (!left) break;
+      const take = Math.min(left, p.refundable);
+      steps.push({ paymentId: p.id, amount: take, cancel: false });
+      left -= take;
+    }
+    return { steps, left };
+  };
+  const cardRefundProblem = (cp, amount) => {
+    if (cp.blocked)
+      return "Sonucu bilinmeyen bir kart iadesi var. Önce İade sekmesinden sonuçlandırın.";
+    const plan = planCardRefund(cp, amount);
+    if (!plan.left) return "";
+    const sameDay = cp.payments.filter((p) => p.sameDay && p.refundable > 0);
+    return sameDay.length
+      ? `Bugün alınan kart ödemesi (${sameDay.map((p) => tl(p.amount)).join(", ")}) bankada yalnız tamamıyla iptal edilebilir; ${tl(amount)} kısmi iade bankanın gün sonundan sonra, yarından itibaren yapılabilir. Tam iade seçin ya da iadeyi yarın yapın.`
+      : `Karta en çok ${tl(amount - plan.left)} iade edilebilir.`;
+  };
+  // Ödeme oturumu: ön rezervasyonda kapora, onaylanmış rezervasyonda kalan bakiye.
+  const openSession = async (r, lang) => {
+    const kind = provider ?? (config.preview ? previewProvider : null);
+    if (!kind) throw new AppError(503, config.message);
+    if (!payable(r))
+      throw new AppError(409, "Bu rezervasyon için online ödeme alınamaz.");
+    if (r.status === "confirmed" && r.date < localDate(clock()))
+      throw new AppError(409, "Tur tarihi geçti; kalan ödeme için acenteyle iletişime geçin.");
+    const amount = due(r);
+    if (!amount)
+      throw new AppError(409, "Bu rezervasyonun ödemesi zaten alınmış.");
+    const id = randomBytes(24).toString("hex"),
+      session = {
+        id,
+        reference: r.reference,
+        amount,
+        // Onaylanmış rezervasyonun kalan ödemesi (kapora değil).
+        balance: r.status === "confirmed",
+        provider: kind.name,
+        status: "pending",
+        lang: lang === "en" ? "en" : "tr",
+        attempt_id: null,
+        created_at: clock(),
+        expires_at: clock() + SESSION_MS,
+      };
+    await db.insert("payment_sessions", id, session);
+    return { ...kind.start({ session, reservation: r }), amount };
   };
   const writeRefund = (x) =>
     workflow.payment(x.reference, {
@@ -386,33 +462,30 @@ export function createPayments(
     provider,
     // Müşteri ödeme başlatır: referans + e-posta eşleşmeli, kalan kapora/tutar alınır.
     async start(reference, email, { lang = "tr" } = {}) {
-      const kind = provider ?? (config.preview ? previewProvider : null);
-      if (!kind) throw new AppError(503, config.message);
       const r = await workflow.get(reference);
       if (r.email !== String(email).trim().toLowerCase())
         throw new AppError(
           404,
           "Bu referans ve e-posta ile bir rezervasyon bulunamadı.",
         );
-      if (r.status !== "pending_agency")
-        throw new AppError(409, "Bu rezervasyon için online ödeme alınamaz.");
-      const amount = due(r);
-      if (!amount)
-        throw new AppError(409, "Bu rezervasyonun ödemesi zaten alınmış.");
-      const id = randomBytes(24).toString("hex"),
-        session = {
-          id,
-          reference: r.reference,
-          amount,
-          provider: kind.name,
-          status: "pending",
-          lang: lang === "en" ? "en" : "tr",
-          attempt_id: null,
-          created_at: clock(),
-          expires_at: clock() + SESSION_MS,
-        };
-      await db.insert("payment_sessions", id, session);
-      return { ...kind.start({ session, reservation: r }), amount };
+      return openSession(r, lang);
+    },
+    // Acentenin müşteriye gönderdiği ödeme bağlantısı (/odeme/bakiye/:token): bilet
+    // belirteci e-postayla zaten müşteriye gider; e-posta sorulmadan ödeme açılır.
+    async startByTicket(token, { lang = "tr" } = {}) {
+      const row = /^[A-Za-z0-9_-]{16,128}$/.test(String(token || ""))
+        ? await db.one("reservations", { ticket_token: String(token) })
+        : null;
+      if (!row) throw new AppError(404, "Ödeme bağlantısı geçersiz.");
+      return openSession(await workflow.get(row.reference), lang);
+    },
+    // Şu an online ödenebilecek tutar (0: ödenecek tutar yok veya ödeme alınamaz).
+    dueAmount(r) {
+      return payable(r) && !(r.status === "confirmed" && r.date < localDate(clock())) ? due(r) : 0;
+    },
+    // Ödeme bağlantısının adresi (panelde kopyalanır, WhatsApp / e-postayla gider).
+    paymentLink(r) {
+      return (resolved?.base || "") + "/odeme/bakiye/" + r.ticket_token;
     },
     async session(id) {
       const s = await getSession(id),
@@ -450,6 +523,8 @@ export function createPayments(
           total: r.total,
           deposit: r.deposit,
           paid: r.net_paid || 0,
+          // Onaylanmış rezervasyonun kalan ödemesi: ödeme planı değiştirilemez.
+          balance: Boolean(s.balance),
         },
         consented: Boolean(s.consents_at),
         // Ayrıntılı onayların rezervasyonda verildiği an (ödeme ekranında gösterilir).
@@ -460,9 +535,11 @@ export function createPayments(
             ? {
                 version: LEGAL_VERSION,
                 preInfo: r.pre_info_text || preInfoText(legal),
+                // Kalan ödemede sözleşme zaten kurulmuştur: kurulan metin gösterilir.
                 contract:
+                  r.contract_text ||
                   "TASLAK · Bu sözleşme ödemeniz bankanızca onaylandığı anda aşağıdaki hükümlerle kurulur ve bir örneği e-postanıza gönderilir.\n\n" +
-                  contractText({ ...legal, via: "online", draft: true }),
+                    contractText({ ...legal, via: "online", draft: true }),
                 cancellation: cancellationRules(tour, {
                   depositPercent: DEPOSIT_PERCENT,
                 }),
@@ -482,6 +559,8 @@ export function createPayments(
         );
       if (s.attempt_id)
         throw new AppError(409, "Kart ödemesi başladı; ödeme planı artık değiştirilemez.");
+      if (s.balance)
+        throw new AppError(409, "Kalan ödemede ödeme planı değiştirilemez.");
       const r = await workflow.changePaymentMode(s.reference, mode, {
         depositPercent: DEPOSIT_PERCENT,
         onlinePayment: Boolean(provider),
@@ -525,6 +604,84 @@ export function createPayments(
     // Yönetim: rezervasyonun kartla alınmış tahsilatları ve iade durumu.
     async cardPayments(reference) {
       return cardPaymentsOf(await workflow.get(reference));
+    },
+    // Panelde iptal penceresi: iptal kurallarına göre iade tutarı ve karta iadenin
+    // bugün yapılıp yapılamayacağı.
+    async cancelQuote(reference) {
+      const r = await workflow.get(reference),
+        tour = tours.find((t) => t.id === r.tourId),
+        q = cancellationQuote({
+          tour,
+          date: r.date,
+          startTime: r.start_time,
+          total: r.total,
+          netPaid: r.net_paid,
+          requestedAt: r.cancellation_requested_at || null,
+          now: clock(),
+          depositPercent: DEPOSIT_PERCENT,
+        }),
+        cp = await cardPaymentsOf(r),
+        cardPaid = cp.payments.reduce((n, p) => n + p.amount - p.refunded, 0);
+      return {
+        ...q,
+        requestedAt: r.cancellation_requested_at || null,
+        card: {
+          paid: cardPaid,
+          enabled: Boolean(gateway),
+          blocked: cp.blocked,
+          // Kurallara göre ve tam iade için karta bugün iade yapılabilir mi?
+          customer: cardPaid ? cardRefundProblem(cp, Math.min(q.customer.refund, cardPaid)) : "",
+          agency: cardPaid ? cardRefundProblem(cp, Math.min(q.agency.refund, cardPaid)) : "",
+        },
+      };
+    },
+    // Bugün yapılamayacak karta iadeyi bankaya hiçbir şey göndermeden reddeder
+    // (iptalden önce denetlenir).
+    async checkCardRefund(reference, amount) {
+      if (!gateway)
+        throw new AppError(503, "Kartla iade için Vakıfbank bağlantısı açık değil.");
+      const problem = cardRefundProblem(await cardPaymentsOf(await workflow.get(reference)), amount);
+      if (problem) throw new AppError(409, problem);
+    },
+    // Tutarı kart tahsilatlarına dağıtarak iade eder (her biri ayrı banka işlemi).
+    // Bir adım askıya alınır veya reddedilirse kalan adımlar yapılmaz.
+    async refundToCard(reference, { amount, admin, clientIp = "" }) {
+      if (!Number.isSafeInteger(amount) || amount <= 0)
+        throw new AppError(400, "Geçerli bir iade tutarı girin.");
+      await this.checkCardRefund(reference, amount);
+      const { steps } = planCardRefund(await cardPaymentsOf(await workflow.get(reference)), amount),
+        results = [];
+      let done = 0;
+      for (const step of steps) {
+        let result;
+        try {
+          result = await this.refundCard(reference, { paymentId: step.paymentId, amount: step.amount, admin, clientIp });
+        } catch (e) {
+          if (!done) throw e;
+          return {
+            status: "partial",
+            amount: done,
+            results,
+            message: `${tl(done)} karta iade edildi; kalan ${tl(amount - done)} iade edilemedi: ${e.message}`,
+          };
+        }
+        results.push(result);
+        if (result.status !== "succeeded")
+          return {
+            status: result.status,
+            amount: done,
+            results,
+            message: (done ? `${tl(done)} karta iade edildi. ` : "") + result.message,
+          };
+        done += step.amount;
+      }
+      return {
+        status: "succeeded",
+        amount: done,
+        results,
+        message:
+          steps.length === 1 ? results[0].message : `${tl(done)} karta iade edildi (${steps.length} banka işlemi).`,
+      };
     },
     // Yönetim (yalnız sahip): kartla alınmış tahsilatı karta iade eder / iptal eder.
     async refundCard(reference, { paymentId, amount, admin, clientIp = "" }) {
@@ -737,7 +894,7 @@ export function createPayments(
           "Ödemeden önce ön bilgilendirme formu, tur hizmet sözleşmesi ve iptal-iade koşulları onay kutusunu işaretleyin.",
         );
       const r = await workflow.get(s.reference);
-      if (r.status !== "pending_agency" || due(r) !== s.amount)
+      if (!payable(r) || due(r) !== s.amount)
         throw new AppError(
           409,
           "Bu rezervasyonun ödeme durumu değişti. Rezervasyonum sayfasından yeniden başlatın.",
@@ -971,7 +1128,7 @@ export function createPayments(
       // aldıysa veya tutar değiştiyse çekim yapılmaz.
       const r = await workflow.get(attempt.reference);
       const owned =
-        r.status === "pending_agency" &&
+        payable(r) &&
         due(r) === attempt.amount &&
         (await db.update(
           "payment_sessions",

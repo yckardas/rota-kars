@@ -288,7 +288,7 @@ export function attachAdvancedApi(
           payment: z
             .object({
               amount: z.number().int().min(1).max(100000000),
-              method: z.enum(["cash", "bank_transfer"]),
+              method: z.enum(["cash", "bank_transfer", "pos"]),
               externalReference: z.string().trim().min(3).max(100).optional(),
             })
             .optional(),
@@ -303,7 +303,7 @@ export function attachAdvancedApi(
   );
   for (const [action, method] of [
     ["confirm", "confirm"],
-    ["cancel", "cancel"],
+    // İptal (isteğe bağlı iadeyle) app.mjs'de: karta iade ödeme modülünü kullanır.
     ["complete", "complete"],
     ["no-show", "noShow"],
   ])
@@ -360,7 +360,7 @@ export function attachAdvancedApi(
         const input = z
           .object({
             amount: z.number().int().min(1).max(100000000),
-            method: z.enum(["cash", "bank_transfer"]),
+            method: z.enum(["cash", "bank_transfer", "pos"]),
             externalReference: z.string().trim().min(3).max(100),
             recordedExternally: z.literal(true),
           })
@@ -430,6 +430,8 @@ export function attachAdvancedApi(
         ["Net", tl(rep.cash.net)],
         ["Nakit (net)", tl(rep.cash.cash)],
         ["Havale/EFT (net)", tl(rep.cash.bankTransfer)],
+        ["Kredi kartı POS (net)", tl(rep.cash.pos)],
+        ["Online kart, Vakıfbank (net)", tl(rep.cash.card)],
         [],
         ["Referans", "Tarih", "Saat", "Tur", "Müşteri", "Telefon", "Kişi", "Durum", "Kaynak", "Tutar (TL)", "Ödenen (TL)"],
         ...rep.reservations.map((x) => [x.reference, x.date, x.time, x.tourName, x.name, x.phone, x.seats, STATUS[x.status] || x.status, x.source === "agency" ? "Panel" : "Site", tl(x.total), tl(x.paid)]),
