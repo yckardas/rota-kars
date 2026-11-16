@@ -39,7 +39,7 @@ export function NewReservation({
     [paymentMode, setPaymentMode] = useState<"on_tour" | "deposit" | "full">("on_tour"),
     [paid, setPaid] = useState(false),
     [amount, setAmount] = useState(""),
-    [method, setMethod] = useState<"cash" | "bank_transfer">("cash"),
+    [method, setMethod] = useState<"cash" | "bank_transfer" | "pos">("cash"),
     [confirm, setConfirm] = useState(true),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -220,9 +220,10 @@ export function NewReservation({
             </label>
             <label className="field">
               Yöntem
-              <select value={method} onChange={(e) => setMethod(e.target.value as "cash" | "bank_transfer")}>
+              <select value={method} onChange={(e) => setMethod(e.target.value as "cash" | "bank_transfer" | "pos")}>
                 <option value="cash">Nakit</option>
                 <option value="bank_transfer">Havale / EFT</option>
+                <option value="pos">Kredi kartı (POS)</option>
               </select>
             </label>
           </div>

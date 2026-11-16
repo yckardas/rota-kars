@@ -269,16 +269,13 @@ test("simülatörle kart ödemesi: 3D Secure sonrası tahsilat ve otomatik onay,
       new RegExp(GOOD_CARD),
       name,
     );
-  // Ödendikten sonra yeni ödeme başlatılamaz.
-  assert.equal(
-    (
-      await api("/payments/start", {
-        reference: r.reference,
-        email: "ayse@example.com",
-      })
-    ).status,
-    409,
-  );
+  // Kapora ödendikten sonra yeni oturum yalnız kalan bakiye içindir (kapora ikinci kez alınmaz).
+  const rest = await api("/payments/start", {
+    reference: r.reference,
+    email: "ayse@example.com",
+  });
+  assert.equal(rest.status, 200);
+  assert.equal((await rest.json()).amount, after.total - after.net_paid);
 });
 
 test("reddedilen kart: çekim yok, müşteri kart formuna döner ve başka kartla öder", async (t) => {
@@ -841,4 +838,147 @@ test("karta iade yalnız sahip rolündedir; operasyon durumu görür, rehber gö
   });
   assert.equal(noConfirm.status, 400);
   assert.equal(sent.length, 0);
+});
+
+// ---- Kalan bakiye, iptal ve iade akışı ----
+
+test("kalan bakiye: kapora kartla ödenince kalan, acentenin gönderdiği bağlantıyla kartla ödenir", async (t) => {
+  const p = await paidByCard(t);
+  const ref = p.r.reference,
+    before = await p.store.workflow.get(ref);
+  assert.equal(before.status, "confirmed");
+  const rest = before.total - before.net_paid;
+  assert.ok(rest > 0);
+  // Panel: bağlantı (operasyon rolü de alabilir) ve e-postayla gönderme.
+  const link = await p.call(`/admin/reservations/${ref}/payment-link`, { body: {}, cookie: p.ops });
+  assert.equal(link.status, 200, JSON.stringify(link.json));
+  assert.equal(link.json.amount, rest);
+  assert.match(link.json.url, new RegExp(`/odeme/bakiye/${before.ticket_token}$`));
+  const mail = await p.call(`/admin/reservations/${ref}/payment-link`, { body: { send: "email" }, cookie: p.ops });
+  assert.equal(mail.status, 200);
+  const outbox = (await p.store.db.find("notification_outbox")).find((m) => m.kind === "payment_link");
+  assert.equal(outbox.recipient, "ayse@example.com");
+  assert.equal(outbox.action_url, link.json.url);
+  // Geçersiz bağlantı ödeme açmaz.
+  assert.equal((await p.api("/payments/start-ticket", { token: "x".repeat(32) })).status, 404);
+  // Müşteri bağlantıyı açar: kalan tutar için oturum, plan değiştirilemez, kurulan sözleşme gösterilir.
+  const start = await p.api("/payments/start-ticket", { token: before.ticket_token });
+  assert.equal(start.status, 200);
+  const started = await start.json();
+  assert.equal(started.amount, rest);
+  const id = started.redirectUrl.split("/").pop();
+  const s = await sessionOf(p.api, id);
+  assert.equal(s.summary.balance, true);
+  assert.equal(s.amount, rest);
+  assert.doesNotMatch(s.documents.contract, /^TASLAK/);
+  assert.equal((await p.api("/payments/mode/" + id, { mode: "full" })).status, 409);
+  // Rezervasyonum'dan (referans + e-posta) da kalan ödenebilir.
+  assert.equal((await p.api("/payments/start", { reference: ref, email: "ayse@example.com" })).status, 200);
+  const back = await p.form("/api/payments/vakifbank/return", await p.throughBank(id));
+  assert.equal(back.status, 303);
+  const after = await p.store.workflow.get(ref);
+  assert.equal(after.status, "confirmed");
+  assert.equal(after.net_paid, after.total);
+  assert.equal(after.balance_due, 0);
+  assert.equal(after.ledger.filter((l) => l.kind === "payment" && l.method === "online:vakifbank").length, 2);
+  assert.ok(
+    (await p.store.db.find("notification_outbox")).some((m) => m.kind === "agency_balance_paid"),
+    "acenteye kalan ödeme bildirimi gider",
+  );
+  // Ödenecek tutar kalmadı: bağlantı ve yeni ödeme açılmaz.
+  assert.equal((await p.call(`/admin/reservations/${ref}/payment-link`, { body: {}, cookie: p.ops })).status, 409);
+  assert.equal((await p.api("/payments/start-ticket", { token: before.ticket_token })).status, 409);
+});
+
+test("iptal penceresi: iade önerisi kurallara göre, kart iadesinin bugün yapılabilirliği söylenir", async (t) => {
+  const p = await paidByCard(t);
+  const ref = p.r.reference;
+  const q = await p.call(`/admin/reservations/${ref}/cancel-quote`, { cookie: p.ops });
+  assert.equal(q.status, 200, JSON.stringify(q.json));
+  assert.equal(q.json.netPaid, p.r.deposit);
+  assert.equal(q.json.customer.refund + q.json.customer.retained, p.r.deposit);
+  assert.equal(q.json.agency.refund, p.r.deposit);
+  assert.equal(q.json.card.paid, p.r.deposit);
+  // Acente iptali: aynı gün tamamı iptal edilebilir.
+  assert.equal(q.json.card.agency, "");
+  assert.equal(q.json.canRefundCard, false, "operasyon rolü karta iade yapamaz");
+  assert.equal((await p.call(`/admin/reservations/${ref}/cancel-quote`, { cookie: p.owner })).json.canRefundCard, true);
+});
+
+test("iptal + karta iade: aynı gün kısmi iade iptalden önce reddedilir, tamamı iptal edilir", async (t) => {
+  const p = await paidByCard(t);
+  const ref = p.r.reference,
+    cancel = (refund, cookie = p.owner) =>
+      p.call(`/admin/reservations/${ref}/cancel`, { body: refund ? { refund } : {}, cookie });
+  // Aynı gün kısmi karta iade: bankaya gitmez, rezervasyon iptal edilmez.
+  const partial = await cancel({ amount: p.r.deposit - 1000, method: "card" });
+  assert.equal(partial.status, 409);
+  assert.match(partial.json.message, /yalnız tamamıyla iptal/);
+  assert.equal(p.sent.length, 0);
+  assert.equal((await p.store.workflow.get(ref)).status, "confirmed");
+  // Operasyon rolü karta iadeli iptal yapamaz; tahsilatı aşan iade reddedilir.
+  assert.equal((await cancel({ amount: p.r.deposit, method: "card" }, p.ops)).status, 403);
+  assert.equal((await cancel({ amount: p.r.deposit + 1, method: "card" })).status, 409);
+  assert.equal((await p.store.workflow.get(ref)).status, "confirmed");
+  const ok = await cancel({ amount: p.r.deposit, method: "card" });
+  assert.equal(ok.status, 200, JSON.stringify(ok.json));
+  assert.equal(ok.json.refund.status, "succeeded");
+  assert.equal(ok.json.reservation.status, "cancelled");
+  assert.equal(p.sent.length, 1);
+  assert.match(p.sent[0], /<TransactionType>Cancel<\/TransactionType>/);
+  assert.equal(await p.netPaid(), 0);
+  const mail = (await p.store.db.find("notification_outbox")).find((m) => m.kind === "reservation_cancelled");
+  assert.match(mail.body, /karta iade ediliyor/);
+});
+
+test("iptal + karta iade: ertesi gün kapora kesilerek kısmi iade yapılır", async (t) => {
+  const p = await paidByCard(t);
+  await p.nextDay();
+  // Oturum 8 saat: ertesi gün sahip yeniden giriş yapar.
+  const owner = (
+    await p.call("/admin/login", { body: { email: "sahip@rotakars.test", password: "sahip-parolasi-2026" } })
+  ).cookie;
+  const ref = p.r.reference,
+    amount = p.r.deposit - 10000;
+  const ok = await p.call(`/admin/reservations/${ref}/cancel`, {
+    body: { refund: { amount, method: "card" } },
+    cookie: owner,
+  });
+  assert.equal(ok.status, 200, JSON.stringify(ok.json));
+  assert.equal(ok.json.refund.status, "succeeded");
+  assert.equal(ok.json.refund.amount, amount);
+  assert.match(p.sent[0], /<TransactionType>Refund<\/TransactionType>/);
+  assert.equal(await p.netPaid(), 10000);
+  assert.equal((await p.store.workflow.get(ref)).status, "cancelled");
+});
+
+test("POS tahsilatı ve POS / havale iadesiyle iptal kaydedilir; rapor POS ve online kartı ayırır", async (t) => {
+  const p = await paidByCard(t);
+  const ref = p.r.reference;
+  const pos = await p.call(`/admin/reservations/${ref}/payments`, {
+    body: { amount: 5000, method: "pos", externalReference: "POS-0001", recordedExternally: true },
+    cookie: p.ops,
+  });
+  assert.equal(pos.status, 200, JSON.stringify(pos.json));
+  // Elle iade dekont referansı olmadan yapılmaz; iptal de yapılmaz.
+  const noRef = await p.call(`/admin/reservations/${ref}/cancel`, {
+    body: { refund: { amount: 5000, method: "pos" } },
+    cookie: p.ops,
+  });
+  assert.equal(noRef.status, 400);
+  assert.equal((await p.store.workflow.get(ref)).status, "confirmed");
+  const ok = await p.call(`/admin/reservations/${ref}/cancel`, {
+    body: { refund: { amount: 5000, method: "pos", externalReference: "POS-IADE-1" } },
+    cookie: p.ops,
+  });
+  assert.equal(ok.status, 200, JSON.stringify(ok.json));
+  const after = await p.store.workflow.get(ref);
+  assert.equal(after.status, "cancelled");
+  assert.equal(after.net_paid, p.r.deposit);
+  assert.ok(after.ledger.some((l) => l.kind === "refund" && l.method === "pos" && l.amount === 5000));
+  assert.equal(p.sent.length, 0, "elle iade bankaya gitmez");
+  const month = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Istanbul" }).slice(0, 7);
+  const rep = await p.store.workflow.monthReport(month);
+  assert.equal(rep.cash.pos, 0);
+  assert.equal(rep.cash.card, p.r.deposit);
 });

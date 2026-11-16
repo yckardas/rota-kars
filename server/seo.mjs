@@ -207,6 +207,7 @@ const PRIVATE = [
   [/^\/hesabim$/, "Hesabım"],
   [/^\/bilet\/[^/]+$/, "Bilet doğrulama"],
   [/^\/odeme\/(kart|sonuc|deneme)\/[a-f0-9]{48}$/, "Ödeme"],
+  [/^\/odeme\/bakiye\/[A-Za-z0-9_-]{16,128}$/, "Ödeme"],
   [/^\/odeme$/, "Online ödeme"],
   [/^\/yonetim$/, "Yönetim"],
 ];

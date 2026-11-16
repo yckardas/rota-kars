@@ -1058,6 +1058,46 @@
   justify-content: space-between;
   gap: 8px 16px;
 }
+/* Tahsilat sekmesi: müşteriye kartla ödeme bağlantısı */
+.rk-admin .payment-link-box {
+  display: grid;
+  gap: 8px;
+  padding: 12px 0 14px;
+  border-bottom: 1px solid var(--mortar-soft);
+}
+.rk-admin .payment-link-box > p {
+  margin: 0;
+}
+.rk-admin .payment-link-box > p svg {
+  vertical-align: -2px;
+}
+.rk-admin .payment-link-url {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 0.82rem;
+}
+/* İade sekmesi: karta iade / elle kayıt seçimi */
+.rk-admin .refund-kind {
+  margin-top: 4px;
+}
+/* İptal penceresi */
+.rk-admin .cancel-dialog {
+  padding: 18px 22px 22px;
+}
+.rk-admin .cancel-dialog .choice-row {
+  display: grid;
+  gap: 6px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.rk-admin .cancel-dialog .choice-row legend {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.rk-admin .cancel-dialog .form-hint svg {
+  vertical-align: -2px;
+}
 .rk-admin .confirm-dialog {
   padding: 22px 24px;
 }

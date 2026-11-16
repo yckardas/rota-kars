@@ -26,11 +26,25 @@ Kod:
 7. **Bankadan satış yanıtı alınamazsa veya kart çekildiği halde rezervasyona işlenemezse:** Ödeme **askıya alınır** (`unverified`). Acenteye "Ödeme sonucu doğrulanamadı" e-postası ve uygulama bildirimi gider. Banka panelinden kontrol edin:
    - Çekildiyse tahsilatı yönetimden elle kaydedin.
    - Çekilmediyse müşteriyi arayın.
-8. **İade:** Yönetimde rezervasyonun **Karta iade** sekmesinden yapılır. Ayrıntı aşağıda, "Karta iade / iptal" bölümünde.
+8. **İade:** Yönetimde rezervasyonun **İade** sekmesinde **Karta iade (bankaya gönderilir)** seçilerek ya da **İptal et** penceresinde iptalle birlikte yapılır. Ayrıntı aşağıda, "Karta iade / iptal" bölümünde.
+9. **Kalan bakiye:** Kapora ödenip rezervasyon onaylandıktan sonra kalan tutar da kartla ödenebilir. Müşteri **Rezervasyonum**'da "Kalanı kartla öde" düğmesini görür. Acente **Tahsilat** sekmesindeki "Müşteri kartla ödesin" kutusundan ödeme bağlantısını (`/odeme/bakiye/<bilet belirteci>`) kopyalayabilir, WhatsApp'tan ya da e-postayla gönderebilir. Ödeme aynı 3D Secure akışından geçer, rezervasyona kendiliğinden işlenir ve acenteye "Kalan ödeme kartla alındı" bildirimi gider. Ödeme planı bu ödemede değiştirilemez; tur tarihi geçtiyse bağlantı ödeme açmaz.
+
+## Tahsilat yöntemleri (yönetim)
+
+- **Online kart (Vakıfbank):** Müşteri sitede öder; kayıt kendiliğinden yazılır (`online:vakifbank`).
+- **Havale / EFT, Nakit, Kredi kartı (POS cihazı):** Dışarıda yapılan işlemin kaydıdır, bankaya bir şey göndermez. Ofisteki fiziksel POS'tan çekilen tutar "Kredi kartı (ofis POS cihazı)" olarak kaydedilir (`pos`). Aylık rapor ve CSV, POS ile online kartı ayrı satırlarda gösterir.
 
 ## Karta iade / iptal (yönetim)
 
-Kartla alınmış tahsilat, rezervasyon penceresindeki **Karta iade** sekmesinden bankaya iade edilir. Sekme yalnızca kartla (Vakıfbank) ödenmiş rezervasyonlarda görünür. Havale veya nakit iadesi eskisi gibi **İade** sekmesinden kaydedilir.
+Kartla alınmış tahsilat, rezervasyon penceresindeki **İade** sekmesinde iade edilir. Kartla (Vakıfbank) ödenmiş rezervasyonda sekmenin üstünde iki seçenek vardır: **Karta iade (bankaya gönderilir)** ve **Havale / nakit / POS iadesini kaydet**. İkincisi bankaya hiçbir şey göndermez; kartla ödenmiş rezervasyonda seçildiğinde bu açıkça uyarılır.
+
+**İptal penceresi:** **İptal et** düğmesi bir pencere açar:
+
+- İptal edeni seçersiniz. **Müşteri isteği** seçilirse iade iptal ve iade koşullarına göre önerilir: süre içindeyse tamamı, süre geçtiyse kapora (toplam bedelin %30'u) düşülür. Süre, müşterinin iptal talebinin geldiği andan hesaplanır. **Acente** seçilirse (asgari katılımcı, hava, yol, araç…) tamamı önerilir. Önerilen tutar değiştirilebilir.
+- İade yöntemi: karta iade, havale / nakit / POS kaydı ya da "iadeyi sonra yapacağım".
+- Karta iade tutarı kart tahsilatlarına dağıtılır (her biri ayrı banka işlemi). Bugün alınan ödeme yalnızca tamamıyla iptal edilebildiği için, bugün yapılamayacak bir kısmi iade **iptal yapılmadan** reddedilir; tam iade seçilebilir ya da iade ertesi gün yapılır.
+- İptal yapılır, sonra iade. Karta iade askıya alınır veya reddedilirse rezervasyon iptal edilmiş olarak kalır; iade **İade** sekmesinden sonuçlandırılır ya da yeniden denenir.
+- Müşteriye giden iptal e-postası iadenin karta yapıldığını veya acentece yapıldığını söyler.
 
 - **Yetki:** Bankaya iade göndermek ve askıdaki iadeyi sonuçlandırmak yalnızca **Sahip** rolündedir. Operasyon rolü sekmeyi ve iade durumunu görür, düğmeleri görmez; uç noktalar da 403 döner. Rehber sekmeyi göremez.
 - **Aynı gün → iptal (Cancel):** Ödeme bugün (İstanbul saatiyle) alındıysa bankanın gün sonu henüz alınmamıştır. Bu durumda yalnızca tutarın **tamamı** iptal edilebilir; kısmi tutar reddedilir.
@@ -38,15 +52,15 @@ Kartla alınmış tahsilat, rezervasyon penceresindeki **Karta iade** sekmesinde
 - **Önce banka, sonra kayıt:** İade kaydı (`payment_ledger`, `kind: refund`, `method: online:vakifbank`) yalnızca banka `ResultCode 0000` döndükten sonra yazılır. Kayıttaki referans iade işleminin kendi numarasıdır (`RF…`); bankanın iade işlem numarası `card_refunds` kaydında durur.
 - **Çift iade olmaz:** Rezervasyon başına aynı anda yalnızca bir kart iadesi bankaya gider (`card_refund_locks` kilidi). Kilit alındıktan sonra iade edilebilir tutar yeniden hesaplanır. Aynı anda gelen ikinci istek 409 alır.
 - **Banka reddederse:** İade kaydı yazılmaz, kilit açılır, bankanın gerekçesi gösterilir. Yeniden denenebilir.
-- **Bankadan yanıt alınamazsa:** İade **askıya alınır** (`unknown`). Acenteye "Kart iadesi doğrulanamadı" e-postası ve uygulama bildirimi gider. Kilit açılmaz; sonuçlanana kadar o rezervasyonda yeni kart iadesi yapılamaz. Vakıfbank üye işyeri panelinden kontrol edin, sonra Karta iade sekmesinde:
+- **Bankadan yanıt alınamazsa:** İade **askıya alınır** (`unknown`). Acenteye "Kart iadesi doğrulanamadı" e-postası ve uygulama bildirimi gider. Kilit açılmaz; sonuçlanana kadar o rezervasyonda yeni kart iadesi yapılamaz. Vakıfbank üye işyeri panelinden kontrol edin, sonra **İade** sekmesindeki **Karta iade** bölümünde:
   - İade panelde görünüyorsa **Gerçekleşti** deyin. İade kaydı yazılır.
   - Görünmüyorsa **Gerçekleşmedi** deyin. İade düşer, yeniden iade yapılabilir.
 - **Banka onaylayıp kayıt yazılamazsa** (`not_recorded`): Bu da askıya alınır ve "Kart iadesi kaydedilemedi" bildirimi gider. Bu durumda yalnızca **Gerçekleşti** seçilebilir, çünkü para karta dönmüştür.
 - 2 dakikadan uzun süre "Bankada işleniyor" kalan iade de sonuçlandırılabilir. Bu, sunucunun banka isteği sırasında yeniden başladığı durum içindir.
-- İade, rezervasyonun durumunu değiştirmez. Tur iptal edilecekse **İptal et** ayrıca yapılır.
+- İade sekmesinden yapılan iade rezervasyonun durumunu değiştirmez. Tur iptal edilecekse **İptal et** penceresi iptal ile iadeyi birlikte yapar.
 - Simülatörde alınmış ödeme (işlem numarası `SIM…`) gerçek bankaya, gerçek ödeme simülatöre iade gönderilmez.
 
-Kod: `server/payments.mjs` (`cardPayments`, `refundCard`, `resolveRefund`), uçlar `server/app.mjs` (`/api/admin/reservations/:reference/card-payments`, `/api/admin/reservations/:reference/card-refunds`, `/api/admin/card-refunds/:id/resolve`), ekran `src/components/admin/CardRefunds.tsx`.
+Kod: `server/payments.mjs` (`cardPayments`, `refundCard`, `refundToCard`, `cancelQuote`, `resolveRefund`, `startByTicket`), `server/legal.mjs` (`cancellationQuote`); uçlar `server/app.mjs` (`/api/admin/reservations/:reference/card-payments`, `.../card-refunds`, `.../cancel-quote`, `.../cancel`, `.../payment-link`, `/api/admin/card-refunds/:id/resolve`, `/api/payments/start-ticket`); ekranlar `src/components/admin/CardRefunds.tsx`, `CancelDialog.tsx`, `PaymentLink.tsx`.
 
 **Canlıda ilk iade:** Kodla gerçek iade henüz denenmedi. İlk kez küçük tutarlı bir ödemede deneyin ve sonucu banka panelinde karşılaştırın. Aşağıdaki "Bankanın dokümanıyla doğrulanacaklar" listesindeki Cancel/Refund maddeleri doğrulanmadan büyük tutarlı iade yapmayın.
 

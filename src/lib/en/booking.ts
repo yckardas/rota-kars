@@ -154,6 +154,23 @@ export const booking: Record<string, string> = {
 
   // Ödeme
   "Kaporanızı şimdi ödeyin.": "Pay your deposit now.",
+  "Kalan tutarı kartla ödeyin.": "Pay the balance by card.",
+  "Kalan tutar": "Balance",
+  "Ödemeyi tur günü hareketten önce buradan kartla yapabilirsiniz; ödeme anında rezervasyonunuza işlenir.":
+    "You can pay it here by card before departure on the tour day; the payment is added to your booking instantly.",
+  "Kalanı kartla öde": "Pay the balance by card",
+  "Şimdi ödenecek kalan tutar": "Balance due now",
+  "{amount} tahsil edildi. {reference} numaralı rezervasyonunuzun kalan ödemesi tamamlandı.":
+    "{amount} charged. The balance of booking {reference} is now paid.",
+  "Ödeme açılamadı.": "The payment could not be opened.",
+  "Ödeme sayfası açılıyor…": "Opening the payment page…",
+  "Lütfen bekleyin.": "Please wait.",
+  "Rezervasyonuma git": "Go to my booking",
+  "Ödeme bağlantısı geçersiz.": "This payment link is not valid.",
+  "Bu rezervasyonun ödemesi zaten alınmış.": "This booking has already been paid.",
+  "Bu rezervasyon için online ödeme alınamaz.": "Online payment is not available for this booking.",
+  "Tur tarihi geçti; kalan ödeme için acenteyle iletişime geçin.":
+    "The tour date has passed; please contact the agency about the balance.",
   "Ödeme alınınca rezervasyonunuz anında onaylanır ve QR kodlu biletiniz geçerli olur.":
     "Once paid, your booking is confirmed instantly and your QR ticket becomes valid.",
   "Kartla öde": "Pay by card",

@@ -55,6 +55,8 @@ type Session = {
     total: number;
     deposit: number;
     paid: number;
+    // Onaylanmış rezervasyonun kalan ödemesi (plan değiştirilemez).
+    balance?: boolean;
   };
   consented?: boolean;
   bookingConsentAt?: number | null;
@@ -73,11 +75,15 @@ export function PayDeposit({
   const { t, lang } = useLang();
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
-  const due = Math.max(0, r.deposit - (r.net_paid || 0));
+  // Onaylanmış rezervasyonda kalan bakiye de kartla ödenebilir (önizlemede değil).
+  const balance = r.status === "confirmed" && catalog.payment.enabled;
+  const due = balance
+    ? Math.max(0, r.balance_due ?? r.total - (r.net_paid || 0))
+    : Math.max(0, r.deposit - (r.net_paid || 0));
   const preview = !catalog.payment.enabled && catalog.payment.preview;
   if (
     !(catalog.payment.enabled || preview) ||
-    r.status !== "pending_agency" ||
+    !(r.status === "pending_agency" || balance) ||
     !due
   )
     return null;
@@ -102,12 +108,18 @@ export function PayDeposit({
       <div>
         {/* Önizleme (banka incelemesi): kart ekranı görünür ama çekim yapılmaz; başlık bunu söyler. */}
         <h2 id="pay-title">
-          {preview ? t("Kartla ödeme yakında") : t("Kaporanızı şimdi ödeyin.")}
+          {preview
+            ? t("Kartla ödeme yakında")
+            : balance
+              ? t("Kalan tutarı kartla ödeyin.")
+              : t("Kaporanızı şimdi ödeyin.")}
         </h2>
         <p>
-          {r.deposit < r.total ? t("%30 kapora") : t("Tur bedeli")}{" "}
+          {balance ? t("Kalan tutar") : r.deposit < r.total ? t("%30 kapora") : t("Tur bedeli")}{" "}
           <strong>{currency(due)}</strong>.{" "}
-          {preview
+          {balance
+            ? t("Ödemeyi tur günü hareketten önce buradan kartla yapabilirsiniz; ödeme anında rezervasyonunuza işlenir.")
+            : preview
             ? t(
                 "Banka onayının ardından bu tutarı buradan kartla ödeyebileceksiniz. Şimdilik kartınızdan çekim yapılmaz; acentemiz ödeme için sizinle iletişime geçecek.",
               )
@@ -127,7 +139,7 @@ export function PayDeposit({
         ) : (
           <CreditCard size={17} />
         )}
-        {preview ? t("Kart ekranını görüntüle") : t("Kartla öde")}
+        {preview ? t("Kart ekranını görüntüle") : balance ? t("Kalanı kartla öde") : t("Kartla öde")}
       </button>
       <small>
         <ShieldCheck size={14} />{" "}
@@ -600,15 +612,17 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
             </div>
             <div className="is-due">
               <dt>
-                {sum.paymentMode === "deposit"
-                  ? t("Şimdi ödenecek kapora (%{pct})", {
-                      pct: catalog.payment.depositPercent ?? 30,
-                    })
-                  : t("Şimdi ödenecek tutar (tamamı)")}
+                {sum.balance
+                  ? t("Şimdi ödenecek kalan tutar")
+                  : sum.paymentMode === "deposit"
+                    ? t("Şimdi ödenecek kapora (%{pct})", {
+                        pct: catalog.payment.depositPercent ?? 30,
+                      })
+                    : t("Şimdi ödenecek tutar (tamamı)")}
               </dt>
               <dd>{currency(s!.amount)}</dd>
             </div>
-            {sum.paymentMode === "deposit" && (
+            {!sum.balance && sum.paymentMode === "deposit" && (
               <p className="payment-summary-note">
                 {t(
                   "Kalan {rest} tur günü hareketten önce ödenir.",
@@ -618,7 +632,7 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
             )}
           </dl>
         )}
-        {open && sum && !sum.paid && ["deposit", "full"].includes(sum.paymentMode) && (
+        {open && sum && !sum.paid && !sum.balance && ["deposit", "full"].includes(sum.paymentMode) && (
           <fieldset className="payment-choices payment-plan" disabled={modeBusy || busy}>
             <legend>{t("Ödeme planı")}</legend>
             {(
@@ -860,6 +874,39 @@ export function OpenPayment({ catalog }: { catalog: Catalog }) {
 }
 // Ödeme dönüşü: sonuç sunucudaki oturumdan okunur (tarayıcı yönlendirmesi
 // ödemeyi onaylamaz).
+// Acentenin gönderdiği ödeme bağlantısı (/odeme/bakiye/:token): ödeme oturumunu
+// açar ve kart ekranına geçer. Ödenecek tutar yoksa veya bağlantı geçersizse söyler.
+export function BalancePayment() {
+  const { t, lang } = useLang();
+  const { token } = useParams(),
+    [error, setError] = useState("");
+  useEffect(() => {
+    post<{ redirectUrl: string }>("/payments/start-ticket", { token, lang })
+      .then((s) => window.location.replace(localPath(lang, s.redirectUrl)))
+      .catch((e) => setError((e as Error).message));
+  }, [token]);
+  return (
+    <section className="container payment-page">
+      <article className="ticket-check payment-card">
+        <h1>{error ? t("Ödeme açılamadı.") : t("Ödeme sayfası açılıyor…")}</h1>
+        {error ? (
+          <>
+            <p className="error" role="alert">
+              {t(error)}
+            </p>
+            <Link className="btn" to="/rezervasyonum">
+              {t("Rezervasyonuma git")}
+            </Link>
+          </>
+        ) : (
+          <p className="muted">
+            <LoaderCircle className="spin" size={16} /> {t("Lütfen bekleyin.")}
+          </p>
+        )}
+      </article>
+    </section>
+  );
+}
 export function PaymentResult() {
   const { t } = useLang();
   const { id } = useParams(),
@@ -920,10 +967,15 @@ export function PaymentResult() {
         {s && (
           <p className="muted">
             {paid
-              ? t(
-                  "{amount} tahsil edildi. {reference} numaralı rezervasyonunuz onaylandı; QR kodlu biletiniz artık geçerli.",
-                  { amount: currency(s.amount), reference: s.reference },
-                )
+              ? s.summary?.balance
+                ? t("{amount} tahsil edildi. {reference} numaralı rezervasyonunuzun kalan ödemesi tamamlandı.", {
+                    amount: currency(s.amount),
+                    reference: s.reference,
+                  })
+                : t(
+                    "{amount} tahsil edildi. {reference} numaralı rezervasyonunuz onaylandı; QR kodlu biletiniz artık geçerli.",
+                    { amount: currency(s.amount), reference: s.reference },
+                  )
               : unverified
                 ? t(
                     "Bankadan ödemenizin sonucu alınamadı. Kartınızdan çekim yapıldıysa rezervasyonunuz korunuyor; ekibimiz kontrol edip sizi arayacak.",
