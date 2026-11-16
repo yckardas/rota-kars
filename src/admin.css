@@ -1041,6 +1041,23 @@
 .rk-admin .audit-timeline li {
   border-bottom: 1px solid var(--mortar-soft);
 }
+.rk-admin .card-refund {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--mortar-soft);
+}
+.rk-admin .card-refund > p svg {
+  vertical-align: -2px;
+}
+.rk-admin .card-refund .form-grid {
+  align-items: end;
+}
+.rk-admin .card-refund-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
 .rk-admin .confirm-dialog {
   padding: 22px 24px;
 }

@@ -38,6 +38,7 @@ import {
 import { SeatMap } from "./SeatMap";
 import { PassengerList } from "./admin/MobileApp";
 import { NewReservation } from "./admin/NewReservation";
+import { CardRefunds } from "./admin/CardRefunds";
 import { DepartureCalendar } from "./admin/DepartureCalendar";
 import { isNativeApp } from "../lib/native";
 import { countryName } from "../lib/countries";
@@ -848,6 +849,7 @@ export function ReservationManager({
           tourName={tourName(booking.tourId)}
           busy={busy}
           action={action}
+          reload={load}
           close={() => setSelected("")}
         />
       )}
@@ -860,16 +862,18 @@ function BookingControls({
   tourName,
   busy,
   action,
+  reload,
   close,
 }: {
   booking: Reservation;
   tourName: string;
   busy: boolean;
   action: (ref: string, path: string, body?: unknown, done?: string) => Promise<boolean>;
+  reload: () => Promise<void>;
   close: () => void;
 }) {
   const feedback = useFeedback();
-  const [mode, setMode] = useState<"payment" | "refund" | "move" | "passengers" | "history">(
+  const [mode, setMode] = useState<"payment" | "refund" | "card" | "move" | "passengers" | "history">(
       r.status === "cancelled" && Number(r.net_paid) > 0 ? "refund" : "payment",
     ),
     [departures, setDepartures] = useState<Departure[]>([]),
@@ -934,6 +938,8 @@ function BookingControls({
       [
         ["payment", "Tahsilat", activeBooking && Number(r.balance_due) > 0],
         ["refund", "İade", Number(r.net_paid) > 0],
+        // Kartla (Vakıfbank) alınmış tahsilat varsa: bankaya iade/iptal ve askıdaki iadeler.
+        ["card", "Karta iade", Boolean(r.ledger?.some((p) => p.kind === "payment" && p.method === "online:vakifbank"))],
         ["move", "Tarih / koltuk", activeBooking],
         ["passengers", "Yolcu adları", activeBooking],
         ["history", "Geçmiş", true],
@@ -1066,7 +1072,9 @@ function BookingControls({
                   "cancel",
                   r.reference + " iptal edilsin mi?",
                   "Koltuklar boşa çıkar ve müşteriye iptal e-postası gider." +
-                    (Number(r.net_paid) > 0 ? ` ${currency(r.net_paid || 0)} tahsilatın iadesini ayrıca kaydetmeniz gerekir.` : ""),
+                    (Number(r.net_paid) > 0
+                      ? ` ${currency(r.net_paid || 0)} tahsilatın iadesi ayrıca yapılmalı (kartla ödendiyse Karta iade sekmesinden, değilse İade sekmesinden kaydedin).`
+                      : ""),
                   "Rezervasyonu iptal et",
                   "Rezervasyon iptal edildi.",
                 )
@@ -1087,7 +1095,9 @@ function BookingControls({
             </button>
           ))}
         </div>
-        {current === "history" ? (
+        {current === "card" ? (
+          <CardRefunds reference={r.reference} onChange={reload} />
+        ) : current === "history" ? (
           <div className="ledger-history">
             {!history && <p className="muted">Yükleniyor…</p>}
             {history && !history.length && <p className="muted">Kayıt yok.</p>}
@@ -1149,6 +1159,7 @@ function BookingControls({
               <>
                 <p className="form-hint">
                   Bu form ödeme veya iade yapmaz. Banka/havale veya nakit olarak dışarıda gerçekleşen işlemi kaydeder.
+                  {current === "refund" && " Kartla alınmış ödemeyi bankaya iade etmek için Karta iade sekmesini kullanın."}
                 </p>
                 <div className="form-grid">
                   <label className="field">

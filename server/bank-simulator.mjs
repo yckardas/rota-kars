@@ -6,7 +6,8 @@ import { bankAmount, xmlValue } from "./vakifbank.mjs";
 // PAYMENT_ALLOW_TEST=1 olmadan açılamaz. Banka test bilgilerini vermeden tüm ödeme
 // akışını uçtan uca denemeye ve bankaya göstermeye yarar. Tahsilat yapmaz.
 // Kartlar: Luhn'a uygun her Visa/Mastercard/Troy başarılı olur; 0002 ile biten kart
-// satışta reddedilir; 4000 0000 0000 0101 3D Secure'a kayıtlı değildir.
+// satışta reddedilir; 4000 0000 0000 0101 3D Secure'a kayıtlı değildir. İptal (Cancel)
+// ve iade (Refund) satış tutarına göre denetlenir.
 const esc = (v) =>
   String(v ?? "").replace(
     /[<>&'"]/g,
@@ -47,12 +48,42 @@ function mpi(form) {
   ).toString("base64url");
   return `<IPaySecure><Message ID="${esc(id)}"><VERes><Status>Y</Status><PaReq>${paReq}</PaReq><TermUrl>${esc(form.get("SuccessUrl"))}</TermUrl><MD>${esc(id)}</MD><ACSUrl>/__bank/vakifbank/acs</ACSUrl></VERes></Message><VerifyEnrollmentRequestId>${esc(id)}</VerifyEnrollmentRequestId></IPaySecure>`;
 }
+// Simülatörün bildiği satışlar (iptal/iade denetimi için). Süreç yeniden başlarsa
+// bilinmeyen "SIM" işlemlerinin iptali/iadesi kabul edilir; diğer referanslar reddedilir.
+const sales = new Map();
+const result = (type, code, detail, amount, ok = code === "0000") =>
+  `<VposResponse><TransactionType>${esc(type)}</TransactionType><TransactionId>${ok ? "SIM" + randomBytes(8).toString("hex").toUpperCase() : ""}</TransactionId><ResultCode>${code}</ResultCode><ResultDetail>${esc(detail)} (simülasyon)</ResultDetail><AuthCode>${ok ? String(100000 + Math.floor(Math.random() * 900000)) : ""}</AuthCode><Rrn>${ok ? randomBytes(6).toString("hex") : ""}</Rrn><CurrencyAmount>${esc(amount)}</CurrencyAmount></VposResponse>`;
+// İptal (Cancel) satışın tamamını geri alır; iade (Refund) kısmi olabilir, toplamı
+// satış tutarını aşamaz. İptal edilmiş veya iadesi başlamış satış iptal edilemez.
+function reverse(type, xml) {
+  const ref = xmlValue(xml, "ReferenceTransactionId"),
+    sale = sales.get(ref),
+    amount = type === "Refund" ? Math.round(Number(xmlValue(xml, "CurrencyAmount")) * 100) : 0;
+  if (!ref || (!sale && !ref.startsWith("SIM")))
+    return result(type, "1033", "Referans işlem bulunamadı", bankAmount(amount));
+  if (sale?.cancelled) return result(type, "1084", "İşlem daha önce iptal edilmiş", bankAmount(amount));
+  if (type === "Cancel") {
+    if (sale?.refunded) return result(type, "1084", "İadesi yapılmış işlem iptal edilemez", bankAmount(0));
+    if (sale) sale.cancelled = true;
+    return result(type, "0000", "İptal başarılı", bankAmount(sale?.amount ?? 0));
+  }
+  if (!Number.isSafeInteger(amount) || amount <= 0)
+    return result(type, "1015", "Geçersiz tutar", bankAmount(0));
+  if (sale && sale.refunded + amount > sale.amount)
+    return result(type, "1085", "İade tutarı satış tutarını aşıyor", bankAmount(amount));
+  if (sale) sale.refunded += amount;
+  return result(type, "0000", "İade başarılı", bankAmount(amount));
+}
 function vpos(form) {
   const xml = form.get("prmstr") || "",
-    type = xmlValue(xml, "TransactionType"),
-    declined = type === "Sale" && xmlValue(xml, "Pan").endsWith("0002"),
-    amount = xmlValue(xml, "CurrencyAmount") || bankAmount(0);
-  return `<VposResponse><MerchantId>${esc(xmlValue(xml, "MerchantId"))}</MerchantId><TransactionType>${esc(type)}</TransactionType><TransactionId>${declined ? "" : "SIM" + randomBytes(8).toString("hex").toUpperCase()}</TransactionId><ResultCode>${declined ? "0051" : "0000"}</ResultCode><ResultDetail>${declined ? "Yetersiz bakiye (simülasyon)" : "İşlem başarılı (simülasyon)"}</ResultDetail><AuthCode>${declined ? "" : String(100000 + Math.floor(Math.random() * 900000))}</AuthCode><Rrn>${declined ? "" : randomBytes(6).toString("hex")}</Rrn><CurrencyAmount>${esc(amount)}</CurrencyAmount></VposResponse>`;
+    type = xmlValue(xml, "TransactionType");
+  if (type === "Cancel" || type === "Refund") return reverse(type, xml);
+  const declined = type === "Sale" && xmlValue(xml, "Pan").endsWith("0002"),
+    amount = xmlValue(xml, "CurrencyAmount") || bankAmount(0),
+    transactionId = declined ? "" : "SIM" + randomBytes(8).toString("hex").toUpperCase();
+  if (type === "Sale" && !declined)
+    sales.set(transactionId, { amount: Math.round(Number(amount) * 100), refunded: 0, cancelled: false });
+  return `<VposResponse><MerchantId>${esc(xmlValue(xml, "MerchantId"))}</MerchantId><TransactionType>${esc(type)}</TransactionType><TransactionId>${transactionId}</TransactionId><ResultCode>${declined ? "0051" : "0000"}</ResultCode><ResultDetail>${declined ? "Yetersiz bakiye (simülasyon)" : "İşlem başarılı (simülasyon)"}</ResultDetail><AuthCode>${declined ? "" : String(100000 + Math.floor(Math.random() * 900000))}</AuthCode><Rrn>${declined ? "" : randomBytes(6).toString("hex")}</Rrn><CurrencyAmount>${esc(amount)}</CurrencyAmount></VposResponse>`;
 }
 // Sunucudan bankaya giden MPI/VPOS istekleri HTTP'ye çıkmadan burada yanıtlanır.
 export function simulatorFetch(url, { body } = {}) {

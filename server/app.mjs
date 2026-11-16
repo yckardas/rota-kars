@@ -1331,6 +1331,56 @@ export function createApp(
       );
     }),
   );
+  // Kartla alınmış tahsilatın karta iadesi / iptali (Vakıfbank). Durumu operasyon da
+  // görür; bankaya iade göndermek ve askıdaki iadeyi sonuçlandırmak yalnız sahiptedir
+  // (admin-auth OWNER_ONLY ile birlikte burada da denetlenir).
+  const ownerOnly = (q) => {
+    if (q.admin?.role !== "owner")
+      throw new AppError(403, "Karta iade yalnız sahip rolündeki yönetici tarafından yapılabilir.");
+  };
+  app.get(
+    "/api/admin/reservations/:reference/card-payments",
+    requireAdmin,
+    route(async (q, r) =>
+      r.json({
+        ...(await payments.cardPayments(q.params.reference)),
+        canRefund: q.admin.role === "owner",
+        enabled: payments.provider?.name === "vakifbank",
+      }),
+    ),
+  );
+  app.post(
+    "/api/admin/reservations/:reference/card-refunds",
+    requireAdmin,
+    route(async (q, r) => {
+      ownerOnly(q);
+      const input = z
+        .object({
+          paymentId: z.string().min(1).max(100),
+          amount: z.number().int().min(1).max(100000000),
+          confirm: z.literal(true),
+        })
+        .parse(q.body);
+      const result = await payments.refundCard(q.params.reference, {
+        paymentId: input.paymentId,
+        amount: input.amount,
+        admin: q.admin,
+        clientIp: clientIp(q),
+      });
+      r.status(result.status === "succeeded" ? 200 : 202).json(result);
+    }),
+  );
+  app.post(
+    "/api/admin/card-refunds/:id/resolve",
+    requireAdmin,
+    route(async (q, r) => {
+      ownerOnly(q);
+      const input = z
+        .object({ outcome: z.enum(["succeeded", "failed"]), confirm: z.literal(true) })
+        .parse(q.body);
+      r.json(await payments.resolveRefund(q.params.id, { outcome: input.outcome, admin: q.admin }));
+    }),
+  );
   app.get(
     "/api/reviews",
     route(async (q, r) => {

@@ -11,6 +11,7 @@ import {
 } from "./vakifbank.mjs";
 import { simulatorFetch } from "./bank-simulator.mjs";
 import { tours } from "./catalog.mjs";
+import { localDate } from "./departures.mjs";
 import {
   LEGAL_VERSION,
   cancellationRules,
@@ -37,6 +38,17 @@ const ATTEMPTS_PER_RESERVATION = 6;
 const FULL_AUTH_ECI = ["05", "02"];
 export const ATTEMPT_ID = /^PY[0-9A-F]{24}$/;
 export const VAKIFBANK_RETURN_PATH = "/api/payments/vakifbank/return";
+export const REFUND_ID = /^RF[0-9A-F]{24}$/;
+const CARD_METHOD = "online:vakifbank";
+// Bankada sonucu beklenen veya bilinmeyen iade tutarı ayrılmış sayılır; acente
+// sonuçlandırana kadar aynı rezervasyonda yeni kart iadesi yapılmaz.
+const OPEN_REFUND = ["pending", "unknown", "not_recorded", "resolving"];
+const HELD_REFUND = [...OPEN_REFUND, "succeeded"];
+// Banka isteği en çok 30 sn sürer; bundan uzun "pending" kalan iade (süreç çöktü)
+// acente tarafından sonuçlandırılabilir.
+const STALE_REFUND_MS = 2 * 60000;
+const tl = (kurus) =>
+  (kurus / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " TL";
 // Önizleme: gerçek ödeme kapalıyken (banka başvurusu sürecinde) kart ekranı
 // gösterilir ama kart hiçbir yere gönderilmez ve çekim yapılmaz.
 export const PREVIEW_MESSAGE =
@@ -227,6 +239,148 @@ export function createPayments(
         "Ödemenizin sonucu doğrulanamadı. Kartınızdan çekim yapıldıysa rezervasyonunuz korunuyor; kontrol edip size döneceğiz.",
     };
   };
+  // ---- Karta iade / iptal (Vakıfbank) ----
+  // Kartla alınmış tahsilat bankada aynı gün iptal (Cancel, yalnız tamamı), sonraki
+  // günler iade (Refund, kısmi olabilir) edilir. Rezervasyon başına aynı anda tek
+  // iade bankaya gider (kilit); iade kaydı yalnız bankanın ResultCode 0000 onayından
+  // sonra yazılır; yanıt alınamazsa iade askıya alınır ve acente sonuçlandırır.
+  const REFUND_LOCKS = "card_refund_locks";
+  // Sonuçlandırma yarıda kalırsa (süreç çöktü) "resolving" da bir süre sonra yeniden açılır.
+  const resolvable = (x) =>
+    ["unknown", "not_recorded"].includes(x.status) ||
+    (x.status === "pending" && x.created_at < clock() - STALE_REFUND_MS) ||
+    (x.status === "resolving" && (x.resolving_at || 0) < clock() - STALE_REFUND_MS);
+  const publicRefund = (x) => ({
+    id: x.id,
+    paymentId: x.payment_id,
+    amount: x.amount,
+    type: x.type,
+    status: x.status,
+    createdAt: x.created_at,
+    finishedAt: x.finished_at || null,
+    by: x.by?.name || x.by?.email || "",
+    resultCode: x.result_code || "",
+    resultDetail: x.result_detail || "",
+    bankTransactionId: x.bank_transaction_id || "",
+    resolvedBy: x.resolved_by?.name || x.resolved_by?.email || "",
+    resolvable: resolvable(x),
+  });
+  const cardPaymentsOf = async (r) => {
+    const refunds = await db.find(
+        "card_refunds",
+        { reference: r.reference },
+        { sort: { created_at: 1 } },
+      ),
+      blocked = refunds.some((x) => OPEN_REFUND.includes(x.status)),
+      today = localDate(clock()),
+      payments = [];
+    for (const p of r.ledger.filter(
+      (l) => l.kind === "payment" && l.method === CARD_METHOD,
+    )) {
+      const amount = Number(p.amount),
+        attempt =
+          (await db.one("payment_attempts", {
+            reference: r.reference,
+            transaction_id: p.external_reference,
+          })) ||
+          (await db.one("payment_attempts", {
+            reference: r.reference,
+            _id: p.external_reference,
+          })),
+        mine = refunds.filter((x) => x.payment_id === p.id),
+        sum = (statuses) =>
+          mine
+            .filter((x) => statuses.includes(x.status))
+            .reduce((n, x) => n + x.amount, 0),
+        held = sum(HELD_REFUND),
+        sameDay = localDate(p.created_at) === today;
+      // Aynı gün yalnız tamamı iptal edilebilir; net tahsilat da buna yetmelidir.
+      const refundable = blocked
+        ? 0
+        : sameDay
+          ? held === 0 && amount <= r.net_paid
+            ? amount
+            : 0
+          : Math.max(0, Math.min(amount - held, r.net_paid));
+      payments.push({
+        id: p.id,
+        amount,
+        paidAt: p.created_at,
+        transactionId: p.external_reference,
+        maskedPan: attempt?.masked_pan || "",
+        brand: attempt?.brand || "",
+        refunded: sum(["succeeded"]),
+        held,
+        refundable,
+        sameDay,
+        refunds: mine.map(publicRefund),
+      });
+    }
+    return { reference: r.reference, netPaid: r.net_paid, blocked, payments };
+  };
+  // Rezervasyon başına tek kart iadesi. Kilit, sahibi sonuçlanmış (veya hiç kaydı
+  // açılamamış eski) bir iadeye aitse devralınır; askıdaki iadenin kilidi açılmaz.
+  const lockRefund = async (reference, id) => {
+    const lock = { refund_id: id, created_at: clock() };
+    if (await db.insertIfAbsent(REFUND_LOCKS, reference, lock)) return true;
+    const current = await db.one(REFUND_LOCKS, { _id: reference });
+    if (!current) return false;
+    const holder = await db.one("card_refunds", { _id: current.refund_id });
+    const free = holder
+      ? ["succeeded", "failed"].includes(holder.status)
+      : current.created_at < clock() - STALE_REFUND_MS;
+    return (
+      free &&
+      Boolean(
+        await db.update(
+          REFUND_LOCKS,
+          { _id: reference, refund_id: current.refund_id },
+          lock,
+        ),
+      )
+    );
+  };
+  const unlockRefund = (reference, id) =>
+    db.remove(REFUND_LOCKS, { _id: reference, refund_id: id });
+  const refundUnverified = async (refund, status, extra = {}) => {
+    await db.update(
+      "card_refunds",
+      { _id: refund.id },
+      { status, finished_at: clock(), ...extra },
+    );
+    const what = refund.type === "cancel" ? "iptali" : "iadesi",
+      recorded = status === "not_recorded";
+    await notifications
+      ?.notifyAgency({
+        subject:
+          (recorded ? "Kart iadesi kaydedilemedi: " : "Kart iadesi doğrulanamadı: ") +
+          refund.reference,
+        body:
+          `${refund.reference} rezervasyonunda ${tl(refund.amount)} kart ${what} ` +
+          (recorded
+            ? "banka tarafından onaylandı ama rezervasyona işlenemedi."
+            : "için bankadan yanıt alınamadı.") +
+          `\nKart: ${refund.masked_pan || "-"}\nİşlem: ${refund.id} (satış ${refund.transaction_ref})` +
+          "\nVakıfbank üye işyeri panelinden kontrol edin ve yönetimde rezervasyonun Karta iade sekmesinden sonuçlandırın. Sonuçlandırılana kadar bu rezervasyonda yeni kart iadesi yapılamaz.",
+        kind: "card_refund_unverified",
+        dedupeKey: "card-refund-unverified:" + refund.id,
+      })
+      .catch(() => {});
+    return {
+      status,
+      refund: publicRefund({ ...refund, status, ...extra }),
+      message: recorded
+        ? "Banka iadeyi onayladı ama rezervasyona işlenemedi. İade askıya alındı; Karta iade sekmesinden sonuçlandırın."
+        : "Bankadan yanıt alınamadı. İade askıya alındı ve acenteye bildirildi; banka panelinden kontrol edip sonuçlandırın.",
+    };
+  };
+  const writeRefund = (x) =>
+    workflow.payment(x.reference, {
+      amount: x.amount,
+      method: CARD_METHOD,
+      externalReference: x.id,
+      kind: "refund",
+    });
   return {
     config,
     provider,
@@ -367,6 +521,180 @@ export function createPayments(
         },
       );
       return { reference: r.reference, email: r.email, memberId: r.member_id || null };
+    },
+    // Yönetim: rezervasyonun kartla alınmış tahsilatları ve iade durumu.
+    async cardPayments(reference) {
+      return cardPaymentsOf(await workflow.get(reference));
+    },
+    // Yönetim (yalnız sahip): kartla alınmış tahsilatı karta iade eder / iptal eder.
+    async refundCard(reference, { paymentId, amount, admin, clientIp = "" }) {
+      if (!gateway)
+        throw new AppError(
+          503,
+          "Kartla iade için Vakıfbank bağlantısı açık değil. İadeyi banka panelinden yapıp elle kaydedin.",
+        );
+      if (!Number.isSafeInteger(amount) || amount <= 0)
+        throw new AppError(400, "Geçerli bir iade tutarı girin.");
+      const first = (await cardPaymentsOf(await workflow.get(reference))).payments.find(
+        (p) => p.id === paymentId,
+      );
+      if (!first) throw new AppError(404, "Kartla alınmış tahsilat bulunamadı.");
+      // Simülatörde alınmış ödeme gerçek bankaya, gerçek ödeme simülatöre gönderilmez.
+      if (bank.simulator !== first.transactionId.startsWith("SIM"))
+        throw new AppError(
+          409,
+          bank.simulator
+            ? "Simülatör gerçek bankada alınmış bir ödemeyi iade edemez."
+            : "Bu ödeme simülatörde alınmış; gerçek bankaya iade gönderilmez.",
+        );
+      const id = "RF" + randomBytes(12).toString("hex").toUpperCase(),
+        r = await workflow.get(reference);
+      if (!(await lockRefund(r.reference, id)))
+        throw new AppError(
+          409,
+          "Bu rezervasyon için başka bir kart iadesi işleniyor veya sonuçlandırılmayı bekliyor.",
+        );
+      // Kilit alındıktan sonra tutarlar yeniden hesaplanır: arada sonuçlanan iade sayılır.
+      let p;
+      try {
+        p = (await cardPaymentsOf(await workflow.get(reference))).payments.find(
+          (x) => x.id === paymentId,
+        );
+        if (!p?.refundable)
+          throw new AppError(409, "Bu tahsilattan iade edilebilecek tutar kalmadı.");
+        if (p.sameDay && amount !== p.amount)
+          throw new AppError(
+            409,
+            `Bugün alınan ödeme yalnız tamamıyla (${tl(p.amount)}) iptal edilebilir. Kısmi iade bankanın gün sonundan sonra, yarından itibaren yapılabilir.`,
+          );
+        if (amount > p.refundable)
+          throw new AppError(
+            409,
+            `İade tutarı bu tahsilattan iade edilebilecek tutarı (${tl(p.refundable)}) aşıyor.`,
+          );
+      } catch (error) {
+        await unlockRefund(r.reference, id);
+        throw error;
+      }
+      const refund = {
+        id,
+        reference: r.reference,
+        payment_id: p.id,
+        transaction_ref: p.transactionId,
+        amount,
+        type: p.sameDay ? "cancel" : "refund",
+        status: "pending",
+        masked_pan: p.maskedPan,
+        by: admin ? { id: admin.id, name: admin.name || "", email: admin.email || "" } : null,
+        created_at: clock(),
+      };
+      await db.insert("card_refunds", id, refund);
+      let result;
+      try {
+        result = await gateway.reverse({
+          reference: p.transactionId,
+          amount,
+          sameDay: p.sameDay,
+          clientIp,
+        });
+      } catch {
+        return refundUnverified(refund, "unknown", { reason: "bank_unreachable" });
+      }
+      const bankFields = {
+        result_code: result.resultCode.slice(0, 8),
+        result_detail: result.resultDetail.slice(0, 200),
+      };
+      if (!result.ok) {
+        await db.update(
+          "card_refunds",
+          { _id: id },
+          { status: "failed", finished_at: clock(), ...bankFields },
+        );
+        await unlockRefund(r.reference, id);
+        throw new AppError(
+          402,
+          "Banka iadeyi onaylamadı" +
+            (result.resultDetail ? ": " + result.resultDetail.slice(0, 120) : ".") +
+            " Karta iade yapılmadı.",
+        );
+      }
+      Object.assign(bankFields, {
+        bank_transaction_id: result.transactionId,
+        auth_code: result.authCode,
+        bank_approved_at: clock(),
+      });
+      await db.update("card_refunds", { _id: id }, bankFields);
+      try {
+        await writeRefund(refund);
+      } catch {
+        // Banka iadeyi yaptı ama kayıt yazılamadı: iade asla kaybolmaz, acente sonuçlandırır.
+        return refundUnverified(refund, "not_recorded", bankFields);
+      }
+      await db.update(
+        "card_refunds",
+        { _id: id },
+        { status: "succeeded", finished_at: clock() },
+      );
+      await unlockRefund(r.reference, id);
+      return {
+        status: "succeeded",
+        refund: publicRefund({ ...refund, ...bankFields, status: "succeeded", finished_at: clock() }),
+        message:
+          refund.type === "cancel"
+            ? `${tl(amount)} kart ödemesi iptal edildi.`
+            : `${tl(amount)} karta iade edildi.`,
+      };
+    },
+    // Askıdaki iadeyi acente banka panelinden kontrol edip sonuçlandırır:
+    // "succeeded" iade kaydını yazar, "failed" iadeyi düşürür ve kilidi açar.
+    async resolveRefund(id, { outcome, admin }) {
+      const x = REFUND_ID.test(id) ? await db.one("card_refunds", { _id: id }) : null;
+      if (!x) throw new AppError(404, "İade kaydı bulunamadı.");
+      if (!resolvable(x))
+        throw new AppError(
+          409,
+          x.status === "pending"
+            ? "İade hâlâ bankada işleniyor. Birkaç dakika sonra yeniden deneyin."
+            : "Bu iade zaten sonuçlanmış.",
+        );
+      // Banka onayı gelmiş veya kaydı yazılmış iade "gerçekleşmedi" sayılamaz.
+      if (
+        outcome !== "succeeded" &&
+        (x.status === "not_recorded" ||
+          x.bank_approved_at ||
+          (await db.one("payment_ledger", {
+            method: CARD_METHOD,
+            external_reference: x.id,
+            kind: "refund",
+          })))
+      )
+        throw new AppError(
+          409,
+          "Banka bu iadeyi onaylamıştı; gerçekleşmedi olarak işaretlenemez.",
+        );
+      if (
+        !(await db.update(
+          "card_refunds",
+          { _id: id, status: x.status, resolving_at: x.resolving_at ?? null },
+          { status: "resolving", resolving_at: clock() },
+        ))
+      )
+        throw new AppError(409, "Bu iade şu anda başka biri tarafından sonuçlandırılıyor.");
+      const resolved = {
+        resolved_by: admin ? { id: admin.id, name: admin.name || "", email: admin.email || "" } : null,
+        resolved_at: clock(),
+        finished_at: x.finished_at || clock(),
+      };
+      if (outcome === "succeeded")
+        try {
+          await writeRefund(x);
+        } catch (error) {
+          await db.update("card_refunds", { _id: id }, { status: x.status });
+          throw error;
+        }
+      await db.update("card_refunds", { _id: id }, { status: outcome, ...resolved });
+      await unlockRefund(x.reference, id);
+      return { status: outcome, refund: publicRefund({ ...x, ...resolved, status: outcome }) };
     },
     // Deneme sağlayıcısı bildirimi: imza doğrulanır, tutar oturumdan alınır.
     async complete(body) {

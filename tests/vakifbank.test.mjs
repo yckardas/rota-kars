@@ -19,8 +19,9 @@ const NOT_ENROLLED = "4000000000000101";
 const SIM_ENV = { PAYMENT_PROVIDER: "vakifbank", VAKIFBANK_ENV: "simulator" };
 
 async function fixture(t, env = SIM_ENV, options = {}) {
-  const store = await openStore(":memory:", { env });
-  const server = createApp(store, { env, ...options }).listen(0, "127.0.0.1");
+  const { clock, ...appOptions } = options;
+  const store = await openStore(":memory:", { env, ...(clock ? { clock } : {}) });
+  const server = createApp(store, { env, ...appOptions }).listen(0, "127.0.0.1");
   await once(server, "listening");
   t.after(async () => {
     await new Promise((r) => server.close(r));
@@ -569,4 +570,275 @@ test("aynı rezervasyonun iki ödeme oturumu aynı anda sonuçlansa da bankaya t
   const after = await store.workflow.get(r.reference);
   assert.equal(after.net_paid, r.deposit);
   assert.equal(await store.db.count("payment_locks", {}), 0, "kilit başarılı çekimden sonra kalkar");
+});
+
+// ---- Karta iade / iptal (yönetim) ----
+const ADMIN_ENV = {
+  ...SIM_ENV,
+  ADMIN_PASSWORD: "ilk-kurulum-parolasi",
+  AGENCY_EMAIL: "acente@example.com",
+};
+const prmstr = (init) =>
+  new URLSearchParams(String(init?.body ?? "")).get("prmstr") || "";
+const bankXml = (code, detail) =>
+  new Response(
+    `<VposResponse><ResultCode>${code}</ResultCode><ResultDetail>${detail}</ResultDetail></VposResponse>`,
+    { headers: { "Content-Type": "application/xml" } },
+  );
+// Kartla kapora ödenmiş rezervasyon + sahip ve operasyon yöneticisi oturumları.
+// bank: iptal/iade isteklerini (Cancel/Refund) yakalayıp yanıtı değiştirmeye yarar.
+async function paidByCard(t, { bank } = {}) {
+  let now = Date.now();
+  const sent = [];
+  const f = await fixture(t, ADMIN_ENV, {
+    clock: () => now,
+    bankFetch: async (url, init) => {
+      const xml = prmstr(init);
+      if (/<TransactionType>(Cancel|Refund)</.test(xml)) {
+        sent.push(xml);
+        if (bank) {
+          const answer = await bank(xml, sent.length);
+          if (answer) return answer;
+        }
+      }
+      return simulatorFetch(url, init);
+    },
+  });
+  const id = await f.start();
+  const res = await f.form("/api/payments/vakifbank/return", await f.throughBank(id));
+  assert.equal(res.status, 303);
+  const paid = await f.store.workflow.get(f.r.reference);
+  assert.equal(paid.net_paid, f.r.deposit);
+  const call = async (path, { body, cookie } = {}) => {
+    const r = await fetch(f.origin + "/api" + path, {
+      method: body ? "POST" : "GET",
+      body: body ? JSON.stringify(body) : undefined,
+      headers: {
+        "Content-Type": "application/json",
+        "X-Rota-Client": "web",
+        ...(cookie ? { Cookie: cookie } : {}),
+      },
+    });
+    return {
+      status: r.status,
+      json: await r.json().catch(() => null),
+      cookie: r.headers.get("set-cookie")?.split(";")[0],
+    };
+  };
+  const boot = (await call("/admin/login", { body: { password: ADMIN_ENV.ADMIN_PASSWORD } })).cookie;
+  let owner = (
+    await call("/admin/users", {
+      body: { email: "sahip@rotakars.test", name: "Sahip", password: "sahip-parolasi-2026", role: "owner" },
+      cookie: boot,
+    })
+  ).cookie;
+  await call("/admin/users", {
+    body: { email: "ops@rotakars.test", name: "Operasyon", password: "operasyon-parolasi-2026", role: "operations" },
+    cookie: owner,
+  });
+  const ops = (
+    await call("/admin/login", { body: { email: "ops@rotakars.test", password: "operasyon-parolasi-2026" } })
+  ).cookie;
+  const ref = f.r.reference;
+  const cardPayments = (cookie = owner) => call(`/admin/reservations/${ref}/card-payments`, { cookie });
+  const refund = (paymentId, amount, cookie = owner) =>
+    call(`/admin/reservations/${ref}/card-refunds`, { body: { paymentId, amount, confirm: true }, cookie });
+  const resolve = (id, outcome, cookie = owner) =>
+    call(`/admin/card-refunds/${id}/resolve`, { body: { outcome, confirm: true }, cookie });
+  const payment = (await cardPayments()).json.payments[0];
+  const netPaid = async () => (await f.store.workflow.get(ref)).net_paid;
+  // Yönetici oturumu 8 saattir: ertesi güne geçince sahip yeniden giriş yapar.
+  const nextDay = async () => {
+    now += 24 * 3600000;
+    owner = (
+      await call("/admin/login", { body: { email: "sahip@rotakars.test", password: "sahip-parolasi-2026" } })
+    ).cookie;
+  };
+  return { ...f, call, owner, ops, sent, payment, cardPayments, refund, resolve, netPaid, nextDay };
+}
+
+test("simülatör iptal ve iadeyi satış tutarına göre denetler", async () => {
+  const vpos = async (fields) => {
+    const xml = await (
+      await simulatorFetch("http://x/__bank/vakifbank/vpos", {
+        body: new URLSearchParams({
+          prmstr: "<VposRequest>" + Object.entries(fields).map(([k, v]) => `<${k}>${v}</${k}>`).join("") + "</VposRequest>",
+        }),
+      })
+    ).text();
+    return {
+      code: /<ResultCode>(\d+)</.exec(xml)[1],
+      id: /<TransactionId>([^<]*)</.exec(xml)[1],
+    };
+  };
+  const sale = await vpos({ TransactionType: "Sale", Pan: GOOD_CARD, CurrencyAmount: "100.00" });
+  assert.equal(sale.code, "0000");
+  assert.equal((await vpos({ TransactionType: "Refund", ReferenceTransactionId: sale.id, CurrencyAmount: "60.00" })).code, "0000");
+  assert.equal((await vpos({ TransactionType: "Refund", ReferenceTransactionId: sale.id, CurrencyAmount: "40.01" })).code, "1085");
+  assert.equal((await vpos({ TransactionType: "Cancel", ReferenceTransactionId: sale.id })).code, "1084");
+  assert.equal((await vpos({ TransactionType: "Refund", ReferenceTransactionId: "PY123", CurrencyAmount: "1.00" })).code, "1033");
+  const other = await vpos({ TransactionType: "Sale", Pan: GOOD_CARD, CurrencyAmount: "50.00" });
+  assert.equal((await vpos({ TransactionType: "Cancel", ReferenceTransactionId: other.id })).code, "0000");
+  assert.equal((await vpos({ TransactionType: "Cancel", ReferenceTransactionId: other.id })).code, "1084");
+});
+
+test("karta iade: aynı gün yalnız tamamı iptal (Cancel) edilir, ikinci iade reddedilir", async (t) => {
+  const { r, payment, cardPayments, refund, sent, netPaid, store } = await paidByCard(t);
+  assert.equal(payment.amount, r.deposit);
+  assert.equal(payment.sameDay, true);
+  assert.equal(payment.refundable, r.deposit);
+  assert.equal(payment.maskedPan, "411111******1111");
+  // Aynı gün kısmi iade yapılamaz (banka gün sonu öncesi yalnız iptal).
+  const partial = await refund(payment.id, 10000);
+  assert.equal(partial.status, 409);
+  assert.match(partial.json.message, /yalnız tamamıyla/);
+  assert.equal(sent.length, 0, "bankaya istek gitmez");
+  const ok = await refund(payment.id, r.deposit);
+  assert.equal(ok.status, 200, JSON.stringify(ok.json));
+  assert.equal(ok.json.status, "succeeded");
+  assert.equal(ok.json.refund.type, "cancel");
+  assert.equal(sent.length, 1);
+  assert.match(sent[0], /<TransactionType>Cancel<\/TransactionType>/);
+  assert.match(sent[0], new RegExp(`<ReferenceTransactionId>${payment.transactionId}</ReferenceTransactionId>`));
+  assert.equal(await netPaid(), 0);
+  const ledger = (await store.workflow.get(r.reference)).ledger.filter((l) => l.kind === "refund");
+  assert.equal(ledger.length, 1);
+  assert.equal(ledger[0].method, "online:vakifbank");
+  assert.equal(ledger[0].external_reference, ok.json.refund.id);
+  // Çift iade: tutar kalmadı, bankaya ikinci istek gitmez.
+  assert.equal((await refund(payment.id, r.deposit)).status, 409);
+  assert.equal(sent.length, 1);
+  const after = (await cardPayments()).json.payments[0];
+  assert.equal(after.refundable, 0);
+  assert.equal(after.refunded, r.deposit);
+});
+
+test("karta iade: ertesi gün kısmi iade (Refund), toplamı tahsilatı aşamaz", async (t) => {
+  const { r, payment, cardPayments, refund, sent, netPaid, nextDay, store } = await paidByCard(t);
+  await nextDay();
+  const first = (await cardPayments()).json.payments[0];
+  assert.equal(first.sameDay, false);
+  assert.equal(first.refundable, r.deposit);
+  const part = await refund(payment.id, 10000);
+  assert.equal(part.status, 200, JSON.stringify(part.json));
+  assert.equal(part.json.refund.type, "refund");
+  assert.match(sent[0], /<TransactionType>Refund<\/TransactionType>/);
+  assert.match(sent[0], /<CurrencyAmount>100\.00<\/CurrencyAmount>/);
+  assert.equal(await netPaid(), r.deposit - 10000);
+  assert.equal((await cardPayments()).json.payments[0].refundable, r.deposit - 10000);
+  // Kalanı aşan iade bankaya gitmez.
+  const over = await refund(payment.id, r.deposit - 10000 + 1);
+  assert.equal(over.status, 409);
+  assert.match(over.json.message, /aşıyor/);
+  assert.equal(sent.length, 1);
+  assert.equal((await refund(payment.id, r.deposit - 10000)).status, 200);
+  assert.equal(await netPaid(), 0);
+  assert.equal((await refund(payment.id, 100)).status, 409);
+  assert.equal(sent.length, 2);
+  // Rezervasyonun durumu iadeyle değişmez (iptal ayrı bir karardır).
+  assert.equal((await store.workflow.get(r.reference)).status, "confirmed");
+});
+
+test("karta iade: aynı anda iki iade isteği gelse de bankaya tek iade gider", async (t) => {
+  const { r, payment, refund, sent, netPaid, nextDay } = await paidByCard(t, {
+    bank: () => new Promise((done) => setTimeout(() => done(null), 150)),
+  });
+  await nextDay();
+  const results = await Promise.all([refund(payment.id, r.deposit), refund(payment.id, r.deposit)]);
+  assert.deepEqual(results.map((x) => x.status).sort(), [200, 409]);
+  assert.equal(sent.length, 1);
+  assert.equal(await netPaid(), 0);
+});
+
+test("karta iade: banka reddederse iade kaydı yazılmaz, yeniden denenebilir", async (t) => {
+  const { r, payment, refund, cardPayments, netPaid, store } = await paidByCard(t, {
+    bank: (_xml, n) => (n === 1 ? bankXml("0057", "İşleme izin verilmiyor") : null),
+  });
+  const declined = await refund(payment.id, r.deposit);
+  assert.equal(declined.status, 402);
+  assert.match(declined.json.message, /İşleme izin verilmiyor/);
+  assert.equal(await netPaid(), r.deposit);
+  const failed = (await cardPayments()).json.payments[0];
+  assert.equal(failed.refundable, r.deposit, "kilit açıldı");
+  assert.equal(failed.refunds[0].status, "failed");
+  assert.equal(failed.refunds[0].resultCode, "0057");
+  assert.equal((await store.workflow.get(r.reference)).ledger.filter((l) => l.kind === "refund").length, 0);
+  assert.equal((await refund(payment.id, r.deposit)).status, 200);
+  assert.equal(await netPaid(), 0);
+});
+
+test("karta iade: bankadan yanıt alınamazsa askıya alınır, acenteye bildirilir ve sonuçlandırılır", async (t) => {
+  const { r, payment, refund, resolve, cardPayments, netPaid, store, ops, sent } = await paidByCard(t, {
+    bank: (_xml, n) => (n <= 2 ? Promise.reject(new Error("timeout")) : null),
+  });
+  const lost = await refund(payment.id, r.deposit);
+  assert.equal(lost.status, 202);
+  assert.equal(lost.json.status, "unknown");
+  assert.equal(await netPaid(), r.deposit, "iade kaydı yazılmaz");
+  const outbox = await store.db.find("notification_outbox");
+  assert.ok(outbox.some((n) => /Kart iadesi doğrulanamadı/.test(n.subject || "")));
+  let view = (await cardPayments()).json;
+  assert.equal(view.blocked, true);
+  assert.equal(view.payments[0].refundable, 0);
+  assert.equal(view.payments[0].refunds[0].resolvable, true);
+  // Askıdaki iade sonuçlanmadan yeni iade bankaya gitmez.
+  assert.equal((await refund(payment.id, r.deposit)).status, 409);
+  assert.equal(sent.length, 1);
+  // Operasyon rolü sonuçlandıramaz; sahip "gerçekleşmedi" der, kilit açılır.
+  assert.equal((await resolve(lost.json.refund.id, "failed", ops)).status, 403);
+  const dropped = await resolve(lost.json.refund.id, "failed");
+  assert.equal(dropped.status, 200);
+  assert.equal((await resolve(lost.json.refund.id, "succeeded")).status, 409, "ikinci kez sonuçlandırılamaz");
+  view = (await cardPayments()).json;
+  assert.equal(view.blocked, false);
+  assert.equal(view.payments[0].refundable, r.deposit);
+  // İkinci deneme de yanıtsız kalır; banka panelinde iade görünür: "gerçekleşti".
+  const lost2 = await refund(payment.id, r.deposit);
+  assert.equal(lost2.json.status, "unknown");
+  const done = await resolve(lost2.json.refund.id, "succeeded");
+  assert.equal(done.status, 200, JSON.stringify(done.json));
+  assert.equal(await netPaid(), 0);
+  assert.equal((await refund(payment.id, r.deposit)).status, 409);
+});
+
+test("karta iade: banka onaylayıp kayıt yazılamazsa iade kaybolmaz", async (t) => {
+  const { r, payment, refund, resolve, netPaid, store } = await paidByCard(t);
+  const original = store.workflow.payment;
+  store.workflow.payment = async () => {
+    throw new Error("db down");
+  };
+  const res = await refund(payment.id, r.deposit);
+  store.workflow.payment = original;
+  assert.equal(res.status, 202);
+  assert.equal(res.json.status, "not_recorded");
+  assert.ok((await store.db.find("notification_outbox")).some((n) => /Kart iadesi kaydedilemedi/.test(n.subject || "")));
+  assert.equal((await resolve(res.json.refund.id, "failed")).status, 409, "banka onayladı; gerçekleşmedi denemez");
+  assert.equal((await resolve(res.json.refund.id, "succeeded")).status, 200);
+  assert.equal(await netPaid(), 0);
+});
+
+test("karta iade yalnız sahip rolündedir; operasyon durumu görür, rehber göremez", async (t) => {
+  const { r, payment, refund, cardPayments, call, ops, owner, sent } = await paidByCard(t);
+  const seen = await cardPayments(ops);
+  assert.equal(seen.status, 200);
+  assert.equal(seen.json.canRefund, false);
+  assert.equal((await cardPayments(owner)).json.canRefund, true);
+  assert.equal((await refund(payment.id, r.deposit, ops)).status, 403);
+  assert.equal(sent.length, 0);
+  await call("/admin/users", {
+    body: { email: "rehber@rotakars.test", name: "Rehber", password: "rehber-parolasi-2026", role: "guide" },
+    cookie: owner,
+  });
+  const guide = (
+    await call("/admin/login", { body: { email: "rehber@rotakars.test", password: "rehber-parolasi-2026" } })
+  ).cookie;
+  assert.equal((await cardPayments(guide)).status, 403);
+  assert.equal((await refund(payment.id, r.deposit, guide)).status, 403);
+  // Onay kutusu olmadan istek kabul edilmez.
+  const noConfirm = await call(`/admin/reservations/${r.reference}/card-refunds`, {
+    body: { paymentId: payment.id, amount: r.deposit },
+    cookie: owner,
+  });
+  assert.equal(noConfirm.status, 400);
+  assert.equal(sent.length, 0);
 });
