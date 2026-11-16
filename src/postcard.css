@@ -2648,33 +2648,39 @@ html:has(.kp) {
   font-size: 12px;
   letter-spacing: 0.04em;
 }
-/* Lastik damga: çift çizgili mürekkep çerçeve, hafif eğik basılmış */
+/* Lastik damga: çift çizgili mürekkep çerçeve, eğik basılmış; durum rengi
+   bir bakışta okunur (onaylı yeşil, iptal kırmızı, beklemede lacivert) */
 .kp .status-stamp {
-  display: inline-block;
-  padding: 5px 10px 4px;
-  border: 2px solid currentColor;
-  border-radius: 3px;
+  --stamp-ok: #1f7a43;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px 6px;
+  border: 3px solid currentColor;
+  border-radius: 4px;
   box-shadow:
     inset 0 0 0 2px var(--kp-card),
-    inset 0 0 0 3px currentColor;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.3;
-  letter-spacing: 0.1em;
+    inset 0 0 0 4px currentColor;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  transform: rotate(-2deg);
+  transform: rotate(-5deg);
   transform-origin: left center;
+  opacity: 0.92;
+}
+.kp .status-stamp svg {
+  flex: none;
 }
 .kp .status-stamp.is-ok {
-  color: var(--kp-red);
+  color: var(--stamp-ok);
 }
 .kp .status-stamp.is-pending {
   color: var(--kp-ink);
 }
 .kp .status-stamp.is-void {
-  color: var(--kp-ink-2);
-  border-style: dashed;
-  box-shadow: none;
+  color: var(--kp-red);
 }
 .kp .reservation-ticket h2 {
   font-size: clamp(28px, 2.8vw, 36px);
@@ -6117,5 +6123,47 @@ html:has(.kp) {
 @media (prefers-reduced-motion: reduce) {
   .kp .discover-photo {
     transform: none;
+  }
+}
+
+/* Doğrulama sayfası, yönetici oturumu: yolcu ve ödeme satırları */
+.kp .ticket-check .ticket-staff {
+  border-top: 1px dashed var(--kp-rule);
+  padding-top: 14px;
+}
+.kp .ticket-staff dd.is-due {
+  color: var(--kp-red);
+  font-weight: 600;
+}
+/* Sorgulama/doğrulama sayfasında damga sonucun kendisi: daha iri basılır */
+.kp .ticket-check-head .status-stamp {
+  position: relative;
+  z-index: 1;
+  padding: 9px 18px 8px;
+  font-size: 19px;
+  border-width: 4px;
+  box-shadow:
+    inset 0 0 0 3px var(--kp-card),
+    inset 0 0 0 5px currentColor;
+}
+.kp .ticket-check-head .status-stamp svg {
+  width: 20px;
+  height: 20px;
+}
+@media (max-width: 700px) {
+  /* Telefonda damga tek satırda kalır, sağdaki posta damgasının altına girmez */
+  .kp .ticket-check-head .status-stamp {
+    padding: 6px 9px 5px;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    border-width: 3px;
+    box-shadow:
+      inset 0 0 0 2px var(--kp-card),
+      inset 0 0 0 4px currentColor;
+  }
+  .kp .ticket-check-head .status-stamp svg {
+    width: 16px;
+    height: 16px;
   }
 }

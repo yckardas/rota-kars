@@ -30,6 +30,7 @@ const GUIDE_ALLOWED = [
   ["GET", /^\/api\/admin\/reports$/],
   ["GET", /^\/api\/admin\/departures$/],
   ["GET", /^\/api\/admin\/departures\/[^/]+\/passengers$/],
+  ["GET", /^\/api\/admin\/tickets\/[^/]+$/],
   ["POST", /^\/api\/admin\/tickets\/[^/]+\/check-in$/],
 ];
 // Yalnız sahibin erişebildiği uçlar.

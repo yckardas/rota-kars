@@ -113,6 +113,21 @@ test("new administrative routes require admin; confirmed QR protects PII and CSV
       .status,
     401,
   );
+  // Okutma ekranı: yolcu adı, irtibat ve ödeme yalnız yönetici oturumunda.
+  assert.equal(
+    (await req("/admin/tickets/" + r.ticket_token, undefined, false)).status,
+    401,
+  );
+  const detail = await (await req("/admin/tickets/" + r.ticket_token)).json();
+  assert.equal(detail.reference, r.reference);
+  assert.deepEqual(
+    detail.passengers.map((p) => [p.seat, p.name]),
+    [[1, "Test Yolcu"]],
+  );
+  assert.equal(detail.contactName, "Test Yolcu");
+  assert.equal(detail.phone, "05550000000");
+  assert.equal(detail.balanceDue, 0);
+  assert.equal(detail.paymentState, "paid");
   assert.equal(
     (await req("/admin/departures/" + d.id + "/passengers.csv")).status,
     200,

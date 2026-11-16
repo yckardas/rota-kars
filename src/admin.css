@@ -1685,3 +1685,156 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ---------- Bilet okutma sonucu: önce karar, sonra yolcu ve ödeme ---------- */
+.rk-admin .modal .scanner,
+.rk-admin .modal .scan-result {
+  padding: 16px 18px;
+}
+.rk-admin .scan-ticket {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px 0;
+  text-align: left;
+}
+.rk-admin .scan-verdict {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 6px;
+  border: 1px solid currentColor;
+}
+.rk-admin .scan-verdict > div {
+  display: grid;
+  gap: 2px;
+}
+.rk-admin .scan-verdict strong {
+  font-size: 19px;
+  line-height: 1.2;
+}
+.rk-admin .scan-verdict span {
+  font-size: 14px;
+  color: var(--ink-strong);
+}
+.rk-admin .scan-verdict.is-ok {
+  color: var(--lichen);
+  background: var(--lichen-wash);
+}
+.rk-admin .scan-verdict.is-bad {
+  color: var(--red);
+  background: var(--red-wash);
+}
+.rk-admin .scan-verdict.is-warn {
+  color: var(--ochre);
+  background: var(--ochre-wash);
+}
+.rk-admin .scan-trip h2 {
+  margin: 2px 0 4px;
+  font-size: 20px;
+}
+.rk-admin .scan-trip p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+.rk-admin .scan-ref {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+.rk-admin .scan-block {
+  border-top: 1px solid var(--mortar-soft);
+  padding-top: 10px;
+}
+.rk-admin .scan-block h3 {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.rk-admin .scan-block h3 span {
+  text-transform: none;
+  letter-spacing: 0;
+}
+.rk-admin .scan-block p {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+.rk-admin .scan-passengers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.rk-admin .scan-passengers li {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+}
+.rk-admin .scan-passengers strong {
+  overflow-wrap: anywhere;
+}
+.rk-admin .scan-passengers small {
+  color: var(--ink-strong);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.rk-admin .scan-seat {
+  display: grid;
+  place-items: center;
+  height: 28px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.rk-admin .scan-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.rk-admin .scan-contact span {
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+.rk-admin .scan-contact-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.rk-admin .scan-payment p {
+  display: grid;
+  gap: 2px;
+}
+.rk-admin .scan-payment span {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.rk-admin .scan-payment.is-due strong {
+  color: var(--red);
+  font-size: 16px;
+}
+.rk-admin .scan-actions {
+  display: grid;
+  gap: 8px;
+  padding: 14px 18px 20px;
+}
+.rk-admin .scan-actions .boarded-tag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  font-weight: 600;
+}

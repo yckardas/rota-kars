@@ -186,6 +186,7 @@ export const booking: Record<string, string> = {
   "Tur tamamlandı": "Tour completed",
   "İptal edildi": "Cancelled",
   "Süresi doldu": "Expired",
+  "Katılım olmadı": "Did not attend",
   "Referans numarası": "Reference number",
   "Üyelik indirimi: −{discount} · İndirim sonrası {total}":
     "Member discount: −{discount} · After discount {total}",
