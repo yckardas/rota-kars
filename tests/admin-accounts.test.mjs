@@ -166,6 +166,8 @@ test("operations cannot reach owner-only routes with case, trailing-slash or dou
   const { roleAllows } = await import("../server/admin-auth.mjs");
   assert.equal(roleAllows("operations", "post", "/api/ADMIN/USERS/"), false);
   assert.equal(roleAllows("guide", "GET", "/api/admin/RESERVATIONS"), false);
+  // Rehber okuttuğu biletin yolcularını görür, rezervasyon listesini görmez.
+  assert.equal(roleAllows("guide", "GET", "/api/admin/tickets/" + "a".repeat(48)), true);
   assert.equal(roleAllows("operations", "GET", "/api/admin/reservations"), true);
   // Karta iade (gerçek para) yalnız sahipte; durumu operasyon da görür.
   assert.equal(roleAllows("operations", "POST", "/api/admin/reservations/RK1/Card-Refunds/"), false);

@@ -381,10 +381,18 @@ export function attachAdvancedApi(
     "/api/tickets/:token",
     route(async (q, r) => r.json(await store.workflow.ticket(q.params.token))),
   );
+  app.get(
+    "/api/admin/tickets/:token",
+    requireAdmin,
+    route(async (q, r) => r.json(await store.workflow.ticketDetail(q.params.token))),
+  );
   app.post(
     "/api/admin/tickets/:token/check-in",
     requireAdmin,
-    route(async (q, r) => r.json(await store.workflow.checkIn(q.params.token))),
+    route(async (q, r) => {
+      await store.workflow.checkIn(q.params.token);
+      r.json(await store.workflow.ticketDetail(q.params.token));
+    }),
   );
   app.get("/api/admin/session", requireAdmin, (q, r) =>
     r.json({ ok: true, user: q.admin, bootstrap: q.adminCtx?.bootstrap || false }),

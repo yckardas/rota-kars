@@ -235,6 +235,9 @@ export const site: Record<string, string> = {
   "Tur tarihi {date}, {time}": "Tour date {date}, {time}",
   "Rezervasyon doğrulandı.": "Booking verified.",
   "Kesinleşmiş bilet değil.": "Not a confirmed ticket.",
+  "Rezervasyon iptal edildi.": "This booking was cancelled.",
+  "Bu rezervasyon iptal edildiği için bilet geçersizdir.":
+    "This booking was cancelled, so the ticket is no longer valid.",
   "Belge doğrulanamadı.": "This document could not be verified.",
   "Belgeniz kontrol ediliyor…": "Checking your document…",
   Hareket: "Departure",

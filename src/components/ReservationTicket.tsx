@@ -1,6 +1,6 @@
 // Ön rezervasyon belgesi: rezervasyon sonunda ve "Rezervasyonum" sayfasında kullanılır.
 // Hatıra kartının arka yüzü gibi: solda durum ve ödeme, sağda pul, damga ve adres satırları.
-import { Info } from "lucide-react";
+import { Check, Info, X } from "lucide-react";
 import { responsive } from "../lib/images";
 import { placeName } from "../lib/place";
 import { Postmark } from "./Postmark";
@@ -17,6 +17,7 @@ const statusLabels: Record<string, string> = {
   completed: "Tur tamamlandı",
   cancelled: "İptal edildi",
   expired: "Süresi doldu",
+  no_show: "Katılım olmadı",
 };
 // Biletin üst satırı: Rota Kars logosu ve site adresi. Ekranda, yazdırılan/PDF
 // bilette ve QR doğrulama sayfasında aynı görünür (yazdırmada site başlığı gizlenir).
@@ -28,8 +29,8 @@ export function TicketBrand() {
     </div>
   );
 }
-// Kartın köşesine basılmış lastik damga: onaylıysa kırmızı, beklerken lacivert,
-// iptal ve süre dolumunda soluk mürekkep.
+// Kartın köşesine basılmış lastik damga: onaylıysa yeşil, iptal ve süre
+// dolumunda kırmızı, onay beklerken lacivert mürekkep.
 export function StatusStamp({ status }: { status: string }) {
   const { t } = useLang();
   const tone = ["confirmed", "completed"].includes(status)
@@ -39,6 +40,11 @@ export function StatusStamp({ status }: { status: string }) {
       : "is-void";
   return (
     <span className={"status-stamp " + tone}>
+      {tone === "is-ok" ? (
+        <Check size={16} strokeWidth={3} aria-hidden="true" />
+      ) : tone === "is-void" ? (
+        <X size={16} strokeWidth={3} aria-hidden="true" />
+      ) : null}
       {statusLabels[status] ? t(statusLabels[status]) : status}
     </span>
   );

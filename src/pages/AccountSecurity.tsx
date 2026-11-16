@@ -4,7 +4,8 @@ import { ShieldCheck, LoaderCircle, Download, Trash2 } from "lucide-react";
 import { api, post } from "../lib/api";
 import { useMember } from "../lib/member";
 import { useEffect } from "react";
-import { dateLabel } from "../lib/types";
+import { currency, dateLabel } from "../lib/types";
+import type { TicketDetail } from "../components/admin/TicketScanner";
 import { Postmark } from "../components/Postmark";
 import { Link, useLang, useLocalNavigate } from "../lib/i18n";
 import { StatusStamp, TicketBrand } from "../components/ReservationTicket";
@@ -157,13 +158,18 @@ export function TicketVerification() {
     [data, setData] = useState<TicketInfo | null>(null),
     [error, setError] = useState(""),
     [admin, setAdmin] = useState(false),
+    // Yalnız yönetici oturumunda: yolcu adları, irtibat ve kalan ödeme.
+    [detail, setDetail] = useState<TicketDetail | null>(null),
     { t } = useLang();
   useEffect(() => {
     api<TicketInfo>("/tickets/" + token)
       .then(setData)
       .catch((e) => setError(e.message));
     api("/admin/session")
-      .then(() => setAdmin(true))
+      .then(() => {
+        setAdmin(true);
+        return api<TicketDetail>("/admin/tickets/" + token).then(setDetail);
+      })
       .catch(() => {});
   }, [token]);
   // QR okutulunca açılan sayfa: hatıra kartının arka yüzü gibi damga, posta
@@ -188,8 +194,10 @@ export function TicketVerification() {
         <h1>
           {data?.valid
             ? t("Rezervasyon doğrulandı.")
-            : data
-              ? t("Kesinleşmiş bilet değil.")
+            : data?.status === "cancelled"
+              ? t("Rezervasyon iptal edildi.")
+              : data
+                ? t("Kesinleşmiş bilet değil.")
               : error
                 ? t("Belge doğrulanamadı.")
                 : t("Belgeniz kontrol ediliyor…")}
@@ -222,12 +230,49 @@ export function TicketVerification() {
                 <dd>{data.pickup}</dd>
               </div>
             </dl>
+            {detail && (
+              <dl className="ticket-lines ticket-staff">
+                {detail.passengers.map((p) => (
+                  <div key={p.seat}>
+                    <dt>Koltuk {p.seat}</dt>
+                    <dd>
+                      {p.name || "İsim girilmemiş"}
+                      {p.idLast4 && ` · ${p.nationality === "TR" || !p.nationality ? "T.C." : p.nationality} …${p.idLast4}`}
+                    </dd>
+                  </div>
+                ))}
+                <div>
+                  <dt>İrtibat</dt>
+                  <dd>
+                    {detail.contactName} · <a href={"tel:" + detail.phone.replace(/[^\d+]/g, "")}>{detail.phone}</a>
+                  </dd>
+                </div>
+                <div>
+                  <dt>Ödeme</dt>
+                  <dd className={detail.valid && detail.balanceDue > 0 ? "is-due" : ""}>
+                    {detail.valid && detail.balanceDue > 0
+                      ? `Tahsil edilecek ${currency(detail.balanceDue)} (toplam ${currency(detail.total)})`
+                      : detail.paymentState === "paid"
+                        ? `Tamamı ödendi · ${currency(detail.total)}`
+                        : `Toplam ${currency(detail.total)}`}
+                  </dd>
+                </div>
+                {(detail.notes || detail.transfer) && (
+                  <div>
+                    <dt>Not</dt>
+                    <dd>{[detail.transfer, detail.notes].filter(Boolean).join(" · ")}</dd>
+                  </div>
+                )}
+              </dl>
+            )}
             <p className="ticket-check-note">
               {data.checkedIn
                 ? t("Katılım kaydedildi.")
                 : data.valid
                   ? t("Bu belge acente tarafından onaylanmış rezervasyona aittir.")
-                  : t(
+                  : data.status === "cancelled"
+                    ? t("Bu rezervasyon iptal edildiği için bilet geçersizdir.")
+                    : t(
                       "Ödeme ve acente onayı tamamlanmadan kesin bilet olarak kullanılamaz.",
                     )}
             </p>
@@ -237,12 +282,12 @@ export function TicketVerification() {
                 disabled={data.checkedIn}
                 onClick={async () => {
                   try {
-                    setData(
-                      await post<TicketInfo>(
-                        "/admin/tickets/" + token + "/check-in",
-                        {},
-                      ),
+                    const next = await post<TicketDetail>(
+                      "/admin/tickets/" + token + "/check-in",
+                      {},
                     );
+                    setData(next);
+                    setDetail(next);
                     setError("");
                   } catch (e) {
                     setError((e as Error).message);

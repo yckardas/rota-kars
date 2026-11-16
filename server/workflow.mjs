@@ -633,6 +633,35 @@ export async function createWorkflow(
         checkedIn: Boolean(r.checked_in_at),
       };
     },
+    // Rehber/operasyon bileti okutunca: yolcular, irtibat, ödeme ve notlar.
+    // Kimlik numarası okutma ekranında yalnız son 4 haneyle görünür.
+    async ticketDetail(token) {
+      const info = await api.ticket(token),
+        r = await api.get(info.reference);
+      return {
+        ...info,
+        contactName: r.name,
+        phone: r.phone,
+        whatsapp: waLink(r.phone) || null,
+        passengers: r.seats.map((seat, i) => {
+          const p = r.passenger_details?.[i];
+          return {
+            seat,
+            name: r.passengers[i] || (i === 0 ? r.name : ""),
+            nationality: p?.nationality || "",
+            idLast4: p?.idNumber ? String(p.idNumber).slice(-4) : "",
+          };
+        }),
+        notes: r.notes || "",
+        transfer: r.transfer ? transferLine(r.transfer) : "",
+        guideName: r.guide_name || null,
+        total: r.total,
+        paid: r.net_paid,
+        balanceDue: r.balance_due,
+        paymentState: r.payment_state,
+        checkedInAt: r.checked_in_at || null,
+      };
+    },
     async checkIn(token) {
       return tx(async () => {
         await cleanup();

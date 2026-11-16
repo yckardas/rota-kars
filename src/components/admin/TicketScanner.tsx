@@ -1,10 +1,20 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, LoaderCircle, QrCode, TriangleAlert, UserCheck } from "lucide-react";
+import {
+  Check,
+  CircleCheck,
+  CircleX,
+  LoaderCircle,
+  MessageCircle,
+  Phone,
+  TriangleAlert,
+  UserCheck,
+} from "lucide-react";
 import { api, post } from "../../lib/api";
-import { dateLabel } from "../../lib/types";
+import { currency, dateLabel } from "../../lib/types";
 import { Modal } from "../Modal";
 
-type TicketInfo = {
+// /api/admin/tickets/:token: rehber ve operasyonun okutma ekranında gördüğü bilet.
+export type TicketDetail = {
   reference: string;
   tourName: string;
   date: string;
@@ -14,7 +24,41 @@ type TicketInfo = {
   status: string;
   valid: boolean;
   checkedIn: boolean;
+  contactName: string;
+  phone: string;
+  whatsapp: string | null;
+  passengers: {
+    seat: number;
+    name: string;
+    nationality: string;
+    idLast4: string;
+  }[];
+  notes: string;
+  transfer: string;
+  guideName: string | null;
+  total: number;
+  paid: number;
+  balanceDue: number;
+  paymentState: "paid" | "partial" | "unpaid" | "refunded";
+  checkedInAt: number | null;
 };
+const STATUS: Record<string, string> = {
+  confirmed: "Onaylı",
+  completed: "Tamamlandı",
+  pending_agency: "Onay bekliyor",
+  cancelled: "İptal edildi",
+  expired: "Süresi doldu",
+  no_show: "Gelmedi",
+};
+const today = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+const time = (ms: number) =>
+  new Date(ms).toLocaleTimeString("tr-TR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 type Detector = { detect: (source: CanvasImageSource) => Promise<{ rawValue: string }[]> };
 type DetectorCtor = new (o: { formats: string[] }) => Detector;
 
@@ -26,7 +70,10 @@ export function TicketScanner({ onClose }: { onClose: () => void }) {
   const video = useRef<HTMLVideoElement>(null),
     [state, setState] = useState<"starting" | "scanning" | "found" | "error">("starting"),
     [message, setMessage] = useState(""),
-    [ticket, setTicket] = useState<{ token: string; info: TicketInfo } | null>(null),
+    [ticket, setTicket] = useState<{
+      token: string;
+      info: TicketDetail;
+    } | null>(null),
     [busy, setBusy] = useState(false),
     [done, setDone] = useState(false),
     [round, setRound] = useState(0);
@@ -66,7 +113,10 @@ export function TicketScanner({ onClose }: { onClose: () => void }) {
             stopped = true;
             stream?.getTracks().forEach((t) => t.stop());
             try {
-              setTicket({ token, info: await api<TicketInfo>("/tickets/" + token) });
+              setTicket({
+                token,
+                info: await api<TicketDetail>("/admin/tickets/" + token),
+              });
               setState("found");
             } catch (e) {
               setMessage((e as Error).message);
@@ -98,7 +148,7 @@ export function TicketScanner({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setMessage("");
     try {
-      const info = await post<TicketInfo>(`/admin/tickets/${ticket.token}/check-in`, {});
+      const info = await post<TicketDetail>(`/admin/tickets/${ticket.token}/check-in`, {});
       setTicket({ ...ticket, info });
       setDone(true);
     } catch (e) {
@@ -140,28 +190,17 @@ export function TicketScanner({ onClose }: { onClose: () => void }) {
           </button>
         </div>
       )}
+      {state === "found" && ticket && <TicketCard info={ticket.info} message={message} justBoarded={done} />}
       {state === "found" && ticket && (
-        <div className={"scan-result " + (ticket.info.valid ? "valid" : "invalid")}>
-          {ticket.info.valid ? <QrCode size={28} /> : <TriangleAlert size={28} />}
-          <h2>{ticket.info.reference}</h2>
-          <p>
-            {ticket.info.tourName} · {dateLabel(ticket.info.date)} {ticket.info.startTime}
-          </p>
-          <p>
-            <strong>Koltuk {ticket.info.seats.join(", ")}</strong>
-          </p>
-          {!ticket.info.valid && <p>Bu bilet geçerli değil (onaylı değil veya iptal edilmiş).</p>}
-          {message && (
-            <p className="error" role="alert">
-              {message}
-            </p>
-          )}
+        <div className="scan-actions">
           {ticket.info.checkedIn || done ? (
             <p className="boarded-tag">
               <Check size={18} /> Bindi olarak işaretli
+              {ticket.info.checkedInAt ? ` · ${time(ticket.info.checkedInAt)}` : ""}
             </p>
           ) : (
-            ticket.info.valid && (
+            ticket.info.status === "confirmed" &&
+            ticket.info.date === today() && (
               <button className="btn" onClick={checkIn} disabled={busy}>
                 {busy ? <LoaderCircle className="spin" size={16} /> : <UserCheck size={16} />}
                 Bindi olarak işaretle
@@ -174,5 +213,136 @@ export function TicketScanner({ onClose }: { onClose: () => void }) {
         </div>
       )}
     </Modal>
+  );
+}
+
+// Okutulan biletin kartı: önce geçerli/değil, sonra yolcular, irtibat ve ödeme.
+function TicketCard({ info, message, justBoarded }: { info: TicketDetail; message: string; justBoarded: boolean }) {
+  const notToday = info.valid && info.status === "confirmed" && info.date !== today(),
+    verdict = !info.valid
+      ? {
+          tone: "bad",
+          icon: <CircleX size={30} />,
+          title: "Geçersiz bilet",
+          text: STATUS[info.status] || info.status,
+        }
+      : info.checkedIn && justBoarded
+        ? {
+            tone: "ok",
+            icon: <CircleCheck size={30} />,
+            title: "Biniş kaydedildi",
+            text: `${info.passengers.length} yolcu bindi.`,
+          }
+        : info.checkedIn
+          ? {
+              tone: "warn",
+              icon: <TriangleAlert size={30} />,
+              title: "Bu bilet zaten okutuldu",
+              text: info.checkedInAt ? `Biniş ${time(info.checkedInAt)}'de kaydedildi.` : "Biniş daha önce kaydedildi.",
+            }
+          : notToday
+            ? {
+                tone: "warn",
+                icon: <TriangleAlert size={30} />,
+                title: "Bugünün turu değil",
+                text: `Bilet ${dateLabel(info.date)} tarihli.`,
+              }
+            : {
+                tone: "ok",
+                icon: <CircleCheck size={30} />,
+                title: "Geçerli bilet",
+                text: STATUS[info.status] || info.status,
+              };
+  const tel = info.phone.replace(/[^\d+]/g, "");
+  return (
+    <div className="scan-ticket">
+      <div className={"scan-verdict is-" + verdict.tone} role="status">
+        {verdict.icon}
+        <div>
+          <strong>{verdict.title}</strong>
+          <span>{verdict.text}</span>
+        </div>
+      </div>
+      <div className="scan-trip">
+        <span className="scan-ref">{info.reference}</span>
+        <h2>{info.tourName}</h2>
+        <p>
+          {dateLabel(info.date)} · {info.startTime} · {info.pickup}
+        </p>
+      </div>
+      <section className="scan-block">
+        <h3>
+          Yolcular <span>{info.passengers.length} kişi</span>
+        </h3>
+        <ul className="scan-passengers">
+          {info.passengers.map((p) => (
+            <li key={p.seat}>
+              <span className="scan-seat">{p.seat}</span>
+              <strong>{p.name || "İsim girilmemiş"}</strong>
+              {p.idLast4 && (
+                <small>
+                  {p.nationality === "TR" || !p.nationality ? "T.C." : p.nationality} …{p.idLast4}
+                </small>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section className="scan-block">
+        <h3>İrtibat</h3>
+        <p className="scan-contact">
+          <strong>{info.contactName}</strong>
+          <span>{info.phone}</span>
+        </p>
+        <div className="scan-contact-actions">
+          {tel && (
+            <a className="btn btn-outline btn-small" href={"tel:" + tel}>
+              <Phone size={15} /> Ara
+            </a>
+          )}
+          {info.whatsapp && (
+            <a className="btn btn-outline btn-small" href={info.whatsapp} target="_blank" rel="noreferrer">
+              <MessageCircle size={15} /> WhatsApp
+            </a>
+          )}
+        </div>
+      </section>
+      <section className={"scan-block scan-payment" + (info.valid && info.balanceDue > 0 ? " is-due" : "")}>
+        <h3>Ödeme</h3>
+        {info.valid && info.balanceDue > 0 ? (
+          <p>
+            <strong>Tahsil edilecek: {currency(info.balanceDue)}</strong>
+            <span>
+              Ödenen {currency(info.paid)} / Toplam {currency(info.total)}
+            </span>
+          </p>
+        ) : (
+          <p>
+            <strong>
+              {info.paymentState === "refunded"
+                ? "İade edildi"
+                : !info.valid && info.paid > 0
+                  ? `Ödenmiş: ${currency(info.paid)}`
+                  : info.paymentState === "paid"
+                    ? "Tamamı ödendi"
+                    : "Ödeme yok"}
+            </strong>
+            <span>Toplam {currency(info.total)}</span>
+          </p>
+        )}
+      </section>
+      {(info.notes || info.transfer) && (
+        <section className="scan-block">
+          <h3>Notlar</h3>
+          {info.transfer && <p>{info.transfer}</p>}
+          {info.notes && <p>{info.notes}</p>}
+        </section>
+      )}
+      {message && (
+        <p className="error" role="alert">
+          {message}
+        </p>
+      )}
+    </div>
   );
 }
