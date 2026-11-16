@@ -73,10 +73,20 @@ test("tour content edits reach catalog, SEO title and can be reset", async (t) =
   ])
     assert.equal((await call("/admin/content/tours/ani-cildir", { body: { ...fields, ...bad }, cookie: ops })).status, 400, JSON.stringify(bad));
   assert.equal((await call("/admin/content/tours/yok-boyle", { body: fields, cookie: ops })).status, 400);
+  // Asgari katılımcı: sayı girilirse bildirim süresi de zorunlu; katalogda turla gelir.
+  assert.equal(before.current.minParticipants, 0);
+  assert.equal((await call("/admin/content/tours/ani-cildir", { body: { ...fields, minParticipants: 8, minNoticeHours: 0 }, cookie: ops })).status, 400);
+  assert.equal((await call("/admin/content/tours/ani-cildir", { body: { ...fields, minParticipants: 8, minNoticeHours: 48 }, cookie: ops })).status, 200);
+  const withMin = (await (await fetch(root + "/api/catalog")).json()).tours.find((x) => x.id === "ani-cildir");
+  assert.equal(withMin.minParticipants, 8);
+  assert.equal(withMin.minNoticeHours, 48);
 
   const reset = await call("/admin/content/tours/ani-cildir/reset", { body: {}, cookie: ops });
   assert.equal(reset.json.edited, false);
   assert.equal(reset.json.current.name, before.current.name);
+  // Sözleşme koşulu: metin sıfırlansa da asgari katılımcı kalır.
+  assert.equal(reset.json.current.minParticipants, 8);
+  assert.equal(reset.json.current.minNoticeHours, 48);
 });
 
 test("business contact info: owner only, validated, survives a restart", async (t) => {

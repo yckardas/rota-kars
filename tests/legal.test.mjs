@@ -8,6 +8,7 @@ import { business, tours } from "../server/catalog.mjs";
 import {
   LEGAL_VERSION,
   cancellationRules,
+  contractText,
   freeCancelDays,
   isLateBooking,
   preInfoText,
@@ -212,4 +213,50 @@ test("rezervasyon hatası hangi alanın yanlış olduğunu söyler; eski sekme y
   for (let i = 0; i < 6; i++)
     assert.equal((await req("/reservations", { ...body, email: "yanlis" })).status, 400);
   assert.equal((await req("/reservations", body)).status, 201);
+});
+
+test("asgari katılımcı: panelde girilen sayı ve süre form ve sözleşmede yazılır, girilmezse genel ifade kalır", () => {
+  const ani = tours.find((x) => x.id === "ani-cildir");
+  const data = (tour) => ({
+    tour,
+    date: "2026-12-20",
+    startTime: "08:00",
+    customer: contact,
+    passengers: [{ name: "Ayşe Yılmaz", seat: 1, nationality: "TR" }],
+    unitPrice: 200000,
+    count: 1,
+    discount: 0,
+    total: 200000,
+    deposit: 60000,
+    paymentMode: "deposit",
+    onlinePayment: true,
+    reference: "RK-TEST",
+    createdAt: Date.parse("2026-12-01T09:00:00+03:00"),
+  });
+  const plain = { ...ani, minParticipants: 0, minNoticeHours: 0 },
+    set = { ...ani, minParticipants: 8, minNoticeHours: 48 };
+  assert.doesNotMatch(preInfoText(data(plain)), /Asgari katılımcı sayısı:/);
+  assert.match(contractText(data(plain)), /Asgari katılımcı sayısına ulaşılamaması/);
+  const info = preInfoText(data(set)),
+    contract = contractText(data(set));
+  assert.match(info, /Asgari katılımcı sayısı: 8 kişi/);
+  assert.match(info, /en geç hareketten 2 gün \(48 saat\) önce/);
+  assert.match(contract, /Asgari katılımcı sayısı: 8 kişi/);
+  assert.match(contract, /en geç hareketten 48 saat önce Müşteri'ye bildirerek iptal edebilir/);
+});
+
+test("müşteri memnuniyeti kartı puanı elle yazılmış sayıdan değil, yorumlar verisinden ve tarihiyle verir", async (t) => {
+  const { req } = await fixture(t);
+  const catalog = (await req("/catalog")).json,
+    reviews = (await req("/reviews")).json;
+  const tr = catalog.features.find((f) => f.rating),
+    i = catalog.features.indexOf(tr),
+    en = catalog.translations.en.features[i];
+  if (reviews.rating && reviews.total) {
+    assert.match(tr.text, new RegExp(reviews.total.toLocaleString("tr-TR")));
+    if (reviews.status === "snapshot") {
+      assert.match(tr.text, /itibarıyla/);
+      assert.match(en.text, /as of/);
+    }
+  } else assert.doesNotMatch(tr.text, /\d/);
 });

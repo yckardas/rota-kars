@@ -22,6 +22,8 @@ type TourFields = {
   excluded: string[];
   itinerary: Itinerary[];
   note: string;
+  minParticipants: number;
+  minNoticeHours: number;
 };
 type BusinessFields = Record<
   "phone" | "mobile" | "email" | "address" | "hours" | "whatsapp" | "whatsappLabel" | "instagram" | "facebook" | "mapsUrl",
@@ -124,7 +126,7 @@ function TourEditor({ id, onSaved }: { id: string; onSaved: () => void }) {
     set("itinerary", next);
   };
   async function save(reset = false) {
-    if (reset && !window.confirm("Bu turun metin ve fotoğrafları ilk hâline dönsün mü? Fiyat değişmez.")) return;
+    if (reset && !window.confirm("Bu turun metin ve fotoğrafları ilk hâline dönsün mü? Fiyat ve asgari katılımcı değişmez.")) return;
     setBusy(true);
     setError("");
     setNotice("");
@@ -183,6 +185,37 @@ function TourEditor({ id, onSaved }: { id: string; onSaved: () => void }) {
           />
         </label>
       </div>
+      <fieldset className="form-grid">
+        <legend>Asgari katılımcı (sözleşmede yazılır)</legend>
+        <label className="field">
+          Asgari katılımcı sayısı
+          <input
+            type="number"
+            min={0}
+            max={60}
+            step="1"
+            value={f.minParticipants || ""}
+            placeholder="Yok"
+            onChange={(e) => set("minParticipants", Math.max(0, Math.round(Number(e.target.value) || 0)))}
+          />
+        </label>
+        <label className="field">
+          Ulaşılamazsa en geç kaç saat önce iptal bildirilir
+          <input
+            type="number"
+            min={0}
+            max={720}
+            step="1"
+            value={f.minNoticeHours || ""}
+            placeholder="ör. 48"
+            onChange={(e) => set("minNoticeHours", Math.max(0, Math.round(Number(e.target.value) || 0)))}
+          />
+        </label>
+        <p className="muted">
+          Doldurulursa ön bilgilendirme formunda ve sözleşmede bu tur için yazılır. Boş bırakılırsa sayı ve süre
+          verilmeden genel ifade kalır; konaklamalı paket turlarda yönetmelik sayı ve sürenin yazılmasını ister.
+        </p>
+      </fieldset>
       <label className="field">
         Özet
         <textarea rows={4} maxLength={1500} value={f.summary} onChange={(e) => set("summary", e.target.value)} />

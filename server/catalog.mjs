@@ -46,7 +46,9 @@ export const features = [
   {
     icon: "heart",
     title: "Müşteri memnuniyeti",
-    text: "Google'da 456 değerlendirmede 4,9 puan.",
+    // Metin /api/catalog'da yorumlar servisinin güncel puanıyla yazılır (app.mjs).
+    rating: true,
+    text: "Misafirlerimizin Google değerlendirmeleri sitemizde.",
   },
 ];
 export const services = [

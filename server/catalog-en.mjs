@@ -19,7 +19,7 @@ export const en = {
     },
     {
       title: "Happy guests",
-      text: "Rated 4.9 from 456 reviews on Google.",
+      text: "Read our guests' Google reviews on the site.",
     },
   ],
   services: {

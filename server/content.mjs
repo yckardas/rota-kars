@@ -24,6 +24,10 @@ export const TOUR_FIELDS = [
   "excluded",
   "itinerary",
   "note",
+  // Asgari katılımcı sayısı ve bu sayıya ulaşılamazsa turun en geç kaç saat önce
+  // iptal edileceği. 0 = belirlenmedi. Ön bilgilendirme formu ve sözleşmede yazılır.
+  "minParticipants",
+  "minNoticeHours",
 ];
 export const BUSINESS_FIELDS = [
   "phone",
@@ -38,8 +42,12 @@ export const BUSINESS_FIELDS = [
   "mapsUrl",
 ];
 const pick = (obj, keys) => Object.fromEntries(keys.filter((k) => obj[k] !== undefined).map((k) => [k, structuredClone(obj[k])]));
-const DEFAULT_TOURS = new Map(tours.map((t) => [t.id, pick(t, TOUR_FIELDS)]));
+const DEFAULT_TOURS = new Map(
+  tours.map((t) => [t.id, { minParticipants: 0, minNoticeHours: 0, ...pick(t, TOUR_FIELDS) }]),
+);
 const DEFAULT_BUSINESS = pick(business, BUSINESS_FIELDS);
+// "Varsayılana dön"ün dokunmadığı satış ve sözleşme koşulları.
+const KEPT_ON_RESET = ["price", "minParticipants", "minNoticeHours"];
 
 // /en sürümünün çevirileri (catalog-en.mjs) varsayılan Türkçe metne göre yazılmıştır.
 // Panelden değiştirilen alanın çevirisi eskimiş olur (ör. "fiyata dahil"den çıkarılan bir
@@ -89,8 +97,8 @@ export async function createContent(db, { clock = Date.now } = {}) {
     return {
       current,
       defaults,
-      // Yalnız fiyatı kalan kayıt (metin sıfırlanmış) düzenlenmiş içerik sayılmaz.
-      edited: Boolean(doc) && Object.keys(doc.fields || {}).some((k) => k !== "price"),
+      // Yalnız fiyat / asgari katılımcı kalan kayıt (metin sıfırlanmış) düzenlenmiş içerik sayılmaz.
+      edited: Boolean(doc) && Object.keys(doc.fields || {}).some((k) => !KEPT_ON_RESET.includes(k)),
       updatedAt: doc?.updated_at || null,
       updatedBy: doc?.updated_by || null,
     };
@@ -118,9 +126,14 @@ export async function createContent(db, { clock = Date.now } = {}) {
     async resetTour(id, { keepPrice = false } = {}) {
       if (!DEFAULT_TOURS.has(id)) throw new AppError(404, "Tur bulunamadı.");
       const doc = keepPrice ? await db.one("site_content", { _id: "tour:" + id }) : null,
-        price = doc?.fields?.price;
-      if (typeof price === "number" && price !== DEFAULT_TOURS.get(id).price)
-        await db.update("site_content", { _id: "tour:" + id }, { fields: { price } });
+        defaults = DEFAULT_TOURS.get(id),
+        kept = Object.fromEntries(
+          KEPT_ON_RESET.filter((k) => typeof doc?.fields?.[k] === "number" && doc.fields[k] !== defaults[k]).map((k) => [
+            k,
+            doc.fields[k],
+          ]),
+        );
+      if (Object.keys(kept).length) await db.update("site_content", { _id: "tour:" + id }, { fields: kept });
       else await db.remove("site_content", { _id: "tour:" + id });
       await apply();
       return this.tour(id);
