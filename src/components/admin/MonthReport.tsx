@@ -16,7 +16,7 @@ type Report = {
     cancelled: number;
     noShow: number;
   };
-  cash: { payments: number; refunds: number; net: number; cash: number; bankTransfer: number };
+  cash: { payments: number; refunds: number; net: number; cash: number; bankTransfer: number; pos?: number; card?: number };
   byTour: {
     tourId: string;
     tourName: string;
@@ -92,7 +92,8 @@ export function MonthReport() {
               <span>Ay içi net tahsilat</span>
               <strong>{currency(data.cash.net)}</strong>
               <small>
-                Nakit {currency(data.cash.cash)} · Havale {currency(data.cash.bankTransfer)}
+                Nakit {currency(data.cash.cash)} · Havale {currency(data.cash.bankTransfer)} · POS{" "}
+                {currency(data.cash.pos || 0)} · Online kart {currency(data.cash.card || 0)}
               </small>
             </div>
             <div>

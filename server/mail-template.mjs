@@ -19,7 +19,8 @@ const paragraphs = (text) =>
         `<p style="margin:0 0 14px;line-height:1.6;color:#1a2846;font-size:15px">${escape(p).replace(/\n/g, "<br>")}</p>`,
     )
     .join("");
-const actionLabel = (url) => (/\/bilet\//.test(url) ? "Biletinizi açın" : "Bağlantıyı açın");
+const actionLabel = (url) =>
+  /\/bilet\//.test(url) ? "Biletinizi açın" : /\/odeme\//.test(url) ? "Ödemeyi yapın" : "Bağlantıyı açın";
 
 export function renderMail({ recipient, subject, body, action_url: url }) {
   const text = body + (url ? "\n\n" + url : "");

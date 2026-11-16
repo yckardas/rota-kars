@@ -338,6 +338,28 @@ export async function createWorkflow(
         return updated;
       });
     },
+    // Acentenin müşteriye gönderdiği kartla ödeme bağlantısı (kalan bakiye / kapora).
+    async sendPaymentLink(reference, url) {
+      const r = await api.get(reference);
+      if (!r.email) throw new AppError(409, "Bu rezervasyonda e-posta adresi yok; bağlantıyı WhatsApp'tan gönderin.");
+      const amount = r.status === "confirmed" ? r.balance_due : Math.max(0, r.deposit - r.net_paid);
+      if (!["pending_agency", "confirmed"].includes(r.status) || !(amount > 0))
+        throw new AppError(409, "Bu rezervasyonda ödenecek tutar yok.");
+      await notifications.enqueue({
+        email: r.email,
+        subject: "Rota Kars · Kartla ödeme bağlantınız",
+        body:
+          `Merhaba ${r.name},\n${r.reference} · ${tourName(r)}\nTarih: ${r.date} · Saat: ${r.start_time}\n` +
+          `${r.status === "confirmed" ? "Kalan" : "Kapora"} tutarı ${(amount / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL'yi aşağıdaki bağlantıdan Vakıfbank güvenli ödeme sayfasında kartla (3D Secure) ödeyebilirsiniz.\n` +
+          "Acentemiz telefonla, e-postayla veya mesajla kart bilgisi istemez.",
+        actionUrl: url,
+        kind: "payment_link",
+        // Aynı gün aynı tutar için tek e-posta; tutar değişirse yeniden gönderilebilir.
+        dedupeKey: `payment-link:${r.reference}:${amount}:${new Date(clock()).toISOString().slice(0, 10)}`,
+      });
+      await audit(r, "payment_link_sent", { amount });
+      return { sent: true, amount };
+    },
     async requestCancellation(reference, email) {
       return tx(async () => {
         await cleanup();
@@ -372,7 +394,9 @@ export async function createWorkflow(
         return updated;
       });
     },
-    async cancel(reference) {
+    // refundNote: panelde iptalle birlikte iade de yapılıyorsa müşteriye giden e-postada
+    // "iade ayrıca yürütülür" yerine yazılır.
+    async cancel(reference, { refundNote = "" } = {}) {
       return tx(async () => {
         await cleanup();
         const r = await api.get(reference);
@@ -387,7 +411,8 @@ export async function createWorkflow(
         await notify(
           updated,
           "reservation_cancelled",
-          "Rezervasyonunuz iptal edildi. Tahsilat varsa iade ayrıca acente tarafından yürütülür.",
+          "Rezervasyonunuz iptal edildi. " +
+            (refundNote || "Tahsilat varsa iade ayrıca acente tarafından yürütülür."),
         );
         return updated;
       });
@@ -766,6 +791,8 @@ export async function createWorkflow(
           net: sum("payment") - sum("refund"),
           cash: sum("payment", "cash") - sum("refund", "cash"),
           bankTransfer: sum("payment", "bank_transfer") - sum("refund", "bank_transfer"),
+          pos: sum("payment", "pos") - sum("refund", "pos"),
+          card: sum("payment", "online:vakifbank") - sum("refund", "online:vakifbank"),
         },
         byTour,
         reservations: rs

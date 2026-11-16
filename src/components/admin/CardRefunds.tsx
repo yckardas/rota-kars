@@ -120,7 +120,8 @@ export function CardRefunds({ reference, onChange }: { reference: string; onChan
     <div className="admin-editor card-refunds">
       <p className="form-hint">
         Bu sekme bankaya gerçek iade gönderir. Bugün alınan ödeme yalnız tamamıyla iptal edilir; kısmi iade ertesi
-        günden itibaren yapılabilir. Havale veya nakit iadeyi İade sekmesinden kaydedin.
+        günden itibaren yapılabilir. Havale, nakit veya POS iadesi için yukarıdan "Havale / nakit / POS iadesini
+        kaydet"i seçin.
         {!data.canRefund && " Karta iade yalnız sahip rolündeki yönetici tarafından yapılabilir."}
         {!data.enabled && " Vakıfbank bağlantısı şu an kapalı; iade banka panelinden yapılmalı."}
       </p>

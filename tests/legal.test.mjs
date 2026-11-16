@@ -7,6 +7,7 @@ import { createApp } from "../server/app.mjs";
 import { business, tours } from "../server/catalog.mjs";
 import {
   LEGAL_VERSION,
+  cancellationQuote,
   cancellationRules,
   contractText,
   freeCancelDays,
@@ -259,4 +260,30 @@ test("müşteri memnuniyeti kartı puanı elle yazılmış sayıdan değil, yoru
       assert.match(en.text, /as of/);
     }
   } else assert.doesNotMatch(tr.text, /\d/);
+});
+
+test("iptal hesabı: süre içinde tamamı, süre geçince kapora düşülür; talep anı esas alınır; acente iptali tam", () => {
+  const ani = tours.find((x) => x.id === "ani-cildir"),
+    batum = tours.find((x) => x.id === "batum"),
+    base = { date: "2026-12-10", startTime: "08:00", total: 300000, netPaid: 90000 };
+  const early = cancellationQuote({ tour: ani, ...base, now: Date.parse("2026-12-06T08:00:00+03:00") });
+  assert.equal(early.late, false);
+  assert.deepEqual(early.customer, { retained: 0, refund: 90000 });
+  const late = cancellationQuote({ tour: ani, ...base, now: Date.parse("2026-12-08T08:00:00+03:00") });
+  assert.equal(late.late, true);
+  assert.deepEqual(late.customer, { retained: 90000, refund: 0 });
+  assert.deepEqual(late.agency, { retained: 0, refund: 90000 });
+  // Tam ödemede süre geçince yalnız %30 kesilir, fazlası iade edilir.
+  const full = cancellationQuote({ tour: ani, ...base, netPaid: 300000, now: Date.parse("2026-12-09T08:00:00+03:00") });
+  assert.deepEqual(full.customer, { retained: 90000, refund: 210000 });
+  // Talep süre içinde geldiyse panelde geç işlense de kesinti yok.
+  const requested = cancellationQuote({
+    tour: ani,
+    ...base,
+    requestedAt: Date.parse("2026-12-06T08:00:00+03:00"),
+    now: Date.parse("2026-12-09T08:00:00+03:00"),
+  });
+  assert.equal(requested.late, false);
+  // Yurt dışında süre 5 gündür.
+  assert.equal(cancellationQuote({ tour: batum, ...base, now: Date.parse("2026-12-06T08:00:00+03:00") }).late, true);
 });

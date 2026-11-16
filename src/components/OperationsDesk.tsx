@@ -39,6 +39,8 @@ import { SeatMap } from "./SeatMap";
 import { PassengerList } from "./admin/MobileApp";
 import { NewReservation } from "./admin/NewReservation";
 import { CardRefunds } from "./admin/CardRefunds";
+import { CancelDialog } from "./admin/CancelDialog";
+import { PaymentLink } from "./admin/PaymentLink";
 import { DepartureCalendar } from "./admin/DepartureCalendar";
 import { isNativeApp } from "../lib/native";
 import { countryName } from "../lib/countries";
@@ -612,7 +614,19 @@ const AUDIT_LABELS: Record<string, string> = {
   completed: "Tur tamamlandı",
   checked_in: "Bilet okutuldu (bindi)",
   no_show: "Gelmedi olarak işaretlendi",
+  payment_link_sent: "Kartla ödeme bağlantısı e-postayla gönderildi",
 };
+// Tahsilat / iade yöntemi adı (kayıtlar ve geçmiş).
+const methodLabel = (m: string) =>
+  m === "cash"
+    ? "Nakit"
+    : m === "bank_transfer"
+      ? "Havale / EFT"
+      : m === "pos"
+        ? "Kredi kartı (POS)"
+        : m.startsWith("online:")
+          ? "Online kart (Vakıfbank)"
+          : m;
 const stamp = (ms?: number) =>
   ms
     ? new Date(ms).toLocaleString("tr-TR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
@@ -851,6 +865,7 @@ export function ReservationManager({
           action={action}
           reload={load}
           close={() => setSelected("")}
+          paymentsOn={Boolean(catalog.payment?.enabled)}
         />
       )}
     </>
@@ -864,6 +879,7 @@ function BookingControls({
   action,
   reload,
   close,
+  paymentsOn = false,
 }: {
   booking: Reservation;
   tourName: string;
@@ -871,11 +887,16 @@ function BookingControls({
   action: (ref: string, path: string, body?: unknown, done?: string) => Promise<boolean>;
   reload: () => Promise<void>;
   close: () => void;
+  paymentsOn?: boolean;
 }) {
   const feedback = useFeedback();
-  const [mode, setMode] = useState<"payment" | "refund" | "card" | "move" | "passengers" | "history">(
+  // Kartla (Vakıfbank) alınmış tahsilat varsa iade sekmesi önce karta iadeyi gösterir.
+  const hasCard = Boolean(r.ledger?.some((p) => p.kind === "payment" && p.method.startsWith("online:")));
+  const [mode, setMode] = useState<"payment" | "refund" | "move" | "passengers" | "history">(
       r.status === "cancelled" && Number(r.net_paid) > 0 ? "refund" : "payment",
     ),
+    [refundKind, setRefundKind] = useState<"card" | "manual">(hasCard ? "card" : "manual"),
+    [cancelOpen, setCancelOpen] = useState(false),
     [departures, setDepartures] = useState<Departure[]>([]),
     [target, setTarget] = useState(""),
     [selected, setSelected] = useState<number[]>([]),
@@ -937,9 +958,8 @@ function BookingControls({
     modes = (
       [
         ["payment", "Tahsilat", activeBooking && Number(r.balance_due) > 0],
-        ["refund", "İade", Number(r.net_paid) > 0],
-        // Kartla (Vakıfbank) alınmış tahsilat varsa: bankaya iade/iptal ve askıdaki iadeler.
-        ["card", "Karta iade", Boolean(r.ledger?.some((p) => p.kind === "payment" && p.method === "online:vakifbank"))],
+        // Kartla tahsilat varsa net tahsilat sıfırlansa da açık kalır: askıdaki iadeler burada sonuçlanır.
+        ["refund", "İade", Number(r.net_paid) > 0 || hasCard],
         ["move", "Tarih / koltuk", activeBooking],
         ["passengers", "Yolcu adları", activeBooking],
         ["history", "Geçmiş", true],
@@ -1064,22 +1084,7 @@ function BookingControls({
             </button>
           )}
           {["pending_agency", "confirmed"].includes(r.status) && (
-            <button
-              className="btn btn-outline btn-small danger-text"
-              disabled={busy}
-              onClick={() =>
-                guarded(
-                  "cancel",
-                  r.reference + " iptal edilsin mi?",
-                  "Koltuklar boşa çıkar ve müşteriye iptal e-postası gider." +
-                    (Number(r.net_paid) > 0
-                      ? ` ${currency(r.net_paid || 0)} tahsilatın iadesi ayrıca yapılmalı (kartla ödendiyse Karta iade sekmesinden, değilse İade sekmesinden kaydedin).`
-                      : ""),
-                  "Rezervasyonu iptal et",
-                  "Rezervasyon iptal edildi.",
-                )
-              }
-            >
+            <button className="btn btn-outline btn-small danger-text" disabled={busy} onClick={() => setCancelOpen(true)}>
               İptal et
             </button>
           )}
@@ -1095,8 +1100,22 @@ function BookingControls({
             </button>
           ))}
         </div>
-        {current === "card" ? (
-          <CardRefunds reference={r.reference} onChange={reload} />
+        {current === "refund" && hasCard && (
+          <div className="desk-tabs refund-kind" role="radiogroup" aria-label="İade yöntemi">
+            <button className={refundKind === "card" ? "active" : ""} onClick={() => setRefundKind("card")}>
+              Karta iade (bankaya gönderilir)
+            </button>
+            <button className={refundKind === "manual" ? "active" : ""} onClick={() => setRefundKind("manual")}>
+              Havale / nakit / POS iadesini kaydet
+            </button>
+          </div>
+        )}
+        {current === "payment" && paymentsOn && ["pending_agency", "confirmed"].includes(r.status) && Number(r.balance_due) > 0 && (
+          <PaymentLink booking={r} />
+        )}
+        {current === "refund" && hasCard && refundKind === "card" ? (
+          // Kayıtlar değişince (iptal penceresinden iade gibi) kart ödemeleri yeniden yüklenir.
+          <CardRefunds key={r.ledger?.length || 0} reference={r.reference} onChange={reload} />
         ) : current === "history" ? (
           <div className="ledger-history">
             {!history && <p className="muted">Yükleniyor…</p>}
@@ -1158,9 +1177,15 @@ function BookingControls({
             ) : (
               <>
                 <p className="form-hint">
-                  Bu form ödeme veya iade yapmaz. Banka/havale veya nakit olarak dışarıda gerçekleşen işlemi kaydeder.
-                  {current === "refund" && " Kartla alınmış ödemeyi bankaya iade etmek için Karta iade sekmesini kullanın."}
+                  Bu form ödeme veya iade yapmaz; havale, nakit veya ofisteki POS cihazıyla dışarıda gerçekleşen işlemi
+                  kaydeder.
                 </p>
+                {current === "refund" && hasCard && (
+                  <p className="error">
+                    Bu kayıt bankaya iade göndermez. Kartla (online) alınan ödemeyi karta geri vermek için "Karta iade"yi
+                    seçin.
+                  </p>
+                )}
                 <div className="form-grid">
                   <label className="field">
                     {current === "payment" ? "Tahsil edilen" : "İade edilen"} tutar (TL)
@@ -1179,6 +1204,7 @@ function BookingControls({
                     <select name="method">
                       <option value="bank_transfer">Havale / EFT</option>
                       <option value="cash">Nakit</option>
+                      <option value="pos">Kredi kartı (ofis POS cihazı)</option>
                     </select>
                   </label>
                 </div>
@@ -1204,16 +1230,12 @@ function BookingControls({
             {r.ledger.map((p) => (
               <p key={p.id}>
                 {stamp(p.created_at)} · {p.kind === "refund" ? "İade" : "Tahsilat"} · {currency(p.amount)} ·{" "}
-                {p.method === "cash"
-                  ? "Nakit"
-                  : p.method.startsWith("online:")
-                    ? "Online kart"
-                    : "Havale"}{" "}
-                · {p.external_reference}
+                {methodLabel(p.method)} · {p.external_reference}
               </p>
             ))}
           </div>
         ) : null}
+        {cancelOpen && <CancelDialog booking={r} onClose={() => setCancelOpen(false)} onDone={reload} />}
       </section>
     </Modal>
   );
