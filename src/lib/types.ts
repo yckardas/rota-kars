@@ -33,6 +33,8 @@ export type Tour = {
   excluded: string[];
   itinerary: { time: string; title: string; text: string }[];
   note: string;
+  minParticipants?: number;
+  minNoticeHours?: number;
   source: string;
 };
 export type Story = {
@@ -108,7 +110,7 @@ export type Catalog = {
     chamberNo: string;
     kep: string;
   };
-  features: { icon: string; title: string; text: string }[];
+  features: { icon: string; title: string; text: string; rating?: boolean }[];
   services: {
     id: string;
     title: string;

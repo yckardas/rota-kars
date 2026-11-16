@@ -12,7 +12,7 @@ import { randomUUID, createHash } from "node:crypto";
 import { AppError } from "./store.mjs";
 import { localDate } from "./departures.mjs";
 
-export const KVKK_NOTICE_VERSION = "2026-11";
+export const KVKK_NOTICE_VERSION = "2026-11-16";
 export const CONSENT_TYPES = [
   "kvkk_notice",
   "marketing",

@@ -5,7 +5,7 @@
 import { transferLine } from "./transfer.mjs";
 import { business } from "./catalog.mjs";
 
-export const LEGAL_VERSION = "2026-11";
+export const LEGAL_VERSION = "2026-11-16";
 export const DEFAULT_DEPOSIT_PERCENT = 30;
 
 const tl = (kurus) =>
@@ -32,6 +32,16 @@ export function isLateBooking(tour, date, startTime, now = Date.now()) {
   return (
     Number.isFinite(start) && start - now < freeCancelHours(tour) * 3600000
   );
+}
+
+// Asgari katılımcı şartı (panelde tur başına girilir). Sayı ve süre girilmemişse
+// boş döner; metinler genel ifadeyle kalır.
+export function minParticipantRule(tour) {
+  const n = Number(tour?.minParticipants) || 0,
+    h = Number(tour?.minNoticeHours) || 0;
+  if (!n || !h) return "";
+  const notice = h % 24 === 0 ? `${h / 24} gün (${h} saat)` : `${h} saat`;
+  return `Asgari katılımcı sayısı: ${n} kişi. Bu sayıya ulaşılamazsa acente turu en geç hareketten ${notice} önce bildirerek iptal edebilir; bu durumda ödediğiniz tutarın tamamı kesintisiz iade edilir ya da dilerseniz başka bir tarihe geçersiniz.`;
 }
 
 export function legalEntity(b = business) {
@@ -105,6 +115,7 @@ export function preInfoText(data, b = business) {
       tour.excluded?.length
         ? `Fiyata dahil değil: ${tour.excluded.join(", ")}`
         : "",
+      minParticipantRule(tour),
       isAbroad(tour)
         ? "Yurt dışı tur: her yolcunun yanında sınır geçişine uygun geçerli kimlik belgesi (pasaport veya kabul edilen kimlik kartı) bulunmalıdır. Belge eksikliği nedeniyle tura katılamama gelmeme hükmündedir."
         : "",
@@ -201,6 +212,7 @@ export function contractText(data, b = business) {
       "Rehberlik: profesyonel kokartlı rehber",
       tour.included?.length ? `Dahil: ${tour.included.join(", ")}` : "",
       tour.excluded?.length ? `Dahil değil: ${tour.excluded.join(", ")}` : "",
+      minParticipantRule(tour),
       `Yolcular ve koltuklar: ${data.passengers.map((p) => `${p.name}${p.seat != null ? " (" + p.seat + ")" : ""}`).join(", ")}`,
     ]),
     section("Madde 4. Fiyat ve ödeme", [
@@ -221,7 +233,9 @@ export function contractText(data, b = business) {
       cancellationRules(tour, { depositPercent: pct }),
     ),
     section("Madde 7. Acente'nin turu iptal etmesi veya değiştirmesi", [
-      "Asgari katılımcı sayısına ulaşılamaması veya hava, yol, sınır kapısı, resmî makam kararı gibi Acente'nin kontrolü dışındaki sebeplerle tur yapılamazsa Acente Müşteri'yi derhâl bilgilendirir.",
+      tour.minParticipants && tour.minNoticeHours
+        ? `Madde 3'te yazılı asgari katılımcı sayısına ulaşılamazsa Acente turu en geç hareketten ${tour.minNoticeHours} saat önce Müşteri'ye bildirerek iptal edebilir. Hava, yol, sınır kapısı, resmî makam kararı gibi Acente'nin kontrolü dışındaki sebeplerle tur yapılamazsa Acente Müşteri'yi derhâl bilgilendirir.`
+        : "Asgari katılımcı sayısına ulaşılamaması veya hava, yol, sınır kapısı, resmî makam kararı gibi Acente'nin kontrolü dışındaki sebeplerle tur yapılamazsa Acente Müşteri'yi derhâl bilgilendirir.",
       "Bu hâllerde Müşteri dilerse başka bir tarihe aktarılır, dilerse ödediği tutarın tamamı Madde 6'daki sürede kesintisiz iade edilir.",
       "Tur başladıktan sonra programın bir bölümü yapılamazsa Acente mümkün olan eşdeğer alternatifi sunar; yapılamayan ve yerine konamayan hizmetin bedeli iade edilir.",
       "Turun esaslı unsurlarından biri değişirse Müşteri değişikliği kabul etmeyerek sözleşmeden ücretsiz dönebilir.",

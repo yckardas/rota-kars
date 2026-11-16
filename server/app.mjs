@@ -963,23 +963,48 @@ export function createApp(
           : { ...t, fromPrice };
       }),
     );
-  const catalogData = async () => ({
+  // "Müşteri memnuniyeti" kartı: puan ve yorum sayısı elle yazılmaz, yorumlar
+  // servisinden gelir (canlı Google verisi ya da tarihli anlık görüntü). Veri
+  // yoksa sayı verilmez; eskimiş bir sayı reklamda yanıltıcı olur.
+  const ratingFeatures = async () => {
+    // Google'a ulaşılamazsa katalog beklemesin: 1,5 sn sonra sayısız metin.
+    const rv = await Promise.race([
+        reviewsService.get().catch(() => null),
+        new Promise((done) => setTimeout(done, 1500, null).unref()),
+      ]),
+      ok = rv && rv.rating && rv.total,
+      date = rv?.status === "snapshot" && rv.fetchedAt ? new Date(rv.fetchedAt + "T12:00:00") : null,
+      trText = ok
+        ? `Google'da ${rv.total.toLocaleString("tr-TR")} değerlendirmede ${rv.rating.toLocaleString("tr-TR")} puan${date ? ` (${date.toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })} itibarıyla)` : ""}.`
+        : "Misafirlerimizin Google değerlendirmeleri sitemizde.",
+      enText = ok
+        ? `Rated ${rv.rating} from ${rv.total.toLocaleString("en-US")} reviews on Google${date ? ` (as of ${date.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })})` : ""}.`
+        : "Read our guests' Google reviews on the site.";
+    // Çeviriler aynı sıradadır (localize.ts dizine göre eşler).
+    const at = features.findIndex((f) => f.rating),
+      swap = (list, text) => list.map((f, i) => (i === at ? { ...f, text } : f));
+    return { tr: swap(features, trText), en: swap(currentEn().features, enText) };
+  };
+  const catalogData = async () => {
+    const rated = await ratingFeatures();
+    return {
       business,
       tours: await withNextDeparture(await store.operations.list()),
       vehicleModels,
       photoCredits,
       stories,
       vehicle,
-      features,
+      features: rated.tr,
       services,
       fleet,
       cancellationPolicy,
       payment: paymentStatus,
-      translations: { en: currentEn() },
+      translations: { en: { ...currentEn(), features: rated.en } },
       preview: true,
       demo: env.DEMO_MODE === "1",
       turnstileSiteKey: turnstile.siteKey,
-  });
+    };
+  };
   app.locals.catalog = catalogData;
   app.get("/api/catalog", async (_q, r) => r.json(await catalogData()));
   // Android yönetici uygulaması güncelleme bilgisi (uygulama açılışta sorar).
@@ -1769,6 +1794,11 @@ export function createApp(
       .array(z.object({ time: line(20), title: line(80).min(1), text: line(600) }))
       .max(15),
     note: line(600),
+    minParticipants: z.number().int().min(0).max(60).default(0),
+    minNoticeHours: z.number().int().min(0).max(720).default(0),
+  }).refine((t) => !t.minParticipants || t.minNoticeHours >= 1, {
+    message: "Asgari katılımcı sayısı girildiyse iptal bildirim süresi de girilmeli.",
+    path: ["minNoticeHours"],
   });
   const tourParam = (q) => z.enum(tours.map((t) => t.id)).parse(q.params.id);
   app.get(

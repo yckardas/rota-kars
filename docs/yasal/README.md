@@ -61,10 +61,18 @@ Anonimleştirmede (üye silme, KVKK silme) `pre_info_text` ve `contract_text` da
 
 - **Avukat incelemesi** (yukarıdaki 11 soru), özellikle yurt dışı aktarımlar için KVKK md. 9 güvenceleri (standart sözleşme ve Kurul'a bildirim).
 - **İYS kaydı:** kampanya e-postası/SMS'i göndermeden önce. Gönderim altyapısı kurulurken iletilere ret bağlantısı eklenmeli; Hesabım'da onayı geri alma düğmesi henüz yok.
-- **Asgari katılımcı sayısı** ve acentenin iptal bildirim süresi her tur için belirlenmedi; metinler süre vermeden "hemen bilgilendiririz" diyor.
+- **Asgari katılımcı sayısı** ve iptal bildirim süresi: panelde tur başına girilebiliyor (İçerik → tur → "Asgari katılımcı"). Girilen tur için ön bilgilendirme formu ve sözleşme sayı ile süreyi yazar; girilmeyen turlarda genel ifade kalır. Konaklamalı paket turlarda doldurulması gerekir. Değerler acentenin kararı.
 - **Havale bilgileri (IBAN)** sitede yok; metin "acentenin bildireceği hesap" diyor.
 - **Sigorta poliçe bilgisi**, **e-posta sağlayıcısı ve ülkesi**, **Railway bölgesi** metinlerde genel ifadeyle geçiyor.
 - **Çalışan aydınlatma metni** (şoför ve rehber verileri, U-ETDS) yazılmadı.
+
+## 16 Kasım 2026 düzeltmeleri (sürüm 2026-11-16)
+
+- Aydınlatma metninde Cloudflare satırına şifreli gece yedeği (R2) eklendi; saklama sürelerine yedeklerin en çok 12 ay tutulduğu yazıldı.
+- Çerez politikasına `rk-pending-booking` (sessionStorage) eklendi.
+- Ana sayfadaki Google puanı elle yazılmıyor; yorumlar servisinden gelir, anlık görüntüyse tarihiyle gösterilir.
+- `LEGAL_VERSION` ve `KVKK_NOTICE_VERSION` `2026-11-16` oldu.
+- Hâlâ açık: KVKK md. 9 standart sözleşme ve Kurul'a bildirim (Railway, Cloudflare, Google, Anthropic vb.), e-posta sağlayıcısının adı ve ülkesi, çalışan aydınlatma metni, İYS, İngilizce aydınlatma metni, paket turlarda sigorta bilgisi.
 
 ## Siteye bağlama (onaydan sonra, tasarım işi bittiğinde)
 

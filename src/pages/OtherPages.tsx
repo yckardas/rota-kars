@@ -455,7 +455,7 @@ function legalRows(b: Catalog["business"], t: (s: string, v?: Record<string, str
 // Yasal bilgilendirme. Kaynak taslaklar docs/yasal/; ön bilgilendirme formu ve
 // sözleşmenin kişiye özel hâli server/legal.mjs'te üretilir. Bağlayıcı metin Türkçedir.
 // Eski bağlantılar (#kvkk, #iptal, #haklar, #uyelik, #asistan) korunur.
-const LEGAL_UPDATED = "11 Kasım 2026";
+const LEGAL_UPDATED = "16 Kasım 2026";
 export function Information({ catalog }: { catalog: Catalog }) {
   const demo = Boolean(catalog.demo),
     b = catalog.business,
@@ -663,7 +663,10 @@ export function Information({ catalog }: { catalog: Catalog }) {
               </tr>
               <tr>
                 <td>Cloudflare</td>
-                <td>Formlarda bot doğrulaması (Turnstile)</td>
+                <td>
+                  Formlarda bot doğrulaması (Turnstile); veritabanının şifreli
+                  gece yedeğinin saklanması (R2)
+                </td>
                 <td>ABD / küresel</td>
               </tr>
               <tr>
@@ -718,6 +721,12 @@ export function Information({ catalog }: { catalog: Catalog }) {
           <li>Konaklama ve özel tur talepleri: 2 yıl.</li>
           <li>Gönderilmiş bildirimler: 90 gün.</li>
           <li>Güvenlik ve denetim kayıtları: 2 yıl.</li>
+          <li>
+            Veritabanının şifreli gece yedekleri: en çok 12 ay (son 7 günün,
+            son 4 haftanın ve son 12 ayın birer yedeği). Silinen veya anonim
+            hâle getirilen kayıtlar bu süre sonunda yedeklerden de çıkar;
+            yedekler yalnız veri kaybında geri yükleme için kullanılır.
+          </li>
           <li>
             Sahiplenilmeyen şans çarkı hediyeleri (IP adresinin geri
             döndürülemez özeti dahil): hediyenin süresi dolduktan 30 gün sonra.
@@ -846,6 +855,16 @@ export function Information({ catalog }: { catalog: Catalog }) {
                 <td>sessionStorage</td>
                 <td>Sohbet penceresindeki son mesajları sayfa değişince korumak</td>
                 <td>Sekme kapanınca silinir</td>
+              </tr>
+              <tr>
+                <td>rk-pending-booking</td>
+                <td>sessionStorage</td>
+                <td>
+                  Kart ödeme ekranından geri dönerseniz yeni kayıt açmadan aynı
+                  ön rezervasyonun ödemesine dönmek (yalnız rezervasyon numarası
+                  ve ödeme bağlantısı)
+                </td>
+                <td>30 dakika; sekme kapanınca silinir</td>
               </tr>
             </tbody>
           </table>
