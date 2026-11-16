@@ -26,7 +26,29 @@ Kod:
 7. **Bankadan satış yanıtı alınamazsa veya kart çekildiği halde rezervasyona işlenemezse:** Ödeme **askıya alınır** (`unverified`). Acenteye "Ödeme sonucu doğrulanamadı" e-postası ve uygulama bildirimi gider. Banka panelinden kontrol edin:
    - Çekildiyse tahsilatı yönetimden elle kaydedin.
    - Çekilmediyse müşteriyi arayın.
-8. **İade:** Şimdilik Vakıfbank üye işyeri panelinden yapılır, ardından yönetimdeki iade kaydı girilir. Bağlantı modülünde `reverse` (aynı gün Cancel, sonraki günler Refund) hazırdır; yönetim paneline bağlanması ayrı bir adımdır.
+8. **İade:** Yönetimde rezervasyonun **Karta iade** sekmesinden yapılır. Ayrıntı aşağıda, "Karta iade / iptal" bölümünde.
+
+## Karta iade / iptal (yönetim)
+
+Kartla alınmış tahsilat, rezervasyon penceresindeki **Karta iade** sekmesinden bankaya iade edilir. Sekme yalnızca kartla (Vakıfbank) ödenmiş rezervasyonlarda görünür. Havale veya nakit iadesi eskisi gibi **İade** sekmesinden kaydedilir.
+
+- **Yetki:** Bankaya iade göndermek ve askıdaki iadeyi sonuçlandırmak yalnızca **Sahip** rolündedir. Operasyon rolü sekmeyi ve iade durumunu görür, düğmeleri görmez; uç noktalar da 403 döner. Rehber sekmeyi göremez.
+- **Aynı gün → iptal (Cancel):** Ödeme bugün (İstanbul saatiyle) alındıysa bankanın gün sonu henüz alınmamıştır. Bu durumda yalnızca tutarın **tamamı** iptal edilebilir; kısmi tutar reddedilir.
+- **Sonraki günler → iade (Refund):** Tam veya kısmi tutar girilebilir. Aynı tahsilattan birden çok kısmi iade yapılabilir; toplamı tahsilatı ve rezervasyonun net tahsilatını aşamaz.
+- **Önce banka, sonra kayıt:** İade kaydı (`payment_ledger`, `kind: refund`, `method: online:vakifbank`) yalnızca banka `ResultCode 0000` döndükten sonra yazılır. Kayıttaki referans iade işleminin kendi numarasıdır (`RF…`); bankanın iade işlem numarası `card_refunds` kaydında durur.
+- **Çift iade olmaz:** Rezervasyon başına aynı anda yalnızca bir kart iadesi bankaya gider (`card_refund_locks` kilidi). Kilit alındıktan sonra iade edilebilir tutar yeniden hesaplanır. Aynı anda gelen ikinci istek 409 alır.
+- **Banka reddederse:** İade kaydı yazılmaz, kilit açılır, bankanın gerekçesi gösterilir. Yeniden denenebilir.
+- **Bankadan yanıt alınamazsa:** İade **askıya alınır** (`unknown`). Acenteye "Kart iadesi doğrulanamadı" e-postası ve uygulama bildirimi gider. Kilit açılmaz; sonuçlanana kadar o rezervasyonda yeni kart iadesi yapılamaz. Vakıfbank üye işyeri panelinden kontrol edin, sonra Karta iade sekmesinde:
+  - İade panelde görünüyorsa **Gerçekleşti** deyin. İade kaydı yazılır.
+  - Görünmüyorsa **Gerçekleşmedi** deyin. İade düşer, yeniden iade yapılabilir.
+- **Banka onaylayıp kayıt yazılamazsa** (`not_recorded`): Bu da askıya alınır ve "Kart iadesi kaydedilemedi" bildirimi gider. Bu durumda yalnızca **Gerçekleşti** seçilebilir, çünkü para karta dönmüştür.
+- 2 dakikadan uzun süre "Bankada işleniyor" kalan iade de sonuçlandırılabilir. Bu, sunucunun banka isteği sırasında yeniden başladığı durum içindir.
+- İade, rezervasyonun durumunu değiştirmez. Tur iptal edilecekse **İptal et** ayrıca yapılır.
+- Simülatörde alınmış ödeme (işlem numarası `SIM…`) gerçek bankaya, gerçek ödeme simülatöre iade gönderilmez.
+
+Kod: `server/payments.mjs` (`cardPayments`, `refundCard`, `resolveRefund`), uçlar `server/app.mjs` (`/api/admin/reservations/:reference/card-payments`, `/api/admin/reservations/:reference/card-refunds`, `/api/admin/card-refunds/:id/resolve`), ekran `src/components/admin/CardRefunds.tsx`.
+
+**Canlıda ilk iade:** Kodla gerçek iade henüz denenmedi. İlk kez küçük tutarlı bir ödemede deneyin ve sonucu banka panelinde karşılaştırın. Aşağıdaki "Bankanın dokümanıyla doğrulanacaklar" listesindeki Cancel/Refund maddeleri doğrulanmadan büyük tutarlı iade yapmayın.
 
 ## Kart verisi ve güvenlik
 
@@ -54,6 +76,7 @@ Ayarlar eksik veya hatalıysa ödeme kendiliğinden kapalı kalır. Bu durumda s
 - Luhn'a uygun her Visa/Mastercard/Troy başarılı olur. Örnek: `4111 1111 1111 1111`, ileri bir tarih, herhangi bir CVV.
 - `4111 1111 1115 0002` satışta reddedilir. Genel kural: 0002 ile biten kart reddedilir.
 - `4000 0000 0000 0101` 3D Secure'a kayıtlı değildir.
+- İptal ve iade simülatörde satış tutarına göre denetlenir. İptal edilmiş veya iadesi başlamış satış iptal edilemez; iadelerin toplamı satışı aşamaz. Sunucu yeniden başladıktan sonra simülatör eski `SIM…` satışlarını tanımaz ve iadelerini denetimsiz kabul eder.
 - Banka sayfası açıkça "SİMÜLASYON" yazar.
 
 ## Banka incelemesi için önizleme (`PAYMENT_PREVIEW=1`)
@@ -109,7 +132,10 @@ Uç noktalar ve alan adları VPOS 724 / MPI modeline göre yazıldı (`vakifbank
 - MPI istek alanları: `MerchantId`, `MerchantPassword`, `VerifyEnrollmentRequestId`, `Pan`, `ExpiryDate`, `PurchaseAmount`, `Currency=949`, `BrandName`, `SuccessUrl`, `FailureUrl`.
 - MPI yanıt alanları: `Status`, `ACSUrl`, `PaReq`, `TermUrl`, `MD`.
 - 3D dönüş alanları: `Status`, `MerchantId`, `VerifyEnrollmentRequestId`, `PurchAmount` biçimi, `Eci`, `Cavv`, `ErrorCode`.
-- VPOS `Sale` / `Cancel` / `Refund` alanları ve `ResultCode`.
+- VPOS `Sale` / `Cancel` / `Refund` alanları ve `ResultCode`. İptal ve iade için şunlar ayrıca doğrulanmalı:
+  - `ReferenceTransactionId` olarak satış yanıtındaki `TransactionId` gönderiliyor. Banka bunu mu bekliyor?
+  - Gün sonu öncesi kısmi iptal/iade gerçekten yapılamıyor mu? Uygulama aynı gün yalnızca tam iptale izin veriyor. Gün sonu saati İstanbul gece yarısından farklıysa "aynı gün" kuralı ona göre ayarlanmalı.
+  - `ClientIp` alanına iadeyi yapan yöneticinin IP'si gönderiliyor. Banka sunucu IP'si mi istiyor?
 - Taksit kullanılacaksa (`InstallmentCount`) ayrıca eklenir; şu an tek çekim.
 
 ### 3D dönüşü için bankaya yazılı sorun

@@ -41,6 +41,9 @@ const OWNER_ONLY = [
   [/^(POST)$/, /^\/api\/admin\/backup$/],
   [/^(POST)$/, /^\/api\/admin\/content\/business$/],
   [/^(GET|POST)$/, /^\/api\/admin\/devices\/(team|test-team)$/],
+  // Karta iade (gerçek para) ve askıdaki iadenin sonuçlandırılması.
+  [/^(POST)$/, /^\/api\/admin\/reservations\/[^/]+\/card-refunds$/],
+  [/^(POST)$/, /^\/api\/admin\/card-refunds(\/|$)/],
 ];
 // Kendi hesap güvenliği uçları: 2FA zorunluyken de açık kalır.
 const SELF_SERVICE = /^\/api\/admin\/(session|me|me\/.*|logout)$/;

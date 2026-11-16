@@ -167,6 +167,11 @@ test("operations cannot reach owner-only routes with case, trailing-slash or dou
   assert.equal(roleAllows("operations", "post", "/api/ADMIN/USERS/"), false);
   assert.equal(roleAllows("guide", "GET", "/api/admin/RESERVATIONS"), false);
   assert.equal(roleAllows("operations", "GET", "/api/admin/reservations"), true);
+  // Karta iade (gerçek para) yalnız sahipte; durumu operasyon da görür.
+  assert.equal(roleAllows("operations", "POST", "/api/admin/reservations/RK1/Card-Refunds/"), false);
+  assert.equal(roleAllows("operations", "POST", "/api/admin/card-refunds/RF1/resolve"), false);
+  assert.equal(roleAllows("operations", "GET", "/api/admin/reservations/RK1/card-payments"), true);
+  assert.equal(roleAllows("owner", "POST", "/api/admin/reservations/RK1/card-refunds"), true);
 });
 
 test("remember this device: long session only with 2FA; sessions listed and others revocable", async (t) => {
