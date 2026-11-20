@@ -249,7 +249,10 @@ export function Layout({
             <a
               href="https://www.tursab.org.tr/tr/ddsv"
               target="_blank"
-              rel="noreferrer"
+              // TÜRSAB doğrulama sayfası siteyi document.referrer'dan tanır;
+              // noreferrer kullanılırsa "doğrulanmış" görünmez.
+              rel="nofollow noopener"
+              referrerPolicy="origin"
               className="tursab-badge"
             >
               <img

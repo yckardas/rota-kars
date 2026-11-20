@@ -15,7 +15,7 @@ Bugün:
 > MERSİS 0735187296600001 · Kars V.D. 7351872966 · Kars Ticaret Sicili 8625 · KEP rotakarsturizm@hs01.kep.tr · [Yasal bilgiler](/iletisim#kunye)
 
 - **"2010'dan beri"**: acente doğru olduğunu teyit etti (03.11.2026), kalıyor. Önerilen altbilgide de korunabilir: "… · TÜRSAB üyesidir · 2010'dan beri". Bugünkü şirket 2022'de kurulduğu için dayanak belgesini dosyada tutmanız yeterli.
-- Belge doğrulama: TÜRSAB rozetinin bağlantısı (`tursab.org.tr/tr/ddsv`) zaten doğrulama sayfasına gidiyor. ✅
+- Belge doğrulama: TÜRSAB rozetinin bağlantısı (`tursab.org.tr/tr/ddsv`) doğrulama sayfasına gidiyor. TÜRSAB siteyi referrer'dan tanıdığı için bağlantıda `noreferrer` olmamalı (`rel="nofollow noopener"`, `referrerPolicy="origin"`). ✅
 
 ## İletişim sayfasına "Yasal bilgiler" bölümü (`/iletisim#kunye`)
 
