@@ -149,6 +149,8 @@ export type Catalog = {
   };
   preview: boolean;
   demo?: boolean;
+  // Sitenin en üstündeki duyuru şeridi (panelden; kapalıyken null).
+  announcement?: { text: string; textEn: string; link: string } | null;
   turnstileSiteKey?: string | null;
 };
 export type Departure = {

@@ -12,6 +12,8 @@ import {
   MessageCircle,
   Facebook,
   UserRound,
+  Megaphone,
+  ArrowRight,
 } from "lucide-react";
 import type { Catalog } from "../lib/types";
 import { MembershipInvite } from "./MembershipInvite";
@@ -28,6 +30,67 @@ import {
   type Lang,
 } from "../lib/i18n";
 import { TourLink, takeTourReturnScroll } from "../lib/tour-transition";
+// Sitenin en üstündeki duyuru şeridi (panelden). Kapatılınca bu oturumda o metin bir daha
+// gösterilmez; metin değişirse yeniden görünür.
+function AnnouncementBar({
+  data,
+}: {
+  data: NonNullable<Catalog["announcement"]>;
+}) {
+  const { t } = useLang();
+  const key = "rota-duyuru-kapali";
+  const [hidden, setHidden] = useState(() => {
+    try {
+      return sessionStorage.getItem(key) === data.text;
+    } catch {
+      return false;
+    }
+  });
+  if (hidden) return null;
+  const more = (
+    <>
+      {t("Detaylı bilgi")} <ArrowRight size={14} />
+    </>
+  );
+  return (
+    <div className="rk-announce" role="region" aria-label={t("Duyuru")}>
+      <div className="container">
+        <Megaphone size={17} aria-hidden="true" />
+        <p>{data.text}</p>
+        {data.link &&
+          (data.link.startsWith("/") ? (
+            <Link className="rk-announce-link" to={data.link}>
+              {more}
+            </Link>
+          ) : (
+            <a
+              className="rk-announce-link"
+              href={data.link}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {more}
+            </a>
+          ))}
+      </div>
+      <button
+        type="button"
+        className="rk-announce-close"
+        aria-label={t("Duyuruyu kapat")}
+        onClick={() => {
+          setHidden(true);
+          try {
+            sessionStorage.setItem(key, data.text);
+          } catch {
+            /* depolama kapalıysa yalnız bu sayfada gizlenir */
+          }
+        }}
+      >
+        <X size={16} />
+      </button>
+    </div>
+  );
+}
 // Aynı sayfanın öbür dildeki karşılığına giden TR / EN bağlantıları.
 function LangSwitch({ className }: { className: string }) {
   const { lang, t } = useLang(),
@@ -63,7 +126,15 @@ export function Layout({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false),
+    // Sayfa kaydırılınca sabit üst menü incelir ve gölge alır (renkli.css).
+    [scrolled, setScrolled] = useState(false),
     location = useLocation();
+  useEffect(() => {
+    const f = () => setScrolled(window.scrollY > 24);
+    f();
+    window.addEventListener("scroll", f, { passive: true });
+    return () => window.removeEventListener("scroll", f);
+  }, []);
   const navigationType = useNavigationType();
   useEffect(() => {
     setOpen(false);
@@ -122,6 +193,7 @@ export function Layout({
       <a href="#main" className="skip-link">
         {t("İçeriğe geç")}
       </a>
+      {catalog.announcement && <AnnouncementBar data={catalog.announcement} />}
       <div className="topbar">
         <div className="container">
           <span>
@@ -142,7 +214,7 @@ export function Layout({
           </div>
         </div>
       </div>
-      <header className="site-header">
+      <header className={"site-header" + (scrolled ? " is-scrolled" : "")}>
         <div className="container header-inner">
           <Link className="brand" to="/" aria-label={t("Rota Kars ana sayfa")}>
             <img

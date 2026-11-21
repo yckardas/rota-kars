@@ -1,16 +1,21 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { isIllustrativePhoto, responsive } from "../lib/images";
+import { responsive } from "../lib/images";
 import { Link, useLang, useLocalNavigate } from "../lib/i18n";
 import {
   ArrowRight,
   Play,
   Armchair,
+  BadgeCheck,
+  CalendarDays,
+  CreditCard,
   ExternalLink,
   ChevronRight,
   Image as ImageIcon,
+  MapPin,
+  Search,
   Snowflake,
   Star,
-  Check,
+  Users,
 } from "lucide-react";
 import type { Catalog, ReviewsResponse, Story } from "../lib/types";
 import { currency, hasPrice } from "../lib/types";
@@ -18,15 +23,18 @@ import { useClearOfLaunchers } from "../lib/launchers";
 import { api } from "../lib/api";
 import { today } from "../lib/types";
 import { TourCard } from "../components/TourCard";
-import { distinctPlacesFirst, heroTours, placeName } from "../lib/place";
-import { develop } from "../lib/reveal";
+import { distinctPlacesFirst, heroTours } from "../lib/place";
+import { develop, watchReveal } from "../lib/reveal";
 import { Reviews, GoogleMark } from "../components/Reviews";
 import { whatsappLink } from "../lib/whatsapp";
 import { SeatMap } from "../components/SeatMap";
 import { StoryPlayer } from "../components/StoryPlayer";
 import { InstagramSection } from "../components/InstagramSection";
 import { FeatureMarquee } from "../components/FeatureMarquee";
-import { Postmark } from "../components/Postmark";
+import { HeroSlider } from "../components/HeroSlider";
+import { CategoryBadges } from "../components/CategoryBadges";
+import { UpcomingDepartures } from "../components/UpcomingDepartures";
+import { filterTone, toneStyle } from "../lib/tone";
 import { TOUR_FILTERS, matchesTourFilter } from "../lib/tourFilters";
 export function Home({ catalog }: { catalog: Catalog }) {
   const [filter, setFilter] = useState("Tüm rotalar"),
@@ -62,10 +70,26 @@ export function Home({ catalog }: { catalog: Catalog }) {
       ),
   );
   const { t, locale } = useLang();
-  const heroCard = useRef<HTMLDivElement>(null);
+  const heroCard = useRef<HTMLFormElement>(null);
   useClearOfLaunchers(heroCard);
-  const insetTours = heroTours(catalog.tours);
+  // Vitrinde önce satışta olan rotalar; yeterince yoksa bütün rotalardan seçilir.
+  const onSale = catalog.tours.filter((tour) => tour.salesOpen),
+    insetTours = heroTours(onSale.length >= 3 ? onSale : catalog.tours);
   const navigate = useLocalNavigate();
+  // Bölümler ekrana girince yükselerek gelir (renkli.css, .rk-reveal).
+  useEffect(() => {
+    const stops = Array.from(
+      document.querySelectorAll(".rk-reveal"),
+      (el) => watchReveal(el),
+    );
+    return () => stops.forEach((stop) => stop());
+  }, []);
+  // Yuvarlak tür rozetleri: her filtre için o türdeki ilk turun fotoğrafı ve tur sayısı.
+  function pickCategory(f: string) {
+    setFiltered(true);
+    setFilter(filtered && filter === f ? "Tüm rotalar" : f);
+    document.getElementById("turlar")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
   function search(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget),
@@ -80,159 +104,92 @@ export function Home({ catalog }: { catalog: Catalog }) {
   }
   return (
     <>
-      <section className="container kp-hero" aria-labelledby="kp-hero-title">
-        <div className="kp-card" ref={heroCard}>
-          <div className="kp-views">
-            <div className="kp-main-view">
-              <img
-                {...responsive(
-                  "/images/ani.webp",
-                  "(max-width: 760px) 100vw, 62vw",
-                )}
-                alt={t("Ani Antik Kenti’nin kış manzarası")}
-                fetchPriority="high"
-                width="1280"
-                height="720"
-              />
-              <div className="kp-hero-postage" aria-hidden="true">
-                <span className="kp-hero-paper" />
-                <div className="kp-hero-ink">
-                  <Postmark
-                    className="kp-postmark kp-home-postmark"
-                    date={today()}
-                    place={t("KARS’TAN")}
-                  />
-                  <span className="kp-hero-postal-lines" />
-                </div>
-              </div>
-              <div className="kp-title">
-                <h1 id="kp-hero-title">{t("Kars’tan selamlar.")}</h1>
-                <p>
-                  {t(
-                    "Kendi VIP aracımızla, küçük gruplarla, rehberli günler. Bir manzara seçin, gerisini birlikte planlayalım.",
-                  )}
-                </p>
-              </div>
-            </div>
-            <div
-              className="kp-insets"
-              role="group"
-              aria-label={t("Rota seçin")}
+      <HeroSlider tours={insetTours} title={t("Kars’tan selamlar.")}>
+        <form className="rk-search" onSubmit={search} ref={heroCard}>
+          <label className="rk-field rk-field-tour">
+            <MapPin size={20} aria-hidden="true" />
+            <span>{t("Rota")}</span>
+            <select
+              name="tour"
+              value={searchTour}
+              onChange={(e) => setSearchTour(e.target.value)}
             >
-              {insetTours.map((tour, i) => (
-                <button
-                  key={tour.id}
-                  type="button"
-                  className="kp-inset"
-                  aria-pressed={searchTour === tour.id}
-                  onClick={() =>
-                    setSearchTour(searchTour === tour.id ? "" : tour.id)
-                  }
-                >
-                  <img
-                    {...responsive(
-                      i === 0 && tour.gallery[1] && !isIllustrativePhoto(tour.gallery[1])
-                        ? tour.gallery[1]
-                        : tour.image,
-                      "(max-width: 760px) 25vw, 16vw",
-                    )}
-                    {...develop}
-                    alt=""
-                    decoding="async"
-                  />
-                  <span className="kp-inset-label">
-                    {placeName(tour)}
-                    <small>
-                      {!tour.salesOpen
-                        ? t("Şu an satışa kapalı")
-                        : hasPrice(tour.fromPrice ?? tour.price)
-                          ? t("{price}’den", { price: currency(tour.fromPrice ?? tour.price) })
-                          : t("Fiyat için arayın")}
-                    </small>
-                  </span>
-                  <span className="kp-inset-check" aria-hidden="true">
-                    <Check size={15} strokeWidth={3} />
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <form className="kp-strip" onSubmit={search}>
-            <label className="kp-field kp-field-tour">
-              <span>{t("Rota")}</span>
-              <select
-                name="tour"
-                value={searchTour}
-                onChange={(e) => setSearchTour(e.target.value)}
-              >
-                <option value="">{t("Nereye gitmek istersiniz?")}</option>
-                {catalog.tours
-                  .filter((t) => !t.inquiryOnly)
-                  .map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label className="kp-field">
-              <span>{t("Tarih")}</span>
-              <input type="date" name="date" min={today()} />
-            </label>
-            <label className="kp-field">
-              <span>{t("Yolcu")}</span>
-              <select name="guests">
-                {Array.from({ length: guestLimit }, (_, i) => (
-                  <option key={i} value={i + 1}>
-                    {t(i === 0 ? "1 kişi" : "{n} kişi", { n: i + 1 })}
+              <option value="">{t("Nereye gitmek istersiniz?")}</option>
+              {catalog.tours
+                .filter((t) => !t.inquiryOnly)
+                .map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
                   </option>
                 ))}
-              </select>
-            </label>
-            <button className="btn" type="submit">
-              {t("Rotamı bul")} <ArrowRight size={18} />
-            </button>
-          </form>
-          <p className="kp-printed">
-            <span>
-              {t(
-                "Ani Antik Kenti, Kars · Rota Kars Turizm, {year}’dan beri Kars’ta · TÜRSAB A Grubu {no}",
-                {
-                  year: catalog.business.founded,
-                  no: catalog.business.tursabNo,
-                },
-              )}
-            </span>
-            {rating?.rating != null && (
-              <a className="kp-rating" href="#yorumlar">
-                <GoogleMark size={16} />
-                <strong>
-                  {rating.rating.toLocaleString(locale, {
-                    minimumFractionDigits: 1,
-                    maximumFractionDigits: 1,
-                  })}
-                </strong>
-                <Star size={13} fill="currentColor" />
-                <span>
-                  {rating.total != null
-                    ? t("{n} Google yorumu", {
-                        n: rating.total.toLocaleString(locale),
-                      })
-                    : t("Google yorumları")}
-                </span>
-              </a>
-            )}
-            <span>
-              {catalog.payment.enabled
-                ? t("Kaporayı kartla güvenle ödeyin; rezervasyonunuz anında onaylanır.")
-                : t("Ödeme havale veya nakitle; rezervasyonunuzu acentemiz onaylar.")}
-            </span>
-          </p>
-        </div>
-      </section>
+            </select>
+          </label>
+          <label className="rk-field">
+            <CalendarDays size={20} aria-hidden="true" />
+            <span>{t("Tarih")}</span>
+            <input type="date" name="date" min={today()} />
+          </label>
+          <label className="rk-field">
+            <Users size={20} aria-hidden="true" />
+            <span>{t("Yolcu")}</span>
+            <select name="guests">
+              {Array.from({ length: guestLimit }, (_, i) => (
+                <option key={i} value={i + 1}>
+                  {t(i === 0 ? "1 kişi" : "{n} kişi", { n: i + 1 })}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="btn rk-search-go" type="submit">
+            <Search size={19} aria-hidden="true" /> {t("Rotamı bul")}
+          </button>
+        </form>
+        <p className="rk-trust">
+          <span>
+            <BadgeCheck size={16} aria-hidden="true" />
+            {t("TÜRSAB A Grubu {no}", { no: catalog.business.tursabNo })}
+          </span>
+          <span>
+            <MapPin size={16} aria-hidden="true" />
+            {t("{year}’dan beri Kars’ta", { year: catalog.business.founded })}
+          </span>
+          {rating?.rating != null && (
+            <a className="kp-rating" href="#yorumlar">
+              <GoogleMark size={16} />
+              <strong>
+                {rating.rating.toLocaleString(locale, {
+                  minimumFractionDigits: 1,
+                  maximumFractionDigits: 1,
+                })}
+              </strong>
+              <Star size={13} fill="currentColor" />
+              <span>
+                {rating.total != null
+                  ? t("{n} Google yorumu", {
+                      n: rating.total.toLocaleString(locale),
+                    })
+                  : t("Google yorumları")}
+              </span>
+            </a>
+          )}
+          <span>
+            <CreditCard size={16} aria-hidden="true" />
+            {catalog.payment.enabled
+              ? t("Kaporayı kartla güvenle ödeyin; rezervasyonunuz anında onaylanır.")
+              : t("Ödeme havale veya nakitle; rezervasyonunuzu acentemiz onaylar.")}
+          </span>
+        </p>
+      </HeroSlider>
+      <CategoryBadges
+        className="container"
+        tours={catalog.tours}
+        active={filtered && filter !== "Tüm rotalar" ? filter : null}
+        onPick={pickCategory}
+      />
       <FeatureMarquee features={catalog.features} />
+      <UpcomingDepartures tours={catalog.tours} />
       <section className="container section tours-section" id="turlar">
-        <div className="section-heading">
+        <div className="section-heading rk-reveal">
           <div>
             <h2>{t("Sizin için bir rota var.")}</h2>
           </div>
@@ -244,6 +201,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
           {["Tüm rotalar", ...TOUR_FILTERS].map((f) => (
             <button
               key={f}
+              style={toneStyle(filterTone(f))}
               className={filter === f ? "active" : ""}
               onClick={() => {
                 setFiltered(true);
@@ -278,7 +236,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
       </section>
       <section className="story-section" id="kesif-kartpostallari">
         <div className="container">
-          <div className="story-intro">
+          <div className="story-intro rk-reveal">
             <h2>
               {t("Yola çıkmadan")} <br />
               {t("küçük bir keşif.")}
@@ -326,7 +284,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
         </div>
       </section>
       <section className="vip-section section">
-        <div className="container vip-inner">
+        <div className="container vip-inner rk-reveal">
           <div className="vip-copy">
             <h2>
               {t("Yolculuğunuza uygun,")}
@@ -371,7 +329,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
           hizmetler, araç kiralama ve konaklamaya kısa yollar. */}
       <section className="container section kp-more" aria-labelledby="kp-more-title">
         <h2 id="kp-more-title">{t("Kars’ta başka neler var?")}</h2>
-        <div className="kp-more-grid">
+        <div className="kp-more-grid rk-reveal">
           {[
             {
               to: "/hizmetler",
@@ -415,7 +373,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
         </div>
       </section>
       <section className="private-journey">
-        <div className="container">
+        <div className="container rk-reveal">
           <div>
             <h2>{t("Yol arkadaşlarınızı alın, gerisini bize bırakın.")}</h2>
           </div>

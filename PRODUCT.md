@@ -32,7 +32,7 @@ Local operator with its own VIP minibuses/midibuses and real seat maps per depar
 
 ## Capabilities and Constraints
 
-- Stack: React 19 + Vite + Express + MongoDB, lucide icons, self-hosted fonts (Marcellus, Onest). Single global stylesheet `src/styles.css`.
+- Stack: React 19 + Vite + Express + MongoDB, lucide icons, self-hosted fonts (Baloo 2 and Onest on the public site; Marcellus still bundled). Single global stylesheet `src/styles.css`.
 - Roles gate tabs server-side; guides see only daily operations.
 - Card payment: Vakıfbank virtual POS with 3D Secure (`server/vakifbank.mjs`); the card is entered on the site's own form and never stored. SMS not connected; SMTP optional.
 - Legal texts (pre-information form, tour service contract, privacy, cookies, cancellation) are generated in `server/legal.mjs` and published at `/bilgilendirme`.
@@ -42,7 +42,7 @@ Local operator with its own VIP minibuses/midibuses and real seat maps per depar
 ## Brand Commitments
 
 - Name: Rota Kars Turizm; gold "ROTA" logotype at `public/images/logo.png`.
-- Public site: the user chose the "Hatıra Kartı" world on 2026-11-03 (multi-view Kars souvenir postcard: snow ground, white card stock, blue-black ink, airmail red only for the title band and actions, logo gold for prices; Marcellus + Onest stay pinned). Recorded in `docs/DESIGN.md`; the previous public look is kept on branch `yedek/mevcut-site-tasarimi`. The agency panel has its own world (`docs/DESIGN-PANEL.md`, chosen 2026-10-21).
+- Public site: on 2026-11-20 the customer asked for the colorful, animated general feel of cmrtur.com (not its pre-made banners); the user chose "Rota Renkleri": white ground, orange-red action colour, one colour per tour type, Baloo 2 headings with Onest body (replacing the earlier Marcellus pin). Recorded in `docs/DESIGN.md`; the previous "Hatıra Kartı" postcard look (chosen 2026-11-03) is kept on branch `yedek/hatira-karti`. The agency panel has its own world (`docs/DESIGN-PANEL.md`, chosen 2026-10-21).
 
 ## Evidence on Hand
 

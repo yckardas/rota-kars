@@ -2,14 +2,14 @@ import { useRef } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { Link, localeOf, useLang } from "../lib/i18n";
 import { useOpenTour } from "../lib/tour-transition";
-import { isIllustrativePhoto, responsive } from "../lib/images";
+import { responsive } from "../lib/images";
+import { tourTone, toneStyle } from "../lib/tone";
 import { currency, hasPrice, type Tour } from "../lib/types";
 import { placeName } from "../lib/place";
 import { develop } from "../lib/reveal";
-// Tek görüntülü hatıra kartı: büyük manzara, köşede ikinci görüntü, kırmızı yer şeridi.
+// Rota renkli tur kartı: büyük fotoğraf, tur türünün renginde yer etiketi ve fiyat.
 // Tıklanınca kartın fotoğrafı tur sayfasının büyük görüntüsüne akar (tour-transition).
 export function TourCard({ tour }: { tour: Tour }) {
-  const inset = tour.gallery.find((g) => g !== tour.image);
   const { t } = useLang(),
     openTour = useOpenTour(),
     photo = useRef<HTMLImageElement>(null),
@@ -17,6 +17,7 @@ export function TourCard({ tour }: { tour: Tour }) {
   return (
     <Link
       className="tour-card"
+      style={toneStyle(tourTone(tour))}
       to={"/turlar/" + tour.id}
       onClick={(e) => openTour(e, tour.id, photo.current, ribbon.current)}
     >
@@ -31,29 +32,25 @@ export function TourCard({ tour }: { tour: Tour }) {
           width="600"
           height="450"
         />
-        {inset && (
-          <span className="tour-card-inset">
-            <img
-              {...responsive(inset, "120px")}
-              {...develop}
-              alt=""
-              loading="lazy"
-              decoding="async"
-            />
-            {isIllustrativePhoto(inset) && (
-              <small className="kp-photo-disclosure">{t("Temsili · Yapay zekâ")}</small>
-            )}
-          </span>
-        )}
         <span className="tour-card-ribbon" ref={ribbon}>{placeName(tour)}</span>
         <span className="tour-card-discover" aria-hidden="true">
           {t("Turu keşfet")} <ArrowUpRight size={16} />
         </span>
         {!tour.salesOpen ? (
           <span className="tour-sales-closed">{t("Şu an satışa kapalı")}</span>
+        ) : tour.mode === "demand" ? (
+          <span className="tour-sales-closed tour-demand">{t("Ön kayıt açık")}</span>
         ) : (
-          tour.mode === "demand" && (
-            <span className="tour-sales-closed tour-demand">{t("Ön kayıt açık")}</span>
+          // İlk seferde az koltuk kaldıysa fotoğrafın üstünde turuncu etiket.
+          tour.next &&
+          tour.next.available <= 3 && (
+            <span className={"tour-seat-badge" + (tour.next.available === 0 ? " is-full" : "")}>
+              {tour.next.available === 0
+                ? t("İlk sefer dolu")
+                : tour.next.available === 1
+                  ? t("Son 1 koltuk")
+                  : t("Son {n} koltuk", { n: tour.next.available })}
+            </span>
           )
         )}
       </div>

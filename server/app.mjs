@@ -41,7 +41,7 @@ import {
   isLateBooking,
   freeCancelDays,
 } from "./legal.mjs";
-import { currentEn } from "./content.mjs";
+import { announcement, currentEn } from "./content.mjs";
 import { attachSocialAuth, cookieValue } from "./social-auth.mjs";
 import { createTurnstile } from "./turnstile.mjs";
 import { fcmHint, webPushEndpointOk } from "./push.mjs";
@@ -999,6 +999,11 @@ export function createApp(
       fleet,
       cancellationPolicy,
       payment: paymentStatus,
+      // Duyuru şeridi yalnız açık ve metni varken gönderilir.
+      announcement:
+        announcement.enabled && announcement.text
+          ? { text: announcement.text, textEn: announcement.textEn, link: announcement.link }
+          : null,
       translations: { en: { ...currentEn(), features: rated.en } },
       preview: true,
       demo: env.DEMO_MODE === "1",
@@ -2009,6 +2014,38 @@ export function createApp(
     "/api/admin/content/business",
     requireAdmin,
     route(async (q, r) => r.json(await store.content.saveBusiness(businessContent.parse(q.body), q.admin))),
+  );
+  // Duyuru şeridi: site içi yol ("/turlar/van") ya da https bağlantısı; başka şema kabul edilmez.
+  const announcementContent = z
+    .object({
+      enabled: z.boolean(),
+      text: line(140),
+      textEn: line(140),
+      link: z.union([
+        z.literal(""),
+        z
+          .string()
+          .trim()
+          .max(300)
+          .refine(
+            (v) => (v.startsWith("/") && !v.startsWith("//")) || /^https:\/\/[^\s]+$/.test(v),
+            "Bağlantı site içi bir yol (/turlar gibi) ya da https:// ile başlayan bir adres olmalı.",
+          ),
+      ]),
+    })
+    .refine((v) => !v.enabled || v.text.length >= 3, {
+      message: "Duyuruyu açmak için Türkçe metni yazın.",
+      path: ["text"],
+    });
+  app.get(
+    "/api/admin/content/announcement",
+    requireAdmin,
+    route(async (_q, r) => r.json(await store.content.announcement())),
+  );
+  app.post(
+    "/api/admin/content/announcement",
+    requireAdmin,
+    route(async (q, r) => r.json(await store.content.saveAnnouncement(announcementContent.parse(q.body), q.admin))),
   );
   app.post(
     "/api/admin/requests/:id",

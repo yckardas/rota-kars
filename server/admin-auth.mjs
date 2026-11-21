@@ -41,6 +41,7 @@ const OWNER_ONLY = [
   [/^(POST)$/, /^\/api\/admin\/campaigns$/],
   [/^(POST)$/, /^\/api\/admin\/backup$/],
   [/^(POST)$/, /^\/api\/admin\/content\/business$/],
+  [/^(POST)$/, /^\/api\/admin\/content\/announcement$/],
   [/^(GET|POST)$/, /^\/api\/admin\/devices\/(team|test-team)$/],
   // Karta iade (gerçek para) ve askıdaki iadenin sonuçlandırılması.
   [/^(POST)$/, /^\/api\/admin\/reservations\/[^/]+\/card-refunds$/],
