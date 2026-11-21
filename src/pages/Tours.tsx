@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { TourCard } from "../components/TourCard";
 import type { Catalog } from "../lib/types";
@@ -6,18 +7,24 @@ import { useLang } from "../lib/i18n";
 import { TOUR_FILTERS, matchesTourFilter } from "../lib/tourFilters";
 import { filterTone, toneStyle } from "../lib/tone";
 import { CategoryBadges } from "../components/CategoryBadges";
+import { openFirst, placeName, searchKey } from "../lib/place";
 export function Tours({ catalog }: { catalog: Catalog }) {
-  const [q, setQ] = useState(""),
+  // Ana sayfa aramasında birden çok rota eşleşirse liste ?q= ile süzülmüş açılır.
+  const [params] = useSearchParams();
+  const [q, setQ] = useState(() => (params.get("q") || "").slice(0, 60)),
     [category, setCategory] = useState("Tümü"),
     [filtered, setFiltered] = useState(false);
   const { t } = useLang();
   // Kategoriler /en altında katalogda İngilizce gelir.
-  const tours = catalog.tours.filter(
-    (tour) =>
-      (category === "Tümü" || matchesTourFilter(tour, category, t)) &&
-      `${tour.name} ${tour.location}`
-        .toLocaleLowerCase("tr")
-        .includes(q.toLocaleLowerCase("tr")),
+  // Satışta olan turlar üstte, satışa kapalılar altta.
+  const tours = openFirst(
+    catalog.tours.filter(
+      (tour) =>
+        (category === "Tümü" || matchesTourFilter(tour, category, t)) &&
+        searchKey(`${placeName(tour)} ${tour.name} ${tour.location}`).includes(
+          searchKey(q),
+        ),
+    ),
   );
   return (
     <>

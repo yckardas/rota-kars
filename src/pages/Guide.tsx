@@ -9,6 +9,7 @@ import { Markdown } from "../lib/markdown";
 import { responsive } from "../lib/images";
 import { TourCard } from "../components/TourCard";
 import { ArticleCard } from "../components/ArticleCard";
+import { openFirst } from "../lib/place";
 import { ARTICLE_CATEGORIES, type Article, type Catalog } from "../lib/types";
 
 const dateOf = (ms: number | null) =>
@@ -91,7 +92,7 @@ export function ArticlePage({ catalog }: { catalog: Catalog }) {
       </div>
     );
   if (!article) return <div className="container guide-page" aria-busy="true" />;
-  const related = catalog.tours.filter((x) => article.tourIds.includes(x.id));
+  const related = openFirst(catalog.tours.filter((x) => article.tourIds.includes(x.id)));
   return (
     <>
       <div className="container breadcrumb">

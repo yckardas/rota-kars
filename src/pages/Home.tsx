@@ -1,29 +1,25 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { responsive } from "../lib/images";
-import { Link, useLang, useLocalNavigate } from "../lib/i18n";
+import { Link, useLang } from "../lib/i18n";
 import {
   ArrowRight,
   Play,
   Armchair,
   BadgeCheck,
-  CalendarDays,
   CreditCard,
   ExternalLink,
   ChevronRight,
   Image as ImageIcon,
   MapPin,
-  Search,
   Snowflake,
   Star,
-  Users,
 } from "lucide-react";
 import type { Catalog, ReviewsResponse, Story } from "../lib/types";
 import { currency, hasPrice } from "../lib/types";
 import { useClearOfLaunchers } from "../lib/launchers";
 import { api } from "../lib/api";
-import { today } from "../lib/types";
 import { TourCard } from "../components/TourCard";
-import { distinctPlacesFirst, heroTours } from "../lib/place";
+import { distinctPlacesFirst, heroTours, openFirst } from "../lib/place";
 import { develop, watchReveal } from "../lib/reveal";
 import { Reviews, GoogleMark } from "../components/Reviews";
 import { whatsappLink } from "../lib/whatsapp";
@@ -32,6 +28,7 @@ import { StoryPlayer } from "../components/StoryPlayer";
 import { InstagramSection } from "../components/InstagramSection";
 import { FeatureMarquee } from "../components/FeatureMarquee";
 import { HeroSlider } from "../components/HeroSlider";
+import { HeroSearch } from "../components/HeroSearch";
 import { CategoryBadges } from "../components/CategoryBadges";
 import { UpcomingDepartures } from "../components/UpcomingDepartures";
 import { filterTone, toneStyle } from "../lib/tone";
@@ -40,7 +37,6 @@ export function Home({ catalog }: { catalog: Catalog }) {
   const [filter, setFilter] = useState("Tüm rotalar"),
     [filtered, setFiltered] = useState(false),
     [story, setStory] = useState<Story | null>(null),
-    [searchTour, setSearchTour] = useState(""),
     [rating, setRating] = useState<{
       rating: number | null;
       total: number | null;
@@ -58,24 +54,12 @@ export function Home({ catalog }: { catalog: Catalog }) {
   }, []);
   const previewTour = catalog.tours.find((t) => t.salesOpen),
     previewVehicle = previewTour?.vehicle || catalog.vehicle;
-  // Tek rezervasyonda en fazla 4 yolcu; büyük gruplar acenteyle planlanır.
-  const guestLimit = Math.min(
-    4,
-    catalog.tours.find((t) => t.id === searchTour)?.vehicle.sellableSeats ||
-      Math.max(
-        ...catalog.tours
-          .filter((t) => t.salesOpen)
-          .map((t) => t.vehicle.sellableSeats),
-        1,
-      ),
-  );
   const { t, locale } = useLang();
   const heroCard = useRef<HTMLFormElement>(null);
   useClearOfLaunchers(heroCard);
   // Vitrinde önce satışta olan rotalar; yeterince yoksa bütün rotalardan seçilir.
   const onSale = catalog.tours.filter((tour) => tour.salesOpen),
     insetTours = heroTours(onSale.length >= 3 ? onSale : catalog.tours);
-  const navigate = useLocalNavigate();
   // Bölümler ekrana girince yükselerek gelir (renkli.css, .rk-reveal).
   useEffect(() => {
     const stops = Array.from(
@@ -90,60 +74,10 @@ export function Home({ catalog }: { catalog: Catalog }) {
     setFilter(filtered && filter === f ? "Tüm rotalar" : f);
     document.getElementById("turlar")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
-  function search(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const f = new FormData(e.currentTarget),
-      tour = String(f.get("tour"));
-    // Talep toplamadaki turda koltuk seçilmez: tur sayfasındaki ön kayda gidilir.
-    if (tour && catalog.tours.find((x) => x.id === tour)?.mode === "demand") navigate(`/turlar/${tour}`);
-    else if (tour)
-      navigate(
-        `/rezervasyon/${tour}?date=${f.get("date") || ""}&guests=${f.get("guests") || 1}`,
-      );
-    else navigate("/turlar");
-  }
   return (
     <>
       <HeroSlider tours={insetTours} title={t("Kars’tan selamlar.")}>
-        <form className="rk-search" onSubmit={search} ref={heroCard}>
-          <label className="rk-field rk-field-tour">
-            <MapPin size={20} aria-hidden="true" />
-            <span>{t("Rota")}</span>
-            <select
-              name="tour"
-              value={searchTour}
-              onChange={(e) => setSearchTour(e.target.value)}
-            >
-              <option value="">{t("Nereye gitmek istersiniz?")}</option>
-              {catalog.tours
-                .filter((t) => !t.inquiryOnly)
-                .map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <label className="rk-field">
-            <CalendarDays size={20} aria-hidden="true" />
-            <span>{t("Tarih")}</span>
-            <input type="date" name="date" min={today()} />
-          </label>
-          <label className="rk-field">
-            <Users size={20} aria-hidden="true" />
-            <span>{t("Yolcu")}</span>
-            <select name="guests">
-              {Array.from({ length: guestLimit }, (_, i) => (
-                <option key={i} value={i + 1}>
-                  {t(i === 0 ? "1 kişi" : "{n} kişi", { n: i + 1 })}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button className="btn rk-search-go" type="submit">
-            <Search size={19} aria-hidden="true" /> {t("Rotamı bul")}
-          </button>
-        </form>
+        <HeroSearch catalog={catalog} formRef={heroCard} />
         <p className="rk-trust">
           <span>
             <BadgeCheck size={16} aria-hidden="true" />
@@ -217,8 +151,9 @@ export function Home({ catalog }: { catalog: Catalog }) {
           className={"tour-grid" + (filtered ? " is-refiltered" : "")}
           key={filter}
         >
-          {/* Bütün turlar ana sayfada; aynı yere giden ikinci, üçüncü tur sona kalır. */}
-          {distinctPlacesFirst(catalog.tours)
+          {/* Bütün turlar ana sayfada: satışta olanlar üstte, kapalılar altta; aynı yere
+              giden ikinci, üçüncü tur kendi grubunun sonuna kalır. */}
+          {openFirst(distinctPlacesFirst(catalog.tours))
             // Kategoriler /en altında katalogda İngilizce gelir.
             .filter(
               (tour) =>
