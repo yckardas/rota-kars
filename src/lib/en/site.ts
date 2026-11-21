@@ -638,4 +638,48 @@ export const site: Record<string, string> = {
     "Routes in this article",
   "Yola çıkmadan okuyun.":
     "Read before you go.",
+  "Tarih seçin":
+    "Pick a date",
+  "Satışa kapalı":
+    "Not on sale",
+  "Rotalar":
+    "Routes",
+  "“{q}” için hazır bir turumuz yok.":
+    "We have no ready-made tour for “{q}”.",
+  "Sizin için planlayalım: bize yazın, dönüş yapalım.":
+    "Let us plan it for you: write to us and we’ll get back to you.",
+  "Listede olmayan bir rota mı?":
+    "A route that isn’t on the list?",
+  "WhatsApp’tan yazın":
+    "Message us on WhatsApp",
+  "Merhaba, {place} için tur düşünüyorum. Bilgi alabilir miyim?":
+    "Hello, I’m thinking of a tour to {place}. Could you tell me more?",
+  "Merhaba, listede olmayan bir rota için bilgi almak istiyorum.":
+    "Hello, I’d like information about a route that isn’t on your list.",
+  "Merhaba, kalabalık bir grup için tur planlamak istiyorum.":
+    "Hello, I’d like to plan a tour for a large group.",
+  "İstenen rota: {place}":
+    "Requested route: {place}",
+  "Önceki ay":
+    "Previous month",
+  "Sonraki ay":
+    "Next month",
+  "Tarihi temizle":
+    "Clear date",
+  "Sefer günü":
+    "Departure day",
+  "Yolcu sayısı":
+    "Number of travellers",
+  "Tek rezervasyonda en fazla {n} kişi.":
+    "Up to {n} people per booking.",
+  "Daha kalabalık gruplar için bize yazın":
+    "Larger group? Write to us",
+  "Azalt":
+    "Fewer",
+  "Artır":
+    "More",
+  "Çıldır Gölü’nün buzunda atlı kızak":
+    "A horse sleigh on frozen Lake Çıldır",
+  "Ani’de Aziz Gregor Kilisesi":
+    "Church of St Gregory at Ani",
 };

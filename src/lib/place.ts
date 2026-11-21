@@ -22,6 +22,16 @@ export function distinctPlacesFirst<T extends Pick<Tour, "name" | "location">>(t
   }
   return [...first, ...rest];
 }
+// Aramada "cildir" yazan da Çıldır'ı bulsun: küçük harf, Türkçe harfler sadeleşir.
+export const searchKey = (s: string) =>
+  s
+    .toLocaleLowerCase("tr")
+    .replace(/[çğıöşüâîû]/g, (c) => "cgiosuaiu"["çğıöşüâîû".indexOf(c)])
+    .trim();
+// Satışta olan turlar önce, satışa kapalılar sonra; her grupta sıra korunur.
+export function openFirst<T extends Pick<Tour, "salesOpen">>(tours: T[]): T[] {
+  return [...tours.filter((t) => t.salesOpen), ...tours.filter((t) => !t.salesOpen)];
+}
 // Ana sayfanın açılış kartındaki dört küçük görüntü: satışı açık turlardan dört ayrı yer.
 // Aralarında yurt dışı tur yoksa sonuncunun yerine ilk yurt dışı tur gelir.
 export function heroTours<T extends Pick<Tour, "name" | "location" | "inquiryOnly" | "abroad">>(tours: T[]): T[] {

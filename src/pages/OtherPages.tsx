@@ -273,7 +273,7 @@ export function Lookup({ catalog }: { catalog: Catalog }) {
     </div>
   );
 }
-export function About() {
+export function About({ catalog }: { catalog: Catalog }) {
   const [request, setRequest] = useState<"private-tour" | "vehicle" | null>(
     null,
   );
@@ -314,12 +314,33 @@ export function About() {
             </button>
           </div>
         </div>
-        <img
-          src="/images/kars.webp"
-          alt={t("Ani’de kış manzarası")}
-          loading="lazy"
-          decoding="async"
-        />
+        {/* Güncel, canlı fotoğraflardan kurulu kolaj: Çıldır'da atlı kızak, üstünde Ani'den
+            bir kare ve kuruluş yılı etiketi. */}
+        <figure className="rk-about-collage">
+          <img
+            className="rk-about-main"
+            {...responsive(
+              "/images/tours/cildir-atli-kizak.webp",
+              "(max-width: 950px) 100vw, 46vw",
+            )}
+            alt={t("Çıldır Gölü’nün buzunda atlı kızak")}
+            width="1400"
+            height="934"
+            decoding="async"
+          />
+          <img
+            className="rk-about-inset"
+            {...responsive("/images/tours/ani-aziz-gregor.webp", "260px")}
+            alt={t("Ani’de Aziz Gregor Kilisesi")}
+            width="1302"
+            height="1208"
+            loading="lazy"
+            decoding="async"
+          />
+          <span className="rk-about-badge">
+            {t("{year}’dan beri Kars’ta", { year: catalog.business.founded })}
+          </span>
+        </figure>
       </section>
       <section className="about-note">
         <div className="container">

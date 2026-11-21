@@ -230,7 +230,7 @@ function App() {
           <Route path="kesfet/:slug" element={<Discover catalog={shown!} />} />
           <Route path="rehber" element={<Guide />} />
           <Route path="rehber/:slug" element={<ArticlePage catalog={shown!} />} />
-          <Route path="hakkimizda" element={<About />} />
+          <Route path="hakkimizda" element={<About catalog={shown!} />} />
           <Route path="iletisim" element={<Contact catalog={shown!} />} />
           <Route
             path="bilgilendirme"
