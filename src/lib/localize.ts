@@ -12,6 +12,11 @@ export function localizeCatalog(catalog: Catalog): Catalog {
     services: catalog.services.map((s) => ({ ...s, ...(en.services?.[s.id] || {}) })),
     fleet: { ...catalog.fleet, ...(en.fleet || {}) },
     cancellationPolicy: en.cancellationPolicy || catalog.cancellationPolicy,
+    // Duyurunun İngilizcesi yazılmamışsa /en altında şerit gösterilmez.
+    announcement:
+      catalog.announcement && catalog.announcement.textEn
+        ? { ...catalog.announcement, text: catalog.announcement.textEn }
+        : null,
     vehicle: { ...catalog.vehicle, ...(en.vehicle || {}) },
     tours: catalog.tours.map((t) => {
       const x = en.tours?.[t.id];

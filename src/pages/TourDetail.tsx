@@ -14,13 +14,15 @@ import {
   ArrowRight,
   Info,
   CalendarDays,
+  Expand,
 } from "lucide-react";
 import { Reviews } from "../components/Reviews";
 import { RequestForm } from "../components/RequestForm";
 import { api } from "../lib/api";
 import { telHref } from "../lib/phone";
 import { useClearOfLaunchers } from "../lib/launchers";
-import { Postmark } from "../components/Postmark";
+import { tourTone, toneStyle } from "../lib/tone";
+import { Lightbox } from "../components/Lightbox";
 import { enteredViaTransition } from "../lib/tour-transition";
 import { TransferOffer } from "../components/TourExtras";
 import { discoverFor } from "../lib/discover";
@@ -50,12 +52,14 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
     // Bu rotayla ilişkilendirilmiş rehber yazıları (panelden).
     [articles, setArticles] = useState<Article[]>([]),
     [activeImage, setActiveImage] = useState(0),
+    // Tam ekran fotoğraf görüntüleyicide açık olan fotoğraf (kapalıyken null).
+    [zoom, setZoom] = useState<number | null>(null),
     // Galeride görüntü değişince yeni fotoğraf yerine "oturur" (ilk açılışta değil).
     [swapped, setSwapped] = useState(false),
     // Karttan geçişle gelindiyse fotoğraf zaten akarak yerine oturdu; kartın giriş
     // hareketi ayrıca oynamaz (geçiş bitince yeniden başlamaz).
     [viaTransition] = useState(enteredViaTransition);
-  // Rota çizgisi ve ilk hareket damgası ekrana girince canlanır.
+  // Rota çizgisi ve fiyat kartı ekrana girince canlanır.
   const routeLine = useReveal<HTMLDivElement>(),
     stampRow = useReveal<HTMLDivElement>();
   const strip = useRef<HTMLDivElement>(null),
@@ -116,6 +120,8 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
     "https://www.google.com/maps/search/?api=1&query=" +
     encodeURIComponent(t.location + " " + t.name);
   const coverImage = t.gallery[activeImage] || t.image;
+  // Sayfa turun türünün rengini alır (rota renkleri, src/lib/tone.ts).
+  const tone = toneStyle(tourTone(t));
   return (
     <>
       <div className="container breadcrumb">
@@ -130,6 +136,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
           "container kp-detail-card" + (viaTransition ? " is-vt-entry" : "")
         }
         aria-labelledby="tour-title"
+        style={tone}
       >
         <div className="kp-card">
           <div
@@ -149,7 +156,17 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
                 alt={t.name}
                 width="1280"
                 height="720"
+                onClick={() => setZoom(activeImage)}
               />
+              <button
+                type="button"
+                className="rk-zoom"
+                onClick={() => setZoom(activeImage)}
+                aria-label={tx("Fotoğrafları büyüt")}
+              >
+                <Expand size={17} aria-hidden="true" />
+                <span>{tx("Büyüt")}</span>
+              </button>
               <div className="kp-title">
                 <h1 id="tour-title" style={viaTransition ? { viewTransitionName: "tour-title" } : undefined}>
                   {t.name}
@@ -245,7 +262,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
           </p>
         </div>
       </section>
-      <div className="container detail-layout">
+      <div className="container detail-layout" style={tone}>
         <div className="detail-content">
           <section>
             <h2>{tx("Bu yolculukta sizi neler bekliyor?")}</h2>
@@ -412,33 +429,21 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
           </section>
         </div>
         <aside className="booking-aside">
-          <div className="kp-stamp-row kp-await" ref={stampRow}>
-            <div className="kp-stamp">
-              <div className="booking-price">
-                <span className="kp-stamp-place">{t.name}</span>
-                {hasPrice(startingPrice) ? (
-                  <>
-                    <strong>{currency(startingPrice)}</strong>
-                    <span>{demand ? tx("tahmini kişi başı fiyat") : tx("kişi başı başlangıç fiyatı")}</span>
-                  </>
-                ) : (
-                  <>
-                    <strong className="booking-price-ask">{tx("Fiyat için arayın")}</strong>
-                    <span>{tx("Fiyat, tur tarihi kesinleşince duyurulur.")}</span>
-                  </>
-                )}
-              </div>
+          <div className="rk-price-card" ref={stampRow}>
+            <div className="booking-price">
+              <span className="rk-price-place">{t.name}</span>
+              {hasPrice(startingPrice) ? (
+                <>
+                  <strong>{currency(startingPrice)}</strong>
+                  <span>{demand ? tx("tahmini kişi başı fiyat") : tx("kişi başı başlangıç fiyatı")}</span>
+                </>
+              ) : (
+                <>
+                  <strong className="booking-price-ask">{tx("Fiyat için arayın")}</strong>
+                  <span>{tx("Fiyat, tur tarihi kesinleşince duyurulur.")}</span>
+                </>
+              )}
             </div>
-            {!t.inquiryOnly && first && (
-              <Postmark
-                date={first.date}
-                time={first.start_time}
-                label={tx("İlk hareket {date}, {time}", {
-                  date: dateLabel(first.date),
-                  time: first.start_time,
-                })}
-              />
-            )}
           </div>
           {demand ? (
             <div className="demand-note">
@@ -523,6 +528,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
       <Reviews tourId={t.id} />
       <div
         className={"tour-mobile-booking" + (stripVisible ? " is-tucked" : "")}
+        style={tone}
         aria-hidden={stripVisible || undefined}
       >
         <div>
@@ -531,6 +537,14 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
         </div>
         {cta("btn", true)}
       </div>
+      {zoom !== null && (
+        <Lightbox
+          images={t.gallery.length ? t.gallery : [t.image]}
+          start={zoom}
+          alt={t.name}
+          onClose={() => setZoom(null)}
+        />
+      )}
       {request && (
         <RequestForm kind="private-tour" onClose={() => setRequest(false)} />
       )}

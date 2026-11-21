@@ -106,6 +106,28 @@ test("business contact info: owner only, validated, survives a restart", async (
   await call("/admin/content/business", { body: current, cookie: owner });
 });
 
+test("announcement strip: owner only, safe links, shown only when on", async (t) => {
+  const { store, call, owner, ops } = await fixture(t);
+  const on = { enabled: true, text: "Yılbaşı Van turu satışta", textEn: "New Year Van tour on sale", link: "/turlar/van" };
+  assert.equal((await call("/catalog")).json.announcement, null);
+  assert.equal((await call("/admin/content/announcement", { body: on, cookie: ops })).status, 403);
+  assert.equal((await call("/admin/content/announcement", { body: { ...on, link: "javascript:alert(1)" }, cookie: owner })).status, 400);
+  assert.equal((await call("/admin/content/announcement", { body: { ...on, link: "//evil.example" }, cookie: owner })).status, 400);
+  assert.equal((await call("/admin/content/announcement", { body: { ...on, text: "" }, cookie: owner })).status, 400);
+  assert.equal((await call("/admin/content/announcement", { body: on, cookie: owner })).status, 200);
+  assert.deepEqual((await call("/catalog")).json.announcement, { text: on.text, textEn: on.textEn, link: on.link });
+  // Yeniden başlatma: kayıt açılışta yeniden uygulanır.
+  const { announcement } = await import("../server/content.mjs");
+  announcement.enabled = false;
+  await store.content.apply();
+  assert.equal(announcement.enabled, true);
+  // Kapatılınca metin saklanır ama sitede görünmez.
+  assert.equal((await call("/admin/content/announcement", { body: { ...on, enabled: false }, cookie: owner })).status, 200);
+  assert.equal((await call("/catalog")).json.announcement, null);
+  assert.equal((await call("/admin/content/announcement", { cookie: owner })).json.current.text, on.text);
+  await call("/admin/content/announcement", { body: { enabled: false, text: "", textEn: "", link: "" }, cookie: owner });
+});
+
 test("monthly CSV opens in Excel (BOM, semicolons) and neutralises formulas", async (t) => {
   const { store, owner, root } = await fixture(t);
   const d = await store.departures.save({

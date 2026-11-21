@@ -4,6 +4,8 @@ import { TourCard } from "../components/TourCard";
 import type { Catalog } from "../lib/types";
 import { useLang } from "../lib/i18n";
 import { TOUR_FILTERS, matchesTourFilter } from "../lib/tourFilters";
+import { filterTone, toneStyle } from "../lib/tone";
+import { CategoryBadges } from "../components/CategoryBadges";
 export function Tours({ catalog }: { catalog: Catalog }) {
   const [q, setQ] = useState(""),
     [category, setCategory] = useState("Tümü"),
@@ -19,13 +21,22 @@ export function Tours({ catalog }: { catalog: Catalog }) {
   );
   return (
     <>
-      <section className="page-intro container">
+      {/* Renkli başlık bandı: başlık ve tür rozetleri; rozet seçimi aşağıdaki filtreyle aynıdır. */}
+      <section className="page-intro container rk-tours-hero">
         <h1>{t("Bir sonraki rotanız.")}</h1>
         <p>
           {t(
             "Kısa bir kaçamak, kışın peşinde bir gün veya yeni bir şehrin hikâyesi.",
           )}
         </p>
+        <CategoryBadges
+          tours={catalog.tours}
+          active={category === "Tümü" ? null : category}
+          onPick={(f) => {
+            setFiltered(true);
+            setCategory(category === f ? "Tümü" : f);
+          }}
+        />
       </section>
       <section className="container catalog-section">
         <div className="catalog-controls">
@@ -43,6 +54,7 @@ export function Tours({ catalog }: { catalog: Catalog }) {
             {["Tümü", ...TOUR_FILTERS].map((c) => (
               <button
                 key={c}
+                style={toneStyle(filterTone(c))}
                 className={category === c ? "active" : ""}
                 onClick={() => {
                   setFiltered(true);

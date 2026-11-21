@@ -29,6 +29,7 @@ type BusinessFields = Record<
   "phone" | "mobile" | "email" | "address" | "hours" | "whatsapp" | "whatsappLabel" | "instagram" | "facebook" | "mapsUrl",
   string
 >;
+type AnnouncementFields = { enabled: boolean; text: string; textEn: string; link: string };
 type Info<T> = { current: T; defaults: T; edited: boolean; updatedAt: number | null; updatedBy: string | null };
 
 const lines = (s: string) =>
@@ -64,10 +65,13 @@ export function ContentManager({
             </option>
           ))}
           {isOwner && <option value="business">İletişim bilgileri</option>}
+          {isOwner && <option value="announcement">Duyuru şeridi</option>}
         </select>
       </label>
       {section === "business" ? (
         <BusinessEditor key="business" onSaved={onSaved} />
+      ) : section === "announcement" ? (
+        <AnnouncementEditor key="announcement" onSaved={onSaved} />
       ) : (
         <TourEditor key={section} id={section} onSaved={onSaved} />
       )}
@@ -381,6 +385,98 @@ function BusinessEditor({ onSaved }: { onSaved: () => void }) {
         {field("mapsUrl", "Google Haritalar bağlantısı", { type: "url" })}
         {field("instagram", "Instagram bağlantısı", { type: "url" })}
         {field("facebook", "Facebook bağlantısı", { type: "url" })}
+      </div>
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      {notice && (
+        <p className="notice-success" role="status">
+          <Check size={16} /> {notice}
+        </p>
+      )}
+      <button className="btn" disabled={busy}>
+        {busy ? <LoaderCircle className="spin" size={16} /> : <Check size={16} />}
+        Kaydet
+      </button>
+    </form>
+  );
+}
+
+// Sitenin en üstündeki duyuru şeridi: kampanya, yeni rota, bayram programı gibi kısa haberler.
+function AnnouncementEditor({ onSaved }: { onSaved: () => void }) {
+  const [info, setInfo] = useState<Info<AnnouncementFields> | null>(null),
+    [f, setF] = useState<AnnouncementFields | null>(null),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(""),
+    [notice, setNotice] = useState("");
+  useEffect(() => {
+    api<Info<AnnouncementFields>>("/admin/content/announcement")
+      .then((d) => {
+        setInfo(d);
+        setF(d.current);
+      })
+      .catch((e) => setError(e.message));
+  }, []);
+  if (!f || !info) return error ? <p className="error">{error}</p> : null;
+  return (
+    <form
+      className="admin-editor content-editor"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setBusy(true);
+        setError("");
+        setNotice("");
+        try {
+          const d = await post<Info<AnnouncementFields>>("/admin/content/announcement", f);
+          setInfo(d);
+          setF(d.current);
+          onSaved();
+          setNotice(d.current.enabled ? "Duyuru sitede yayında." : "Duyuru kapatıldı; sitede görünmüyor.");
+        } catch (err) {
+          setError((err as Error).message);
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <div className="content-head">
+        <h2>Duyuru şeridi</h2>
+        <Saved info={info} />
+      </div>
+      <p className="muted">
+        Sitenin en üstünde, menünün üzerinde renkli bir şerit olarak görünür. Ziyaretçi kapatırsa o oturumda yeniden
+        çıkmaz; metni değiştirdiğinizde yeniden görünür. İngilizce metin boşsa İngilizce sayfada şerit gösterilmez.
+      </p>
+      <label className="checkbox-label">
+        <input type="checkbox" checked={f.enabled} onChange={(e) => setF({ ...f, enabled: e.target.checked })} />
+        Duyuru sitede görünsün
+      </label>
+      <div className="form-grid">
+        <label className="field">
+          Duyuru metni (Türkçe, en çok 140 karakter)
+          <input
+            value={f.text}
+            maxLength={140}
+            required={f.enabled}
+            placeholder="Örn. Yılbaşı Van turu satışta: son 6 koltuk"
+            onChange={(e) => setF({ ...f, text: e.target.value })}
+          />
+        </label>
+        <label className="field">
+          İngilizce metin (isteğe bağlı)
+          <input value={f.textEn} maxLength={140} onChange={(e) => setF({ ...f, textEn: e.target.value })} />
+        </label>
+        <label className="field">
+          Bağlantı (isteğe bağlı)
+          <input
+            value={f.link}
+            maxLength={300}
+            placeholder="/turlar/van ya da https://…"
+            onChange={(e) => setF({ ...f, link: e.target.value })}
+          />
+        </label>
       </div>
       {error && (
         <p className="error" role="alert">

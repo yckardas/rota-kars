@@ -1,4 +1,5 @@
-// Panelden düzenlenen site içerikleri: tur metinleri/fotoğrafları ve iletişim bilgileri.
+// Panelden düzenlenen site içerikleri: tur metinleri/fotoğrafları, iletişim bilgileri ve
+// sitenin en üstündeki duyuru şeridi.
 // Varsayılanlar catalog.mjs'de kalır; düzenlemeler "site_content" koleksiyonunda tutulur
 // ve açılışta/kayıtta katalogdaki nesnelerin üstüne yazılır. Böylece site, SEO etiketleri,
 // sohbet botu ve bildirimler aynı güncel metni kullanır. (Tek sunucu örneği varsayılır.)
@@ -41,6 +42,11 @@ export const BUSINESS_FIELDS = [
   "facebook",
   "mapsUrl",
 ];
+// Sitenin en üstündeki duyuru şeridi (kampanya, yeni rota, bayram programı...).
+// Kapalıyken ya da metin boşken sitede görünmez.
+export const ANNOUNCEMENT_FIELDS = ["enabled", "text", "textEn", "link"];
+const DEFAULT_ANNOUNCEMENT = { enabled: false, text: "", textEn: "", link: "" };
+export const announcement = structuredClone(DEFAULT_ANNOUNCEMENT);
 const pick = (obj, keys) => Object.fromEntries(keys.filter((k) => obj[k] !== undefined).map((k) => [k, structuredClone(obj[k])]));
 const DEFAULT_TOURS = new Map(
   tours.map((t) => [t.id, { minParticipants: 0, minNoticeHours: 0, ...pick(t, TOUR_FIELDS) }]),
@@ -90,6 +96,7 @@ export async function createContent(db, { clock = Date.now } = {}) {
     for (const tour of tours)
       Object.assign(tour, structuredClone(DEFAULT_TOURS.get(tour.id)), docs.get("tour:" + tour.id)?.fields || {});
     Object.assign(business, structuredClone(DEFAULT_BUSINESS), docs.get("business")?.fields || {});
+    Object.assign(announcement, structuredClone(DEFAULT_ANNOUNCEMENT), docs.get("announcement")?.fields || {});
   }
   await apply();
   const info = async (key, current, defaults) => {
@@ -150,6 +157,19 @@ export async function createContent(db, { clock = Date.now } = {}) {
       });
       await apply();
       return this.business();
+    },
+    async announcement() {
+      return info("announcement", pick(announcement, ANNOUNCEMENT_FIELDS), DEFAULT_ANNOUNCEMENT);
+    },
+    async saveAnnouncement(fields, actor) {
+      await db.upsert("site_content", "announcement", {
+        id: "announcement",
+        fields: pick(fields, ANNOUNCEMENT_FIELDS),
+        updated_at: clock(),
+        updated_by: actor?.name || null,
+      });
+      await apply();
+      return this.announcement();
     },
   };
 }
