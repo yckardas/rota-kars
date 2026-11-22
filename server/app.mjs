@@ -145,7 +145,7 @@ const bookingSchema = z.object({
   transfer: transferChoiceSchema.optional(),
 });
 // Sitedeki görseller: paketlenmiş /images dosyaları veya bucket'a yüklenen /media dosyaları.
-const localImage = /^(\/images\/[\w.-]+|\/media\/[a-f0-9-]{36}\.(jpg|png|webp|avif))$/;
+const localImage = /^(\/images\/(?:[\w-]+\/)*[\w-][\w.-]*|\/media\/[a-f0-9-]{36}\.(jpg|png|webp|avif))$/;
 const localVideo = /^(\/videos\/[A-Za-z0-9_-]+\.(mp4|webm)|\/media\/[a-f0-9-]{36}\.(mp4|webm))$/;
 // Limitler için istemci anahtarı: IPv6'da tek kişi genelde bütün bir /64 bloğa
 // sahiptir; adres değiştirerek limit aşılmasın diye /64 öneki kullanılır.
@@ -200,6 +200,46 @@ const validationMessage = (err) => {
     ? "Bilgileri kontrol edin: " + passenger + ". yolcunun " +
         (key === "passengers" ? "ad soyadı" : FIELD_LABELS[key]) + " eksik veya hatalı."
     : "Bilgileri kontrol edin: " + FIELD_LABELS[key] + " eksik veya hatalı.";
+};
+// Panelde tur kaydı reddedilirse hangi alanın neden reddedildiği yazılır.
+const TOUR_LABELS = {
+  name: "Tur adı",
+  subtitle: "Alt başlık",
+  category: "Kategori",
+  duration: "Süre",
+  location: "Güzergâh",
+  season: "Sezon",
+  departure: "Hareket saati",
+  end: "Dönüş saati",
+  price: "Başlayan fiyat",
+  summary: "Özet",
+  image: "Kapak fotoğrafı",
+  gallery: "Galeri",
+  included: "Fiyata dahil",
+  excluded: "Fiyata dahil değil",
+  itinerary: "Program",
+  note: "Not",
+  minParticipants: "Asgari katılımcı sayısı",
+  minNoticeHours: "İptal bildirim süresi",
+};
+const STEP_LABELS = { time: "saati", title: "başlığı", text: "açıklaması" };
+const LIST_ITEMS = { gallery: "fotoğraf", included: "madde", excluded: "madde", itinerary: "adım" };
+const tourIssueMessage = (issue) => {
+  const [field, index, part] = issue.path;
+  if (issue.code === "custom" || !TOUR_LABELS[field]) return issue.message;
+  let label = TOUR_LABELS[field];
+  if (index !== undefined) label += `, ${index + 1}. ${LIST_ITEMS[field]}`;
+  if (STEP_LABELS[part]) label += " " + STEP_LABELS[part];
+  if (issue.code === "invalid_format") return `${label}: ${issue.message}`;
+  if (issue.origin === "string" && issue.code === "too_big")
+    return `${label} en fazla ${issue.maximum} karakter olabilir.`;
+  if (issue.origin === "string" && issue.code === "too_small")
+    return issue.minimum === 1
+      ? `${label} boş bırakılamaz.`
+      : `${label} en az ${issue.minimum} karakter olmalı.`;
+  if (issue.origin === "array" && issue.code === "too_big")
+    return `${label} en fazla ${issue.maximum} ${LIST_ITEMS[field]} olabilir.`;
+  return `${label} geçersiz.`;
 };
 // Herkese açık sefer bilgisinde rehberin adı/telefonu yer almaz (yalnız yönetim ve bilette).
 // Plaka da yalnız panelde: halka açık seferde araç adı ve yılı kalır.
@@ -1943,7 +1983,7 @@ export function createApp(
     location: line(80),
     season: line(40),
     departure: line(20),
-    end: line(20),
+    end: line(40),
     price: z.number().int().min(0).max(100000000),
     summary: line(1500).min(10),
     image: imagePath,
@@ -1951,7 +1991,7 @@ export function createApp(
     included: z.array(line(160).min(1)).max(20),
     excluded: z.array(line(160).min(1)).max(20),
     itinerary: z
-      .array(z.object({ time: line(20), title: line(80).min(1), text: line(600) }))
+      .array(z.object({ time: line(40), title: line(80).min(1), text: line(600) }))
       .max(15),
     note: line(600),
     minParticipants: z.number().int().min(0).max(60).default(0),
@@ -1960,6 +2000,13 @@ export function createApp(
     message: "Asgari katılımcı sayısı girildiyse iptal bildirim süresi de girilmeli.",
     path: ["minNoticeHours"],
   });
+  const parseTourContent = (body) => {
+    const result = tourContent.safeParse(body);
+    if (result.success) return result.data;
+    throw new z.ZodError(
+      result.error.issues.map((i) => ({ ...i, code: "custom", message: tourIssueMessage(i) })),
+    );
+  };
   const tourParam = (q) => z.enum(tours.map((t) => t.id)).parse(q.params.id);
   app.get(
     "/api/admin/content/tours/:id",
@@ -1969,7 +2016,7 @@ export function createApp(
   app.post(
     "/api/admin/content/tours/:id",
     requireAdmin,
-    route(async (q, r) => r.json(await store.content.saveTour(tourParam(q), tourContent.parse(q.body), q.admin))),
+    route(async (q, r) => r.json(await store.content.saveTour(tourParam(q), parseTourContent(q.body), q.admin))),
   );
   app.post(
     "/api/admin/content/tours/:id/reset",

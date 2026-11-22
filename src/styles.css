@@ -7441,7 +7441,7 @@ input[type="radio"] {
 }
 .itinerary-row {
   display: grid;
-  grid-template-columns: 90px 1fr;
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
   gap: 8px;
   padding-bottom: 12px;
   border-bottom: 1px solid #eef0ea;
@@ -7458,6 +7458,9 @@ input[type="radio"] {
 @media (max-width: 760px) {
   .content-editor .form-grid {
     grid-template-columns: 1fr;
+  }
+  .itinerary-row {
+    grid-template-columns: minmax(0, 1fr);
   }
   .content-cover img {
     width: 100%;
