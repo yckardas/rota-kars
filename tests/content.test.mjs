@@ -196,3 +196,70 @@ test("English site drops a stale translation for fields edited in the panel", as
   await call("/admin/content/tours/ani-cildir/reset", { body: {}, cookie: ops });
   assert.equal((await enTour()).name, original.name, "varsayılana dönünce çeviri geri gelir");
 });
+
+test("every tour's built-in content can be saved from the panel unchanged", async (t) => {
+  const { store, call, ops } = await fixture(t);
+  const { tours } = await import("../server/catalog.mjs");
+  const rejected = [];
+  for (const { id } of tours) {
+    const { defaults } = (await call(`/admin/content/tours/${id}`, { cookie: ops })).json;
+    const saved = await call(`/admin/content/tours/${id}`, { body: defaults, cookie: ops });
+    if (saved.status !== 200) rejected.push([id, saved.json.details]);
+    await store.content.resetTour(id);
+  }
+  assert.deepEqual(rejected, []);
+});
+
+test("itinerary time and return time accept 40 characters, not 41", async (t) => {
+  const { store, call, ops } = await fixture(t);
+  const { current } = (await call("/admin/content/tours/ani-cildir", { cookie: ops })).json;
+  const save = (patch) => call("/admin/content/tours/ani-cildir", { body: { ...current, ...patch }, cookie: ops });
+  const step = (time) => [{ time, title: "Buluşma", text: "" }];
+  assert.equal((await save({ itinerary: step("a".repeat(40)) })).status, 200, "saat 40");
+  assert.equal((await save({ end: "a".repeat(40) })).status, 200, "dönüş 40");
+  assert.equal((await save({ itinerary: step("a".repeat(41)) })).status, 400, "saat 41");
+  assert.equal((await save({ end: "a".repeat(41) })).status, 400, "dönüş 41");
+});
+
+test("a rejected tour save names the field, the row and the limit", async (t) => {
+  const { call, ops } = await fixture(t);
+  const { current } = (await call("/admin/content/tours/ani-cildir", { cookie: ops })).json;
+  const step = { time: "08:00", title: "Buluşma", text: "" };
+  for (const [patch, message, field] of [
+    [{ itinerary: [step, { ...step, time: "a".repeat(41) }] }, "Program, 2. adım saati en fazla 40 karakter olabilir.", "itinerary.1.time"],
+    [{ itinerary: [{ ...step, title: "" }] }, "Program, 1. adım başlığı boş bırakılamaz.", "itinerary.0.title"],
+    [{ included: ["Rehber", "a".repeat(161)] }, "Fiyata dahil, 2. madde en fazla 160 karakter olabilir.", "included.1"],
+    [{ excluded: Array(21).fill("Yemek") }, "Fiyata dahil değil en fazla 20 madde olabilir.", "excluded"],
+    [{ name: "ab" }, "Tur adı en az 3 karakter olmalı.", "name"],
+    [{ price: -1 }, "Başlayan fiyat geçersiz.", "price"],
+    [{ gallery: ["/gecersiz.gif"] }, "Galeri, 1. fotoğraf: Geçersiz görsel yolu.", "gallery.0"],
+    [{ minParticipants: 8, minNoticeHours: 0 }, "Asgari katılımcı sayısı girildiyse iptal bildirim süresi de girilmeli.", "minNoticeHours"],
+  ]) {
+    const res = await call("/admin/content/tours/ani-cildir", { body: { ...current, ...patch }, cookie: ops });
+    assert.equal(res.status, 400);
+    assert.equal(res.json.message, message);
+    assert.equal(res.json.details[0].field, field);
+  }
+});
+
+test("built-in tour photos are valid Instagram covers and hotel photos", async (t) => {
+  const { call, owner } = await fixture(t);
+  const { tours } = await import("../server/catalog.mjs");
+  const post = (cover) =>
+    call("/admin/instagram", {
+      body: { title: "Kapak", permalink: "https://www.instagram.com/reel/KAPAK12345/", cover, position: 9, active: false },
+      cookie: owner,
+    });
+  const hotel = (image) =>
+    call("/admin/hotels", {
+      body: { name: "Deneme Otel", location: "Kars", description: "Deneme otel açıklaması", amenities: [], image, active: false },
+      cookie: owner,
+    });
+  // Instagram formu varsayılan kapak olarak ilk turun fotoğrafını seçer.
+  assert.equal((await post(tours[0].image)).status, 200, "Instagram: " + tours[0].image);
+  assert.equal((await hotel(tours[0].image)).status, 200, "otel: " + tours[0].image);
+  for (const bad of ["/images/../server/x.webp", "/images/tours/../../x.webp", "/images/..", "/images//x.webp", "https://evil.example/x.jpg"]) {
+    assert.equal((await post(bad)).status, 400, "Instagram: " + bad);
+    assert.equal((await hotel(bad)).status, 400, "otel: " + bad);
+  }
+});

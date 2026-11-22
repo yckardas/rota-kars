@@ -118,7 +118,8 @@ function TourEditor({ id, onSaved }: { id: string; onSaved: () => void }) {
         <LoaderCircle className="spin" size={16} /> Yükleniyor…
       </p>
     );
-  const set = <K extends keyof TourFields>(k: K, v: TourFields[K]) => setF({ ...f, [k]: v });
+  // Güncel form üzerine yazılır: yükleme sürerken yapılan değişiklikler silinmez.
+  const set = <K extends keyof TourFields>(k: K, v: TourFields[K]) => setF((cur) => (cur ? { ...cur, [k]: v } : cur));
   const setStep = (i: number, patch: Partial<Itinerary>) =>
     set(
       "itinerary",
@@ -177,7 +178,7 @@ function TourEditor({ id, onSaved }: { id: string; onSaved: () => void }) {
         {text("location", "Güzergâh", 80)}
         {text("season", "Sezon", 40)}
         {text("departure", "Hareket saati", 20)}
-        {text("end", "Dönüş saati", 20)}
+        {text("end", "Dönüş saati", 40)}
         <label className="field">
           "Başlayan fiyat" (TL)
           <input
@@ -258,7 +259,7 @@ function TourEditor({ id, onSaved }: { id: string; onSaved: () => void }) {
           <MediaUploadButton
             accept="image/jpeg,image/png,image/webp"
             label="Galeriye fotoğraf ekle"
-            onUploaded={(m) => set("gallery", [...f.gallery, m.url])}
+            onUploaded={(m) => setF((cur) => (cur ? { ...cur, gallery: [...cur.gallery, m.url] } : cur))}
           />
         )}
       </fieldset>
@@ -276,7 +277,7 @@ function TourEditor({ id, onSaved }: { id: string; onSaved: () => void }) {
         <legend>Program</legend>
         {f.itinerary.map((s, i) => (
           <div className="itinerary-row" key={i}>
-            <input aria-label="Saat" placeholder="Saat" value={s.time} maxLength={20} onChange={(e) => setStep(i, { time: e.target.value })} />
+            <input aria-label="Saat" placeholder="Saat" value={s.time} maxLength={40} onChange={(e) => setStep(i, { time: e.target.value })} />
             <input aria-label="Başlık" placeholder="Başlık" value={s.title} maxLength={80} onChange={(e) => setStep(i, { title: e.target.value })} required />
             <textarea aria-label="Açıklama" placeholder="Açıklama" rows={2} value={s.text} maxLength={600} onChange={(e) => setStep(i, { text: e.target.value })} />
             <div className="itinerary-tools">

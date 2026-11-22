@@ -119,7 +119,9 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
   const mapUrl =
     "https://www.google.com/maps/search/?api=1&query=" +
     encodeURIComponent(t.location + " " + t.name);
-  const coverImage = t.gallery[activeImage] || t.image;
+  // Kapak her zaman ilk fotoğraf (SEO ve ön yükleme ile aynı sıra).
+  const photos = [...new Set([t.image, ...t.gallery])];
+  const coverImage = photos[activeImage] || t.image;
   // Sayfa turun türünün rengini alır (rota renkleri, src/lib/tone.ts).
   const tone = toneStyle(tourTone(t));
   return (
@@ -141,7 +143,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
         <div className="kp-card">
           <div
             className={
-              "kp-views" + (t.gallery.length > 1 ? "" : " kp-views-single")
+              "kp-views" + (photos.length > 1 ? "" : " kp-views-single")
             }
           >
             <div className="kp-main-view">
@@ -182,9 +184,9 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
                 </span>
               )}
             </div>
-            {t.gallery.length > 1 && (
-              <div className={"kp-insets kp-insets-stack" + (t.gallery.length > 3 ? " kp-insets-mosaic" : "")}>
-                {t.gallery.map((img, i) => (
+            {photos.length > 1 && (
+              <div className={"kp-insets kp-insets-stack" + (photos.length > 3 ? " kp-insets-mosaic" : "")}>
+                {photos.map((img, i) => (
                   <button
                     key={img}
                     type="button"
@@ -539,7 +541,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
       </div>
       {zoom !== null && (
         <Lightbox
-          images={t.gallery.length ? t.gallery : [t.image]}
+          images={photos}
           start={zoom}
           alt={t.name}
           onClose={() => setZoom(null)}
