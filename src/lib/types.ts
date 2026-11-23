@@ -182,7 +182,8 @@ export type Reservation = {
   // Onaylanan yasal belgeler (server/legal.mjs); Türkçe düz metin.
   pre_info_text?: string | null;
   contract_text?: string | null;
-  passenger_details?: PassengerDetail[];
+  // Panelden eklenen kayıtta kimliği alınmamış yolcu null olur.
+  passenger_details?: (PassengerDetail | null)[];
   ticketUrl?: string;
   qrDataUrl?: string;
   net_paid?: number;

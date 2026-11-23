@@ -5,7 +5,7 @@ import { vehicleModels, fleetVehicles } from "./operations.mjs";
 import { tours } from "./catalog.mjs";
 import { localDate } from "./departures.mjs";
 import { siteBase as configuredBase } from "./seo.mjs";
-import { maskDetails } from "./passenger-id.mjs";
+import { maskDetails, passengerDetail } from "./passenger-id.mjs";
 export const siteBase = (q, env) => configuredBase(env, q);
 export async function receipt(reservation, q, env) {
   const ticketUrl = siteBase(q, env) + "/bilet/" + reservation.ticket_token;
@@ -283,6 +283,9 @@ export function attachAdvancedApi(
           phone,
           email: z.union([z.literal(""), email]).optional(),
           passengers: z.array(clean).min(1).max(53),
+          // Kimlik (U-ETDS için) isteğe bağlı: telefonda alınamayan yolcu null kalır,
+          // rezervasyon kartından sefere kadar tamamlanır.
+          passengerDetails: z.array(passengerDetail.nullable()).max(53).optional(),
           paymentMode: z.enum(["deposit", "full", "on_tour"]),
           notes: z.string().trim().max(500).optional(),
           payment: z
@@ -344,9 +347,12 @@ export function attachAdvancedApi(
     requireAdmin,
     route(async (q, r) => {
       const input = z
-        .object({ names: z.array(clean).min(1).max(53) })
+        .object({
+          names: z.array(clean).min(1).max(53),
+          details: z.array(passengerDetail.nullable()).max(53).optional(),
+        })
         .parse(q.body);
-      r.json(await store.workflow.passengers(q.params.reference, input.names));
+      r.json(await store.workflow.passengers(q.params.reference, input.names, input.details));
     }),
   );
   for (const [path, kind] of [
@@ -458,10 +464,9 @@ export function attachAdvancedApi(
       // Rehber binişte kimliği eşleştirmek için yalnız son 4 haneyi görür.
       if (q.admin?.role === "guide")
         for (const b of list.bookings)
-          b.passengerDetails = b.passengerDetails.map((p) => ({
-            ...p,
-            idNumber: p.idNumber ? "•••" + p.idNumber.slice(-4) : "",
-          }));
+          b.passengerDetails = b.passengerDetails.map((p) =>
+            p ? { ...p, idNumber: p.idNumber ? "•••" + p.idNumber.slice(-4) : "" } : null,
+          );
       r.json(list);
     }),
   );

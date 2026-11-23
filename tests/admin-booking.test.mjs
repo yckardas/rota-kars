@@ -285,3 +285,27 @@ test("quick filters, no-show and removing an unused departure", async (t) => {
   await s.departures.remove(empty.id);
   await assert.rejects(s.departures.get(empty.id, { allowClosed: true, allowPast: true }), (e) => e.status === 404);
 });
+
+test("agency booking stores optional passenger ids and can complete them later", async (t) => {
+  const { s, d } = await setup(t);
+  const TR = { nationality: "TR", idNumber: "10000000146", gender: "K" };
+  const r = await s.adminReserve(base(d, { passengerDetails: [TR, null], confirm: true }), AGENT);
+  assert.deepEqual(r.passenger_details, [TR, null], "kimliği girilmeyen yolcu boş kalır");
+  const raw = await s.db.one("reservations", { _id: r.id });
+  assert.match(raw.passenger_details[0].idNumber, /^enc:v1:/, "kimlik şifreli saklanır");
+  assert.equal(raw.passenger_details[1], null);
+  // Eksik kimlik U-ETDS özetinde görünür.
+  assert.deepEqual((await s.uetds.status(d.id)).missingIds, ["4"]);
+  // Sefere kadar tamamlanır.
+  const DE = { nationality: "DE", idNumber: "C01X00T47", gender: "E" };
+  const done = await s.workflow.passengers(r.reference, r.passengers, [TR, DE]);
+  assert.deepEqual(done.passenger_details, [TR, DE]);
+  assert.deepEqual((await s.uetds.status(d.id)).missingIds, []);
+  // Yalnız adlar değişirse kimlikler korunur.
+  const renamed = await s.workflow.passengers(r.reference, ["Ayşe Yıldız", "Mehmet Yılmaz"]);
+  assert.deepEqual(renamed.passenger_details, [TR, DE]);
+  await assert.rejects(s.workflow.passengers(r.reference, r.passengers, [TR]), (e) => e.status === 400);
+  // Kimliksiz eski kayıtta tamamlama da çalışır.
+  const plain = await s.adminReserve(base(d, { seats: [7], passengers: ["Tek Yolcu"] }), AGENT);
+  assert.deepEqual((await s.workflow.passengers(plain.reference, ["Tek Yolcu"], [null])).passenger_details, [null]);
+});

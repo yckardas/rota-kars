@@ -45,14 +45,16 @@ export function piiCipher(env = process.env) {
         decipher.final(),
       ]).toString("utf8");
     },
+    // Panelden eklenen kayıtta kimliği henüz alınmamış yolcu null olarak durur.
     sealDetails(details = []) {
-      return details.map((p) => ({ ...p, idNumber: this.seal(p.idNumber) }));
+      return details.map((p) =>
+        p ? { ...p, idNumber: this.seal(p.idNumber) } : null,
+      );
     },
     openDetails(details = []) {
-      return (details || []).map((p) => ({
-        ...p,
-        idNumber: this.open(p.idNumber),
-      }));
+      return (details || []).map((p) =>
+        p ? { ...p, idNumber: this.open(p.idNumber) } : null,
+      );
     },
   };
 }

@@ -509,6 +509,7 @@ export async function openStore(
             email: input.email || "",
             phone: input.phone,
             passengers: input.passengers,
+            passengerDetails: input.passengerDetails || [],
             paymentMode: input.paymentMode,
             agent,
             notes: input.notes,

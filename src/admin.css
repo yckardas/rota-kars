@@ -636,6 +636,69 @@
 .rk-admin .row-note {
   color: var(--ochre) !important;
 }
+/* Telefon rezervasyonu: kimliği alınmamış yolcu, dokununca Yolcular sekmesi açılır. */
+.rk-admin .passenger-ids .id-missing {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border: 0;
+  border-radius: 3px;
+  background: var(--ochre-wash);
+  color: var(--ochre);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.rk-admin .passenger-ids .id-missing:hover {
+  background: var(--ochre);
+  color: #fff;
+}
+/* Yolcu satırı: ad soyad + uyruk / kimlik no / cinsiyet */
+.rk-admin .passenger-entry {
+  display: grid;
+  gap: 6px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.rk-admin .passenger-entry:first-of-type {
+  border-top: 0;
+}
+.rk-admin .passenger-id-fields {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) auto;
+  gap: 8px 12px;
+  align-items: end;
+}
+.rk-admin .passenger-id-fields .choice-inline {
+  display: flex;
+  gap: 14px;
+  min-height: 40px;
+  align-items: center;
+}
+.rk-admin .passenger-id-fields input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--red);
+}
+.rk-admin .passenger-id-fields .field small {
+  font-weight: 400;
+}
+.rk-admin .passenger-id-fields .choice-inline label {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+@media (max-width: 620px) {
+  .rk-admin .passenger-id-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+  .rk-admin .passenger-id-fields [role="radiogroup"] {
+    grid-column: 1 / -1;
+  }
+}
 
 /* Durum etiketleri */
 .rk-admin .status-tag {
@@ -981,6 +1044,10 @@
   padding: 0;
   border: 0;
   background: transparent;
+}
+/* Koltuk kapat / telefon rezervasyonu formu modalın kenarına yapışmasın. */
+.rk-admin .modal .admin-editor.new-reservation {
+  padding: 18px 22px 22px;
 }
 .rk-admin .form-hint {
   margin: 0 0 6px;

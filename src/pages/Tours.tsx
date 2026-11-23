@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, Search, SlidersHorizontal } from "lucide-react";
 import { TourCard } from "../components/TourCard";
 import type { Catalog } from "../lib/types";
 import { useLang } from "../lib/i18n";
@@ -8,12 +8,15 @@ import { TOUR_FILTERS, matchesTourFilter } from "../lib/tourFilters";
 import { filterTone, toneStyle } from "../lib/tone";
 import { CategoryBadges } from "../components/CategoryBadges";
 import { openFirst, placeName, searchKey } from "../lib/place";
+import { RequestForm } from "../components/RequestForm";
 export function Tours({ catalog }: { catalog: Catalog }) {
   // Ana sayfa aramasında birden çok rota eşleşirse liste ?q= ile süzülmüş açılır.
   const [params] = useSearchParams();
   const [q, setQ] = useState(() => (params.get("q") || "").slice(0, 60)),
     [category, setCategory] = useState("Tümü"),
-    [filtered, setFiltered] = useState(false);
+    [filtered, setFiltered] = useState(false),
+    // Listede olmayan rota için bireysel / özel tur talebi.
+    [asking, setAsking] = useState(false);
   const { t } = useLang();
   // Kategoriler /en altında katalogda İngilizce gelir.
   // Satışta olan turlar üstte, satışa kapalılar altta.
@@ -105,6 +108,38 @@ export function Tours({ catalog }: { catalog: Catalog }) {
           </div>
         )}
       </section>
+      {/* Listede olmayan bir yere (ör. tek kişi Ağrı) gitmek isteyen buradan talep bırakır. */}
+      <section className="private-journey tours-private-request">
+        <div className="container">
+          <div>
+            <h2>{t("Aradığınız rota listede yok mu?")}</h2>
+            <p>
+              {t(
+                "Tek başınıza ya da kendi grubunuzla, istediğiniz tarihte: gideceğiniz yeri ve ihtiyacınızı yazın, size özel programı ve fiyatı hazırlayalım.",
+              )}
+            </p>
+          </div>
+          <button
+            className="btn btn-outline"
+            type="button"
+            onClick={() => setAsking(true)}
+          >
+            {t("Özel tur ve hizmet talebi")} <ArrowRight size={16} />
+          </button>
+        </div>
+      </section>
+      {asking && (
+        <RequestForm
+          kind="private-tour"
+          initialGuests={1}
+          initialNotes={
+            q.trim()
+              ? t("Gitmek istediğim yer: {place}", { place: q.trim() })
+              : ""
+          }
+          onClose={() => setAsking(false)}
+        />
+      )}
     </>
   );
 }

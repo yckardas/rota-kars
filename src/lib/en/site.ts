@@ -460,6 +460,22 @@ export const site: Record<string, string> = {
     "Accommodation request",
   "Size özel tur talebi":
     "Private tour request",
+  "Aradığınız rota listede yok mu?":
+    "Can’t find your route on the list?",
+  "Tek başınıza ya da kendi grubunuzla, istediğiniz tarihte: gideceğiniz yeri ve ihtiyacınızı yazın, size özel programı ve fiyatı hazırlayalım.":
+    "On your own or with your group, on the date you choose: tell us where you want to go and what you need, and we will prepare a programme and price just for you.",
+  "Özel tur ve hizmet talebi":
+    "Private tour and service request",
+  "Gitmek istediğim yer: {place}":
+    "Where I want to go: {place}",
+  "{tour} için bilgi ve fiyat":
+    "{tour}: price and details",
+  "Fiyat ve müsaitliği size iletelim.":
+    "Let us send you prices and availability.",
+  "{tour} için düşündüğünüz tarihi ve kişi sayısını yazın; fiyat, program ve boş koltuk bilgisiyle size dönelim.":
+    "Tell us your preferred date and group size for {tour}; we will get back to you with the price, programme and seat availability.",
+  "Merak ettikleriniz: fiyat, kalkış noktası, çocuk indirimi…":
+    "Your questions: price, pick-up point, child discount…",
   "Talebiniz kaydedildi.":
     "Your request has been received.",
   "Referans numaranız":

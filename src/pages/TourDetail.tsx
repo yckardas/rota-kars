@@ -548,7 +548,13 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
         />
       )}
       {request && (
-        <RequestForm kind="private-tour" onClose={() => setRequest(false)} />
+        <RequestForm
+          kind="tour-info"
+          tourId={t.id}
+          tourName={t.name}
+          initialCheckIn={first?.date}
+          onClose={() => setRequest(false)}
+        />
       )}
       {prereg && (
         <InterestForm kind="prereg" tourId={t.id} tourName={t.name} onClose={() => setPrereg(false)} />

@@ -1,4 +1,4 @@
-// Talep formu: konaklama, size özel tur ve araç kiralama. Konaklamada (otel sayfası ya
+// Talep formu: konaklama, tur bilgisi/fiyatı, size özel tur ve araç kiralama. Konaklamada (otel sayfası ya
 // da tur sayfasındaki "Konaklama da ayarlayalım") tarih, kişi, oda tercihi ve iletişim
 // alınır; talep panele düşer, acente anlaşmalı otelle görüşüp müşteriye döner.
 import { useState, type FormEvent } from "react";
@@ -33,10 +33,10 @@ export function RequestForm({
   initialNotes = "",
   onClose,
 }: {
-  kind?: "hotel" | "private-tour" | "vehicle";
+  kind?: "hotel" | "tour-info" | "private-tour" | "vehicle";
   hotels?: Hotel[];
   hotelId?: string;
-  // Tur sayfasından gelen konaklama talebi hangi tura bağlı.
+  // Tur sayfasından gelen talep (konaklama, tur bilgisi) hangi tura bağlı.
   tourId?: string;
   tourName?: string;
   initialCheckIn?: string;
@@ -49,12 +49,15 @@ export function RequestForm({
     [error, setError] = useState(""),
     [result, setResult] = useState(""),
     human = useTurnstile("request");
-  const hotel = kind === "hotel";
+  const hotel = kind === "hotel",
+    info = kind === "tour-info" && Boolean(tourName);
   const title = hotel
     ? t("Konaklama talebi")
     : kind === "vehicle"
       ? t("Araç kiralama talebi")
-      : t("Size özel tur talebi");
+      : info
+        ? t("{tour} için bilgi ve fiyat", { tour: tourName! })
+        : t("Size özel tur talebi");
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -77,9 +80,9 @@ export function RequestForm({
               ...(f.get("roomType") ? { roomType: f.get("roomType") } : {}),
               ...(num("children") ? { children: num("children") } : {}),
               ...(f.get("budget") ? { budget: f.get("budget") } : {}),
-              ...(tourId ? { tourId } : {}),
             }
           : {}),
+        ...(tourId && (hotel || kind === "tour-info") ? { tourId } : {}),
         ...(f.get("hotelId") ? { hotelId: f.get("hotelId") } : {}),
         consent: f.get("consent") === "on",
         turnstileToken: human.token,
@@ -115,7 +118,13 @@ export function RequestForm({
         </div>
       ) : (
         <form className="request-form" onSubmit={submit}>
-          <h2>{hotel ? t("Kars’ta kendinize bir yer ayırın.") : t("Birlikte güzel bir rota çizelim.")}</h2>
+          <h2>
+            {hotel
+              ? t("Kars’ta kendinize bir yer ayırın.")
+              : info
+                ? t("Fiyat ve müsaitliği size iletelim.")
+                : t("Birlikte güzel bir rota çizelim.")}
+          </h2>
           <p className="muted">
             {hotel && tourName
               ? t(
@@ -124,7 +133,12 @@ export function RequestForm({
                 )
               : hotel
                 ? t("Tarihlerinizi paylaşın, anlaşmalı otellerimiz için konaklama seçeneklerinizi birlikte planlayalım.")
-                : t("Tarihinizi ve grubunuzu paylaşın. Size uygun programı birlikte netleştirelim.")}
+                : info
+                  ? t(
+                      "{tour} için düşündüğünüz tarihi ve kişi sayısını yazın; fiyat, program ve boş koltuk bilgisiyle size dönelim.",
+                      { tour: tourName! },
+                    )
+                  : t("Tarihinizi ve grubunuzu paylaşın. Size uygun programı birlikte netleştirelim.")}
           </p>
           {hotels.length > 0 && (
             <label className="field">
@@ -212,7 +226,11 @@ export function RequestForm({
               rows={3}
               maxLength={2000}
               placeholder={
-                hotel ? t("Konum, kahvaltı, erken giriş gibi tercihleriniz…") : t("Oda, ulaşım veya tur tercihiniz…")
+                hotel
+                  ? t("Konum, kahvaltı, erken giriş gibi tercihleriniz…")
+                  : info
+                    ? t("Merak ettikleriniz: fiyat, kalkış noktası, çocuk indirimi…")
+                    : t("Oda, ulaşım veya tur tercihiniz…")
               }
             />
           </label>

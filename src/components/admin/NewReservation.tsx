@@ -13,6 +13,7 @@ import {
 } from "../../lib/types";
 import { Modal } from "../Modal";
 import { SeatMap } from "../SeatMap";
+import { PassengerIdFields, detailFrom, emptyId, idProblem, type IdDraft } from "./PassengerIdFields";
 
 const waNumber = (phone: string) => {
   const digits = phone.replace(/\D/g, "");
@@ -20,18 +21,23 @@ const waNumber = (phone: string) => {
   return intl.length >= 11 ? intl : "";
 };
 
-// Telefon/WhatsApp ile gelen müşteri için panelden rezervasyon.
+// Telefon/WhatsApp ile gelen müşteri için panelden rezervasyon: seçilen koltuklar
+// sitede satıştan düşer (koltuk kapatma). Seferler listesinden açılınca sefer seçili gelir.
 export function NewReservation({
   catalog,
+  initialDepartureId = "",
   onClose,
   onCreated,
 }: {
   catalog: Catalog;
+  initialDepartureId?: string;
   onClose: () => void;
   onCreated: () => void;
 }) {
   const [departures, setDepartures] = useState<Departure[]>([]),
-    [departureId, setDepartureId] = useState(""),
+    [departureId, setDepartureId] = useState(initialDepartureId),
+    // Koltuk numarasına göre kimlik taslağı; koltuk kaldırılıp yeniden seçilince korunur.
+    [ids, setIds] = useState<Record<number, IdDraft>>({}),
     [seatData, setSeatData] = useState<{ seats: Seat[]; vehicle: Vehicle } | null>(null),
     [selected, setSelected] = useState<number[]>([]),
     [name, setName] = useState(""),
@@ -70,6 +76,9 @@ export function NewReservation({
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
+    const drafts = selected.map((seat) => ids[seat] || emptyId),
+      problem = drafts.map((d, i) => idProblem(d, `Koltuk ${selected[i]}`)).find(Boolean);
+    if (problem) return setError(problem);
     setBusy(true);
     setError("");
     try {
@@ -81,6 +90,7 @@ export function NewReservation({
         phone: String(f.get("phone") || "").trim(),
         email: String(f.get("email") || "").trim(),
         passengers: names.map((n) => n.trim()),
+        passengerDetails: drafts.map(detailFrom),
         paymentMode,
         notes: String(f.get("notes") || "").trim(),
         ...(paid && amountKurus > 0 ? { payment: { amount: amountKurus, method } } : {}),
@@ -133,10 +143,11 @@ export function NewReservation({
     );
   }
   return (
-    <Modal title="Yeni rezervasyon" onClose={onClose} wide>
+    <Modal title="Koltuk kapat · telefon rezervasyonu" onClose={onClose} wide>
       <form className="admin-editor new-reservation" onSubmit={submit}>
         <p className="muted">
-          Telefon veya WhatsApp ile gelen müşteriyi kaydedin. Online satışı kapanmış seferlere de eklenebilir.
+          Telefon veya WhatsApp ile satılan koltukları kapatın: seçtiğiniz koltuklar sitede satıştan düşer. Yolcu,
+          kimlik ve ödeme bilgisini girin. Online satışı kapanmış seferlere de eklenebilir.
         </p>
         <label className="field">
           Sefer
@@ -175,21 +186,32 @@ export function NewReservation({
         {selected.length > 0 && (
           <fieldset className="passenger-fields">
             <legend>Yolcular</legend>
+            <p className="muted">
+              Kimlik bilgisi U-ETDS bildirimi için gerekir. Telefonda alınamadıysa boş bırakın; rezervasyon kartından
+              sefere kadar tamamlayabilirsiniz.
+            </p>
             {selected.map((seat, i) => (
-              <label className="field" key={seat}>
-                Koltuk {seat}
-                <input
-                  value={names[i]}
-                  onChange={(e) => {
-                    const next = [...names];
-                    next[i] = e.target.value;
-                    setPassengers(next);
-                  }}
-                  required
-                  minLength={2}
-                  maxLength={100}
+              <div className="passenger-entry" key={seat}>
+                <label className="field">
+                  Koltuk {seat} · ad soyad
+                  <input
+                    value={names[i]}
+                    onChange={(e) => {
+                      const next = [...names];
+                      next[i] = e.target.value;
+                      setPassengers(next);
+                    }}
+                    required
+                    minLength={2}
+                    maxLength={100}
+                  />
+                </label>
+                <PassengerIdFields
+                  name={"new-gender-" + seat}
+                  value={ids[seat] || emptyId}
+                  onChange={(next) => setIds((cur) => ({ ...cur, [seat]: next }))}
                 />
-              </label>
+              </div>
             ))}
           </fieldset>
         )}
@@ -243,7 +265,7 @@ export function NewReservation({
         )}
         <button className="btn block" disabled={busy || !departureId || !selected.length}>
           {busy ? <LoaderCircle className="spin" size={17} /> : <Ticket size={17} />}
-          Rezervasyonu kaydet{total ? ` · ${currency(total)}` : ""}
+          Koltukları kapat ve kaydet{total ? ` · ${currency(total)}` : ""}
         </button>
       </form>
     </Modal>

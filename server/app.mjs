@@ -80,7 +80,7 @@ const ymd = z
   );
 const requestSchema = z
   .object({
-    kind: z.enum(["hotel", "private-tour", "vehicle"]),
+    kind: z.enum(["hotel", "tour-info", "private-tour", "vehicle"]),
     name: clean,
     email,
     phone,
@@ -88,7 +88,7 @@ const requestSchema = z
     checkOut: ymd.optional(),
     guests: z.number().int().min(1).max(50),
     hotelId: z.string().uuid().optional(),
-    // Konaklama talebinin ayrıntıları (tur sayfasından gelince tourId de olur).
+    // Tur sayfasından gelen talepte (konaklama, tur bilgisi) tourId de olur.
     tourId: z.enum(tours.map((t) => t.id)).optional(),
     rooms: z.number().int().min(1).max(20).optional(),
     roomType: z.enum(Object.keys(ROOM_TYPES)).optional(),
@@ -99,6 +99,9 @@ const requestSchema = z
   })
   .refine((r) => r.checkIn >= new Date().toISOString().slice(0, 10), {
     message: "Gelecek bir tarih seçin.",
+  })
+  .refine((r) => r.kind !== "tour-info" || r.tourId, {
+    message: "Bilgi almak istediğiniz turu seçin.",
   })
   .refine((r) => r.kind !== "hotel" || (r.checkOut && r.checkOut > r.checkIn), {
     message: "Çıkış tarihi giriş tarihinden sonra olmalıdır.",
