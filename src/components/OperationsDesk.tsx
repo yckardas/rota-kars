@@ -7,6 +7,7 @@ import {
   RefreshCw,
   CalendarDays,
   Ticket,
+  Armchair,
   Mail,
   Users,
   QrCode,
@@ -18,6 +19,7 @@ import {
 } from "lucide-react";
 import { TicketScanner } from "./admin/TicketScanner";
 import { UetdsPanel } from "./admin/UetdsPanel";
+import { PassengerIdFields, detailFrom, draftFrom, idProblem, type IdDraft } from "./admin/PassengerIdFields";
 import { useFeedback } from "./admin/feedback";
 import { SeatCourse } from "./admin/SeatCourse";
 import { Modal } from "./Modal";
@@ -79,6 +81,8 @@ export function DepartureManager({
     [tourFilter, setTourFilter] = useState(""),
     [passengers, setPassengers] = useState(""),
     [uetds, setUetds] = useState(""),
+    // Telefonla satılan koltukları bu seferde kapatma (panelden rezervasyon).
+    [closing, setClosing] = useState(""),
     [showPast, setShowPast] = useState(false),
     [view, setView] = useState<"calendar" | "list">("calendar");
   async function load() {
@@ -219,6 +223,15 @@ export function DepartureManager({
           busy={busy}
           cancel={() => setEditing(false)}
           remove={editing ? () => remove(editing) : undefined}
+          closeSeats={editing && editing.date >= today() ? () => setClosing(editing.id) : undefined}
+        />
+      )}
+      {closing && (
+        <NewReservation
+          catalog={catalog}
+          initialDepartureId={closing}
+          onClose={() => setClosing("")}
+          onCreated={() => load().catch(feedback.error)}
         />
       )}
       {passengers && (
@@ -294,6 +307,12 @@ export function DepartureManager({
                   >
                     Düzenle
                   </button>
+                  {d.date >= today() && (
+                    <button className="text-link" onClick={() => setClosing(d.id)}>
+                      <Armchair size={14} />
+                      Koltuk kapat
+                    </button>
+                  )}
                   <button className="text-link" onClick={() => setPassengers(d.id)}>
                     <Users size={14} />
                     Yolcu listesi
@@ -328,6 +347,7 @@ function DepartureEditor({
   busy,
   cancel,
   remove,
+  closeSeats,
 }: {
   catalog: Catalog;
   departure: Departure | null;
@@ -335,6 +355,7 @@ function DepartureEditor({
   busy: boolean;
   cancel: () => void;
   remove?: () => void;
+  closeSeats?: () => void;
 }) {
   // Yeni sefer, turun "Tur ve araç planı"ndaki araçla açılır; listenin ilk sınıfıyla
   // (4 kişilik binek) değil. Plan yoksa ilk sınıfa düşülür.
@@ -573,6 +594,11 @@ function DepartureEditor({
         <button className="text-link" type="button" onClick={cancel}>
           Vazgeç
         </button>
+        {closeSeats && (
+          <button className="btn btn-outline" type="button" onClick={closeSeats}>
+            <Armchair size={16} /> Koltuk kapat (telefon rezervasyonu)
+          </button>
+        )}
         {remove && (
           <button className="text-link danger-text push-right" type="button" onClick={remove}>
             <Trash2 size={15} /> Seferi sil
@@ -722,8 +748,8 @@ export function ReservationManager({
       <div className="desk-toolbar">
         {canCreate && (
           <button className="btn" onClick={() => setCreating(true)}>
-            <Plus size={16} />
-            Yeni rezervasyon
+            <Armchair size={16} />
+            Koltuk kapat / rezervasyon
           </button>
         )}
         <label className="field reservation-search">
@@ -904,7 +930,12 @@ function BookingControls({
       seats: { number: number; status: "occupied" | "available" }[];
       vehicle: NonNullable<Reservation["vehicle"]>;
     } | null>(null),
-    [history, setHistory] = useState<AuditRow[] | null>(null);
+    [history, setHistory] = useState<AuditRow[] | null>(null),
+    // Yolcular sekmesi: kimlik taslakları (koltuk sırasıyla), kayıt yenilenince sıfırlanır.
+    [idDrafts, setIdDrafts] = useState<IdDraft[]>(() => r.seats.map((_, i) => draftFrom(r.passenger_details?.[i])));
+  useEffect(() => {
+    setIdDrafts(r.seats.map((_, i) => draftFrom(r.passenger_details?.[i])));
+  }, [r]);
   useEffect(() => {
     if (mode === "move")
       api<Departure[]>("/tours/" + r.tourId + "/departures")
@@ -930,8 +961,16 @@ function BookingControls({
     if (current === "move") {
       if (await action(r.reference, "move", { departureId: target, seats: selected }, "Rezervasyon yeni sefere taşındı."))
         setTarget("");
-    } else if (current === "passengers")
-      await action(r.reference, "passengers", { names: f.getAll("passenger") }, "Yolcu adları kaydedildi.");
+    } else if (current === "passengers") {
+      const problem = idDrafts.map((d, i) => idProblem(d, `Koltuk ${r.seats[i]}`)).find(Boolean);
+      if (problem) return feedback.error(new Error(problem));
+      await action(
+        r.reference,
+        "passengers",
+        { names: f.getAll("passenger"), details: idDrafts.map(detailFrom) },
+        "Yolcu bilgileri kaydedildi.",
+      );
+    }
     else if (
       await action(
         r.reference,
@@ -961,7 +1000,7 @@ function BookingControls({
         // Kartla tahsilat varsa net tahsilat sıfırlansa da açık kalır: askıdaki iadeler burada sonuçlanır.
         ["refund", "İade", Number(r.net_paid) > 0 || hasCard],
         ["move", "Tarih / koltuk", activeBooking],
-        ["passengers", "Yolcu adları", activeBooking],
+        ["passengers", "Yolcular ve kimlik", activeBooking],
         ["history", "Geçmiş", true],
       ] as const
     ).filter((m) => m[2]),
@@ -978,18 +1017,25 @@ function BookingControls({
               {dateLabel(r.date)} · {r.start_time} · Koltuk {r.seats.join(", ")} · {r.passengers.length} kişi
             </p>
             {/* Yolcu kimlikleri (U-ETDS bildirimi için); yalnız panelde tam görünür. */}
-            {Boolean(r.passenger_details?.length) && (
+            {/* Kimliği alınmamış yolcu (telefon rezervasyonu) "kimlik eksik" ile işaretlenir. */}
+            {(Boolean(r.passenger_details?.length) || activeBooking) && (
               <ul className="passenger-ids">
                 {r.seats.map((seat, i) => {
                   const p = r.passenger_details?.[i];
                   return (
                     <li key={seat}>
                       <span>Koltuk {seat}</span> {r.passengers[i]}
-                      {p && (
+                      {p?.idNumber ? (
                         <small>
                           {p.nationality === "TR" ? "T.C." : countryName(p.nationality)} {p.idNumber} ·{" "}
                           {p.gender === "E" ? "Erkek" : "Kadın"}
                         </small>
+                      ) : (
+                        activeBooking && (
+                          <button type="button" className="id-missing" onClick={() => setMode("passengers")}>
+                            Kimlik eksik · tamamla
+                          </button>
+                        )
                       )}
                     </li>
                   );
@@ -1168,12 +1214,26 @@ function BookingControls({
                 </p>
               </>
             ) : current === "passengers" ? (
-              r.passengers.map((p, i) => (
-                <label className="field" key={i}>
-                  {i + 1}. yolcu
-                  <input name="passenger" defaultValue={p} minLength={2} maxLength={100} required />
-                </label>
-              ))
+              <>
+                <p className="form-hint">
+                  Kimlik bilgisi U-ETDS bildirimi için gerekir; bilmediğiniz numarayı boş bırakın, sonra tamamlayın.
+                </p>
+                {r.passengers.map((p, i) => (
+                  <div className="passenger-row" key={r.seats[i] ?? i}>
+                    <label className="field">
+                      Koltuk {r.seats[i]} · ad soyad
+                      <input name="passenger" defaultValue={p} minLength={2} maxLength={100} required />
+                    </label>
+                    {idDrafts[i] && (
+                      <PassengerIdFields
+                        name={"desk-gender-" + r.reference + "-" + i}
+                        value={idDrafts[i]}
+                        onChange={(next) => setIdDrafts((cur) => cur.map((d, j) => (j === i ? next : d)))}
+                      />
+                    )}
+                  </div>
+                ))}
+              </>
             ) : (
               <>
                 <p className="form-hint">
