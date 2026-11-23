@@ -302,7 +302,7 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx, pii
           "reservations",
           { _id: r.id },
           {
-            passenger_details: r.passenger_details.map((p) => ({ ...p, idNumber: "" })),
+            passenger_details: r.passenger_details.map((p) => (p ? { ...p, idNumber: "" } : null)),
             ids_purged_at: now,
           },
         );

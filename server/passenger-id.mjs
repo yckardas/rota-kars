@@ -52,4 +52,4 @@ export const countryName = (code) => {
 export const maskId = (value = "") =>
   value.length > 3 ? "•".repeat(value.length - 3) + value.slice(-3) : "•••";
 export const maskDetails = (details = []) =>
-  details.map((p) => ({ ...p, idNumber: maskId(p.idNumber) }));
+  details.map((p) => (p ? { ...p, idNumber: maskId(p.idNumber) } : null));

@@ -556,15 +556,22 @@ export async function createWorkflow(
         return updated;
       });
     },
-    async passengers(reference, names) {
+    // Yolcu adları ve (verilirse) kimlikleri; details verilmezse kimlikler korunur.
+    async passengers(reference, names, details) {
       return tx(async () => {
         await cleanup();
         const r = await api.get(reference);
-        if (names.length !== r.seats.length)
+        if (names.length !== r.seats.length || (details && details.length !== r.seats.length))
           throw new AppError(400, "Yolcu ve koltuk sayıları eşleşmeli.");
         if (!["pending_agency", "confirmed"].includes(r.status))
           throw new AppError(409, "Bu kaydın yolcuları değiştirilemez.");
-        await db.update("reservations", { _id: r.id }, { passengers: names });
+        await db.update(
+          "reservations",
+          { _id: r.id },
+          details
+            ? { passengers: names, passenger_details: pii ? pii.sealDetails(details) : details }
+            : { passengers: names },
+        );
         await audit(r, "passengers_updated", {});
         return api.get(reference);
       });

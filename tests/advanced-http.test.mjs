@@ -161,3 +161,25 @@ test("email/reset endpoints return generic requests, tokens do not leak and prof
   assert.deepEqual(a, b);
   assert.equal((await req("/auth/verify", { token: "bad" })).status, 400);
 });
+
+test("panel booking accepts a missing passenger id but rejects a half-filled one", async (t) => {
+  const { store: s, req, login } = await fixture(t),
+    d = (await s.listDepartures("ani-cildir"))[0];
+  await login();
+  const body = (passengerDetails) => ({
+    departureId: d.id,
+    seats: [1, 2],
+    name: "Telefon Müşteri",
+    phone: "05551112233",
+    passengers: ["Ayşe Yılmaz", "Ali Yılmaz"],
+    paymentMode: "on_tour",
+    passengerDetails,
+  });
+  const half = await req("/admin/reservations", body([{ nationality: "TR", idNumber: "", gender: "K" }, null]));
+  assert.equal(half.status, 400);
+  const badTc = await req("/admin/reservations", body([{ nationality: "TR", idNumber: "12345678901", gender: "K" }, null]));
+  assert.equal(badTc.status, 400);
+  // Şemayı geçer; kurulum parolasıyla girişte rezervasyon eklenemez (403).
+  const ok = await req("/admin/reservations", body([{ nationality: "TR", idNumber: "10000000146", gender: "K" }, null]));
+  assert.equal(ok.status, 403);
+});
