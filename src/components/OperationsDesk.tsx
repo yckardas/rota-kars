@@ -1219,7 +1219,7 @@ function BookingControls({
                   Kimlik bilgisi U-ETDS bildirimi için gerekir; bilmediğiniz numarayı boş bırakın, sonra tamamlayın.
                 </p>
                 {r.passengers.map((p, i) => (
-                  <div className="passenger-row" key={r.seats[i] ?? i}>
+                  <div className="passenger-entry" key={r.seats[i] ?? i}>
                     <label className="field">
                       Koltuk {r.seats[i]} · ad soyad
                       <input name="passenger" defaultValue={p} minLength={2} maxLength={100} required />

@@ -472,8 +472,8 @@ export const site: Record<string, string> = {
     "{tour}: price and details",
   "Fiyat ve müsaitliği size iletelim.":
     "Let us send you prices and availability.",
-  "{tour} turu için düşündüğünüz tarihi ve kişi sayısını yazın; fiyat, program ve boş koltuk bilgisiyle size dönelim.":
-    "Tell us your preferred date and group size for the {tour} tour; we will get back to you with the price, programme and seat availability.",
+  "{tour} için düşündüğünüz tarihi ve kişi sayısını yazın; fiyat, program ve boş koltuk bilgisiyle size dönelim.":
+    "Tell us your preferred date and group size for {tour}; we will get back to you with the price, programme and seat availability.",
   "Merak ettikleriniz: fiyat, kalkış noktası, çocuk indirimi…":
     "Your questions: price, pick-up point, child discount…",
   "Talebiniz kaydedildi.":

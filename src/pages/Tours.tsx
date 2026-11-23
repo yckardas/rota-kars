@@ -119,7 +119,11 @@ export function Tours({ catalog }: { catalog: Catalog }) {
               )}
             </p>
           </div>
-          <button className="btn btn-outline" type="button" onClick={() => setAsking(true)}>
+          <button
+            className="btn btn-outline"
+            type="button"
+            onClick={() => setAsking(true)}
+          >
             {t("Özel tur ve hizmet talebi")} <ArrowRight size={16} />
           </button>
         </div>
@@ -128,7 +132,11 @@ export function Tours({ catalog }: { catalog: Catalog }) {
         <RequestForm
           kind="private-tour"
           initialGuests={1}
-          initialNotes={q.trim() ? t("Gitmek istediğim yer: {place}", { place: q.trim() }) : ""}
+          initialNotes={
+            q.trim()
+              ? t("Gitmek istediğim yer: {place}", { place: q.trim() })
+              : ""
+          }
           onClose={() => setAsking(false)}
         />
       )}

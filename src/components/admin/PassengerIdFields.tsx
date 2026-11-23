@@ -5,17 +5,30 @@ import { countryOptions } from "../../lib/countries";
 import { tcknValid } from "../../lib/tckn";
 import type { PassengerDetail } from "../../lib/types";
 
-export type IdDraft = { nationality: string; idNumber: string; gender: "" | "K" | "E" };
+export type IdDraft = {
+  nationality: string;
+  idNumber: string;
+  gender: "" | "K" | "E";
+};
 export const emptyId: IdDraft = { nationality: "TR", idNumber: "", gender: "" };
 export const draftFrom = (p?: PassengerDetail | null): IdDraft =>
-  p ? { nationality: p.nationality, idNumber: p.idNumber, gender: p.gender } : emptyId;
+  p
+    ? { nationality: p.nationality, idNumber: p.idNumber, gender: p.gender }
+    : emptyId;
 // Numara boşsa kimlik girilmemiş sayılır (null).
 export const detailFrom = (d: IdDraft): PassengerDetail | null =>
-  d.idNumber.trim() ? { nationality: d.nationality, idNumber: d.idNumber.trim(), gender: d.gender as "K" | "E" } : null;
+  d.idNumber.trim()
+    ? {
+        nationality: d.nationality,
+        idNumber: d.idNumber.trim(),
+        gender: d.gender as "K" | "E",
+      }
+    : null;
 // Gönderimden önce okunur hata: yarım ya da geçersiz kimlik.
 export function idProblem(d: IdDraft, label: string) {
   if (!d.idNumber.trim()) return "";
-  if (d.nationality === "TR" && !tcknValid(d.idNumber.trim())) return `${label}: T.C. kimlik numarası geçersiz.`;
+  if (d.nationality === "TR" && !tcknValid(d.idNumber.trim()))
+    return `${label}: T.C. kimlik numarası geçersiz.`;
   if (!d.gender) return `${label}: cinsiyet seçin.`;
   return "";
 }
@@ -37,7 +50,10 @@ export function PassengerIdFields({
     <div className="passenger-id-fields">
       <label className="field">
         Uyruk
-        <select value={value.nationality} onChange={(e) => set({ nationality: e.target.value, idNumber: "" })}>
+        <select
+          value={value.nationality}
+          onChange={(e) => set({ nationality: e.target.value, idNumber: "" })}
+        >
           <optgroup label="Sık seçilenler">
             {countries.first.map((c) => (
               <option key={c.code} value={c.code}>
@@ -55,11 +71,16 @@ export function PassengerIdFields({
         </select>
       </label>
       <label className="field">
-        {tr ? "T.C. kimlik no" : "Pasaport no"} <small className="muted">(boş bırakılabilir)</small>
+        {tr ? "T.C. kimlik no" : "Pasaport no"}{" "}
+        <small className="muted">(boş bırakılabilir)</small>
         <input
           value={value.idNumber}
           onChange={(e) =>
-            set({ idNumber: tr ? e.target.value.replace(/\D/g, "") : e.target.value.toUpperCase() })
+            set({
+              idNumber: tr
+                ? e.target.value.replace(/\D/g, "")
+                : e.target.value.toUpperCase(),
+            })
           }
           inputMode={tr ? "numeric" : "text"}
           maxLength={tr ? 11 : 20}

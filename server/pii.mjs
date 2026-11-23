@@ -47,7 +47,9 @@ export function piiCipher(env = process.env) {
     },
     // Panelden eklenen kayıtta kimliği henüz alınmamış yolcu null olarak durur.
     sealDetails(details = []) {
-      return details.map((p) => (p ? { ...p, idNumber: this.seal(p.idNumber) } : null));
+      return details.map((p) =>
+        p ? { ...p, idNumber: this.seal(p.idNumber) } : null,
+      );
     },
     openDetails(details = []) {
       return (details || []).map((p) =>

@@ -175,11 +175,20 @@ test("panel booking accepts a missing passenger id but rejects a half-filled one
     paymentMode: "on_tour",
     passengerDetails,
   });
-  const half = await req("/admin/reservations", body([{ nationality: "TR", idNumber: "", gender: "K" }, null]));
+  const half = await req(
+    "/admin/reservations",
+    body([{ nationality: "TR", idNumber: "", gender: "K" }, null]),
+  );
   assert.equal(half.status, 400);
-  const badTc = await req("/admin/reservations", body([{ nationality: "TR", idNumber: "12345678901", gender: "K" }, null]));
+  const badTc = await req(
+    "/admin/reservations",
+    body([{ nationality: "TR", idNumber: "12345678901", gender: "K" }, null]),
+  );
   assert.equal(badTc.status, 400);
   // Şemayı geçer; kurulum parolasıyla girişte rezervasyon eklenemez (403).
-  const ok = await req("/admin/reservations", body([{ nationality: "TR", idNumber: "10000000146", gender: "K" }, null]));
+  const ok = await req(
+    "/admin/reservations",
+    body([{ nationality: "TR", idNumber: "10000000146", gender: "K" }, null]),
+  );
   assert.equal(ok.status, 403);
 });

@@ -135,7 +135,7 @@ export function RequestForm({
                 ? t("Tarihlerinizi paylaşın, anlaşmalı otellerimiz için konaklama seçeneklerinizi birlikte planlayalım.")
                 : info
                   ? t(
-                      "{tour} turu için düşündüğünüz tarihi ve kişi sayısını yazın; fiyat, program ve boş koltuk bilgisiyle size dönelim.",
+                      "{tour} için düşündüğünüz tarihi ve kişi sayısını yazın; fiyat, program ve boş koltuk bilgisiyle size dönelim.",
                       { tour: tourName! },
                     )
                   : t("Tarihinizi ve grubunuzu paylaşın. Size uygun programı birlikte netleştirelim.")}

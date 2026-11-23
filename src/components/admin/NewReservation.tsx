@@ -191,7 +191,7 @@ export function NewReservation({
               sefere kadar tamamlayabilirsiniz.
             </p>
             {selected.map((seat, i) => (
-              <div className="passenger-row" key={seat}>
+              <div className="passenger-entry" key={seat}>
                 <label className="field">
                   Koltuk {seat} · ad soyad
                   <input

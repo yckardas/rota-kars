@@ -654,13 +654,13 @@
   color: #fff;
 }
 /* Yolcu satırı: ad soyad + uyruk / kimlik no / cinsiyet */
-.rk-admin .passenger-row {
+.rk-admin .passenger-entry {
   display: grid;
   gap: 6px;
   padding: 10px 0;
   border-top: 1px solid var(--line);
 }
-.rk-admin .passenger-row:first-of-type {
+.rk-admin .passenger-entry:first-of-type {
   border-top: 0;
 }
 .rk-admin .passenger-id-fields {
@@ -674,6 +674,17 @@
   gap: 14px;
   min-height: 40px;
   align-items: center;
+}
+.rk-admin .passenger-id-fields input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--red);
+}
+.rk-admin .passenger-id-fields .field small {
+  font-weight: 400;
 }
 .rk-admin .passenger-id-fields .choice-inline label {
   display: inline-flex;
@@ -1033,6 +1044,10 @@
   padding: 0;
   border: 0;
   background: transparent;
+}
+/* Koltuk kapat / telefon rezervasyonu formu modalın kenarına yapışmasın. */
+.rk-admin .modal .admin-editor.new-reservation {
+  padding: 18px 22px 22px;
 }
 .rk-admin .form-hint {
   margin: 0 0 6px;

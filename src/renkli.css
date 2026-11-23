@@ -1364,6 +1364,8 @@ html:has(.kp) {
 .kp .private-journey > .container {
   position: relative;
   overflow: hidden;
+  /* Dekoratif halka taşar; clip, odak/scrollIntoView ile bandın yana kaymasını önler. */
+  overflow: clip;
   padding: 46px 56px;
   border-radius: 30px;
   background: linear-gradient(
