@@ -112,3 +112,31 @@ test("agency tracks the hotel conversation with stay-specific status names", asy
   );
   assert.equal((await call("/admin/requests/" + row.id, { status: "bogus" })).status, 400);
 });
+
+test("tour info request carries the tour name and requires a tour", async (t) => {
+  const { store, call } = await fixture(t);
+  const ask = {
+    kind: "tour-info",
+    name: "Bilgi Misafir",
+    email: "bilgi@example.com",
+    phone: "05551112233",
+    checkIn: "2027-02-01",
+    guests: 2,
+    tourId: "ani-cildir",
+    notes: "Fiyat nedir?",
+    consent: true,
+  };
+  const r = await call("/requests", ask);
+  assert.equal(r.status, 201, JSON.stringify(r.json));
+  const [row] = (await store.dashboard()).requests;
+  assert.equal(row.kind, "tour-info");
+  assert.equal(row.body.tourId, "ani-cildir");
+  const outbox = await store.db.find("notification_outbox", {});
+  const agency = outbox.find((m) => m.recipient === "ekip@rotakars.test");
+  assert.match(agency.subject, /Tur bilgi \/ fiyat talebi: TL-.* · Ani, Çıldır ve Kars/);
+  const customer = outbox.find((m) => m.recipient === "bilgi@example.com");
+  assert.match(customer.subject, /Tur bilgi \/ fiyat talebi alındı/);
+  assert.match(customer.body, /Tur: Ani, Çıldır ve Kars/);
+  const { tourId, ...noTour } = ask;
+  assert.equal((await call("/requests", noTour)).status, 400);
+});

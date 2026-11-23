@@ -1,4 +1,4 @@
-// Gelen talepler (konaklama, özel tur, araç kiralama): alan etiketleri, türe göre
+// Gelen talepler (konaklama, tur bilgisi, özel tur, araç kiralama): alan etiketleri, türe göre
 // durum adları ve acente/müşteri mesajlarında kullanılan okunur özet.
 export const ROOM_TYPES = {
   single: "Tek kişilik",
@@ -15,6 +15,8 @@ export const BUDGETS = {
 export const REQUEST_KINDS = {
   hotel: "Konaklama talebi",
   "private-tour": "Özel tur talebi",
+  // Tur sayfasındaki "Bu tur için bilgi alın": hangi tur için arandığı başlıkta görünür.
+  "tour-info": "Tur bilgi / fiyat talebi",
   vehicle: "Araç kiralama talebi",
 };
 // Durum anahtarları tüm türlerde aynıdır; konaklamada acente otelle görüşüp döner,

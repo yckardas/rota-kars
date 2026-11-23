@@ -60,6 +60,7 @@ const BUDGETS: Record<string, string> = { economy: "Ekonomik", standard: "Orta",
 const KIND: Record<string, string> = {
   hotel: "Konaklama talebi",
   vehicle: "Araç kiralama talebi",
+  "tour-info": "Tur bilgi / fiyat talebi",
   "private-tour": "Özel tur talebi",
 };
 const wa = (phone: string) => {
@@ -184,7 +185,10 @@ export function RequestManager({ initialQuery = "", tours = [] }: { initialQuery
         {visible.map((r) => (
           <article key={r.id} className={"request-card status-" + r.status}>
             <div className="section-heading">
-              <h3>{KIND[r.kind] || "Talep"}</h3>
+              <h3>
+                {KIND[r.kind] || "Talep"}
+                {r.kind === "tour-info" && r.body.tourId ? " · " + tourName(r.body.tourId) : ""}
+              </h3>
               <small>{new Date(r.created_at).toLocaleDateString("tr-TR")}</small>
             </div>
             <strong>{r.body.name}</strong>
