@@ -53,6 +53,28 @@ async function fixture(t) {
     { email: "sahip@rotakars.test", name: "Sahip", password: "sahip-parolasi-2026", role: "owner" },
     boot,
   );
+  const saveDep = (extra = {}) =>
+    call("/admin/departures", {
+      body: {
+        tourId: TOUR,
+        date: DATE,
+        startTime: "09:00",
+        pickup: "Kars Garı",
+        guideName: "Ali",
+        guidePhone: "05550000000",
+        vehicleModel: "vip-midibus",
+        passengerSeats: 19,
+        active: true,
+        ...extra,
+      },
+      cookie: owner,
+    });
+  const addVehicle = async (id) => {
+    const r = await call(`/admin/departures/${id}/vehicles`, { body: {}, cookie: owner });
+    assert.equal(r.status, 201, r.text);
+    return r.json;
+  };
+  const adminList = async () => (await call(`/admin/departures?tourId=${TOUR}`, { cookie: owner })).json;
   const departure = async (extra = {}) => {
     const r = await call("/admin/departures", {
       body: {
@@ -90,7 +112,7 @@ async function fixture(t) {
     (await call(admin ? `/admin/departures/${id}/seats` : `/departures/${id}/seats`, admin ? { cookie: owner } : {})).json.seats;
   const status = (seats, n) => seats.find((s) => s.number === n).status;
   const publicList = async () => (await call(`/tours/${TOUR}/departures`)).json;
-  return { store, call, owner, departure, book, close, seatsOf, status, publicList };
+  return { store, call, owner, departure, saveDep, addVehicle, adminList, book, close, seatsOf, status, publicList };
 }
 
 test("closed seats look occupied online, closed to the agent, and are not sold online", async (t) => {
@@ -152,4 +174,111 @@ test("overview does not count closed seats as booked", async (t) => {
   const week = (await call("/admin/overview", { cookie: owner })).json.week;
   assert.equal(week.booked, 2);
   assert.equal(week.capacity, 18);
+});
+
+const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
+
+test("added vehicle copies the shared plan and the date shows once", async (t) => {
+  const { departure, addVehicle, book, publicList } = await fixture(t);
+  const v1 = await departure({ vehicleId: "36ABN916" });
+  const v2 = await addVehicle(v1.id);
+  assert.equal(v2.vehicle_no, 2);
+  assert.equal(v2.group_id, v1.id);
+  assert.equal(v2.vehicle_id, "");
+  assert.equal(v2.guide_name, "");
+  assert.deepEqual([v2.date, v2.start_time, v2.price, v2.pickup], [v1.date, v1.start_time, v1.price, v1.pickup]);
+  assert.equal(v2.vehicle.passengerSeats, 19);
+  let rows = (await publicList()).filter((x) => x.date === DATE);
+  assert.equal(rows.length, 1, "aynı tarih tek satır");
+  assert.equal(rows[0].id, v1.id);
+  assert.equal(rows[0].available, 36);
+  assert.deepEqual(rows[0].vehicles, [
+    { id: v1.id, available: 18 },
+    { id: v2.id, available: 18 },
+  ]);
+  assert.doesNotMatch(JSON.stringify(rows[0]), /"plate"/);
+  assert.equal((await book(v1.id, range(1, 18))).status, 201);
+  rows = (await publicList()).filter((x) => x.date === DATE);
+  assert.equal(rows[0].id, v2.id);
+  assert.equal(rows[0].available, 18);
+});
+
+test("online holds fill vehicle 1 first; agents are exempt", async (t) => {
+  const { call, departure, addVehicle, book } = await fixture(t);
+  const v1 = await departure();
+  const v2 = await addVehicle(v1.id);
+  await book(v1.id, range(1, 16));
+  const early = await call("/holds", { body: { departureId: v2.id, seats: [1] } });
+  assert.equal(early.status, 409);
+  assert.match(early.json.message, /Önce diğer araç/);
+  assert.equal((await call("/holds", { body: { departureId: v2.id, seats: [1, 2, 3] } })).status, 201, "3 kişi 1. araca sığmaz");
+  assert.equal((await book(v2.id, [5])).status, 201);
+});
+
+test("vehicle 2 alone is listed when vehicle 1 is inactive", async (t) => {
+  const { departure, addVehicle, publicList } = await fixture(t);
+  const v1 = await departure();
+  const v2 = await addVehicle(v1.id);
+  await departure({ id: v1.id, active: false });
+  const row = (await publicList()).find((x) => x.date === DATE);
+  assert.equal(row.id, v2.id);
+  assert.deepEqual(row.vehicles, [{ id: v2.id, available: 18 }]);
+});
+
+test("shared fields sync across the group and respect locks on any vehicle", async (t) => {
+  const { call, owner, departure, saveDep, addVehicle, adminList, book } = await fixture(t);
+  const v1 = await departure();
+  const v2 = await addVehicle(v1.id);
+  await departure({ id: v1.id, startTime: "07:00", pickup: "Otel" });
+  let second = (await adminList()).find((x) => x.id === v2.id);
+  assert.equal(second.start_time, "07:00");
+  assert.equal(second.pickup, "Otel");
+  assert.equal(second.guide_name, "", "rehber araca özel");
+  await book(v2.id, [1]);
+  const moved = await saveDep({ id: v1.id, startTime: "07:00", date: "2027-03-11" });
+  assert.equal(moved.status, 409, "2. araçta kayıt varken ortak tarih değişmez");
+  const twin = await saveDep({ startTime: "07:00" });
+  assert.equal(twin.status, 409);
+  assert.match(twin.json.message, /Araç ekle/);
+  assert.equal((await saveDep({ startTime: "15:00" })).status, 200, "aynı gün farklı saat ayrı sefer");
+  const v3 = await addVehicle(v2.id);
+  assert.equal(v3.vehicle_no, 3);
+  assert.equal(v3.group_id, v1.id);
+  const first = await call(`/admin/departures/${v1.id}`, { method: "DELETE", cookie: owner });
+  assert.equal(first.status, 409);
+  assert.match(first.json.message, /diğer araçları/);
+  assert.equal((await call(`/admin/departures/${v3.id}`, { method: "DELETE", cookie: owner })).status, 200);
+  second = (await adminList()).find((x) => x.id === v2.id);
+  assert.equal(second.vehicle_no, 2);
+});
+
+test("waitlist hears about an added vehicle", async (t) => {
+  const { store, call, departure, addVehicle, book } = await fixture(t);
+  const v1 = await departure();
+  await book(v1.id, range(1, 18));
+  const wait = await call("/interest", {
+    body: {
+      kind: "waitlist",
+      tourId: TOUR,
+      departureId: v1.id,
+      count: 2,
+      name: "Bekleyen Misafir",
+      email: "bekleyen@example.com",
+      phone: "05551112233",
+      consent: true,
+    },
+  });
+  assert.equal(wait.status, 201, wait.text);
+  assert.equal((await store.interest.notifyOpenings()).notified, 0);
+  const v2 = await addVehicle(v1.id);
+  assert.equal((await store.interest.notifyOpenings()).notified, 1);
+  const mail = await store.db.one("notification_outbox", { kind: "interest_opening" });
+  assert.ok(mail);
+  // 2. araç numarasıyla açılan sayfadan bekleme listesine yazılan da gruba bağlanır.
+  await book(v2.id, range(1, 18));
+  const late = await call("/interest", {
+    body: { kind: "waitlist", tourId: TOUR, departureId: v2.id, count: 1, name: "Geç Gelen", email: "gec@example.com", phone: "05551112233", consent: true },
+  });
+  assert.equal(late.status, 201, late.text);
+  assert.equal((await store.db.one("interest_list", { email: "gec@example.com" })).departure_id, v1.id);
 });

@@ -135,7 +135,7 @@ export async function createDepartures(
         { ...(tourId ? { tour_id: tourId } : {}), ...(date ? { date } : {}) },
         { sort: { date: 1, start_time: 1, id: 1 } },
       );
-      return Promise.all(
+      const listed = await Promise.all(
         rows.map(async (row) => {
           const d = withCutoff(await enrich(row)),
             locked = new Set(
@@ -151,8 +151,14 @@ export async function createDepartures(
           return { ...d, closed, available: d.vehicle.sellableSeats - locked.size - closed };
         }),
       );
+      // Grubun satışı açık araçlarındaki toplam boş yer (bekleme listesi ve panel için).
+      const groupFree = new Map();
+      for (const d of listed)
+        if (d.salesOpen) groupFree.set(d.group_id, (groupFree.get(d.group_id) || 0) + d.available);
+      return listed.map((d) => ({ ...d, group_available: groupFree.get(d.group_id) || 0 }));
     },
-    async save(input) {
+    // group: "Araç ekle"den gelen ek araç ({ group_id, vehicle_no }); aynı tarih/saat kontrolünü atlar.
+    async save(input, { group } = {}) {
       // Filodan bir araç seçildiyse sınıf ve kapasite o araçtan gelir.
       if (input.vehicleId) {
         const unit = fleetVehicle(input.vehicleId);
@@ -178,17 +184,57 @@ export async function createDepartures(
             old.start_time !== input.startTime ||
             old.vehicle.modelId !== input.vehicleModel ||
             old.vehicle.passengerSeats !== input.passengerSeats);
+        // Aynı tarihteki diğer araçlar (ek araç eklenince hepsinde group_id yazılıdır).
+        const siblings = old
+            ? await db.find("departures", { group_id: old.group_id, _id: { $ne: id } })
+            : [],
+          shared =
+            old &&
+            (old.date !== input.date ||
+              old.price !== (input.price ?? tourPrice(input.tourId)) ||
+              old.start_time !== input.startTime);
         if (
-          changed &&
-          (await db.one("seat_locks", {
-            departure_id: id,
-            expires_at: { $gt: clock() },
-          }))
+          (changed &&
+            (await db.one("seat_locks", {
+              departure_id: id,
+              expires_at: { $gt: clock() },
+            }))) ||
+          (shared &&
+            siblings.length &&
+            (await db.one("seat_locks", {
+              departure_id: { $in: siblings.map((x) => x.id) },
+              expires_at: { $gt: clock() },
+            })))
         )
           throw new AppError(
             409,
             "Ayrılmış koltuklar varken tarih, fiyat veya araç değiştirilemez. Yolcuyu başka sefere taşıyabilirsiniz.",
           );
+        // Aynı tur, tarih ve saatte ikinci sefer açılmaz: müşteri aynı günü iki kez görürdü.
+        if (!group && (!old || old.date !== input.date || old.start_time !== input.startTime)) {
+          const own = old?.group_id;
+          const twin = (
+            await db.find("departures", { tour_id: input.tourId, date: input.date, start_time: input.startTime })
+          ).find((x) => x.id !== id && (x.group_id || x.id) !== own);
+          if (twin)
+            throw new AppError(
+              409,
+              "Bu tarih ve saatte sefer var; ikinci araç için seferde 'Araç ekle'yi kullanın.",
+            );
+        }
+        if (old && old.date !== input.date)
+          for (const x of siblings.filter((x) => x.vehicle_id)) {
+            const clash = await db.one("departures", {
+              vehicle_id: x.vehicle_id,
+              date: input.date,
+              group_id: { $ne: old.group_id },
+            });
+            if (clash)
+              throw new AppError(
+                409,
+                `${x.vehicle_no || ""}. aracın plakası ${input.date} günü başka bir sefere atanmış. Önce o seferin aracını değiştirin.`,
+              );
+          }
         if (input.vehicleId) {
           const clash = await db.one("departures", {
             vehicle_id: input.vehicleId,
@@ -218,14 +264,51 @@ export async function createDepartures(
             (n) => n <= makeVehicle(input.vehicleModel, input.passengerSeats).sellableSeats,
           ),
         };
-        if (old) await db.update("departures", { _id: id }, fields);
-        else
+        if (old) {
+          await db.update("departures", { _id: id }, fields);
+          // Tarih, saat, fiyat ve buluşma noktası gruptaki tüm araçlarda aynıdır.
+          if (siblings.length)
+            await db.updateMany(
+              "departures",
+              { group_id: old.group_id, _id: { $ne: id } },
+              { date: fields.date, start_time: fields.start_time, price: fields.price, pickup: fields.pickup },
+            );
+        } else
           await db.insert("departures", id, {
             id,
             tour_id: input.tourId,
             ...fields,
+            ...(group || {}),
           });
         return this.get(id, { allowClosed: true, allowPast: true });
+      });
+    },
+    // Dolan tarihe ek araç: tarih, saat, fiyat, buluşma noktası, aktiflik ve araç tipi 1. araçtan
+    // gelir; plaka, rehber ve kapalı koltuklar araca özeldir ve boş başlar.
+    async addVehicle(id) {
+      return tx(async () => {
+        const src = await this.get(id, { allowClosed: true, allowPast: true }),
+          gid = src.group_id,
+          base = await this.get(gid, { allowClosed: true, allowPast: true }),
+          members = await db.find("departures", { group_id: gid });
+        await db.update("departures", { _id: gid }, { group_id: gid, vehicle_no: 1 });
+        const next = Math.max(1, ...members.map((m) => Number(m.vehicle_no) || 1)) + 1;
+        return this.save(
+          {
+            tourId: base.tour_id,
+            date: base.date,
+            startTime: base.start_time,
+            price: base.custom_price,
+            pickup: base.pickup,
+            guideName: "",
+            guidePhone: "",
+            vehicleModel: base.vehicle.modelId,
+            passengerSeats: base.vehicle.passengerSeats,
+            vehicleId: "",
+            active: Boolean(base.active),
+          },
+          { group: { group_id: gid, vehicle_no: next } },
+        );
       });
     },
     // Online satışa kapalı koltuklar (ör. arka dörtlü). Satılmış koltuk sonradan kapatılamaz;
@@ -254,7 +337,9 @@ export async function createDepartures(
     // Yanlış açılmış sefer silinebilir; kaydı (iptal edilmiş olsa da) olan sefer yalnız kapatılır.
     async remove(id) {
       return tx(async () => {
-        await this.get(id, { allowClosed: true, allowPast: true });
+        const d = await this.get(id, { allowClosed: true, allowPast: true });
+        if (d.vehicle_no === 1 && (await db.one("departures", { group_id: id, _id: { $ne: id } })))
+          throw new AppError(409, "Bu tarihin ek araçları var; önce diğer araçları silin.");
         if (await db.one("reservations", { departure_id: id }))
           throw new AppError(409, "Bu seferde rezervasyon kaydı var; silmek yerine satışa kapatın.");
         await db.remove("seat_locks", { departure_id: id });

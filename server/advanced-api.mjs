@@ -133,6 +133,13 @@ export function attachAdvancedApi(
     }),
   );
   app.post(
+    "/api/admin/departures/:id/vehicles",
+    requireAdmin,
+    route(async (q, r) =>
+      r.status(201).json(await store.departures.addVehicle(z.string().min(1).max(100).parse(q.params.id))),
+    ),
+  );
+  app.post(
     "/api/admin/departures/:id/closed-seats",
     requireAdmin,
     route(async (q, r) => {

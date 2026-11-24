@@ -260,10 +260,23 @@ export async function openStore(
     db,
     clock,
     cleanup,
+    // Halka açık liste: aynı tarihteki araçlar tek satırdır. Satır, ilk boş yeri olan aracı
+    // gösterir; rezervasyon sayfası yolcu sayısına göre "vehicles" içinden sığan ilk aracı seçer.
     async listDepartures(tourId) {
-      return (await departures.list({ tourId })).filter(
+      const open = (await departures.list({ tourId })).filter(
         (d) => d.salesOpen && d.date >= localDate(clock()),
       );
+      const groups = new Map();
+      for (const d of open) groups.set(d.group_id, [...(groups.get(d.group_id) || []), d]);
+      return [...groups.values()].map((vs) => {
+        vs.sort((a, b) => a.vehicle_no - b.vehicle_no);
+        const pick = vs.find((v) => v.available > 0) || vs[0];
+        return {
+          ...pick,
+          available: vs.reduce((n, v) => n + v.available, 0),
+          vehicles: vs.map((v) => ({ id: v.id, available: v.available })),
+        };
+      });
     },
     async availability(id, { agent = false } = {}) {
       await cleanup();
@@ -316,6 +329,19 @@ export async function openStore(
           );
         if (!agent && seats.some((n) => d.closed_seats.includes(n)))
           throw new AppError(409, "Seçtiğiniz koltuklardan biri satışa kapalı.");
+        // Online satışta önce küçük numaralı araç dolar; acenta bu sıradan muaftır.
+        if (
+          !agent &&
+          d.vehicle_no > 1 &&
+          (await departures.list({ tourId: d.tour_id, date: d.date })).some(
+            (x) =>
+              x.group_id === d.group_id &&
+              x.vehicle_no < d.vehicle_no &&
+              x.salesOpen &&
+              x.available >= seats.length,
+          )
+        )
+          throw new AppError(409, "Önce diğer araç doluyor; sayfayı yenileyip yeniden seçin.");
         const token = randomBytes(24).toString("hex"),
           expires = clock() + 600000;
         // Önce tüm koltuklar kontrol edilir, sonra hepsi yazılır: biri doluysa
