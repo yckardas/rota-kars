@@ -210,10 +210,26 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         );
     }
   }, [member]);
+  // Tarihte birden fazla araç varsa yolcu sayısının sığdığı ilk araç açılır (önce 1. araç
+  // dolar); müşteri araç seçmez. Koltuk, fiyat ve ayırma çağrıları bu aracın seferiyle yapılır.
+  const dateRow = departures.find((d) => d.id === departureId),
+    vehicleId =
+      dateRow?.vehicles?.find((v) => v.available >= count)?.id ??
+      dateRow?.vehicles?.[0]?.id ??
+      departureId,
+    splitGroup = Boolean(
+      dateRow?.vehicles &&
+        dateRow.vehicles.length > 1 &&
+        dateRow.available >= count &&
+        !dateRow.vehicles.some((v) => v.available >= count),
+    );
+  useEffect(() => {
+    setSelected([]);
+  }, [vehicleId]);
   useEffect(() => {
     setQuote(null);
     setQuoteError("");
-    if (!departureId) return;
+    if (!vehicleId) return;
     let active = true;
     setQuoteBusy(true);
     post<{
@@ -223,7 +239,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
       total: number;
       deposit: number;
     }>("/reservations/quote", {
-      departureId,
+      departureId: vehicleId,
       count,
       ...(couponId ? { couponId } : {}),
       ...(transfer
@@ -249,7 +265,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
       active = false;
     };
   }, [
-    departureId,
+    vehicleId,
     count,
     couponId,
     member,
@@ -259,13 +275,13 @@ export function Booking({ catalog }: { catalog: Catalog }) {
   ]);
   // 3. adım: sunucunun ürettiği ön bilgilendirme formu (kayıtta aynı metin saklanır).
   useEffect(() => {
-    if (step !== 2 || !departureId) return;
+    if (step !== 2 || !vehicleId) return;
     let active = true;
     setPreInfoError("");
     post<PreInfo>(
       "/reservations/pre-info",
       {
-        departureId,
+        departureId: vehicleId,
         seats: selected,
         ...contact,
         passengers: selected.map((_, i) => {
@@ -293,7 +309,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     return () => {
       active = false;
     };
-  }, [step, departureId, mode, couponId]);
+  }, [step, vehicleId, mode, couponId]);
   // Yön yalnız adım değişince güncellenir; süre sayacının her saniyelik
   // yeniden çizimi animasyonu baştan başlatmasın.
   const prevStep = useRef(step),
@@ -425,10 +441,10 @@ export function Booking({ catalog }: { catalog: Catalog }) {
   }, [tour]);
   useEffect(() => {
     let active = true;
-    if (!departureId || step !== 0) return;
+    if (!vehicleId || step !== 0) return;
     const refresh = () =>
       api<{ seats: Seat[]; vehicle: Vehicle }>(
-        `/departures/${departureId}/seats`,
+        `/departures/${vehicleId}/seats`,
       )
         .then((d) => {
           if (active) {
@@ -458,7 +474,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
       active = false;
       clearInterval(timer);
     };
-  }, [departureId, step]);
+  }, [vehicleId, step]);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
@@ -495,13 +511,13 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     }
     setBusy(true);
     try {
-      const h = await post<Hold>("/holds", { departureId, seats: selected });
+      const h = await post<Hold>("/holds", { departureId: vehicleId, seats: selected });
       setHold(h);
       goStep(1);
     } catch (e) {
       setError((e as Error).message);
       const fresh = await api<{ seats: Seat[] }>(
-        `/departures/${departureId}/seats`,
+        `/departures/${vehicleId}/seats`,
       ).catch(() => null);
       if (fresh) {
         setSeats(fresh.seats);
@@ -917,6 +933,15 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   <button type="button" className="btn btn-small" onClick={() => setInterest("prereg")}>
                     {t("Ücretsiz ön kayıt bırakın")}
                   </button>
+                </div>
+              )}
+              {departure && !hold && !selected.length && splitGroup && (
+                <div className="info-note waitlist-note" role="status">
+                  <Info size={18} />
+                  <p>
+                    {t("Grubunuz tek araca sığmıyor; birlikte yolculuk için bizi arayın.")}{" "}
+                    <a href={telHref(catalog.business.mobile)}>{t("Acente ile görüşün.")}</a>
+                  </p>
                 </div>
               )}
               {/* Kendi koltuk ayırmanız sayıyı düşürmesin: yalnız seçim yapılmadan önce. */}

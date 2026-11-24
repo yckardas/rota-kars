@@ -1281,6 +1281,16 @@
   background: var(--red);
   color: #fff;
 }
+/* Satışa kapalı koltuk: müşteriye dolu görünür, acenta seçip yazabilir. */
+.rk-admin .vehicle-seat.closed {
+  background: repeating-linear-gradient(135deg, #eef1f2 0 6px, #dfe4e6 6px 12px);
+  border-color: #c3ccd0;
+  border-style: dashed;
+}
+.rk-admin .vehicle-seat.closed > span {
+  background: #5a666c;
+  color: #fff;
+}
 
 /* ---------- Giriş ekranı ---------- */
 .rk-admin .admin-login {

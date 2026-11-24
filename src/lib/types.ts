@@ -174,8 +174,17 @@ export type Departure = {
   guide_phone: string;
   vehicle_id?: string;
   vehicle: Vehicle;
+  // Aynı tarihteki ek araçlar: group_id 1. aracın id'si, vehicle_no 1, 2, 3…
+  group_id?: string;
+  vehicle_no?: number;
+  // Panel: online satışa kapalı koltuklar ve bunların boş olanlarının sayısı.
+  closed_seats?: number[];
+  closed?: number;
+  // Halka açık liste: tarihin satışı açık araçları (sırayla) ve boş yerleri.
+  vehicles?: { id: string; available: number }[];
 };
-export type Seat = { number: number; status: "occupied" | "available" };
+// "closed": satışa kapalı koltuk; yalnız panelde gelir (müşteriye "occupied").
+export type Seat = { number: number; status: "occupied" | "available" | "closed" };
 export type Hold = { token: string; seats: number[]; expiresAt: number };
 export type PassengerDetail = {
   nationality: string;
