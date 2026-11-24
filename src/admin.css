@@ -1965,3 +1965,29 @@
 .rk-admin .content-documents textarea {
   background: var(--surface);
 }
+
+/* Site içerikleri: tur kopyalama ve kopya turun yayın durumu */
+.rk-admin .tour-copy-box,
+.rk-admin .tour-copy-status {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+.rk-admin .tour-copy-box > .btn {
+  justify-self: start;
+}
+.rk-admin .tour-copy-status {
+  border: 1px solid var(--lichen);
+  border-left-width: 4px;
+  background: var(--lichen-wash);
+}
+.rk-admin .tour-copy-status p {
+  margin: 0;
+}
+.rk-admin .tour-copy-status code {
+  font-size: 13px;
+}

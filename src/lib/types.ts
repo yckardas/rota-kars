@@ -14,6 +14,9 @@ export type Tour = {
   id: string;
   // Yurt dışı tur (katalogda yalnız yurt dışı turlarda bulunur).
   abroad?: boolean;
+  // Panelden kopyalanan tur ve kaynağı (bkz. server/content.mjs).
+  custom?: boolean;
+  sourceId?: string;
   salesOpen: boolean;
   vehicle: Vehicle;
   name: string;
