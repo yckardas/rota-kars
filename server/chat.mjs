@@ -163,12 +163,13 @@ export function createChatService(
       q = normalize(last),
       w = words(last);
     const has = (...terms) => terms.some((s) => q.includes(s));
-    const tours = (await store?.operations?.list()) || catalogTours;
+    // Taslak (yayınlanmamış kopya) turlar önerilmez.
+    const tours = ((await store?.operations?.list()) || catalogTours).filter((t) => !t.hidden);
     const context = contextFor(messages, pageTourId),
       count = context.count;
-    const found = context.found.map(
-      (t) => tours.find((current) => current.id === t.id) || t,
-    );
+    const found = context.found
+      .filter((t) => !t.hidden)
+      .map((t) => tours.find((current) => current.id === t.id) || t);
     const t = found[0],
       vehicle = t?.vehicle || defaultVehicle;
     const reply = (text, extra = {}) => ({

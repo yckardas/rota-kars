@@ -203,7 +203,8 @@ export async function openStore(
     });
     const seedDepartures = [];
     const today = new Date(clock());
-    for (const t of tours)
+    // Örnek seferler yalnız kod içindeki turlara; panelden kopyalanan tur seferle başlamaz.
+    for (const t of tours.filter((x) => !x.custom))
       for (let i = 0; i < 6; i++) {
         const d = new Date(today);
         d.setUTCDate(d.getUTCDate() + 3 + i * 7);

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { tourIdSchema } from "./tour-id.mjs";
 import QRCode from "qrcode";
 import { AppError } from "./store.mjs";
 import { vehicleModels, fleetVehicles } from "./operations.mjs";
@@ -36,7 +37,7 @@ export function attachAdvancedApi(
   },
 ) {
   const token = z.string().regex(/^[a-f0-9]{64}$/),
-    tourId = z.enum(tours.map((t) => t.id));
+    tourId = tourIdSchema;
   app.post(
     "/api/auth/verification/request",
     requireMember,
@@ -113,7 +114,7 @@ export function attachAdvancedApi(
           amountMinTotal: z.number().int().min(0).max(100000000),
           validDays: z.number().int().min(1).max(365),
           minTotal: z.number().int().min(0).max(100000000),
-          tourIds: z.array(tourId).max(tours.length),
+          tourIds: z.array(tourId).max(100),
           referralTrigger: z.enum(["paid", "completed"]),
           requireVerified: z.boolean(),
         })

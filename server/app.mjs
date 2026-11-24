@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { tourIdSchema } from "./tour-id.mjs";
 import { isIP } from "node:net";
 import express from "express";
 import QRCode from "qrcode";
@@ -41,7 +42,7 @@ import {
   isLateBooking,
   freeCancelDays,
 } from "./legal.mjs";
-import { announcement, currentEn } from "./content.mjs";
+import { announcement, currentEn, TOUR_SLUG } from "./content.mjs";
 import { attachSocialAuth, cookieValue } from "./social-auth.mjs";
 import { createTurnstile } from "./turnstile.mjs";
 import { fcmHint, webPushEndpointOk } from "./push.mjs";
@@ -89,7 +90,7 @@ const requestSchema = z
     guests: z.number().int().min(1).max(50),
     hotelId: z.string().uuid().optional(),
     // Tur sayfasından gelen talepte (konaklama, tur bilgisi) tourId de olur.
-    tourId: z.enum(tours.map((t) => t.id)).optional(),
+    tourId: tourIdSchema.optional(),
     rooms: z.number().int().min(1).max(20).optional(),
     roomType: z.enum(Object.keys(ROOM_TYPES)).optional(),
     children: z.number().int().min(0).max(20).optional(),
@@ -853,7 +854,7 @@ export function createApp(
     "/api/admin/operations/:id/mode",
     requireAdmin,
     route(async (q, r) => {
-      const id = z.enum(tours.map((t) => t.id)).parse(q.params.id);
+      const id = tourIdSchema.parse(q.params.id);
       const input = z
         .object({
           mode: z.enum(["online", "demand"]),
@@ -869,7 +870,7 @@ export function createApp(
     "/api/admin/operations/:id/open-sales",
     requireAdmin,
     route(async (q, r) => {
-      const id = z.enum(tours.map((t) => t.id)).parse(q.params.id);
+      const id = tourIdSchema.parse(q.params.id);
       r.json(await store.interest.openSales(id));
     }),
   );
@@ -905,7 +906,7 @@ export function createApp(
     "/api/admin/operations/:id/transfer",
     requireAdmin,
     route(async (q, r) => {
-      const id = z.enum(tours.map((t) => t.id)).parse(q.params.id);
+      const id = tourIdSchema.parse(q.params.id);
       r.json(await store.operations.saveTransfer(id, transferConfigSchema.parse(q.body)));
     }),
   );
@@ -1032,7 +1033,8 @@ export function createApp(
     const rated = await ratingFeatures();
     return {
       business,
-      tours: await withNextDeparture(await store.operations.list()),
+      // Panelden kopyalanıp henüz yayınlanmamış (taslak) turlar sitede görünmez.
+      tours: await withNextDeparture((await store.operations.list()).filter((t) => !t.hidden)),
       vehicleModels,
       photoCredits,
       stories,
@@ -1268,7 +1270,7 @@ export function createApp(
             ),
           context: z
             .object({
-              tourId: z.enum(tours.map((t) => t.id)).optional(),
+              tourId: tourIdSchema.optional(),
             })
             .optional(),
           abroadConsent: z.boolean().optional(),
@@ -1563,7 +1565,7 @@ export function createApp(
     "/api/reviews",
     route(async (q, r) => {
       const tourId = q.query.tour
-        ? z.enum(tours.map((t) => t.id)).parse(q.query.tour)
+        ? tourIdSchema.parse(q.query.tour)
         : null;
       r.json(await reviewsService.get(await store.assignments(), tourId));
     }),
@@ -1589,7 +1591,7 @@ export function createApp(
       const input = z
         .object({
           kind: z.enum(["waitlist", "prereg"]),
-          tourId: z.enum(tours.map((t) => t.id)),
+          tourId: tourIdSchema,
           departureId: z.string().min(1).max(100).optional(),
           preferredDate: z.string().trim().max(60).optional(),
           count: z.number().int().min(1).max(50),
@@ -2011,7 +2013,44 @@ export function createApp(
       result.error.issues.map((i) => ({ ...i, code: "custom", message: tourIssueMessage(i) })),
     );
   };
-  const tourParam = (q) => z.enum(tours.map((t) => t.id)).parse(q.params.id);
+  const tourParam = (q) => tourIdSchema.parse(q.params.id);
+  // Tur kopyalama (bkz. content.mjs): liste taslakları da içerir.
+  app.get(
+    "/api/admin/content/tours",
+    requireAdmin,
+    route(async (_q, r) => r.json(store.content.listTours())),
+  );
+  app.post(
+    "/api/admin/content/tours/:id/copy",
+    requireAdmin,
+    route(async (q, r) => {
+      const input = z
+        .object({
+          id: z
+            .string()
+            .trim()
+            .min(3, "Adres en az 3 karakter olmalı.")
+            .max(60, "Adres en fazla 60 karakter olabilir.")
+            .regex(TOUR_SLUG, "Adreste yalnız küçük harf, rakam ve tire kullanın (ör. tiflis-gunubirlik)."),
+          name: line(80).min(3),
+        })
+        .parse(q.body);
+      r.status(201).json(await store.content.copyTour(tourParam(q), input, q.admin));
+    }),
+  );
+  app.post(
+    "/api/admin/content/tours/:id/visibility",
+    requireAdmin,
+    route(async (q, r) => {
+      const { hidden } = z.object({ hidden: z.boolean() }).parse(q.body);
+      r.json(await store.content.setTourHidden(tourParam(q), hidden));
+    }),
+  );
+  app.delete(
+    "/api/admin/content/tours/:id",
+    requireAdmin,
+    route(async (q, r) => r.json(await store.content.deleteTour(tourParam(q)))),
+  );
   app.get(
     "/api/admin/content/tours/:id",
     requireAdmin,
@@ -2166,7 +2205,7 @@ export function createApp(
           category: z.enum(Object.keys(ARTICLE_CATEGORIES)),
           cover: z.string().regex(articleImage, "Kapak görseli sitedeki ya da yüklenen bir görsel olmalı."),
           body: z.string().trim().min(50).max(30000),
-          tourIds: z.array(z.enum(tours.map((t) => t.id))).max(10).default([]),
+          tourIds: z.array(tourIdSchema).max(10).default([]),
           status: z.enum(["draft", "published"]),
         })
         .parse(q.body);
@@ -2203,7 +2242,7 @@ export function createApp(
       const input = z
         .object({
           reviewId: z.string().min(1).max(500),
-          tourIds: z.array(z.enum(tours.map((t) => t.id))).max(tours.length),
+          tourIds: z.array(tourIdSchema).max(100),
         })
         .parse(q.body);
       await store.assignReview(input.reviewId, input.tourIds);

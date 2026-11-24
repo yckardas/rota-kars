@@ -55,6 +55,12 @@ const DEFAULT_TOURS = new Map(
   tours.map((t) => [t.id, { minParticipants: 0, minNoticeHours: 0, documents: [], ...pick(t, TOUR_FIELDS) }]),
 );
 const DEFAULT_BUSINESS = pick(business, BUSINESS_FIELDS);
+// Kod içindeki turlar; panelden kopyalanan turlar (custom_tours) bunlara eklenir.
+const BUILT_IN = new Set(tours.map((t) => t.id));
+// Kopyaya kaynaktan geçen, panelde düzenlenmeyen alanlar.
+const BASE_FIELDS = ["inquiryOnly", "demandByDefault"];
+// Kopya turun adresi: /turlar/<id>.
+export const TOUR_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 // "Varsayılana dön"ün dokunmadığı satış ve sözleşme koşulları.
 const KEPT_ON_RESET = ["price", "minParticipants", "minNoticeHours"];
 
@@ -94,10 +100,41 @@ export async function createContent(db, { clock = Date.now } = {}) {
     },
     { "fields.image": ani.image, "fields.gallery": ani.gallery },
   );
+  // Panelden kopyalanan turlar ortak tur dizisine (kaynağın ve önceki kopyalarının
+  // arkasına) eklenir; böylece rezervasyon, sefer, SEO ve bildirimler onları da bulur.
+  // Kayıttan silinen kopya diziden de çıkar.
+  async function syncCustomTours() {
+    const rows = await db.find("custom_tours", {}, { sort: { created_at: 1 } }),
+      wanted = new Set(rows.map((r) => r.id));
+    for (let i = tours.length - 1; i >= 0; i--)
+      if (!BUILT_IN.has(tours[i].id) && !wanted.has(tours[i].id)) {
+        DEFAULT_TOURS.delete(tours[i].id);
+        tours.splice(i, 1);
+      }
+    for (const row of rows) {
+      DEFAULT_TOURS.set(row.id, structuredClone(row.defaults));
+      let tour = tours.find((t) => t.id === row.id);
+      if (!tour) {
+        tour = { id: row.id };
+        const after = tours.reduce((at, t, i) => (t.id === row.source_id || t.sourceId === row.source_id ? i : at), tours.length - 1);
+        tours.splice(after + 1, 0, tour);
+      }
+      Object.assign(tour, structuredClone(row.base || {}), {
+        source: "",
+        custom: true,
+        hidden: Boolean(row.hidden),
+        sourceId: row.source_id,
+      });
+    }
+  }
   async function apply() {
+    await syncCustomTours();
     const docs = new Map((await db.find("site_content", {})).map((d) => [d.id, d]));
-    for (const tour of tours)
+    for (const tour of tours) {
       Object.assign(tour, structuredClone(DEFAULT_TOURS.get(tour.id)), docs.get("tour:" + tour.id)?.fields || {});
+      // Kopyada yurt dışı/yurt içi kategoriden gelir (ücretsiz iptal süresi, sözleşme dili).
+      if (tour.custom) tour.abroad = tour.category === "Yurt dışı";
+    }
     Object.assign(business, structuredClone(DEFAULT_BUSINESS), docs.get("business")?.fields || {});
     Object.assign(announcement, structuredClone(DEFAULT_ANNOUNCEMENT), docs.get("announcement")?.fields || {});
   }
@@ -113,12 +150,66 @@ export async function createContent(db, { clock = Date.now } = {}) {
       updatedBy: doc?.updated_by || null,
     };
   };
+  const meta = (t) => ({ id: t.id, name: t.name, custom: Boolean(t.custom), hidden: Boolean(t.hidden), sourceId: t.sourceId || null });
+  const copyOnly = (id) => {
+    if (BUILT_IN.has(id)) throw new AppError(409, "Bu işlem yalnız panelden kopyalanan turlarda yapılabilir.");
+    const tour = tours.find((t) => t.id === id);
+    if (!tour) throw new AppError(404, "Tur bulunamadı.");
+    return tour;
+  };
   return {
     apply,
+    // Açılıştaki gibi kopyaları kayıttan yeniden yükler (testlerde yeniden başlatma).
+    reload: apply,
+    // Paneldeki tur listesi: taslak kopyalar dahil.
+    listTours: () => tours.map(meta),
     async tour(id) {
       const tour = tours.find((t) => t.id === id);
       if (!tour) throw new AppError(404, "Tur bulunamadı.");
-      return info("tour:" + id, pick(tour, TOUR_FIELDS), DEFAULT_TOURS.get(id));
+      return { ...(await info("tour:" + id, pick(tour, TOUR_FIELDS), DEFAULT_TOURS.get(id))), tour: meta(tour) };
+    },
+    // Turu yeni bir tur olarak kopyalar: içerik (paneldeki güncel hâliyle) ve araç/satış
+    // ayarı kaynaktan gelir, seferler gelmez. Kopya taslak başlar; "Yayınla" ile sitede görünür.
+    async copyTour(sourceId, { id, name }, actor) {
+      const source = tours.find((t) => t.id === sourceId);
+      if (!source) throw new AppError(404, "Tur bulunamadı.");
+      if (tours.some((t) => t.id === id) || (await db.one("custom_tours", { _id: id })))
+        throw new AppError(409, "Bu adres başka bir turda kullanılıyor. Farklı bir adres yazın.");
+      const ops = await db.one("tour_operations", { _id: sourceId });
+      await db.transaction(async () => {
+        await db.insert("custom_tours", id, {
+          id,
+          source_id: sourceId,
+          hidden: true,
+          base: pick(source, BASE_FIELDS),
+          defaults: { ...pick(source, TOUR_FIELDS), name },
+          created_at: clock(),
+          created_by: actor?.name || null,
+        });
+        if (ops) {
+          const { _id, ...rest } = ops;
+          await db.insert("tour_operations", id, { ...rest, tour_id: id });
+        }
+      });
+      await apply();
+      return this.tour(id);
+    },
+    async setTourHidden(id, hidden) {
+      copyOnly(id);
+      await db.update("custom_tours", { _id: id }, { hidden: Boolean(hidden) });
+      await apply();
+      return this.tour(id);
+    },
+    // Seferi olan kopya silinmez (rezervasyon ve raporlar tur adını kullanır); taslağa alınır.
+    async deleteTour(id, { force = false } = {}) {
+      copyOnly(id);
+      if (!force && (await db.count("departures", { tour_id: id })))
+        throw new AppError(409, "Bu turun seferleri var; silmek yerine taslağa alın.");
+      await db.remove("custom_tours", { _id: id });
+      await db.remove("site_content", { _id: "tour:" + id });
+      await db.remove("tour_operations", { _id: id });
+      await apply();
+      return { ok: true };
     },
     async saveTour(id, fields, actor) {
       if (!DEFAULT_TOURS.has(id)) throw new AppError(404, "Tur bulunamadı.");

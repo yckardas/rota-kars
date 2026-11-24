@@ -307,7 +307,7 @@ export function pageMeta(path, base) {
       graph.push({
         "@type": "ItemList",
         name: "Rota Kars turları",
-        itemListElement: tours.map((t, i) => ({
+        itemListElement: publicTours().map((t, i) => ({
           "@type": "ListItem",
           position: i + 1,
           url: `${base}/turlar/${t.id}`,
@@ -338,7 +338,7 @@ export function pageMeta(path, base) {
     };
   }
   const tourMatch = p.match(/^\/turlar\/([^/]+)$/);
-  const tour = tourMatch && tours.find((t) => t.id === tourMatch[1]);
+  const tour = tourMatch && publicTours().find((t) => t.id === tourMatch[1]);
   if (tour) {
     graph.push(
       tourLd(base, tour),
@@ -536,15 +536,20 @@ export function robotsTxt(base, env) {
   ].join("\n");
 }
 
+// Sitede görünen turlar: panelden kopyalanıp yayınlanmamış (taslak) turlar hariç.
+const publicTours = () => tours.filter((t) => !t.hidden);
 export function sitemapXml(base) {
   const paths = [
     ...Object.keys(STATIC),
-    ...tours.map((t) => `/turlar/${t.id}`),
+    ...publicTours().map((t) => `/turlar/${t.id}`),
     ...services.map((s) => `/hizmetler/${s.id}`),
     ...publishedArticles().map((a) => `/rehber/${a.slug}`),
     // İngilizce sürüm: çevrilmiş sayfalar.
     ...Object.keys(EN_STATIC).map((p) => (p === "/" ? "/en" : "/en" + p)),
-    ...tours.map((t) => `/en/turlar/${t.id}`),
+    // Kopya turların İngilizcesi yok; /en sürümü site haritasına girmez.
+    ...publicTours()
+      .filter((t) => !t.custom)
+      .map((t) => `/en/turlar/${t.id}`),
   ];
   const images = (p) => {
     const t = tours.find((x) => `/turlar/${x.id}` === p.replace(/^\/en/, ""));
