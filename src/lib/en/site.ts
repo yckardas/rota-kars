@@ -460,6 +460,8 @@ export const site: Record<string, string> = {
     "Accommodation request",
   "Size özel tur talebi":
     "Private tour request",
+  "Yola çıkmadan önce: gerekli belgeler":
+    "Before you travel: required documents",
   "Aradığınız rota listede yok mu?":
     "Can’t find your route on the list?",
   "Tek başınıza ya da kendi grubunuzla, istediğiniz tarihte: gideceğiniz yeri ve ihtiyacınızı yazın, size özel programı ve fiyatı hazırlayalım.":

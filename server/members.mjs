@@ -258,24 +258,26 @@ export async function createMembers(db, { clock, tx, campaigns }) {
         const campaign = await campaigns.get();
         if (!campaign.active)
           throw new AppError(409, "Şans çarkı kampanyası şu anda kapalı.");
-        if (
+        // E-postası doğrulanmamış üye de çevirir (yeni üye çarkı hemen görür);
+        // kampanya doğrulama istiyorsa hediye bekler ve doğrulanınca kupona
+        // dönüşür (activatePending, misafir çarkıyla aynı akış).
+        const pending =
           campaign.requireVerified &&
-          !(await db.one("members", { _id: memberId }))?.email_verified
-        )
-          throw new AppError(403, "Önce e-posta adresinizi doğrulayın.");
+          !(await db.one("members", { _id: memberId }))?.email_verified;
         const index = pickSector(campaign.sectors),
           sector = campaign.sectors[index],
-          prize = await coupon(memberId, sector, "wheel");
+          prize = pending ? null : await coupon(memberId, sector, "wheel");
         await db.insert("member_spins", memberId, {
           member_id: memberId,
-          coupon_id: prize.id,
+          coupon_id: prize?.id || null,
           prize_index: index,
           prize_json: sector,
           sectors_json: campaign.sectors,
-          activated_at: clock(),
+          ...(pending ? {} : { activated_at: clock() }),
         });
         return {
           coupon: prize,
+          pending: Boolean(pending),
           index,
           prize: sector,
           sectors: campaign.sectors,

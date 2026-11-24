@@ -263,3 +263,21 @@ test("built-in tour photos are valid Instagram covers and hotel photos", async (
     assert.equal((await hotel(bad)).status, 400, "otel: " + bad);
   }
 });
+
+test("required documents: abroad tours have defaults, panel edits reach the catalog, limits hold", async (t) => {
+  const { store, call, ops, root } = await fixture(t);
+  const info = (await call("/admin/content/tours/nahcivan", { cookie: ops })).json;
+  assert.ok(info.defaults.documents.some((d) => /muvafakatname/.test(d)), "Nahçıvan varsayılan belgeleri");
+  assert.deepEqual((await call("/admin/content/tours/ani-cildir", { cookie: ops })).json.current.documents, []);
+  const documents = ["Geçerli pasaport", "Muvafakatname (18 yaş altı)"];
+  const saved = await call("/admin/content/tours/nahcivan", { body: { ...info.current, documents }, cookie: ops });
+  assert.equal(saved.status, 200, JSON.stringify(saved.json));
+  const catalog = await (await fetch(root + "/api/catalog")).json();
+  assert.deepEqual(catalog.tours.find((x) => x.id === "nahcivan").documents, documents);
+  // Eski panel (alanı göndermeyen) kaydı da kabul edilir.
+  const { documents: _omit, ...legacy } = info.current;
+  assert.equal((await call("/admin/content/tours/nahcivan", { body: legacy, cookie: ops })).status, 200);
+  const tooMany = Array.from({ length: 13 }, (_, i) => "Belge " + i);
+  assert.equal((await call("/admin/content/tours/nahcivan", { body: { ...info.current, documents: tooMany }, cookie: ops })).status, 400);
+  await store.content.resetTour("nahcivan");
+});

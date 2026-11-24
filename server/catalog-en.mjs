@@ -187,7 +187,11 @@ export const en = {
           text: "Departure for the border gate. Times may vary with how busy it is.",
         },
       ],
-      note: "Entry documents, border conditions and current fees are confirmed by the agency before travel.",
+      note: "",
+      documents: [
+        "Passport or new-type (chip) Turkish ID card",
+        "Entry documents, border conditions and current fees are confirmed by the agency before travel.",
+      ],
     },
     "van-gunubirlik": {
       name: "Van Day Trip",
@@ -335,7 +339,11 @@ export const en = {
           text: "Afternoon departure, entry at the Türkgözü border crossing and the drive back to Kars.",
         },
       ],
-      note: "Exit and return are via the Türkgözü border crossing. Entry documents (passport or new-type ID card) and border conditions are confirmed by the agency before travel.",
+      note: "Exit and return are via the Türkgözü border crossing.",
+      documents: [
+        "Passport or new-type (chip) Turkish ID card",
+        "Entry documents and border conditions are confirmed by the agency before travel.",
+      ],
     },
     "butik-mardin": {
       name: "Boutique Mardin Tour",
@@ -491,7 +499,13 @@ export const en = {
           text: "Departure for the border gate and the drive back to Kars. Times may vary with how busy the border is.",
         },
       ],
-      note: "Entry is with the new-type Turkish ID card. The ID cards of travellers under 18 must carry a photo; under-18s not travelling with their mother or father need a notarised letter of consent. A departure tax of 1,250 TL per person is paid at the border.",
+      note: "",
+      documents: [
+        "Entry is with the new-type (chip) Turkish ID card.",
+        "The ID cards of travellers under 18 must carry a photo.",
+        "Under-18s not travelling with their mother or father need a notarised letter of consent.",
+        "A departure tax of 1,250 TL per person is paid at the border.",
+      ],
     },
     "sivas-kemaliye": {
       name: "Sivas, Divriği and Kemaliye Tour",
@@ -730,7 +744,13 @@ export const en = {
           text: "Gobustan National Park, the mud volcanoes and the Bibi-Heybat Mosque.",
         },
       ],
-      note: "The tour price is 20,000 TL or 400 USD per person. Entry is with the new-type Turkish ID card. The ID cards of travellers under 18 (infants included) must carry a photo; under-18s not travelling with their mother or father need a notarised letter of consent. A departure tax of 1,250 TL per person is paid at the border. Flight times and the order of visits by day are confirmed before the tour date.",
+      note: "The tour price is 20,000 TL or 400 USD per person. Flight times and the order of visits by day are confirmed before the tour date.",
+      documents: [
+        "Entry is with the new-type (chip) Turkish ID card.",
+        "The ID cards of travellers under 18 (infants included) must carry a photo.",
+        "Under-18s not travelling with their mother or father need a notarised letter of consent.",
+        "A departure tax of 1,250 TL per person is paid at the border.",
+      ],
     },
   },
   stories: {

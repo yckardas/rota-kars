@@ -1997,6 +1997,7 @@ export function createApp(
       .array(z.object({ time: line(40), title: line(80).min(1), text: line(600) }))
       .max(15),
     note: line(600),
+    documents: z.array(line(300).min(1)).max(12).default([]),
     minParticipants: z.number().int().min(0).max(60).default(0),
     minNoticeHours: z.number().int().min(0).max(720).default(0),
   }).refine((t) => !t.minParticipants || t.minNoticeHours >= 1, {

@@ -25,6 +25,9 @@ export const TOUR_FIELDS = [
   "excluded",
   "itinerary",
   "note",
+  // Gerekli belgeler ve önemli notlar (kimlik, pasaport, muvafakatname, harç...):
+  // tur sayfasında ve rezervasyonda dikkat çeken kutuda, her satır bir madde.
+  "documents",
   // Asgari katılımcı sayısı ve bu sayıya ulaşılamazsa turun en geç kaç saat önce
   // iptal edileceği. 0 = belirlenmedi. Ön bilgilendirme formu ve sözleşmede yazılır.
   "minParticipants",
@@ -49,7 +52,7 @@ const DEFAULT_ANNOUNCEMENT = { enabled: false, text: "", textEn: "", link: "" };
 export const announcement = structuredClone(DEFAULT_ANNOUNCEMENT);
 const pick = (obj, keys) => Object.fromEntries(keys.filter((k) => obj[k] !== undefined).map((k) => [k, structuredClone(obj[k])]));
 const DEFAULT_TOURS = new Map(
-  tours.map((t) => [t.id, { minParticipants: 0, minNoticeHours: 0, ...pick(t, TOUR_FIELDS) }]),
+  tours.map((t) => [t.id, { minParticipants: 0, minNoticeHours: 0, documents: [], ...pick(t, TOUR_FIELDS) }]),
 );
 const DEFAULT_BUSINESS = pick(business, BUSINESS_FIELDS);
 // "Varsayılana dön"ün dokunmadığı satış ve sözleşme koşulları.

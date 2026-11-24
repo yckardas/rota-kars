@@ -147,6 +147,9 @@ export function preInfoText(data, b = business) {
         ? `Fiyata dahil değil: ${tour.excluded.join(", ")}`
         : "",
       minParticipantRule(tour),
+      tour.documents?.length
+        ? `Gerekli belgeler ve önemli notlar: ${tour.documents.join(" · ")}`
+        : "",
       isAbroad(tour)
         ? "Yurt dışı tur: her yolcunun yanında sınır geçişine uygun geçerli kimlik belgesi (pasaport veya kabul edilen kimlik kartı) bulunmalıdır. Belge eksikliği nedeniyle tura katılamama gelmeme hükmündedir."
         : "",

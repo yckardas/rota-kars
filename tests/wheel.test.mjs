@@ -171,3 +171,32 @@ test("çark hakkını kullanmış üye giriş yapınca misafir hediyesi bağlanm
   const dash = (await guest("/member/dashboard")).json;
   assert.equal(dash.coupons.length, 1, "yalnız kendi çarkının kuponu");
 });
+
+test("doğrulanmamış üye Hesabım'da çarkı hemen çevirir; kupon e-posta doğrulanınca açılır", async (t) => {
+  const { store, browser } = await fixture(t);
+  assert.equal(
+    (await store.campaigns.get()).requireVerified,
+    true,
+    "canlıdaki gibi doğrulama zorunlu",
+  );
+  const req = browser();
+  const reg = await register(req, "yeni@example.com");
+  assert.equal(reg.status, 201);
+  const memberId = reg.json.member.id;
+  const spun = await req("/member/spin", {});
+  assert.equal(spun.status, 200, JSON.stringify(spun.json));
+  assert.equal(spun.json.pending, true);
+  assert.equal(spun.json.coupon, null);
+  assert.deepEqual(spun.json.prize, spun.json.sectors[spun.json.index]);
+  let dash = (await req("/member/dashboard")).json;
+  assert.equal(dash.coupons.length, 0, "doğrulanmadan kupon yok");
+  assert.equal(dash.spin.prize_index, spun.json.index);
+  assert.equal(dash.spin.coupon_id, null);
+  // Hak bir kez kullanılır.
+  assert.equal((await req("/member/spin", {})).status, 409);
+  await store.db.update("members", { _id: memberId }, { email_verified: 1 });
+  dash = (await req("/member/dashboard")).json;
+  assert.equal(dash.coupons.length, 1, "doğrulanınca kupon açılır");
+  dash = (await req("/member/dashboard")).json;
+  assert.equal(dash.coupons.length, 1, "kupon bir kez oluşur");
+});

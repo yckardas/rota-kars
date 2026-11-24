@@ -22,6 +22,7 @@ type TourFields = {
   excluded: string[];
   itinerary: Itinerary[];
   note: string;
+  documents: string[];
   minParticipants: number;
   minNoticeHours: number;
 };
@@ -94,6 +95,7 @@ function TourEditor({ id, onSaved }: { id: string; onSaved: () => void }) {
     [f, setF] = useState<TourFields | null>(null),
     [included, setIncluded] = useState(""),
     [excluded, setExcluded] = useState(""),
+    [documents, setDocuments] = useState(""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
@@ -102,6 +104,7 @@ function TourEditor({ id, onSaved }: { id: string; onSaved: () => void }) {
     setF(structuredClone(data.current));
     setIncluded(data.current.included.join("\n"));
     setExcluded(data.current.excluded.join("\n"));
+    setDocuments((data.current.documents || []).join("\n"));
   };
   useEffect(() => {
     api<Info<TourFields>>("/admin/content/tours/" + id)
@@ -142,6 +145,7 @@ function TourEditor({ id, onSaved }: { id: string; onSaved: () => void }) {
             ...f,
             included: lines(included),
             excluded: lines(excluded),
+            documents: lines(documents),
           });
       load(data);
       onSaved();
@@ -298,6 +302,22 @@ function TourEditor({ id, onSaved }: { id: string; onSaved: () => void }) {
             <Plus size={15} /> Adım ekle
           </button>
         )}
+      </fieldset>
+      {/* Yurt dışı turlarında en çok sorulan bilgi: tur sayfasının üstünde renkli kutuda,
+          rezervasyonda yolcu bilgileri adımında gösterilir. */}
+      <fieldset className="content-documents">
+        <legend>Gerekli belgeler ve önemli notlar</legend>
+        <p className="form-hint">
+          Kimlik, pasaport, vize, muvafakatname, sınır harcı gibi yolcunun mutlaka bilmesi gerekenler. Her satıra bir
+          madde yazın (en fazla 12). Tur sayfasının üstünde dikkat çeken kutuda ve rezervasyon sırasında görünür; boş
+          bırakılırsa kutu çıkmaz.
+        </p>
+        <textarea
+          rows={5}
+          value={documents}
+          onChange={(e) => setDocuments(e.target.value)}
+          placeholder={"Ör. Pasaport veya yeni tip (çipli) T.C. kimlik kartı\n18 yaş altı için muvafakatname"}
+        />
       </fieldset>
       <label className="field">
         Not (sayfanın altında)
