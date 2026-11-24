@@ -1435,8 +1435,16 @@ html:has(.kp) {
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--rk-doga) 38%, transparent) 0, transparent 42%),
-    radial-gradient(circle at 92% 100%, color-mix(in srgb, var(--rk-yurtdisi) 34%, transparent) 0, transparent 46%),
+    radial-gradient(
+      circle at 12% 0%,
+      color-mix(in srgb, var(--rk-doga) 38%, transparent) 0,
+      transparent 42%
+    ),
+    radial-gradient(
+      circle at 92% 100%,
+      color-mix(in srgb, var(--rk-yurtdisi) 34%, transparent) 0,
+      transparent 46%
+    ),
     var(--rk-night);
   border-top: 0;
   color: rgba(255, 255, 255, 0.86);
@@ -1460,7 +1468,9 @@ html:has(.kp) {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
-  transition: background 0.2s ease, transform 0.2s var(--rk-ease);
+  transition:
+    background 0.2s ease,
+    transform 0.2s var(--rk-ease);
 }
 .kp .footer .social-link:hover {
   background: var(--rk-flame);
@@ -1496,7 +1506,11 @@ html:has(.kp) {
   align-self: start;
   padding: 26px 24px;
   border-radius: var(--rk-radius);
-  background: linear-gradient(140deg, var(--rk-flame) 0%, var(--rk-yurtdisi) 100%);
+  background: linear-gradient(
+    140deg,
+    var(--rk-flame) 0%,
+    var(--rk-yurtdisi) 100%
+  );
   box-shadow: 0 30px 50px -32px rgba(194, 37, 92, 0.9);
 }
 .kp .footer-contact h3 {
@@ -3092,9 +3106,13 @@ html:has(.kp .site-header) {
   padding: 22px 24px;
   border-radius: var(--rk-radius);
   border: 2px solid var(--rk-gun);
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--rk-gun) 22%, #fff) 0%, #fff8e6 100%);
-  box-shadow: 0 20px 40px -30px color-mix(in srgb, var(--rk-gun) 90%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--rk-gun) 22%, #fff) 0%,
+    #fff8e6 100%
+  );
+  box-shadow: 0 20px 40px -30px
+    color-mix(in srgb, var(--rk-gun) 90%, transparent);
 }
 .kp .tour-documents-icon {
   display: grid;

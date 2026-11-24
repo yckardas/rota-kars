@@ -174,7 +174,11 @@ test("çark hakkını kullanmış üye giriş yapınca misafir hediyesi bağlanm
 
 test("doğrulanmamış üye Hesabım'da çarkı hemen çevirir; kupon e-posta doğrulanınca açılır", async (t) => {
   const { store, browser } = await fixture(t);
-  assert.equal((await store.campaigns.get()).requireVerified, true, "canlıdaki gibi doğrulama zorunlu");
+  assert.equal(
+    (await store.campaigns.get()).requireVerified,
+    true,
+    "canlıdaki gibi doğrulama zorunlu",
+  );
   const req = browser();
   const reg = await register(req, "yeni@example.com");
   assert.equal(reg.status, 201);
