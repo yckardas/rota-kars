@@ -33,6 +33,8 @@ export type Tour = {
   excluded: string[];
   itinerary: { time: string; title: string; text: string }[];
   note: string;
+  // Gerekli belgeler ve önemli notlar (yurt dışı turlarında kimlik, pasaport...).
+  documents?: string[];
   minParticipants?: number;
   minNoticeHours?: number;
   source: string;

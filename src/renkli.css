@@ -2994,3 +2994,78 @@ html:has(.kp .site-header) {
     font-size: 16px;
   }
 }
+
+/* ---------- Gerekli belgeler (yurt dışı turları) ----------
+   Tur sayfasında içeriğin en üstünde, rezervasyonda yolcu adımında. Dikkat rengi
+   güneş sarısı: turun türünden bağımsız olarak "önemli" diye okunur. */
+.kp .tour-documents {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: start;
+  margin: 0 0 28px;
+  padding: 22px 24px;
+  border-radius: var(--rk-radius);
+  border: 2px solid var(--rk-gun);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--rk-gun) 22%, #fff) 0%, #fff8e6 100%);
+  box-shadow: 0 20px 40px -30px color-mix(in srgb, var(--rk-gun) 90%, transparent);
+}
+.kp .tour-documents-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--rk-gun);
+  color: var(--rk-gun-on);
+}
+.kp .tour-documents h2,
+.kp .tour-documents strong {
+  margin: 4px 0 10px;
+  color: var(--kp-ink);
+  font-size: clamp(20px, 2vw, 24px);
+  line-height: 1.2;
+}
+.kp .tour-documents strong {
+  display: block;
+  font-size: 16px;
+}
+.kp .tour-documents ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.kp .tour-documents li {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 8px;
+  align-items: start;
+  color: var(--kp-ink);
+  font-size: 15.5px;
+  line-height: 1.5;
+}
+.kp .tour-documents li svg {
+  margin-top: 4px;
+  color: var(--rk-gun-ink);
+}
+.kp .tour-documents.compact {
+  margin: 14px 0 20px;
+  padding: 16px 18px;
+  gap: 12px;
+}
+.kp .tour-documents.compact .tour-documents-icon {
+  width: 38px;
+  height: 38px;
+}
+.kp .tour-documents.compact li {
+  font-size: 14.5px;
+}
+@media (max-width: 560px) {
+  .kp .tour-documents {
+    grid-template-columns: 1fr;
+    padding: 18px;
+  }
+}

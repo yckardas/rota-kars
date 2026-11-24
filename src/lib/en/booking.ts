@@ -56,6 +56,7 @@ export const booking: Record<string, string> = {
   "{n}. yolcunun T.C. kimlik numarası geçerli görünmüyor. Lütfen kontrol edin.":
     "The Turkish ID number (T.C.) for passenger {n} doesn't look right. Please check it.",
   "Yol arkadaşlarımızı tanıyalım.": "Tell us who's coming along.",
+  "Her yolcunun yanında olması gerekenler": "What every traveller must carry",
   "Yolcu adlarını ve sizinle iletişime geçebileceğimiz bilgileri paylaşın.":
     "Share the passengers' names and how we can reach you.",
   "{n}. yolcu": "Passenger {n}",

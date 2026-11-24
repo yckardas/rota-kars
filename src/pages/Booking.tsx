@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   FileText,
   CreditCard,
+  FileCheck2,
 } from "lucide-react";
 import { api, post, ApiError } from "../lib/api";
 import {
@@ -1094,6 +1095,25 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   "Yolcu adlarını ve sizinle iletişime geçebileceğimiz bilgileri paylaşın.",
                 )}
               </p>
+              {/* Yolcu bilgisi girilirken gerekli belgeler bir kez daha hatırlatılır. */}
+              {Boolean(tour?.documents?.length) && (
+                <div className="tour-documents compact" role="note">
+                  <div className="tour-documents-icon" aria-hidden="true">
+                    <FileCheck2 size={20} />
+                  </div>
+                  <div>
+                    <strong>{t("Her yolcunun yanında olması gerekenler")}</strong>
+                    <ul>
+                      {tour!.documents!.map((d) => (
+                        <li key={d}>
+                          <Check size={14} />
+                          {d}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
               {selected.map((n, i) => {
                 const p = ids[i] || emptyId,
                   tr = p.nationality === "TR",

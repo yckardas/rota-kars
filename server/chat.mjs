@@ -23,6 +23,9 @@ const tl = (n) =>
     currency: "TRY",
     maximumFractionDigits: 0,
   }).format(n / 100);
+// Turun gerekli belgeleri (yurt dışı turları): yanıtların sonuna madde madde eklenir.
+const docsText = (t) =>
+  t.documents?.length ? `\n\nGerekli belgeler:\n${t.documents.map((d) => "• " + d).join("\n")}` : "";
 const link = (label, href) => ({
   kind: "link",
   label,
@@ -124,7 +127,7 @@ export const knowledge = [
   `Hizmetler: ${services.map((s) => s.title + ": " + s.text).join(" | ")}`,
   ...catalogTours.map(
     (t) =>
-      `${t.name}: ${t.price > 0 ? `${tl(t.price)} örnek kişi başı` : "fiyat acenteden sorulur"}, ${t.duration}, ${t.location}. Dahil: ${t.included.join(", ")}. Ekstra: ${t.excluded.join(", ")}. ${t.summary} ${t.note}`,
+      `${t.name}: ${t.price > 0 ? `${tl(t.price)} örnek kişi başı` : "fiyat acenteden sorulur"}, ${t.duration}, ${t.location}. Dahil: ${t.included.join(", ")}. Ekstra: ${t.excluded.join(", ")}. ${t.summary} ${t.note}${t.documents?.length ? ` Gerekli belgeler: ${t.documents.join("; ")}.` : ""}`,
   ),
 ].join("\n");
 export function createChatService(
@@ -308,7 +311,7 @@ export function createChatService(
       )
     )
       return reply(
-        `${t ? t.name + " için " : ""}yaş, erişilebilirlik, evcil hayvan, giriş belgesi, özel fiyat ve hava koşullarına bağlı hizmetleri acente ile teyit etmelisiniz. Uygunluk veya indirim sözü veremem. Sorunuzu ekibimize iletebilirsiniz.`,
+        `${t?.documents?.length && has("pasaport", "kimlik", "vize", "sinir") ? `${t.name} için gerekli belgeler:\n${t.documents.map((d) => "• " + d).join("\n")}\n\n` : ""}${t ? t.name + " için " : ""}yaş, erişilebilirlik, evcil hayvan, giriş belgesi, özel fiyat ve hava koşullarına bağlı hizmetleri acente ile teyit etmelisiniz. Uygunluk veya indirim sözü veremem. Sorunuzu ekibimize iletebilirsiniz.`,
         {
           handoff: true,
           actions: common,
@@ -391,7 +394,7 @@ export function createChatService(
     )
       return reply(
         t
-          ? `${t.name}\n\nDahil: ${t.included.join(", ")}.\n\nEkstra: ${t.excluded.join(", ")}.\n\n${t.note}`
+          ? `${t.name}\n\nDahil: ${t.included.join(", ")}.\n\nEkstra: ${t.excluded.join(", ")}.\n\n${t.note}${docsText(t)}`
           : "Hizmet kapsamı rotaya göre değişiyor. Hangi turu düşünüyorsunuz?",
         {
           actions: common,
@@ -502,7 +505,7 @@ export function createChatService(
       );
     }
     if (t && (mentions(last).length || has("program", "rota", "tur", "anlat")))
-      return reply(`${t.name}: ${t.duration}. ${t.summary}\n\n${t.note}`, {
+      return reply(`${t.name}: ${t.duration}. ${t.summary}\n\n${t.note}${docsText(t)}`, {
         cards: [card(t)],
         actions: common,
         suggestions: [

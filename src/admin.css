@@ -1945,3 +1945,23 @@
   margin: 0;
   font-weight: 600;
 }
+
+/* Site içerikleri: tur sayfasının üstünde görünen "Gerekli belgeler" alanı öne çıkar. */
+.rk-admin .content-documents {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 16px 16px;
+  border: 1px solid var(--ochre);
+  border-left-width: 4px;
+  border-radius: 6px;
+  background: var(--ochre-wash);
+}
+.rk-admin .content-documents legend {
+  padding: 0 6px;
+  color: var(--ochre);
+  font-weight: 700;
+}
+.rk-admin .content-documents textarea {
+  background: var(--surface);
+}

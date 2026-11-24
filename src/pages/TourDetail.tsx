@@ -15,6 +15,7 @@ import {
   Info,
   CalendarDays,
   Expand,
+  FileCheck2,
 } from "lucide-react";
 import { Reviews } from "../components/Reviews";
 import { RequestForm } from "../components/RequestForm";
@@ -266,6 +267,26 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
       </section>
       <div className="container detail-layout" style={tone}>
         <div className="detail-content">
+          {/* Gerekli belgeler (yurt dışı turlarında kimlik, pasaport, muvafakatname, harç):
+              içeriğin en üstünde, gözden kaçmayacak renkli kutuda. Panelden düzenlenir. */}
+          {Boolean(t.documents?.length) && (
+            <section className="tour-documents" aria-labelledby="tour-documents-title">
+              <div className="tour-documents-icon" aria-hidden="true">
+                <FileCheck2 size={26} />
+              </div>
+              <div>
+                <h2 id="tour-documents-title">{tx("Yola çıkmadan önce: gerekli belgeler")}</h2>
+                <ul>
+                  {t.documents!.map((d) => (
+                    <li key={d}>
+                      <Check size={16} />
+                      {d}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+          )}
           <section>
             <h2>{tx("Bu yolculukta sizi neler bekliyor?")}</h2>
             <p className="lead-copy">{t.summary}</p>
@@ -321,10 +342,12 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
               ))}
             </div>
           </section>
-          <div className="info-note">
-            <Info size={20} />
-            <p>{t.note}</p>
-          </div>
+          {t.note && (
+            <div className="info-note">
+              <Info size={20} />
+              <p>{t.note}</p>
+            </div>
+          )}
           <section>
             <h2>{tx("Buluşalım, yola çıkalım.")}</h2>
             <div className="tour-meeting">

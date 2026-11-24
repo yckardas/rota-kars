@@ -281,7 +281,11 @@ export const tours = [
         text: "Sınır kapısına hareket. Yoğunluğa göre saatler değişebilir.",
       },
     ],
-    note: "Giriş belgeleri, sınır koşulları ve güncel harçlar seyahat öncesinde acente tarafından teyit edilir.",
+    note: "",
+    documents: [
+      "Pasaport veya yeni tip (çipli) T.C. kimlik kartı",
+      "Giriş belgeleri, sınır koşulları ve güncel harçlar seyahat öncesinde acente tarafından teyit edilir.",
+    ],
     source: "https://rotakarsturizm.com/tur/gunubirlik-batum-turu/",
   },
   {
@@ -473,7 +477,11 @@ export const tours = [
         text: "Öğleden sonra yola çıkış, Türkgözü sınır kapısından giriş ve Kars'a dönüş.",
       },
     ],
-    note: "Çıkış ve dönüş Türkgözü sınır kapısından yapılır. Giriş belgeleri (pasaport veya yeni tip kimlik kartı) ve sınır koşulları seyahat öncesinde acente tarafından teyit edilir.",
+    note: "Çıkış ve dönüş Türkgözü sınır kapısından yapılır.",
+    documents: [
+      "Pasaport veya yeni tip (çipli) T.C. kimlik kartı",
+      "Giriş belgeleri ve sınır koşulları seyahat öncesinde acente tarafından teyit edilir.",
+    ],
     source: "https://rotakarsturizm.com/tur/konaklamali-tiflis-turu/",
   },
   // Kasım 2026'da acentenin gönderdiği tur broşürlerinden eklenen rotalar. Hepsi açılışta
@@ -677,7 +685,13 @@ export const tours = [
         text: "Sınır kapısına hareket ve Kars'a dönüş yolculuğu. Sınırdaki yoğunluğa göre saatler değişebilir.",
       },
     ],
-    note: "Girişler yeni tip kimlik kartıyla yapılır. 18 yaşından küçüklerin kimlik kartında fotoğraf bulunması zorunludur; anne ya da babasıyla seyahat etmeyen 18 yaş altı yolcular için muvafakatname gerekir. Sınırda kişi başı 1.250 TL yurt dışı çıkış harcı ödenir.",
+    note: "",
+    documents: [
+      "Girişler yeni tip (çipli) T.C. kimlik kartıyla yapılır.",
+      "18 yaşından küçüklerin kimlik kartında fotoğraf bulunması zorunludur.",
+      "Anne ya da babasıyla seyahat etmeyen 18 yaş altı yolcular için muvafakatname gerekir.",
+      "Sınırda kişi başı 1.250 TL yurt dışı çıkış harcı ödenir.",
+    ],
     source: "https://rotakarsturizm.com/tur/nahcivan-turu/",
   },
   {
@@ -985,7 +999,13 @@ export const tours = [
         text: "Gobustan Milli Parkı, çamur volkanları ve Bibi Heybet Camii.",
       },
     ],
-    note: "Tur ücreti kişi başı 20.000 TL ya da 400 USD'dir. Girişler yeni tip kimlik kartıyla yapılır. 18 yaşından küçüklerin (bebekler dahil) kimlik kartında fotoğraf bulunması zorunludur; anne ya da babasıyla seyahat etmeyen 18 yaş altı yolcular için muvafakatname gerekir. Sınırda kişi başı 1.250 TL yurt dışı çıkış harcı ödenir. Uçuş saatleri ve günlere göre gezi sırası tur tarihinden önce teyit edilir.",
+    note: "Tur ücreti kişi başı 20.000 TL ya da 400 USD'dir. Uçuş saatleri ve günlere göre gezi sırası tur tarihinden önce teyit edilir.",
+    documents: [
+      "Girişler yeni tip (çipli) T.C. kimlik kartıyla yapılır.",
+      "18 yaşından küçüklerin (bebekler dahil) kimlik kartında fotoğraf bulunması zorunludur.",
+      "Anne ya da babasıyla seyahat etmeyen 18 yaş altı yolcular için muvafakatname gerekir.",
+      "Sınırda kişi başı 1.250 TL yurt dışı çıkış harcı ödenir.",
+    ],
     source:
       "https://rotakarsturizm.com/tur/buyuk-azerbaycan-turu-nahcivan-baku/",
   },
