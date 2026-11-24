@@ -30,6 +30,11 @@ export async function createInterest(db, { clock, tx, departures, operations, no
   const bookingUrl = (tourId, date) => base() + "/rezervasyon/" + tourId + (date ? "?date=" + date : "");
   const cancelUrl = (row) => base() + "/api/interest/" + row.token + "/cancel";
 
+  // Tarihin satışı açık, kalkmamış araçları (ek araç varsa hepsi).
+  const openVehicles = async (d) =>
+    (await departures.list({ tourId: d.tour_id, date: d.date })).filter(
+      (x) => x.group_id === d.group_id && x.salesOpen && !x.departed,
+    );
   const api = {
     // Siteden gelen kayıt. Aynı e-posta aynı sefer/tur için bekliyorsa yeni kayıt
     // açılmaz; kişi sayısı ve not güncellenir.
@@ -42,11 +47,10 @@ export async function createInterest(db, { clock, tx, departures, operations, no
           departure = await departures.get(input.departureId, { allowClosed: true });
           if (departure.tour_id !== input.tourId) throw new AppError(400, "Sefer bu tura ait değil.");
           if (departure.departed) throw new AppError(409, "Bu seferin satışı kapandı.");
-          const listed = (await departures.list({ tourId: input.tourId, date: departure.date })).find(
-            (d) => d.id === departure.id,
-          );
-          if (listed?.salesOpen && listed.available >= input.count)
+          // Bekleme kaydı tarihin araç grubuna (1. aracın id'si) bağlanır.
+          if ((await openVehicles(departure)).some((d) => d.available >= input.count))
             throw new AppError(409, "Bu seferde yer var; hemen rezervasyon yapabilirsiniz.");
+          departure = { ...departure, id: departure.group_id };
         } else if (ops.mode !== "demand")
           throw new AppError(409, "Bu tur için ön kayıt değil, doğrudan rezervasyon alınıyor.");
         const email = input.email.toLowerCase();
@@ -203,10 +207,12 @@ export async function createInterest(db, { clock, tx, departures, operations, no
         } catch {
           continue;
         }
-        const listed = (await departures.list({ tourId: d.tour_id, date: d.date })).find((x) => x.id === d.id);
-        if (!listed?.salesOpen || listed.departed) continue;
+        // Ek araç eklenmesi ya da kapalı koltuğun açılması da yer açar; grup birlikte okunur.
+        const open = await openVehicles(d);
+        if (!open.length) continue;
+        const listed = { available: open.reduce((n, x) => n + x.available, 0) };
         for (const row of rows) {
-          if (listed.available < row.count) continue;
+          if (!open.some((x) => x.available >= row.count)) continue;
           await notifications.enqueue({
             email: row.email,
             subject: `Rota Kars · ${tourName(d.tour_id)} seferinde yer açıldı`,

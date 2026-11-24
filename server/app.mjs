@@ -247,7 +247,9 @@ const tourIssueMessage = (issue) => {
 };
 // Herkese açık sefer bilgisinde rehberin adı/telefonu yer almaz (yalnız yönetim ve bilette).
 // Plaka da yalnız panelde: halka açık seferde araç adı ve yılı kalır.
-const publicDeparture = ({ guide_name, guide_phone, ...d }) => {
+// Rehber, plaka ve satışa kapalı koltuk bilgisi halka açık yanıta girmez.
+// eslint-disable-next-line no-unused-vars
+const publicDeparture = ({ guide_name, guide_phone, closed_seats, closed, group_available, ...d }) => {
   const plate = d.vehicle?.unit?.plate;
   if (!plate) return d;
   const { plate: _, ...unit } = d.vehicle.unit;

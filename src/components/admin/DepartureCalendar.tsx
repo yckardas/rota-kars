@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { SeatCourse } from "./SeatCourse";
+import { groupSizes, soldSeats, vehicleTag } from "./vehicleGroup";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { today, type Catalog, type Departure } from "../../lib/types";
 
@@ -24,9 +25,11 @@ export function DepartureCalendar({
   const byDate = useMemo(() => {
     const map = new Map<string, Departure[]>();
     for (const d of items) map.set(d.date, [...(map.get(d.date) || []), d]);
-    for (const list of map.values()) list.sort((a, b) => a.start_time.localeCompare(b.start_time));
+    for (const list of map.values())
+      list.sort((a, b) => a.start_time.localeCompare(b.start_time) || (a.vehicle_no || 1) - (b.vehicle_no || 1));
     return map;
   }, [items]);
+  const sizes = useMemo(() => groupSizes(items), [items]);
   const first = new Date(Date.UTC(cursor.y, cursor.m, 1)),
     offset = (first.getUTCDay() + 6) % 7,
     days = new Date(Date.UTC(cursor.y, cursor.m + 1, 0)).getUTCDate(),
@@ -71,14 +74,15 @@ export function DepartureCalendar({
                   type="button"
                   className={"calendar-chip" + (d.active ? "" : " closed") + (d.available === 0 ? " full" : "")}
                   onClick={() => onPick(d)}
-                  title={`${short(d.tour_id)} · ${d.start_time} · ${d.available} boş koltuk`}
+                  title={`${short(d.tour_id)} · ${d.start_time}${vehicleTag(d, sizes) ? " · " + vehicleTag(d, sizes) : ""} · ${d.available} boş koltuk`}
                 >
                   <span className="chip-line">
                     <i className="tour-stone" style={{ background: color(d.tour_id) }} aria-hidden="true" />
                     <strong>{d.start_time}</strong> <span className="chip-name">{short(d.tour_id)}</span>
+                    {vehicleTag(d, sizes) && <span className="chip-vehicle">{d.vehicle_no}. araç</span>}
                   </span>
                   <SeatCourse
-                    sold={(d.vehicle?.sellableSeats || 0) - d.available}
+                    sold={soldSeats(d)}
                     total={d.vehicle?.sellableSeats || 0}
                     size="xs"
                     guide={false}

@@ -54,9 +54,7 @@ export function SeatMap({
   const status = (n: number) =>
     selected.includes(n)
       ? "selected"
-      : seats.find((s) => s.number === n)?.status === "occupied"
-        ? "occupied"
-        : "available";
+      : (seats.find((s) => s.number === n)?.status ?? "available");
   const shape = vehicle.shape || "midibus",
     cols = cockpit.length;
   // Kapı iki sütun kaplıyorsa tek parça çizilir.
@@ -157,7 +155,9 @@ export function SeatMap({
                         ? t("seçili")
                         : st === "occupied"
                           ? t("dolu")
-                          : t("boş"),
+                          : st === "closed"
+                            ? t("satışa kapalı")
+                            : t("boş"),
                   })}
                   aria-pressed={st === "selected"}
                 >

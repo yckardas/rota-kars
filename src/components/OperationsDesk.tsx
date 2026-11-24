@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useState, type FormEvent } from "react";
 import {
   Plus,
   Check,
@@ -22,6 +22,8 @@ import { UetdsPanel } from "./admin/UetdsPanel";
 import { PassengerIdFields, detailFrom, draftFrom, idProblem, type IdDraft } from "./admin/PassengerIdFields";
 import { useFeedback } from "./admin/feedback";
 import { SeatCourse } from "./admin/SeatCourse";
+import { ClosedSeats } from "./admin/ClosedSeats";
+import { groupSizes, groupedOrder, soldSeats, vehicleTag } from "./admin/vehicleGroup";
 import { Modal } from "./Modal";
 import { downloadCsv } from "../lib/csv";
 import { telHref, waNumber } from "../lib/phone";
@@ -112,7 +114,26 @@ export function DepartureManager({
       feedback.error(e);
     }
   }
-  const listed = showPast ? items : items.filter((d) => d.date >= today());
+  // Dolan tarihe ek araç: ortak plan 1. araçtan gelir, plaka ve rehber yeni araçta seçilir.
+  async function addVehicle(d: Departure) {
+    const ok = await feedback.confirm({
+      title: "Bu tarihe araç eklensin mi?",
+      body: `${dateLabel(d.date)} · ${d.start_time}. Müşteri tarihi tek satır görür; online satışta önce mevcut araç dolar, sonra yeni araç açılır.`,
+      confirmLabel: "Araç ekle",
+    });
+    if (!ok) return;
+    try {
+      const added = await post<Departure>(`/admin/departures/${encodeURIComponent(d.id)}/vehicles`, {});
+      feedback.ok(`${added.vehicle_no}. araç eklendi; plakayı ve rehberi seçin.`);
+      await load();
+      setEditing(added);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (e) {
+      feedback.error(e);
+    }
+  }
+  const sizes = groupSizes(items);
+  const listed = groupedOrder(showPast ? items : items.filter((d) => d.date >= today()));
   // "Tur fiyatını kullan" seçiliyse fiyat gönderilmez (null): sefer panelden
   // düzenlenen tur fiyatını izler; değilse bu sefere özel fiyat kaydedilir.
   const priceOf = (f: FormData) =>
@@ -224,6 +245,9 @@ export function DepartureManager({
           cancel={() => setEditing(false)}
           remove={editing ? () => remove(editing) : undefined}
           closeSeats={editing && editing.date >= today() ? () => setClosing(editing.id) : undefined}
+          addVehicle={editing && editing.date >= today() ? () => addVehicle(editing) : undefined}
+          tag={editing ? vehicleTag(editing, sizes) : ""}
+          onSeatsSaved={() => load().catch(feedback.error)}
         />
       )}
       {closing && (
@@ -269,15 +293,17 @@ export function DepartureManager({
                   </strong>
                   <small>
                     {dateLabel(d.date)} · {d.start_time}
+                    {vehicleTag(d, sizes) && <strong className="vehicle-tag"> · {vehicleTag(d, sizes)}</strong>}
                   </small>
                 </td>
                 <td>
                   {d.vehicle?.unit
                     ? `${d.vehicle.unit.name} · ${d.vehicle.unit.plate}`
                     : `${d.vehicle?.passengerSeats}+1 · ${d.vehicle?.name}`}
-                  <SeatCourse sold={(d.vehicle?.sellableSeats || 0) - d.available} total={d.vehicle?.sellableSeats || 0} size="sm" />
+                  <SeatCourse sold={soldSeats(d)} total={d.vehicle?.sellableSeats || 0} size="sm" />
                   <small>
                     {d.available} / {d.vehicle?.sellableSeats} koltuk boş
+                    {d.closed ? ` · ${d.closed} satışa kapalı` : ""}
                   </small>
                 </td>
                 <td>
@@ -311,6 +337,12 @@ export function DepartureManager({
                     <button className="text-link" onClick={() => setClosing(d.id)}>
                       <Armchair size={14} />
                       Koltuk kapat
+                    </button>
+                  )}
+                  {d.date >= today() && (
+                    <button className="text-link" onClick={() => addVehicle(d)}>
+                      <Plus size={14} />
+                      Araç ekle
                     </button>
                   )}
                   <button className="text-link" onClick={() => setPassengers(d.id)}>
@@ -348,6 +380,9 @@ function DepartureEditor({
   cancel,
   remove,
   closeSeats,
+  addVehicle,
+  tag = "",
+  onSeatsSaved,
 }: {
   catalog: Catalog;
   departure: Departure | null;
@@ -356,6 +391,10 @@ function DepartureEditor({
   cancel: () => void;
   remove?: () => void;
   closeSeats?: () => void;
+  addVehicle?: () => void;
+  // "2. araç" gibi; tek araçlı seferde boş.
+  tag?: string;
+  onSeatsSaved?: () => void;
 }) {
   // Yeni sefer, turun "Tur ve araç planı"ndaki araçla açılır; listenin ilk sınıfıyla
   // (4 kişilik binek) değil. Plan yoksa ilk sınıfa düşülür.
@@ -392,7 +431,13 @@ function DepartureEditor({
   }
   return (
     <form className="admin-editor departure-editor" onSubmit={save}>
-      <h2>{d ? "Seferi düzenle" : "Yeni sefer"}</h2>
+      <h2>{d ? "Seferi düzenle" + (tag ? " · " + tag : "") : "Yeni sefer"}</h2>
+      {tag && (
+        <p className="info-note group-note">
+          Bu tarihte birden fazla araç var. Tarih, saat, fiyat ve buluşma noktası gruptaki bütün araçlara uygulanır;
+          araç, plaka, rehber ve satış durumu bu araca özeldir.
+        </p>
+      )}
       <div className="form-grid">
         <label className="field">
           Tur
@@ -582,6 +627,7 @@ function DepartureEditor({
         />
         <span>Sefer rezervasyona açık</span>
       </label>
+      {d && d.date >= today() && <ClosedSeats key={d.id} departure={d} onSaved={() => onSeatsSaved?.()} />}
       <div className="button-row">
         <button className="btn" disabled={busy}>
           {busy ? (
@@ -597,6 +643,11 @@ function DepartureEditor({
         {closeSeats && (
           <button className="btn btn-outline" type="button" onClick={closeSeats}>
             <Armchair size={16} /> Koltuk kapat (telefon rezervasyonu)
+          </button>
+        )}
+        {addVehicle && (
+          <button className="btn btn-outline" type="button" onClick={addVehicle}>
+            <Plus size={16} /> Araç ekle
           </button>
         )}
         {remove && (
@@ -927,7 +978,7 @@ function BookingControls({
     [target, setTarget] = useState(""),
     [selected, setSelected] = useState<number[]>([]),
     [seatData, setSeatData] = useState<{
-      seats: { number: number; status: "occupied" | "available" }[];
+      seats: { number: number; status: "occupied" | "available" | "closed" }[];
       vehicle: NonNullable<Reservation["vehicle"]>;
     } | null>(null),
     [history, setHistory] = useState<AuditRow[] | null>(null),
@@ -937,9 +988,10 @@ function BookingControls({
     setIdDrafts(r.seats.map((_, i) => draftFrom(r.passenger_details?.[i])));
   }, [r]);
   useEffect(() => {
+    // Taşıma: acenta tarihin her aracını ayrı görür ve satışa kapalı koltuğa da taşıyabilir.
     if (mode === "move")
-      api<Departure[]>("/tours/" + r.tourId + "/departures")
-        .then(setDepartures)
+      api<Departure[]>("/admin/departures?tourId=" + encodeURIComponent(r.tourId))
+        .then((rows) => setDepartures(rows.filter((d) => d.salesOpen && d.date >= today())))
         .catch(feedback.error);
     if (mode === "history")
       api<AuditRow[]>("/admin/reservations/" + r.reference + "/audit")
@@ -950,7 +1002,7 @@ function BookingControls({
     setSelected([]);
     setSeatData(null);
     if (target)
-      api<NonNullable<typeof seatData>>("/departures/" + target + "/seats")
+      api<NonNullable<typeof seatData>>("/admin/departures/" + encodeURIComponent(target) + "/seats")
         .then(setSeatData)
         .catch(feedback.error);
   }, [target]);
@@ -1188,7 +1240,9 @@ function BookingControls({
                     <option value="">Tarih seçin</option>
                     {departures.map((d) => (
                       <option key={d.id} value={d.id}>
-                        {dateLabel(d.date)} · {d.start_time} · {currency(d.price)} · {d.vehicle?.passengerSeats}+1
+                        {dateLabel(d.date)} · {d.start_time}
+                        {vehicleTag(d, groupSizes(departures)) ? " · " + vehicleTag(d, groupSizes(departures)) : ""} ·{" "}
+                        {currency(d.price)} · {d.vehicle?.passengerSeats}+1 · {d.available} boş
                       </option>
                     ))}
                   </select>
@@ -1527,6 +1581,7 @@ export function DailyReport({ catalog }: { catalog: Catalog }) {
     [error, setError] = useState(""),
     [passengers, setPassengers] = useState(""),
     [scanning, setScanning] = useState(false);
+  const reportSizes = groupSizes(data?.departures || []);
   useEffect(() => {
     setError("");
     api<NonNullable<typeof data>>("/admin/reports?date=" + date)
@@ -1585,20 +1640,40 @@ export function DailyReport({ catalog }: { catalog: Catalog }) {
                 </tr>
               </thead>
               <tbody>
-                {data.departures.map((d) => (
-                  <tr key={d.id}>
+                {groupedOrder(data.departures).map((d) => {
+                  const tag = vehicleTag(d, reportSizes),
+                    group = data.departures.filter((x) => (x.group_id || x.id) === (d.group_id || d.id));
+                  return (
+                  <Fragment key={d.id}>
+                  {tag && d.vehicle_no === Math.min(...group.map((x) => x.vehicle_no || 1)) && (
+                    <tr className="report-group">
+                      <td colSpan={4}>
+                        <strong>
+                          {catalog.tours.find((t) => t.id === d.tour_id)?.name} · {d.start_time} · {group.length} araç
+                        </strong>{" "}
+                        toplam {group.reduce((n, x) => n + x.confirmedGuests, 0)} onaylı misafir ·{" "}
+                        {group.reduce((n, x) => n + x.available, 0)} boş koltuk
+                      </td>
+                    </tr>
+                  )}
+                  <tr>
                     <td>
                       {catalog.tours.find((t) => t.id === d.tour_id)?.name}
-                      <small>{d.start_time}</small>
+                      <small>
+                        {d.start_time}
+                        {tag && ` · ${tag}`}
+                        {tag && d.vehicle?.unit ? ` · ${d.vehicle.unit.plate}` : ""}
+                      </small>
                     </td>
                     <td>
                       {d.pickup}
                       <small>{d.guide_name || "Rehber atanmadı"}</small>
                     </td>
                     <td>
-                      <SeatCourse sold={(d.vehicle?.sellableSeats || 0) - d.available} total={d.vehicle?.sellableSeats || 0} size="sm" />
+                      <SeatCourse sold={soldSeats(d)} total={d.vehicle?.sellableSeats || 0} size="sm" />
                       <small>
                         {d.confirmedGuests} onaylı misafir · {d.available} boş koltuk
+                        {d.closed ? ` · ${d.closed} satışa kapalı` : ""}
                       </small>
                     </td>
                     <td>
@@ -1619,7 +1694,9 @@ export function DailyReport({ catalog }: { catalog: Catalog }) {
                       )}
                     </td>
                   </tr>
-                ))}
+                  </Fragment>
+                  );
+                })}
               </tbody>
             </table>
             {!data.departures.length && <p className="admin-empty">Bu gün için sefer yok.</p>}

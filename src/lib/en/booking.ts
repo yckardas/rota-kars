@@ -148,6 +148,11 @@ export const booking: Record<string, string> = {
   Kapı: "Door",
   "{n} numaralı koltuk, {state}": "Seat {n}, {state}",
   seçili: "selected",
+  "satışa kapalı": "closed to online sale",
+  "Bu tarihteki araçların doluluğu değişti; koltuklarınızı yeniden seçin.":
+    "Seats on this date's vehicles have changed; please choose your seats again.",
+  "Grubunuz tek araca sığmıyor; birlikte yolculuk için bizi arayın.":
+    "Your group does not fit in a single vehicle; call us so you can travel together.",
   dolu: "taken",
   boş: "available",
   "{guests} misafir + {guides} rehber + {drivers} şoför":

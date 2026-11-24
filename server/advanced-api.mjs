@@ -132,6 +132,23 @@ export function attachAdvancedApi(
       r.json(await store.departures.list(filters));
     }),
   );
+  app.post(
+    "/api/admin/departures/:id/vehicles",
+    requireAdmin,
+    route(async (q, r) =>
+      r.status(201).json(await store.departures.addVehicle(z.string().min(1).max(100).parse(q.params.id))),
+    ),
+  );
+  app.post(
+    "/api/admin/departures/:id/closed-seats",
+    requireAdmin,
+    route(async (q, r) => {
+      const { seats } = z
+        .object({ seats: z.array(z.number().int()).max(53) })
+        .parse(q.body);
+      r.json(await store.departures.setClosedSeats(z.string().min(1).max(100).parse(q.params.id), seats));
+    }),
+  );
   app.delete(
     "/api/admin/departures/:id",
     requireAdmin,
@@ -220,25 +237,30 @@ export function attachAdvancedApi(
             })
           : null;
         const d = await store.departures.save(input);
-        if (
-          before &&
-          (before.pickup !== d.pickup ||
-            before.guide_name !== d.guide_name ||
-            before.guide_phone !== d.guide_phone)
-        ) {
+        const pickupChanged = before && before.pickup !== d.pickup,
+          guideChanged = before && (before.guide_name !== d.guide_name || before.guide_phone !== d.guide_phone);
+        if (pickupChanged || guideChanged) {
+          // Buluşma noktası gruptaki bütün araçlarda ortaktır: değişince her aracın yolcusuna
+          // haber gider. Rehber araca özeldir; yalnız bu aracın yolcularına.
+          const vehicles = new Map(
+            (await store.departures.list({ tourId: d.tour_id, date: d.date }))
+              .filter((x) => x.group_id === d.group_id && (pickupChanged || x.id === d.id))
+              .map((x) => [x.id, x]),
+          );
           for (const booking of await store.workflow.list({
             date: d.date,
             all: true,
           })) {
             if (
-              booking.departure_id !== d.id ||
+              !vehicles.has(booking.departure_id) ||
               !["pending_agency", "confirmed"].includes(booking.status)
             )
               continue;
+            const v = vehicles.get(booking.departure_id);
             await store.notifications.enqueue({
               email: booking.email,
               subject: "Rota Kars · Buluşma bilgileriniz güncellendi",
-              body: `${booking.reference} · ${d.date} ${d.start_time}\nBuluşma: ${d.pickup}\nRehber: ${d.guide_name || "Acente tarafından paylaşılacak"} ${d.guide_phone}`,
+              body: `${booking.reference} · ${d.date} ${d.start_time}\nBuluşma: ${d.pickup}\nRehber: ${v.guide_name || "Acente tarafından paylaşılacak"} ${v.guide_phone}`,
               kind: "pickup_updated",
               dedupeKey:
                 "pickup:" + booking.reference + ":" + crypto.randomUUID(),
