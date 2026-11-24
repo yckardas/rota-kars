@@ -94,13 +94,14 @@ async function fixture(t) {
     assert.equal(r.status, 200, r.text);
     return r.json;
   };
-  const book = (departureId, seats, cookie = owner) =>
+  const book = (departureId, seats, cookie = owner, email) =>
     call("/admin/reservations", {
       body: {
         departureId,
         seats,
         name: "Telefon Müşteri",
         phone: "05551112233",
+        ...(email ? { email } : {}),
         passengers: seats.map((n) => "Yolcu " + n),
         paymentMode: "on_tour",
         confirm: true,
@@ -281,4 +282,34 @@ test("waitlist hears about an added vehicle", async (t) => {
   });
   assert.equal(late.status, 201, late.text);
   assert.equal((await store.db.one("interest_list", { email: "gec@example.com" })).departure_id, v1.id);
+});
+
+test("a shared pickup change emails every vehicle's customers; a guide change only its own", async (t) => {
+  const { store, departure, addVehicle, book } = await fixture(t);
+  const v1 = await departure();
+  const v2 = await addVehicle(v1.id);
+  await book(v1.id, [1], undefined, "birinci@example.com");
+  await book(v2.id, [1], undefined, "ikinci@example.com");
+  const mails = async () =>
+    (await store.db.find("notification_outbox", { kind: "pickup_updated" })).map((m) => m.recipient || m.email).sort();
+  await departure({ id: v1.id, pickup: "Kars Garı önü" });
+  assert.deepEqual(await mails(), ["birinci@example.com", "ikinci@example.com"]);
+  await departure({ id: v2.id, pickup: "Kars Garı önü", guideName: "Veli" });
+  assert.deepEqual(await mails(), ["birinci@example.com", "ikinci@example.com", "ikinci@example.com"]);
+});
+
+test("the same-date check also sees old departures saved without a start time", async (t) => {
+  const { store, saveDep } = await fixture(t);
+  await store.db.insert("departures", "eski-kayit", {
+    id: "eski-kayit",
+    tour_id: TOUR,
+    date: DATE,
+    price: null,
+    active: 1,
+    vehicle_model: "vip-midibus",
+    passenger_seats: 19,
+  });
+  const shown = (await store.departures.list({ tourId: TOUR, date: DATE }))[0].start_time;
+  const twin = await saveDep({ startTime: shown });
+  assert.equal(twin.status, 409, twin.text);
 });

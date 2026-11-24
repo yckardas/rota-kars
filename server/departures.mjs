@@ -213,9 +213,10 @@ export async function createDepartures(
         // Aynı tur, tarih ve saatte ikinci sefer açılmaz: müşteri aynı günü iki kez görürdü.
         if (!group && (!old || old.date !== input.date || old.start_time !== input.startTime)) {
           const own = old?.group_id;
-          const twin = (
-            await db.find("departures", { tour_id: input.tourId, date: input.date, start_time: input.startTime })
-          ).find((x) => x.id !== id && (x.group_id || x.id) !== own);
+          // Saatsiz eski kayıtlar okuma anında turun saatini alır; karşılaştırma okunan saatle.
+          const twin = (await this.list({ tourId: input.tourId, date: input.date })).find(
+            (x) => x.start_time === input.startTime && x.id !== id && x.group_id !== own,
+          );
           if (twin)
             throw new AppError(
               409,

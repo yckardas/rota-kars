@@ -627,7 +627,7 @@ function DepartureEditor({
         />
         <span>Sefer rezervasyona açık</span>
       </label>
-      {d && <ClosedSeats key={d.id} departure={d} onSaved={() => onSeatsSaved?.()} />}
+      {d && d.date >= today() && <ClosedSeats key={d.id} departure={d} onSaved={() => onSeatsSaved?.()} />}
       <div className="button-row">
         <button className="btn" disabled={busy}>
           {busy ? (
