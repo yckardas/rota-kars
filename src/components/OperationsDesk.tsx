@@ -23,7 +23,7 @@ import { PassengerIdFields, detailFrom, draftFrom, idProblem, type IdDraft } fro
 import { useFeedback } from "./admin/feedback";
 import { SeatCourse } from "./admin/SeatCourse";
 import { ClosedSeats } from "./admin/ClosedSeats";
-import { groupSizes, soldSeats, vehicleTag } from "./admin/vehicleGroup";
+import { groupSizes, groupedOrder, soldSeats, vehicleTag } from "./admin/vehicleGroup";
 import { Modal } from "./Modal";
 import { downloadCsv } from "../lib/csv";
 import { telHref, waNumber } from "../lib/phone";
@@ -133,7 +133,7 @@ export function DepartureManager({
     }
   }
   const sizes = groupSizes(items);
-  const listed = showPast ? items : items.filter((d) => d.date >= today());
+  const listed = groupedOrder(showPast ? items : items.filter((d) => d.date >= today()));
   // "Tur fiyatını kullan" seçiliyse fiyat gönderilmez (null): sefer panelden
   // düzenlenen tur fiyatını izler; değilse bu sefere özel fiyat kaydedilir.
   const priceOf = (f: FormData) =>
@@ -1640,7 +1640,7 @@ export function DailyReport({ catalog }: { catalog: Catalog }) {
                 </tr>
               </thead>
               <tbody>
-                {data.departures.map((d) => {
+                {groupedOrder(data.departures).map((d) => {
                   const tag = vehicleTag(d, reportSizes),
                     group = data.departures.filter((x) => (x.group_id || x.id) === (d.group_id || d.id));
                   return (
