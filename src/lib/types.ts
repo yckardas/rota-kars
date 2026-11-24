@@ -182,6 +182,8 @@ export type Departure = {
   closed?: number;
   // Halka açık liste: tarihin satışı açık araçları (sırayla) ve boş yerleri.
   vehicles?: { id: string; available: number }[];
+  // Panel listesi: online satış şu an açık mı (tarih geçmemiş, aktif, kesim saatinden önce).
+  salesOpen?: boolean;
 };
 // "closed": satışa kapalı koltuk; yalnız panelde gelir (müşteriye "occupied").
 export type Seat = { number: number; status: "occupied" | "available" | "closed" };

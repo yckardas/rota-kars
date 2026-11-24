@@ -2001,3 +2001,76 @@
 .rk-admin .tour-copy-status code {
   font-size: 13px;
 }
+
+/* ---------- Satışa kapalı koltuklar ve ek araç (2026-11-24) ---------- */
+.rk-admin .closed-seats {
+  margin: 18px 0 6px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--mortar);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.rk-admin .closed-seats legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px;
+  font-weight: 700;
+}
+.rk-admin .closed-seats .seat-map {
+  max-width: 360px;
+}
+.rk-admin .seat-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 10px 0 4px;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+.rk-admin .seat-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.rk-admin .seat-legend i {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid var(--free-edge);
+  background: var(--free);
+}
+.rk-admin .seat-legend .legend-sold {
+  background: var(--red);
+  border-color: var(--red-deep);
+}
+.rk-admin .seat-legend .legend-closed {
+  background: repeating-linear-gradient(135deg, #eef1f2 0 3px, #9aa4a9 3px 5px);
+  border-style: dashed;
+  border-color: #5a666c;
+}
+.rk-admin .group-note {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--ochre-wash);
+  color: var(--ink-strong);
+}
+.rk-admin .vehicle-tag {
+  color: var(--ochre);
+}
+.rk-admin .calendar-chip .chip-vehicle {
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--ochre-wash);
+  color: var(--ochre);
+  font-size: 0.72em;
+  font-weight: 700;
+}
+.rk-admin .report-group td {
+  background: var(--ochre-wash);
+  font-size: 0.9rem;
+}

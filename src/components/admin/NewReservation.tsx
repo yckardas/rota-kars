@@ -13,6 +13,7 @@ import {
 } from "../../lib/types";
 import { Modal } from "../Modal";
 import { SeatMap } from "../SeatMap";
+import { groupSizes, vehicleTag } from "./vehicleGroup";
 import { PassengerIdFields, detailFrom, emptyId, idProblem, type IdDraft } from "./PassengerIdFields";
 
 const waNumber = (phone: string) => {
@@ -63,6 +64,7 @@ export function NewReservation({
       .then(setSeatData)
       .catch((e) => setError(e.message));
   }, [departureId]);
+  const sizes = groupSizes(departures);
   const departure = departures.find((d) => d.id === departureId),
     total = (departure?.price || 0) * selected.length,
     tourName = (id: string) => catalog.tours.find((t) => t.id === id)?.name || id;
@@ -147,7 +149,8 @@ export function NewReservation({
       <form className="admin-editor new-reservation" onSubmit={submit}>
         <p className="muted">
           Telefon veya WhatsApp ile satılan koltukları kapatın: seçtiğiniz koltuklar sitede satıştan düşer. Yolcu,
-          kimlik ve ödeme bilgisini girin. Online satışı kapanmış seferlere de eklenebilir.
+          kimlik ve ödeme bilgisini girin. Online satışı kapanmış seferlere ve satışa kapalı (çizgili) koltuklara da
+          yazabilirsiniz.
         </p>
         <label className="field">
           Sefer
@@ -155,7 +158,9 @@ export function NewReservation({
             <option value="">Sefer seçin</option>
             {departures.map((d) => (
               <option key={d.id} value={d.id}>
-                {tourName(d.tour_id)} · {dateLabel(d.date)} {d.start_time} · {d.available} boş
+                {tourName(d.tour_id)} · {dateLabel(d.date)} {d.start_time}
+                {vehicleTag(d, sizes) ? " · " + vehicleTag(d, sizes) : ""} · {d.available} boş
+                {d.closed ? ` · ${d.closed} satışa kapalı` : ""}
                 {d.active ? "" : " · satış kapalı"}
               </option>
             ))}
