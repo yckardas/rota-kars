@@ -25,8 +25,11 @@ test("every tour has an English version with the same shape", () => {
   for (const t of tours) {
     const e = en.tours[t.id];
     assert.ok(e, t.id);
-    for (const k of ["name", "subtitle", "category", "duration", "season", "summary", "note"]) assert.ok(e[k], `${t.id}.${k}`);
+    for (const k of ["name", "subtitle", "category", "duration", "season", "summary"]) assert.ok(e[k], `${t.id}.${k}`);
+    // Not artık boş olabilir (belgeler ayrı listede); Türkçesi varsa İngilizcesi de olmalı.
+    assert.equal(Boolean(e.note), Boolean(t.note), `${t.id}.note`);
     for (const k of ["included", "excluded", "itinerary"]) assert.equal(e[k].length, t[k].length, `${t.id}.${k}`);
+    assert.equal(e.documents?.length || 0, t.documents?.length || 0, `${t.id}.documents`);
   }
 });
 
