@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, Check, LoaderCircle, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, Copy, Eye, EyeOff, LoaderCircle, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { api, post } from "../../lib/api";
 import type { Catalog } from "../../lib/types";
 import { MediaUploadButton } from "../MediaUpload";
@@ -32,6 +32,19 @@ type BusinessFields = Record<
 >;
 type AnnouncementFields = { enabled: boolean; text: string; textEn: string; link: string };
 type Info<T> = { current: T; defaults: T; edited: boolean; updatedAt: number | null; updatedBy: string | null };
+// Paneldeki tur listesi satırı; custom: panelden kopyalanmış, hidden: taslak (sitede yok).
+type TourMeta = { id: string; name: string; custom: boolean; hidden: boolean; sourceId: string | null };
+type TourInfo = Info<TourFields> & { tour?: TourMeta };
+// Tur adından adres önerisi: "Günübirlik Tiflis" → "gunubirlik-tiflis".
+const slugify = (s: string) =>
+  s
+    .toLocaleLowerCase("tr-TR")
+    .replace(/[çğıöşü]/g, (c) => ({ ç: "c", ğ: "g", ı: "i", ö: "o", ş: "s", ü: "u" })[c] || c)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
 
 const lines = (s: string) =>
   s
@@ -49,7 +62,18 @@ export function ContentManager({
   isOwner: boolean;
   onSaved: () => void;
 }) {
-  const [section, setSection] = useState<string>(catalog.tours[0]?.id || "business");
+  const [section, setSection] = useState<string>(catalog.tours[0]?.id || "business"),
+    // Taslak kopyalar sitedeki katalogda yok; liste panelden gelir.
+    [tourList, setTourList] = useState<TourMeta[]>(() =>
+      catalog.tours.map((t) => ({ id: t.id, name: t.name, custom: false, hidden: false, sourceId: null })),
+    );
+  const refreshList = () =>
+    api<TourMeta[]>("/admin/content/tours")
+      .then(setTourList)
+      .catch(() => {});
+  useEffect(() => {
+    refreshList();
+  }, []);
   return (
     <>
       <p className="muted">
@@ -60,9 +84,10 @@ export function ContentManager({
       <label className="field content-picker">
         Düzenlenecek içerik
         <select value={section} onChange={(e) => setSection(e.target.value)}>
-          {catalog.tours.map((t) => (
+          {tourList.map((t) => (
             <option key={t.id} value={t.id}>
               Tur · {t.name}
+              {t.custom ? (t.hidden ? " · taslak" : " · kopya") : ""}
             </option>
           ))}
           {isOwner && <option value="business">İletişim bilgileri</option>}
@@ -74,7 +99,19 @@ export function ContentManager({
       ) : section === "announcement" ? (
         <AnnouncementEditor key="announcement" onSaved={onSaved} />
       ) : (
-        <TourEditor key={section} id={section} onSaved={onSaved} />
+        <TourEditor
+          key={section}
+          id={section}
+          tours={tourList}
+          onSaved={() => {
+            onSaved();
+            refreshList();
+          }}
+          onOpen={(id) => {
+            refreshList().then(() => setSection(id));
+            onSaved();
+          }}
+        />
       )}
     </>
   );
@@ -90,8 +127,23 @@ function Saved({ info }: { info: Info<unknown> }) {
   );
 }
 
-function TourEditor({ id, onSaved }: { id: string; onSaved: () => void }) {
-  const [info, setInfo] = useState<Info<TourFields> | null>(null),
+function TourEditor({
+  id,
+  tours,
+  onSaved,
+  onOpen,
+}: {
+  id: string;
+  tours: TourMeta[];
+  onSaved: () => void;
+  // Kopyalanan ya da silinen turdan sonra açılacak tur.
+  onOpen: (id: string) => void;
+}) {
+  const [info, setInfo] = useState<TourInfo | null>(null),
+    [copying, setCopying] = useState(false),
+    [copyName, setCopyName] = useState(""),
+    [copyId, setCopyId] = useState(""),
+    [copyIdTouched, setCopyIdTouched] = useState(false),
     [f, setF] = useState<TourFields | null>(null),
     [included, setIncluded] = useState(""),
     [excluded, setExcluded] = useState(""),
@@ -99,7 +151,7 @@ function TourEditor({ id, onSaved }: { id: string; onSaved: () => void }) {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
-  const load = (data: Info<TourFields>) => {
+  const load = (data: TourInfo) => {
     setInfo(data);
     setF(structuredClone(data.current));
     setIncluded(data.current.included.join("\n"));
@@ -107,7 +159,7 @@ function TourEditor({ id, onSaved }: { id: string; onSaved: () => void }) {
     setDocuments((data.current.documents || []).join("\n"));
   };
   useEffect(() => {
-    api<Info<TourFields>>("/admin/content/tours/" + id)
+    api<TourInfo>("/admin/content/tours/" + id)
       .then(load)
       .catch((e) => setError(e.message));
   }, [id]);
@@ -140,8 +192,8 @@ function TourEditor({ id, onSaved }: { id: string; onSaved: () => void }) {
     setNotice("");
     try {
       const data = reset
-        ? await post<Info<TourFields>>(`/admin/content/tours/${id}/reset`, {})
-        : await post<Info<TourFields>>("/admin/content/tours/" + id, {
+        ? await post<TourInfo>(`/admin/content/tours/${id}/reset`, {})
+        : await post<TourInfo>("/admin/content/tours/" + id, {
             ...f,
             included: lines(included),
             excluded: lines(excluded),
@@ -153,6 +205,47 @@ function TourEditor({ id, onSaved }: { id: string; onSaved: () => void }) {
     } catch (e) {
       setError((e as Error).message);
     } finally {
+      setBusy(false);
+    }
+  }
+  const meta = info.tour,
+    sourceName = meta?.sourceId ? tours.find((t) => t.id === meta.sourceId)?.name || meta.sourceId : "";
+  // Turu yeni bir tur olarak kopyalar; kopya taslak açılır ve hemen düzenlenir.
+  async function copyTour() {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const created = await post<TourInfo>(`/admin/content/tours/${id}/copy`, { id: copyId, name: copyName.trim() });
+      onOpen(created.tour?.id || copyId);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function setHidden(hidden: boolean) {
+    setBusy(true);
+    setError("");
+    try {
+      load(await post<TourInfo>(`/admin/content/tours/${id}/visibility`, { hidden }));
+      onSaved();
+      setNotice(hidden ? "Tur taslağa alındı; sitede görünmüyor." : "Tur yayında. Seferlerini Sefer planından ekleyebilirsiniz.");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function removeTour() {
+    if (!window.confirm(`"${info!.current.name}" turu silinsin mi? Bu işlem geri alınamaz.`)) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/admin/content/tours/${encodeURIComponent(id)}`, { method: "DELETE" });
+      onOpen(meta?.sourceId || tours[0]?.id || "business");
+    } catch (e) {
+      setError((e as Error).message);
       setBusy(false);
     }
   }
@@ -172,7 +265,102 @@ function TourEditor({ id, onSaved }: { id: string; onSaved: () => void }) {
     >
       <div className="content-head">
         <h2>{info.current.name}</h2>
+        {meta?.custom && (
+          <span className={"status-tag" + (meta.hidden ? "" : " status-confirmed")}>
+            {meta.hidden ? "Taslak · sitede görünmüyor" : "Yayında"}
+          </span>
+        )}
         <Saved info={info} />
+      </div>
+      {/* Kopya tur: kaynağı, yayın durumu ve silme. */}
+      {meta?.custom && (
+        <div className="tour-copy-status">
+          <p>
+            Bu tur <strong>{sourceName}</strong> turundan kopyalandı. Adresi: <code>/turlar/{id}</code>.{" "}
+            {meta.hidden
+              ? "Taslak: adını, programını, gezilecek yerleri ve fiyatını düzenleyip kaydedin, sonra yayınlayın."
+              : "Sitede yayında; seferlerini Sefer planından ekleyin."}
+          </p>
+          <div className="flow-actions">
+            {meta.hidden ? (
+              <button type="button" className="btn btn-small" disabled={busy} onClick={() => setHidden(false)}>
+                <Eye size={15} /> Yayınla
+              </button>
+            ) : (
+              <button type="button" className="btn btn-outline btn-small" disabled={busy} onClick={() => setHidden(true)}>
+                <EyeOff size={15} /> Taslağa al
+              </button>
+            )}
+            <button type="button" className="text-link danger-text" disabled={busy} onClick={removeTour}>
+              <Trash2 size={15} /> Turu sil
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Kopyalama: aynı turdan rotası, süresi veya programı farklı yeni bir tur. */}
+      <div className="tour-copy-box">
+        {copying ? (
+          <>
+            <p className="form-hint">
+              Kopya, bu turun metinleri, fotoğrafları, belgeleri, fiyatı ve araç planıyla <strong>taslak</strong> olarak
+              açılır; seferler kopyalanmaz. Düzenleyip yayınlayana kadar sitede görünmez.
+            </p>
+            <div className="form-grid">
+              <label className="field">
+                Yeni turun adı
+                <input
+                  value={copyName}
+                  maxLength={80}
+                  autoFocus
+                  onChange={(e) => {
+                    setCopyName(e.target.value);
+                    if (!copyIdTouched) setCopyId(slugify(e.target.value));
+                  }}
+                  placeholder="Ör. Günübirlik Tiflis"
+                />
+              </label>
+              <label className="field">
+                Sayfa adresi
+                <input
+                  value={copyId}
+                  maxLength={60}
+                  onChange={(e) => {
+                    setCopyIdTouched(true);
+                    setCopyId(slugify(e.target.value));
+                  }}
+                  placeholder="gunubirlik-tiflis"
+                />
+                <small className="muted">rotakarsturizm.com/turlar/{copyId || "…"}</small>
+              </label>
+            </div>
+            <div className="flow-actions">
+              <button type="button" className="text-link" onClick={() => setCopying(false)}>
+                Vazgeç
+              </button>
+              <button
+                type="button"
+                className="btn btn-small"
+                disabled={busy || copyName.trim().length < 3 || copyId.length < 3}
+                onClick={copyTour}
+              >
+                <Copy size={15} /> Kopyayı oluştur
+              </button>
+            </div>
+          </>
+        ) : (
+          <button
+            type="button"
+            className="btn btn-outline btn-small"
+            onClick={() => {
+              setCopying(true);
+              setCopyName(info.current.name + " (yeni)");
+              setCopyId(slugify(info.current.name + " yeni"));
+              setCopyIdTouched(false);
+            }}
+          >
+            <Copy size={15} /> Bu turu kopyala
+          </button>
+        )}
       </div>
       <div className="form-grid">
         {text("name", "Tur adı", 80)}
