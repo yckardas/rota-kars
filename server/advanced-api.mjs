@@ -132,6 +132,16 @@ export function attachAdvancedApi(
       r.json(await store.departures.list(filters));
     }),
   );
+  app.post(
+    "/api/admin/departures/:id/closed-seats",
+    requireAdmin,
+    route(async (q, r) => {
+      const { seats } = z
+        .object({ seats: z.array(z.number().int()).max(53) })
+        .parse(q.body);
+      r.json(await store.departures.setClosedSeats(z.string().min(1).max(100).parse(q.params.id), seats));
+    }),
+  );
   app.delete(
     "/api/admin/departures/:id",
     requireAdmin,

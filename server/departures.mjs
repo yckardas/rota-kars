@@ -81,6 +81,13 @@ export async function createDepartures(
           }
         : vehicle,
       vehicle_id: unit ? unit.id : "",
+      // Aynı tarihteki ek araçlar 1. aracın id'siyle bağlanır (eski kayıtlarda alan yoktur).
+      group_id: row.group_id || row.id,
+      vehicle_no: Number(row.vehicle_no) || 1,
+      // Online satışa kapalı koltuklar; acenta panelden yine yazabilir.
+      closed_seats: (Array.isArray(row.closed_seats) ? row.closed_seats : []).filter(
+        (n) => Number.isInteger(n) && n >= 1 && n <= (unit ? fleetVehicleLayout(unit, vehicle) : vehicle).sellableSeats,
+      ),
       start_time:
         row.start_time ||
         tours
@@ -131,11 +138,17 @@ export async function createDepartures(
       return Promise.all(
         rows.map(async (row) => {
           const d = withCutoff(await enrich(row)),
-            used = await db.count("seat_locks", {
-              departure_id: d.id,
-              expires_at: { $gt: clock() },
-            });
-          return { ...d, available: d.vehicle.sellableSeats - used };
+            locked = new Set(
+              (
+                await db.find(
+                  "seat_locks",
+                  { departure_id: d.id, expires_at: { $gt: clock() } },
+                  { projection: { seat: 1 } },
+                )
+              ).map((l) => l.seat),
+            ),
+            closed = d.closed_seats.filter((n) => !locked.has(n)).length;
+          return { ...d, closed, available: d.vehicle.sellableSeats - locked.size - closed };
         }),
       );
     },
@@ -200,6 +213,10 @@ export async function createDepartures(
           vehicle_model: input.vehicleModel,
           passenger_seats: input.passengerSeats,
           vehicle_id: input.vehicleId || "",
+          // Araç küçülürse kapasite dışında kalan kapalı koltuklar atılır.
+          closed_seats: (old?.closed_seats || []).filter(
+            (n) => n <= makeVehicle(input.vehicleModel, input.passengerSeats).sellableSeats,
+          ),
         };
         if (old) await db.update("departures", { _id: id }, fields);
         else
@@ -208,6 +225,29 @@ export async function createDepartures(
             tour_id: input.tourId,
             ...fields,
           });
+        return this.get(id, { allowClosed: true, allowPast: true });
+      });
+    },
+    // Online satışa kapalı koltuklar (ör. arka dörtlü). Satılmış koltuk sonradan kapatılamaz;
+    // kapalı koltuğa acenta yazdıysa iptalde koltuk yeniden kapalıya döner.
+    async setClosedSeats(id, seats) {
+      return tx(async () => {
+        await cleanup();
+        const d = await this.get(id, { allowClosed: true, allowPast: true }),
+          max = d.vehicle.sellableSeats;
+        if (!Array.isArray(seats) || seats.some((n) => !Number.isInteger(n) || n < 1 || n > max))
+          throw new AppError(400, `Yalnızca 1–${max} numaralı koltuklar kapatılabilir.`);
+        const next = [...new Set(seats)].sort((a, b) => a - b),
+          added = next.filter((n) => !d.closed_seats.includes(n));
+        if (
+          added.length &&
+          (await db.one("seat_locks", {
+            _id: { $in: added.map((n) => `${id}:${n}`) },
+            expires_at: { $gt: clock() },
+          }))
+        )
+          throw new AppError(409, "Bu koltuk dolu; önce rezervasyonu taşıyın.");
+        await db.update("departures", { _id: id }, { closed_seats: next });
         return this.get(id, { allowClosed: true, allowPast: true });
       });
     },
