@@ -547,7 +547,8 @@ export function Account() {
               t("Çarkı çevir")
             )}
           </button>
-          {prize && !spinning && (
+          {/* E-posta doğrulanmadıysa hediye bekler; aşağıdaki mesaj gösterilir. */}
+          {prize && !spinning && !(data.spin && !data.spin.coupon_id) && (
             <p className="wheel-result" role="status">
               {t("Tebrikler! {prize} indirim kuponunuz hesabınızda.", {
                 prize: prizeLabel(prize, lang),
