@@ -1,6 +1,8 @@
 // Üyelik, hesabım, hesap güvenliği ve yol arkadaşları metinleri; sunucunun bu
 // akışlarda döndürdüğü hata iletileri de burada çevrilir.
 export const member: Record<string, string> = {
+  "Gün batımında Ağrı Dağı, Ani Katedrali ve karlı yolda rota çizgisi":
+    "Mount Ararat and Ani Cathedral at sunset, with a route line on a snowy road",
   // Üye ol / giriş
   "Bu e-posta zaten kayıtlı. E-posta ve parolanızla giriş yapın, ardından sosyal hesabınızı bağlayın.":
     "This email is already registered. Log in with your email and password, then link your social account.",

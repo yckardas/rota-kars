@@ -127,7 +127,11 @@ export function Membership() {
   return (
     <section className="container membership-layout">
       <div className="membership-story">
-        <img src="/images/kars.webp" alt={t("Kars rotasından bir görünüm")} />
+        {/* Rota Renkleri çizimi: gün batımında Ağrı Dağı, Ani Katedrali, karlı yol. */}
+        <img
+          src="/images/uyelik-rota.svg"
+          alt={t("Gün batımında Ağrı Dağı, Ani Katedrali ve karlı yolda rota çizgisi")}
+        />
         <div>
           <span className="section-note">{t("Rota Kars yol arkadaşlığı")}</span>
           <h1>

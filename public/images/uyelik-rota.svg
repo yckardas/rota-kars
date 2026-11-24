@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Gün batımında Ağrı Dağı, Ani Katedrali ve karlı yolda rota çizgisi">
+  <!-- Üyelik ekranı çizimi (Rota Renkleri, 2026-11-24): gün batımı, Ağrı Dağı,
+       Ani Katedrali silueti, karlı yol ve turuncu rota çizgisi. Alt kısım
+       sayfadaki koyu geçişin altında kalır; ilgi üst yarıdadır. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d2f6b"/>
+      <stop offset="0.24" stop-color="#3b5bdb"/>
+      <stop offset="0.44" stop-color="#8a3fc0"/>
+      <stop offset="0.56" stop-color="#e0407a"/>
+      <stop offset="0.66" stop-color="#f58a2a"/>
+      <stop offset="0.74" stop-color="#ffcf6e"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fff1c4" stop-opacity="0.95"/>
+      <stop offset="0.45" stop-color="#ffc861" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ffc861" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="far" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7a3f8f"/>
+      <stop offset="1" stop-color="#5a2c72"/>
+    </linearGradient>
+    <linearGradient id="mid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a2257"/>
+      <stop offset="1" stop-color="#25183f"/>
+    </linearGradient>
+    <linearGradient id="snow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fdf3ff"/>
+      <stop offset="1" stop-color="#c9d6f5"/>
+    </linearGradient>
+    <linearGradient id="snow2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e9eeff"/>
+      <stop offset="1" stop-color="#9fb2e6"/>
+    </linearGradient>
+    <linearGradient id="road" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4a3f73"/>
+      <stop offset="1" stop-color="#1e2a55"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Gök -->
+  <rect width="600" height="800" fill="url(#sky)"/>
+  <g fill="#ffffff">
+    <circle cx="62" cy="58" r="1.6" opacity="0.9"/>
+    <circle cx="140" cy="112" r="1.2" opacity="0.7"/>
+    <circle cx="228" cy="40" r="1.8" opacity="0.85"/>
+    <circle cx="318" cy="92" r="1.1" opacity="0.6"/>
+    <circle cx="402" cy="36" r="1.5" opacity="0.8"/>
+    <circle cx="486" cy="84" r="1.2" opacity="0.7"/>
+    <circle cx="552" cy="30" r="1.7" opacity="0.85"/>
+    <circle cx="100" cy="176" r="1" opacity="0.5"/>
+    <circle cx="520" cy="160" r="1" opacity="0.5"/>
+  </g>
+  <!-- Güneş -->
+  <circle cx="410" cy="350" r="150" fill="url(#glow)"/>
+  <circle cx="410" cy="350" r="58" fill="#ffe3a0"/>
+
+  <!-- Ağrı Dağı: büyük ve küçük zirve, karlı tepeler -->
+  <path d="M0 470 L120 420 L250 300 L300 262 L345 296 L400 342 L452 318 L500 344 L600 410 L600 520 L0 520 Z" fill="url(#far)"/>
+  <path d="M250 300 L300 262 L345 296 L330 300 L318 292 L302 306 L288 296 L270 312 Z" fill="#fff6ff"/>
+  <path d="M452 318 L500 344 L486 346 L470 338 L460 346 Z" fill="#fff6ff" opacity="0.9"/>
+
+  <!-- Orta tepeler ve Ani Katedrali silueti -->
+  <path d="M0 520 L70 478 L150 468 L230 490 L320 470 L420 496 L520 474 L600 490 L600 580 L0 580 Z" fill="url(#mid)"/>
+  <g fill="#1c1233" transform="translate(100 0)">
+    <!-- gövde -->
+    <rect x="92" y="420" width="96" height="62" rx="2"/>
+    <!-- yan çatılar -->
+    <path d="M86 424 L140 400 L194 424 Z"/>
+    <!-- kasnak ve konik kubbe (yıkık kubbe yerine Ani kiliselerinin tipik külahı) -->
+    <rect x="124" y="380" width="32" height="26"/>
+    <path d="M118 382 L140 350 L162 382 Z"/>
+    <!-- kemerli pencereler -->
+    <rect x="103" y="436" width="8" height="16" rx="4" fill="#f08a24" opacity="0.55"/>
+    <rect x="136" y="434" width="8" height="18" rx="4" fill="#f08a24" opacity="0.55"/>
+    <rect x="169" y="436" width="8" height="16" rx="4" fill="#f08a24" opacity="0.55"/>
+    <!-- sur kalıntısı -->
+    <path d="M200 482 L200 456 L212 456 L212 462 L222 462 L222 452 L234 452 L234 482 Z"/>
+  </g>
+
+  <!-- Karlı ön plan -->
+  <path d="M0 560 C120 528 220 540 300 556 C390 574 480 534 600 548 L600 800 L0 800 Z" fill="url(#snow)"/>
+  <path d="M0 640 C140 604 260 630 340 650 C430 672 520 630 600 640 L600 800 L0 800 Z" fill="url(#snow2)" opacity="0.85"/>
+
+  <!-- Kıvrılan yol -->
+  <path d="M236 800 C250 720 330 690 336 640 C342 596 300 584 318 556 L330 556 C318 584 362 600 358 646 C352 704 300 730 330 800 Z" fill="url(#road)"/>
+  <path d="M283 800 C292 724 344 694 347 642 C350 600 318 584 324 556" fill="none" stroke="#ffc861" stroke-width="3" stroke-dasharray="10 9" stroke-linecap="round" opacity="0.9"/>
+
+  <!-- Rota çizgisi ve iğne -->
+  <path d="M324 556 C312 524 276 506 266 470 C260 446 256 428 252 412" fill="none" stroke="#d63a12" stroke-width="4" stroke-dasharray="2 10" stroke-linecap="round"/>
+  <g transform="translate(252 404)">
+    <circle r="22" fill="#d63a12" opacity="0.18"/>
+    <path d="M0 6 C-12 -6 -14 -12 -14 -18 A14 14 0 0 1 14 -18 C14 -12 12 -6 0 6 Z" fill="#d63a12" stroke="#ffffff" stroke-width="2.5"/>
+    <circle cy="-18" r="5" fill="#ffffff"/>
+  </g>
+
+  <!-- Karlı çamlar -->
+  <g>
+    <g transform="translate(400 572)">
+      <path d="M0 -58 L22 -14 L12 -14 L28 14 L-28 14 L-12 -14 L-22 -14 Z" fill="#1f3b6e"/>
+      <path d="M0 -58 L12 -34 L-12 -34 Z M-12 -14 L12 -14 L16 -6 L-16 -6 Z" fill="#ffffff" opacity="0.9"/>
+      <rect x="-4" y="14" width="8" height="10" fill="#2a1a3d"/>
+    </g>
+    <g transform="translate(440 596) scale(0.8)">
+      <path d="M0 -58 L22 -14 L12 -14 L28 14 L-28 14 L-12 -14 L-22 -14 Z" fill="#244a85"/>
+      <path d="M0 -58 L12 -34 L-12 -34 Z" fill="#ffffff" opacity="0.9"/>
+      <rect x="-4" y="14" width="8" height="10" fill="#2a1a3d"/>
+    </g>
+    <g transform="translate(168 610) scale(0.9)">
+      <path d="M0 -58 L22 -14 L12 -14 L28 14 L-28 14 L-12 -14 L-22 -14 Z" fill="#1f3b6e"/>
+      <path d="M0 -58 L12 -34 L-12 -34 Z M-12 -14 L12 -14 L16 -6 L-16 -6 Z" fill="#ffffff" opacity="0.9"/>
+      <rect x="-4" y="14" width="8" height="10" fill="#2a1a3d"/>
+    </g>
+  </g>
+
+  <!-- Kar taneleri -->
+  <g fill="#ffffff" opacity="0.8">
+    <circle cx="80" cy="250" r="2.2"/>
+    <circle cx="190" cy="210" r="1.6"/>
+    <circle cx="530" cy="250" r="2"/>
+    <circle cx="560" cy="380" r="1.6"/>
+    <circle cx="40" cy="380" r="1.8"/>
+    <circle cx="250" cy="150" r="1.4"/>
+  </g>
+</svg>
