@@ -702,17 +702,54 @@ function BackupCard({ owner }: { owner: boolean }) {
     </article>
   );
 }
+type IntegrationStatus = {
+  payment: { enabled: boolean; provider: string | null; test: boolean; simulator: boolean };
+  email: { delivery: "resend" | "smtp" | null };
+};
+// Bağlantılar: durumlar sunucudaki gerçek ayardan okunur (/admin/integrations).
 function Integrations({ catalog, owner }: { catalog: Catalog; owner: boolean }) {
+  const [st, setSt] = useState<IntegrationStatus | null>(null);
+  useEffect(() => {
+    api<IntegrationStatus>("/admin/integrations")
+      .then(setSt)
+      .catch(() => setSt(null));
+  }, []);
+  const pay = st?.payment,
+    mail = st?.email.delivery;
   return (
     <div className="integration-list">
       <BackupCard owner={owner} />
       <article>
         <h3>Sanal POS</h3>
-        <span className="status-tag">Banka anlaşması bekleniyor</span>
+        {!st ? (
+          <span className="status-tag inactive">Durum okunamadı</span>
+        ) : pay?.enabled && !pay.test ? (
+          <span className="status-tag status-confirmed">Canlı · gerçek tahsilat</span>
+        ) : pay?.enabled ? (
+          <span className="status-tag">{pay.simulator ? "Simülatör" : "Test ortamı"} · gerçek para çekilmez</span>
+        ) : (
+          <span className="status-tag inactive">Kapalı</span>
+        )}
         <p>
-          Ödeme ekranı devre dışıdır. Kart verisi alınmaz. Sağlayıcı
-          seçildiğinde doğrulanan sunucu bildirimi ve ödeme adapteri
-          eklenir.
+          {pay?.enabled
+            ? `${pay.provider === "vakifbank" ? "Vakıfbank sanal POS" : "Ödeme sağlayıcısı"} bağlı. Kart bilgisi sitenin formunda alınır, 3D Secure ile bankada doğrulanır; veritabanına yazılmaz. Karta iade rezervasyon kartının İade sekmesinden yapılır.`
+            : "Online kartla ödeme kapalı. Müşteriler ön rezervasyon bırakır; tahsilat havale, nakit veya POS ile elle kaydedilir."}
+        </p>
+      </article>
+      <article>
+        <h3>E-posta</h3>
+        {!st ? (
+          <span className="status-tag inactive">Durum okunamadı</span>
+        ) : mail ? (
+          <span className="status-tag status-confirmed">Gönderiliyor · {mail === "resend" ? "Resend" : "SMTP"}</span>
+        ) : (
+          <span className="status-tag inactive">Gönderim kapalı</span>
+        )}
+        <p>
+          {mail
+            ? "Müşteri ve ekip e-postaları bildirim kuyruğundan otomatik gönderilir; gönderilemeyenler orada yeniden denenir."
+            : "E-postalar bildirim kuyruğunda bekler, gönderilmez. Gönderim hizmeti ve site adresi tanımlanınca otomatik gönderim başlar."}{" "}
+          SMS bağlantısı yok.
         </p>
       </article>
       <article>
@@ -724,15 +761,6 @@ function Integrations({ catalog, owner }: { catalog: Catalog; owner: boolean }) 
         <a href={catalog.business.mapsUrl} target="_blank" rel="noreferrer">
           İşletme bağlantısı <ExternalLink size={14} />
         </a>
-      </article>
-      <article>
-        <h3>E-posta ve SMS</h3>
-        <span className="status-tag">Sağlayıcı bağlı değil</span>
-        <p>
-          E-postalar bildirim kuyruğunda saklanır. Gönderim hizmeti (Resend
-          veya SMTP) ve site adresi tanımlandığında otomatik gönderim başlar. SMS için sağlayıcı
-          bağlantısı gerekir.
-        </p>
       </article>
     </div>
   );

@@ -304,3 +304,31 @@ test("admin panel traffic has its own rate limit bucket; public API limit is unt
   assert.ok(blocked, "panel sınırı da işler");
   assert.ok(Number(blocked.headers.get("retry-after")) > 0, "Retry-After başlığı");
 });
+
+test("integrations endpoint reports the real payment and e-mail setup", async (t) => {
+  const run = async (extra) => {
+    const password = randomBytes(32).toString("hex"),
+      env = { ADMIN_PASSWORD: password, ...extra },
+      store = await openStore(":memory:", { env });
+    const server = createApp(store, { env }).listen(0, "127.0.0.1");
+    await once(server, "listening");
+    t.after(async () => {
+      await new Promise((r) => server.close(r));
+      await store.db.close();
+    });
+    const base = "http://127.0.0.1:" + server.address().port;
+    const h = { "Content-Type": "application/json", "X-Rota-Client": "web" };
+    assert.equal((await fetch(base + "/api/admin/integrations")).status, 401);
+    const login = await fetch(base + "/api/admin/login", { method: "POST", headers: h, body: JSON.stringify({ password }) });
+    return (await fetch(base + "/api/admin/integrations", { headers: { Cookie: login.headers.get("set-cookie").split(";")[0] } })).json();
+  };
+  const off = await run({});
+  assert.deepEqual(off.payment, { enabled: false, provider: null, test: false, simulator: false });
+  assert.equal(off.email.delivery, null);
+  const on = await run({ PAYMENT_PROVIDER: "test", MAIL_FROM: "Rota <info@ornek.test>", PUBLIC_BASE_URL: "https://ornek.test", RESEND_API_KEY: "re_test" });
+  assert.equal(on.payment.enabled, true);
+  assert.equal(on.payment.provider, "test");
+  assert.equal(on.payment.test, true);
+  assert.equal(on.email.delivery, "resend");
+  assert.ok(!JSON.stringify(on).includes("re_test"), "anahtar istemciye gitmez");
+});

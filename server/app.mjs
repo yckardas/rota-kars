@@ -968,6 +968,22 @@ export function createApp(
   // Gece yedeği: durum herkese açık değil, yalnız yönetim paneline. Elle yedek sahibe özel.
   app.locals.backup = backup;
   app.get("/api/admin/backup", requireAdmin, route(async (_q, r) => r.json(await backup.status())));
+  // Bağlantılar sayfası: ödeme ve e-posta hizmetinin gerçek durumu (anahtarlar istemciye gitmez).
+  app.get(
+    "/api/admin/integrations",
+    requireAdmin,
+    route(async (_q, r) =>
+      r.json({
+        payment: {
+          enabled: Boolean(paymentStatus.enabled),
+          provider: paymentStatus.provider || null,
+          test: Boolean(paymentStatus.test),
+          simulator: Boolean(paymentStatus.simulator),
+        },
+        email: { delivery: store.notifications.delivery || null },
+      }),
+    ),
+  );
   app.post(
     "/api/admin/backup",
     requireAdmin,

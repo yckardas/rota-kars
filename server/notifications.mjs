@@ -30,6 +30,8 @@ export async function createNotifications(db, { clock, tx, env = {}, push = null
     .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
   const api = {
     configured: ready,
+    // "resend" | "smtp" | null — Bağlantılar sayfası gösterir.
+    delivery: delivery || null,
     agencyEmails,
     async notifyAgency({ subject, body, actionUrl = null, kind, dedupeKey, pushUrl = "/yonetim" }) {
       // Yönetici uygulamasına anlık bildirim: işlem tamamlandıktan sonra, olay başına bir kez.
