@@ -2693,3 +2693,11 @@
     max-width: none;
   }
 }
+/* Açıklamadaki etiketler renk karesi kuralından (.calendar-legend span) etkilenmesin. */
+.rk-admin .calendar-states li span.chip-vehicle {
+  width: auto;
+  height: auto;
+  display: inline-block;
+  line-height: 1.4;
+  white-space: nowrap;
+}
