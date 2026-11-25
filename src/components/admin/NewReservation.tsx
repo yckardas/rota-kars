@@ -53,7 +53,8 @@ export function NewReservation({
     [result, setResult] = useState<Reservation | null>(null);
   useEffect(() => {
     api<Departure[]>("/admin/departures")
-      .then((rows) => setDepartures(rows.filter((d) => d.date >= today())))
+      // Talep toplayan tarihe rezervasyon yazılmaz; önce "Satışa aç".
+      .then((rows) => setDepartures(rows.filter((d) => d.date >= today() && !d.demand)))
       .catch((e) => setError(e.message));
   }, []);
   useEffect(() => {

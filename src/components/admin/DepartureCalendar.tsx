@@ -80,6 +80,7 @@ export function DepartureCalendar({
                     <i className="tour-stone" style={{ background: color(d.tour_id) }} aria-hidden="true" />
                     <strong>{d.start_time}</strong> <span className="chip-name">{short(d.tour_id)}</span>
                     {vehicleTag(d, sizes) && <span className="chip-vehicle">{d.vehicle_no}. araç</span>}
+                    {d.demand && <span className="chip-vehicle chip-demand">Talep</span>}
                   </span>
                   <SeatCourse
                     sold={soldSeats(d)}

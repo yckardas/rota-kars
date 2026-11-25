@@ -97,9 +97,15 @@ export async function createDepartures(
       pickup: row.pickup || DEFAULT_PICKUP,
       guide_name: row.guide_name || "",
       guide_phone: row.guide_phone || "",
-      // Talep toplama modundaki turda koltuk satılmaz; yalnız ön kayıt alınır.
+      // Seferin satış modu: null turun moduna uyar; "demand"/"online" yalnız bu tarih için
+      // (ör. talep toplayan turda eşiği dolan tarih online satışa geçer).
+      sales_mode: row.sales_mode ?? null,
+      mode: row.sales_mode || base.mode,
+      demand: (row.sales_mode || base.mode) === "demand",
+      // Talep toplayan tarihte koltuk satılmaz; yalnız ön kayıt alınır.
       // Fiyatı girilmemiş (0) turun seferi de satılmaz: bedelsiz rezervasyon oluşmasın.
-      salesOpen: base.salesOpen && base.mode !== "demand" && Boolean(row.active) && price > 0,
+      salesOpen:
+        base.salesOpen && (row.sales_mode || base.mode) !== "demand" && Boolean(row.active) && price > 0,
     };
   };
   const withCutoff = (d) => {
@@ -193,6 +199,22 @@ export async function createDepartures(
             (old.date !== input.date ||
               old.price !== (input.price ?? tourPrice(input.tourId)) ||
               old.start_time !== input.startTime);
+        // Satış modu: gönderilmezse eski değer kalır; ek araç grubun modunu alır.
+        const salesMode =
+          input.salesMode !== undefined
+            ? input.salesMode
+            : old
+              ? old.sales_mode
+              : group
+                ? (await db.one("departures", { _id: group.group_id }))?.sales_mode ?? null
+                : null;
+        if (
+          old &&
+          !old.demand &&
+          (salesMode || (await operations.get(input.tourId)).mode) === "demand" &&
+          (await this.hasActiveBookings(old.group_id))
+        )
+          throw new AppError(409, "Bu tarihte rezervasyon var; talep toplamaya alınamaz.");
         if (
           (changed &&
             (await db.one("seat_locks", {
@@ -264,16 +286,26 @@ export async function createDepartures(
           closed_seats: (old?.closed_seats || []).filter(
             (n) => n <= makeVehicle(input.vehicleModel, input.passengerSeats).sellableSeats,
           ),
+          sales_mode: salesMode,
         };
         if (old) {
           await db.update("departures", { _id: id }, fields);
-          // Tarih, saat, fiyat ve buluşma noktası gruptaki tüm araçlarda aynıdır.
+          // Tarih, saat, fiyat, buluşma noktası ve satış modu gruptaki tüm araçlarda aynıdır.
           if (siblings.length)
             await db.updateMany(
               "departures",
               { group_id: old.group_id, _id: { $ne: id } },
-              { date: fields.date, start_time: fields.start_time, price: fields.price, pickup: fields.pickup },
+              {
+                date: fields.date,
+                start_time: fields.start_time,
+                price: fields.price,
+                pickup: fields.pickup,
+                sales_mode: fields.sales_mode,
+              },
             );
+          // Ön kayıtlar sefer grubuna bağlıdır; tarih değişince kayıttaki tarih de güncellenir.
+          if (old.date !== input.date)
+            await db.updateMany("interest_list", { departure_id: old.group_id }, { departure_date: input.date });
         } else
           await db.insert("departures", id, {
             id,
@@ -335,6 +367,16 @@ export async function createDepartures(
         return this.get(id, { allowClosed: true, allowPast: true });
       });
     },
+    // Tarihin (gruptaki herhangi bir aracın) aktif rezervasyonu var mı?
+    async hasActiveBookings(groupId) {
+      const ids = [groupId, ...(await db.find("departures", { group_id: groupId })).map((x) => x.id)];
+      return Boolean(
+        await db.one("reservations", {
+          departure_id: { $in: ids },
+          status: { $in: ["pending_agency", "confirmed"] },
+        }),
+      );
+    },
     // Yanlış açılmış sefer silinebilir; kaydı (iptal edilmiş olsa da) olan sefer yalnız kapatılır.
     async remove(id) {
       return tx(async () => {
@@ -343,6 +385,11 @@ export async function createDepartures(
           throw new AppError(409, "Bu tarihin ek araçları var; önce diğer araçları silin.");
         if (await db.one("reservations", { departure_id: id }))
           throw new AppError(409, "Bu seferde rezervasyon kaydı var; silmek yerine satışa kapatın.");
+        if (
+          d.id === d.group_id &&
+          (await db.one("interest_list", { departure_id: id, status: { $in: ["waiting", "notified"] } }))
+        )
+          throw new AppError(409, "Bu tarihte ön kayıt var; önce kayıtları kapatın.");
         await db.remove("seat_locks", { departure_id: id });
         await db.remove("departures", { _id: id });
         return { ok: true };

@@ -7,6 +7,7 @@ import { Modal } from "./Modal";
 import { useTurnstile } from "./Turnstile";
 import { post } from "../lib/api";
 import { useLang } from "../lib/i18n";
+import { dateLabel, type DemandDate } from "../lib/types";
 
 export function InterestForm({
   kind,
@@ -15,6 +16,9 @@ export function InterestForm({
   departureId,
   departureLabel,
   initialCount = 1,
+  dates = [],
+  initialDateId,
+  allowUndated = true,
   onClose,
 }: {
   kind: "prereg" | "waitlist";
@@ -23,6 +27,11 @@ export function InterestForm({
   departureId?: string;
   departureLabel?: string;
   initialCount?: number;
+  // Ön kayıt: talep toplayan tarihler; seçilen tarih kayda bağlanır. "" = başka bir tarih
+  // (tarihsiz kayıt; yalnız tur talep toplama modundaysa).
+  dates?: DemandDate[];
+  initialDateId?: string;
+  allowUndated?: boolean;
   onClose: () => void;
 }) {
   const { t } = useLang();
@@ -31,6 +40,11 @@ export function InterestForm({
     [result, setResult] = useState(""),
     human = useTurnstile("request");
   const waitlist = kind === "waitlist";
+  const pickDate = !waitlist && dates.length > 0;
+  const [dateId, setDateId] = useState(
+    initialDateId && dates.some((d) => d.id === initialDateId) ? initialDateId : allowUndated ? "" : dates[0]?.id || "",
+  );
+  const picked = dates.find((d) => d.id === dateId);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -40,7 +54,7 @@ export function InterestForm({
       const r = await post<{ reference: string }>("/interest", {
         kind,
         tourId,
-        ...(departureId ? { departureId } : {}),
+        ...(departureId ? { departureId } : pickDate && dateId ? { departureId: dateId } : {}),
         ...(f.get("preferredDate") ? { preferredDate: f.get("preferredDate") } : {}),
         count: Number(f.get("count")),
         name: f.get("name"),
@@ -86,9 +100,14 @@ export function InterestForm({
                   tour: tourName,
                   departure: departureLabel || "",
                 })
-              : t("{tour} için ücretsiz ön kayıt bırakın. Ödeme alınmaz; tur kesinleşince size haber verip rezervasyonu açarız.", {
-                  tour: tourName,
-                })}
+              : picked
+                ? t("{tour} · {date} için ücretsiz ön kayıt bırakın. Ödeme alınmaz; tarih kesinleşince size haber verip rezervasyonu açarız.", {
+                    tour: tourName,
+                    date: dateLabel(picked.date),
+                  })
+                : t("{tour} için ücretsiz ön kayıt bırakın. Ödeme alınmaz; tur kesinleşince size haber verip rezervasyonu açarız.", {
+                    tour: tourName,
+                  })}
           </p>
           <div className="form-grid">
             <label className="field">
@@ -109,7 +128,20 @@ export function InterestForm({
               {t("Kişi sayısı")}
               <input name="count" type="number" min={1} max={50} defaultValue={initialCount} required />
             </label>
-            {!waitlist && (
+            {pickDate && (
+              <label className="field">
+                {t("Tarih")}
+                <select value={dateId} onChange={(e) => setDateId(e.target.value)}>
+                  {dates.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {dateLabel(d.date)} · {d.start_time}
+                    </option>
+                  ))}
+                  {allowUndated && <option value="">{t("Başka bir tarih istiyorum")}</option>}
+                </select>
+              </label>
+            )}
+            {!waitlist && !(pickDate && dateId) && (
               <label className="field">
                 {t("Tercih ettiğiniz dönem (isteğe bağlı)")}
                 <input name="preferredDate" maxLength={60} placeholder={t("Örn. Mart 2027, hafta sonu")} />

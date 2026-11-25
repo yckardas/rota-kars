@@ -616,6 +616,22 @@ export const site: Record<string, string> = {
     "Pre-registration is free, no payment taken",
   "Ön kayıt açık":
     "Pre-registration open",
+  "Ön kayıt açık · {date}":
+    "Pre-registration open · {date}",
+  "Planlanan tarihler":
+    "Planned dates",
+  "Talep toplanan tarihler":
+    "Dates collecting interest",
+  "Tüm tarihler ({n})":
+    "All dates ({n})",
+  "tahmini {price}":
+    "estimated {price}",
+  "Başka bir tarih istiyorum":
+    "I'd like another date",
+  "Başka bir tarih için ücretsiz ön kayıt":
+    "Pre-register for free for another date",
+  "{tour} · {date} için ücretsiz ön kayıt bırakın. Ödeme alınmaz; tarih kesinleşince size haber verip rezervasyonu açarız.":
+    "Leave a free pre-registration for {tour} · {date}. No payment is taken; we'll let you know and open booking once the date is confirmed.",
   "yeterli talep olursa":
     "runs with enough demand",
   "Bu tur yeterli talep olursa yapılacak; şu an koltuk satılmıyor. Ücretsiz ön kayıt bırakın, tur kesinleşince size haber verelim.":

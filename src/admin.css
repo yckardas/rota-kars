@@ -2074,3 +2074,33 @@
   background: var(--ochre-wash);
   font-size: 0.9rem;
 }
+
+/* Talep toplayan tarihler (sefer listesi, takvim, ön kayıt sekmesi) */
+.rk-admin .calendar-chip .chip-demand {
+  background: var(--kp-red-wash, #fbe9e7);
+  color: var(--kp-red, #c2342b);
+}
+.rk-admin .demand-tag {
+  display: block;
+  margin-top: 4px;
+  color: var(--kp-red, #c2342b);
+  font-weight: 600;
+}
+.rk-admin .interest-dates {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.rk-admin .interest-dates li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line, #e3e8ee);
+}
+.rk-admin .interest-dates .interest-progress {
+  grid-column: 1 / -1;
+}

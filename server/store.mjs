@@ -262,8 +262,10 @@ export async function openStore(
     cleanup,
     // Halka açık liste: aynı tarihteki araçlar tek satırdır. Satır, ilk boş yeri olan aracı
     // gösterir; rezervasyon sayfası yolcu sayısına göre "vehicles" içinden sığan ilk aracı seçer.
-    async listDepartures(tourId) {
-      const open = (await departures.list({ tourId })).filter(
+    // rows: önceden okunmuş departures.list sonucu (katalog aynı listeyi talep tarihleri için
+    // de kullanır; seferler iki kez okunmaz).
+    async listDepartures(tourId, { rows } = {}) {
+      const open = (rows || (await departures.list({ tourId }))).filter(
         (d) => d.salesOpen && d.date >= localDate(clock()),
       );
       const groups = new Map();

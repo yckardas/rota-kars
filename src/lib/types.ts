@@ -1,5 +1,6 @@
 import { localeOf } from "./i18n";
 import type { PricedTransfer, TransferConfig } from "./transfer";
+export type DemandDate = { id: string; date: string; start_time: string; price: number; count?: number };
 export type Tour = {
   // Satışı açık turun ilk seferi (katalogda sunucu ekler).
   next?: { date: string; startTime: string; available: number };
@@ -11,6 +12,8 @@ export type Tour = {
   // count yalnız panelde "ilerlemeyi göster" açıksa gelir.
   mode?: "online" | "demand";
   demand?: { threshold: number; showProgress: boolean; count?: number };
+  // Talep toplayan tarihler (seferler; count yalnız "ilerlemeyi göster" açıksa).
+  demandDates?: DemandDate[];
   id: string;
   // Yurt dışı tur (katalogda yalnız yurt dışı turlarda bulunur).
   abroad?: boolean;
@@ -184,6 +187,10 @@ export type Departure = {
   vehicles?: { id: string; available: number }[];
   // Panel listesi: online satış şu an açık mı (tarih geçmemiş, aktif, kesim saatinden önce).
   salesOpen?: boolean;
+  // Satış modu: sales_mode null ise turun moduna uyar; demand = talep toplayan tarih.
+  sales_mode?: "demand" | "online" | null;
+  mode?: "demand" | "online";
+  demand?: boolean;
 };
 // "closed": satışa kapalı koltuk; yalnız panelde gelir (müşteriye "occupied").
 export type Seat = { number: number; status: "occupied" | "available" | "closed" };

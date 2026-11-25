@@ -14,6 +14,10 @@ export function TourCard({ tour }: { tour: Tour }) {
     openTour = useOpenTour(),
     photo = useRef<HTMLImageElement>(null),
     ribbon = useRef<HTMLSpanElement>(null);
+  // Talep turunda satışa açılmış bir tarih varsa kart satış görünümüne geçer.
+  const demandOnly = tour.mode === "demand" && !tour.next,
+    shortDate = (date: string) =>
+      new Date(date + "T12:00:00").toLocaleDateString(localeOf(), { day: "numeric", month: "short" });
   return (
     <Link
       className="tour-card"
@@ -38,8 +42,12 @@ export function TourCard({ tour }: { tour: Tour }) {
         </span>
         {!tour.salesOpen ? (
           <span className="tour-sales-closed">{t("Şu an satışa kapalı")}</span>
-        ) : tour.mode === "demand" ? (
-          <span className="tour-sales-closed tour-demand">{t("Ön kayıt açık")}</span>
+        ) : demandOnly ? (
+          <span className="tour-sales-closed tour-demand">
+            {tour.demandDates?.length
+              ? t("Ön kayıt açık · {date}", { date: shortDate(tour.demandDates[0].date) })
+              : t("Ön kayıt açık")}
+          </span>
         ) : (
           // İlk seferde az koltuk kaldıysa fotoğrafın üstünde turuncu etiket.
           tour.next &&
@@ -61,18 +69,13 @@ export function TourCard({ tour }: { tour: Tour }) {
             {tour.duration} · {t("Kars çıkışlı")}
             {tour.inquiryOnly
               ? " · " + t("tarih için arayın")
-              : tour.mode === "demand"
+              : demandOnly
                 ? " · " + t("yeterli talep olursa")
                 : ""}
           </p>
           {tour.next && (
             <p className={"tour-card-next" + (tour.next.available <= 3 ? " is-few" : "")}>
-              {t("İlk hareket {date}", {
-                date: new Date(tour.next.date + "T12:00:00").toLocaleDateString(localeOf(), {
-                  day: "numeric",
-                  month: "short",
-                }),
-              })} ·{" "}
+              {t("İlk hareket {date}", { date: shortDate(tour.next.date) })} ·{" "}
               {tour.next.available === 0
                 ? t("dolu")
                 : tour.next.available <= 3
@@ -84,7 +87,7 @@ export function TourCard({ tour }: { tour: Tour }) {
         {hasPrice(tour.fromPrice ?? tour.price) ? (
           <strong>
             {currency(tour.fromPrice ?? tour.price)}
-            <small>{tour.mode === "demand" ? t("tahmini kişi başı") : t("kişi başı")}</small>
+            <small>{demandOnly ? t("tahmini kişi başı") : t("kişi başı")}</small>
           </strong>
         ) : (
           <strong className="tour-card-ask">

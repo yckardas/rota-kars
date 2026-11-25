@@ -29,6 +29,7 @@ import { TransferOffer } from "../components/TourExtras";
 import { discoverFor } from "../lib/discover";
 import { ArticleCard } from "../components/ArticleCard";
 import { InterestForm } from "../components/InterestForm";
+import { DemandDates } from "../components/DemandDates";
 import {
   currency,
   hasPrice,
@@ -48,7 +49,8 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
     // Tur öncesi/sonrası konaklama talebi (anlaşmalı oteller listesiyle açılır).
     [stay, setStay] = useState<Hotel[] | null>(null),
     // Talep toplama modundaki tur için ücretsiz ön kayıt formu.
-    [prereg, setPrereg] = useState(false),
+    // Açıkken { dateId }: bir talep tarihinden açıldıysa o tarih seçili gelir.
+    [prereg, setPrereg] = useState<{ dateId?: string } | null>(null),
     [departures, setDepartures] = useState<Departure[]>([]),
     // Bu rotayla ilişkilendirilmiş rehber yazıları (panelden).
     [articles, setArticles] = useState<Article[]>([]),
@@ -70,7 +72,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
   useClearOfLaunchers(strip, "actionVisible");
   useEffect(() => {
     setActiveImage(0);
-    if (t && !t.inquiryOnly && t.mode !== "demand")
+    if (t && !t.inquiryOnly)
       api<Departure[]>(`/tours/${t.id}/departures`)
         .then(setDepartures)
         .catch(() => setDepartures([]));
@@ -100,8 +102,11 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
       ? Math.min(...departures.map((d) => d.price))
       : (t.fromPrice ?? t.price),
     currentVehicle = next?.vehicle || t.vehicle;
-  // Talep toplama: koltuk satılmaz; yeterli ön kayıt olunca acente satışı açar.
-  const demand = t.mode === "demand" && !t.inquiryOnly;
+  // Talep toplama: satılabilir sefer yoksa koltuk satılmaz; yeterli ön kayıt olunca acente
+  // satışı açar. Talep turunda satışa açılmış bir tarih varsa sayfa satış görünümüne geçer.
+  const demand = t.mode === "demand" && !t.inquiryOnly && !first,
+    demandDates = t.inquiryOnly ? [] : t.demandDates || [],
+    threshold = t.demand?.threshold || 14;
   // Ana çağrı düğmesi her yerde aynı: bilgi al, ön kayıt ya da tarih/koltuk seç.
   const cta = (className: string, short = false) =>
     t.inquiryOnly ? (
@@ -109,7 +114,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
         {short ? tx("Bilgi alın") : tx("Bu tur için bilgi alın")}
       </button>
     ) : demand ? (
-      <button className={className} onClick={() => setPrereg(true)}>
+      <button className={className} onClick={() => setPrereg({})}>
         {short ? tx("Ön kayıt") : tx("Ücretsiz ön kayıt bırakın")}
       </button>
     ) : (
@@ -475,7 +480,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
               <p>
                 {tx("Bu tur yeterli talep olursa yapılacak. Ücretsiz ön kayıt bırakın; tur kesinleşince size haber verip rezervasyonu açalım.")}
               </p>
-              {t.demand?.count !== undefined && (
+              {t.demand?.count !== undefined && !demandDates.length && (
                 <div className="demand-progress">
                   <span>
                     {tx("{count} / {threshold} kişi hazır", {
@@ -485,6 +490,14 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
                   </span>
                   <progress max={t.demand.threshold} value={Math.min(t.demand.count, t.demand.threshold)} />
                 </div>
+              )}
+              {demandDates.length > 0 && (
+                <DemandDates
+                  title={tx("Planlanan tarihler")}
+                  dates={demandDates}
+                  threshold={threshold}
+                  onPick={(dateId) => setPrereg({ dateId })}
+                />
               )}
             </div>
           ) : (
@@ -506,7 +519,21 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
               </span>
             </div>
           )}
+          {!demand && demandDates.length > 0 && (
+            <DemandDates
+              title={tx("Talep toplanan tarihler")}
+              dates={demandDates}
+              threshold={threshold}
+              onPick={(dateId) => setPrereg({ dateId })}
+            />
+          )}
           {cta("btn block")}
+          {/* Talep turunda satışa açılmış tarih olsa da tarih belirtmeden ön kayıt yolu kalır. */}
+          {t.mode === "demand" && !demand && !t.inquiryOnly && (
+            <button type="button" className="text-link demand-dates-more" onClick={() => setPrereg({})}>
+              {tx("Başka bir tarih için ücretsiz ön kayıt")}
+            </button>
+          )}
           <div className="aside-benefits">
             <span>
               <Armchair size={15} />
@@ -580,7 +607,15 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
         />
       )}
       {prereg && (
-        <InterestForm kind="prereg" tourId={t.id} tourName={t.name} onClose={() => setPrereg(false)} />
+        <InterestForm
+          kind="prereg"
+          tourId={t.id}
+          tourName={t.name}
+          dates={demandDates}
+          initialDateId={prereg.dateId}
+          allowUndated={t.mode === "demand"}
+          onClose={() => setPrereg(null)}
+        />
       )}
       {stay && (
         <RequestForm

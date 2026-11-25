@@ -86,13 +86,50 @@ export function DepartureManager({
     // Telefonla satılan koltukları bu seferde kapatma (panelden rezervasyon).
     [closing, setClosing] = useState(""),
     [showPast, setShowPast] = useState(false),
-    [view, setView] = useState<"calendar" | "list">("calendar");
+    [view, setView] = useState<"calendar" | "list">("calendar"),
+    // Talep tarihlerinin ön kayıt sayıları (tarihin 1. aracının id'si) ve tur eşikleri.
+    [demandInfo, setDemandInfo] = useState<{ counts: Record<string, number>; thresholds: Record<string, number> }>({
+      counts: {},
+      thresholds: {},
+    });
   async function load() {
-    setItems(
-      await api<Departure[]>(
-        "/admin/departures" + (tourFilter ? "?tourId=" + tourFilter : ""),
-      ),
-    );
+    const [rows, interest] = await Promise.all([
+      api<Departure[]>("/admin/departures" + (tourFilter ? "?tourId=" + tourFilter : "")),
+      api<{ tours: { id: string; demand: { threshold: number }; dates: { id: string; count: number }[] }[] }>(
+        "/admin/interest",
+      ).catch(() => ({ tours: [] })),
+    ]);
+    setItems(rows);
+    const counts: Record<string, number> = {},
+      thresholds: Record<string, number> = {};
+    for (const t of interest.tours) {
+      thresholds[t.id] = t.demand?.threshold || 14;
+      for (const x of t.dates || []) counts[x.id] = x.count;
+    }
+    setDemandInfo({ counts, thresholds });
+  }
+  const demandCount = (d: Departure) => demandInfo.counts[d.group_id || d.id] || 0,
+    demandLabel = (d: Departure) =>
+      `Talep · ${demandCount(d)}/${demandInfo.thresholds[d.tour_id] || 14} kişi`;
+  // Talep tarihini satışa aç: tarihin tüm araçları satışa geçer, o tarihe kayıtlılara e-posta gider.
+  async function openDate(d: Departure) {
+    const n = demandCount(d);
+    const ok = await feedback.confirm({
+      title: `${dateLabel(d.date)} satışa açılsın mı?`,
+      body: n
+        ? `Bu tarihe kayıtlı ${n} kişiye rezervasyon bağlantısı e-postayla gider.`
+        : "Bu tarihe henüz ön kayıt yok; tarih online satışa geçer.",
+      confirmLabel: "Satışa aç",
+    });
+    if (!ok) return;
+    try {
+      const r = await post<{ notified: number }>(`/admin/departures/${encodeURIComponent(d.group_id || d.id)}/open-sales`, {});
+      feedback.ok(`${dateLabel(d.date)} satışa açıldı; ${r.notified} kişiye haber verildi.`);
+      setEditing(false);
+      await load();
+    } catch (e) {
+      feedback.error(e);
+    }
   }
   useEffect(() => {
     load().catch(feedback.error);
@@ -167,8 +204,21 @@ export function DepartureManager({
         await load();
         return;
       }
+      // Talep tarihine kayıtlı kişiler tarih değişikliğini kendiliğinden öğrenmez.
+      if (
+        editing &&
+        demandCount(editing) > 0 &&
+        (f.get("date") !== editing.date || f.get("startTime") !== editing.start_time) &&
+        !(await feedback.confirm({
+          title: "Tarih değişsin mi?",
+          body: `Bu tarihe kayıtlı ${demandCount(editing)} kişi var; tarih değişikliğini onlara siz bildirin.`,
+          confirmLabel: "Kaydet",
+        }))
+      )
+        return;
       await post("/admin/departures", {
         ...(editing ? { id: editing.id } : {}),
+        salesMode: f.get("salesMode") ? f.get("salesMode") : null,
         tourId: f.get("tourId"),
         date: f.get("date"),
         startTime: f.get("startTime"),
@@ -244,10 +294,12 @@ export function DepartureManager({
           busy={busy}
           cancel={() => setEditing(false)}
           remove={editing ? () => remove(editing) : undefined}
-          closeSeats={editing && editing.date >= today() ? () => setClosing(editing.id) : undefined}
+          closeSeats={editing && editing.date >= today() && !editing.demand ? () => setClosing(editing.id) : undefined}
           addVehicle={editing && editing.date >= today() ? () => addVehicle(editing) : undefined}
           tag={editing ? vehicleTag(editing, sizes) : ""}
           onSeatsSaved={() => load().catch(feedback.error)}
+          openDate={editing && editing.demand && editing.date >= today() ? () => openDate(editing) : undefined}
+          demandNote={editing && editing.demand ? demandLabel(editing) : ""}
         />
       )}
       {closing && (
@@ -322,6 +374,7 @@ export function DepartureManager({
                   >
                     {d.active ? "Açık" : "Kapalı"}
                   </span>
+                  {d.demand && <small className="demand-tag">{demandLabel(d)}</small>}
                 </td>
                 <td>
                   <button
@@ -333,7 +386,13 @@ export function DepartureManager({
                   >
                     Düzenle
                   </button>
-                  {d.date >= today() && (
+                  {d.demand && d.date >= today() && (d.vehicle_no || 1) === 1 && (
+                    <button className="text-link" onClick={() => openDate(d)}>
+                      <Check size={14} />
+                      Satışa aç
+                    </button>
+                  )}
+                  {d.date >= today() && !d.demand && (
                     <button className="text-link" onClick={() => setClosing(d.id)}>
                       <Armchair size={14} />
                       Koltuk kapat
@@ -383,6 +442,8 @@ function DepartureEditor({
   addVehicle,
   tag = "",
   onSeatsSaved,
+  openDate,
+  demandNote = "",
 }: {
   catalog: Catalog;
   departure: Departure | null;
@@ -395,6 +456,9 @@ function DepartureEditor({
   // "2. araç" gibi; tek araçlı seferde boş.
   tag?: string;
   onSeatsSaved?: () => void;
+  // Talep tarihinde: "Satışa aç" ve "Talep · 3/14 kişi" notu.
+  openDate?: () => void;
+  demandNote?: string;
 }) {
   // Yeni sefer, turun "Tur ve araç planı"ndaki araçla açılır; listenin ilk sınıfıyla
   // (4 kişilik binek) değil. Plan yoksa ilk sınıfa düşülür.
@@ -627,6 +691,22 @@ function DepartureEditor({
         />
         <span>Sefer rezervasyona açık</span>
       </label>
+      <label className="field">
+        Satış
+        <select name="salesMode" defaultValue={d?.sales_mode || ""}>
+          <option value="">
+            Turun ayarı (şu an: {catalog.tours.find((t) => t.id === tourId)?.mode === "demand" ? "talep toplama" : "online satış"})
+          </option>
+          <option value="online">Online satış</option>
+          <option value="demand">Talep toplama (koltuk satılmaz, ücretsiz ön kayıt)</option>
+        </select>
+        <small className="muted">
+          {tag
+            ? "Satış modu bu tarihin tüm araçlarında ortaktır."
+            : "Talep toplayan tarih sitede \"ön kayıt\" olarak görünür; eşik dolunca \"Satışa aç\" deyin."}
+          {demandNote ? " " + demandNote + "." : ""}
+        </small>
+      </label>
       {d && d.date >= today() && <ClosedSeats key={d.id} departure={d} onSaved={() => onSeatsSaved?.()} />}
       <div className="button-row">
         <button className="btn" disabled={busy}>
@@ -643,6 +723,11 @@ function DepartureEditor({
         {closeSeats && (
           <button className="btn btn-outline" type="button" onClick={closeSeats}>
             <Armchair size={16} /> Koltuk kapat (telefon rezervasyonu)
+          </button>
+        )}
+        {openDate && (
+          <button className="btn btn-outline" type="button" onClick={openDate}>
+            <Check size={16} /> Satışa aç
           </button>
         )}
         {addVehicle && (
