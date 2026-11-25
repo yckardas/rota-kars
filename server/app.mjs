@@ -1001,23 +1001,29 @@ export function createApp(
     Promise.all(
       list.map(async (t) => {
         if (t.inquiryOnly) return { ...t, fromPrice: t.price };
-        // Talep toplama: koltuk satılmaz; ilerleme açıksa ön kayıtlı kişi sayısı da verilir.
-        if (t.mode === "demand")
-          return {
-            ...t,
-            fromPrice: t.price,
-            demand: {
-              ...t.demand,
-              ...(t.demand.showProgress ? { count: await store.interest.demandCount(t.id) } : {}),
-            },
-          };
-        const open = await store.listDepartures(t.id).catch(() => []),
+        // Siteyi tarih belirler: satılabilir sefer (talep turunda satışa açılan tarih dahil)
+        // "ilk hareket" olur; talep toplayan tarihler ayrıca listelenir. Talep toplama turunda
+        // ilerleme açıksa tarihsiz ön kayıtlı kişi sayısı da verilir.
+        const showProgress = Boolean(t.demand?.showProgress),
+          open = await store.listDepartures(t.id).catch(() => []),
+          demandDates = await store.interest.demandDates(t.id, { withCount: showProgress }).catch(() => []),
           [d] = open,
           // Anasayfa, tur kartı ve tur detayı aynı "…’den" fiyatını gösterir.
           fromPrice = open.length ? Math.min(...open.map((x) => x.price)) : t.price;
-        return d
-          ? { ...t, fromPrice, next: { date: d.date, startTime: d.start_time, available: Math.max(0, d.available) } }
-          : { ...t, fromPrice };
+        return {
+          ...t,
+          fromPrice,
+          ...(d ? { next: { date: d.date, startTime: d.start_time, available: Math.max(0, d.available) } } : {}),
+          ...(demandDates.length ? { demandDates } : {}),
+          ...(t.mode === "demand"
+            ? {
+                demand: {
+                  ...t.demand,
+                  ...(showProgress ? { count: await store.interest.demandCount(t.id) } : {}),
+                },
+              }
+            : {}),
+        };
       }),
     );
   // "Müşteri memnuniyeti" kartı: puan ve yorum sayısı elle yazılmaz, yorumlar

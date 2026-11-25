@@ -236,3 +236,32 @@ test("the admin interest view lists each tour's dates with their own counts", as
     [[d.id, DATE, 2, true]],
   );
 });
+
+test("the catalog lists demand dates without leaking internals; an opened date sells like any tour", async (t) => {
+  const { call, departure } = await fixture(t);
+  const tour = async () => (await call("/catalog")).json.tours.find((x) => x.id === "guneydogu");
+  const d1 = await departure("guneydogu", { price: 250000, guideName: "Ali", guidePhone: "05550000000" });
+  const d2 = await departure("guneydogu", { price: 250000, date: "2026-10-31", active: false });
+  await departure("guneydogu", { price: 250000, date: "2026-10-17", startTime: "10:00" }); // satış kesimi geçti
+  let g = await tour();
+  assert.deepEqual(
+    g.demandDates.map((x) => [x.id, x.date, x.start_time, x.price]),
+    [[d1.id, DATE, "05:00", 250000]],
+  );
+  assert.doesNotMatch(JSON.stringify(g.demandDates), /plate|guide|closed|sales_mode|vehicle/);
+  assert.equal(g.demandDates[0].count, undefined, "ilerleme kapalıyken sayı yok");
+  assert.equal(g.next, undefined);
+  const late = await call("/interest", { kind: "prereg", tourId: "guneydogu", departureId: d2.id, ...person() });
+  assert.equal(late.status, 409, "pasif tarihe ön kayıt yok");
+  await call("/interest", { kind: "prereg", tourId: "guneydogu", departureId: d1.id, ...person() });
+  await call("/admin/operations/guneydogu/mode", { mode: "demand", threshold: 14, showProgress: true });
+  g = await tour();
+  assert.equal(g.demandDates[0].count, 2);
+  assert.equal(g.demand.count, 0, "tur sayacı tarihsiz kayıtlar");
+  assert.equal((await call(`/admin/departures/${d1.id}/open-sales`, {})).status, 200);
+  g = await tour();
+  assert.equal(g.demandDates, undefined);
+  assert.equal(g.next.date, DATE);
+  assert.equal(g.fromPrice, 250000);
+  assert.equal((await call("/tours/guneydogu/departures")).json.length, 1);
+});
