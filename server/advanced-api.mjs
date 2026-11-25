@@ -227,6 +227,8 @@ export function attachAdvancedApi(
             .enum(["", ...fleetVehicles.map((v) => v.id)])
             .default(""),
           active: z.boolean(),
+          // null: turun satış moduna uyar; gönderilmezse mevcut değer kalır.
+          salesMode: z.enum(["demand", "online"]).nullable().optional(),
         })
         .parse(q.body);
       const d = await store.db.transaction(async () => {
