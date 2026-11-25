@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Download, LoaderCircle, Mail, MessageCircle, Phone } from "lucide-react";
+import { Download, LoaderCircle, Mail, MessageCircle, Phone, Ticket } from "lucide-react";
 import { api, post } from "../../lib/api";
-import { dateLabel, type Hotel, type Tour } from "../../lib/types";
+import { dateLabel, type Catalog, type Hotel, type Tour } from "../../lib/types";
+import { NewReservation } from "./NewReservation";
 import { downloadCsv } from "../../lib/csv";
 import { isNativeApp } from "../../lib/native";
 
@@ -70,7 +71,18 @@ const wa = (phone: string) => {
 };
 
 // Gelen talepler: durum takibi, not geçmişi, tek dokunuşla arama/WhatsApp.
-export function RequestManager({ initialQuery = "", tours = [] }: { initialQuery?: string; tours?: Tour[] }) {
+export function RequestManager({
+  initialQuery = "",
+  tours = [],
+  catalog,
+}: {
+  initialQuery?: string;
+  tours?: Tour[];
+  // Verilirse tur taleplerinde "Rezervasyon oluştur" görünür.
+  catalog?: Catalog;
+}) {
+  // Talepten açılan yeni rezervasyon penceresi.
+  const [booking, setBooking] = useState<RequestRecord | null>(null);
   const [items, setItems] = useState<RequestRecord[] | null>(null),
     [hotels, setHotels] = useState<Hotel[]>([]),
     [kind, setKind] = useState("all"),
@@ -226,6 +238,11 @@ export function RequestManager({ initialQuery = "", tours = [] }: { initialQuery
                   <Mail size={15} /> E-posta
                 </a>
               )}
+              {catalog && ["tour-info", "private-tour"].includes(r.kind) && !["won", "lost"].includes(r.status) && (
+                <button type="button" className="btn btn-small" onClick={() => setBooking(r)}>
+                  <Ticket size={15} /> Rezervasyon oluştur
+                </button>
+              )}
             </div>
             <label className="field">
               Durum
@@ -259,6 +276,23 @@ export function RequestManager({ initialQuery = "", tours = [] }: { initialQuery
           </article>
         ))}
       </div>
+      {booking && catalog && (
+        <NewReservation
+          catalog={catalog}
+          prefill={{
+            name: booking.body.name,
+            phone: booking.body.phone,
+            email: booking.body.email,
+            tourId: booking.body.tourId,
+            date: booking.body.checkIn,
+            guests: booking.body.guests,
+            notes: booking.body.notes ? booking.body.notes.slice(0, 500) : "",
+          }}
+          onClose={() => setBooking(null)}
+          // Rezervasyon yazılınca talep "Rezervasyona döndü" olur ve referansı not düşülür.
+          onCreated={(created) => update(booking.id, { status: "won", note: "Rezervasyon oluşturuldu: " + created.reference })}
+        />
+      )}
     </>
   );
 }

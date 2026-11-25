@@ -472,7 +472,7 @@ function AdminPanel({
         {tab === "finance" && <FinancePanel key={key("fin")} onReservation={(ref) => pick("reservations", { ref })} />}
         {tab === "reports" && <MonthReport key={key("rep")} />}
         {tab === "notifications" && <NotificationManager key={key("notif")} />}
-        {tab === "requests" && <RequestManager key={key("req")} initialQuery={nav.q || ""} tours={catalog.tours} />}
+        {tab === "requests" && <RequestManager key={key("req")} initialQuery={nav.q || ""} tours={catalog.tours} catalog={catalog} />}
         {tab === "hotels" && <HotelManager key={key("hotels")} />}
         {tab === "articles" && <ArticleManager key={key("articles")} catalog={catalog} />}
         {tab === "interest" && <InterestManager key={key("interest")} onChange={refreshCatalog} />}
