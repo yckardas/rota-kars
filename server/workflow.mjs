@@ -81,20 +81,45 @@ export async function createWorkflow(
     });
   };
   // Telefonla alınan kayıtlarda e-posta olmayabilir: o zaman müşteriye e-posta gitmez.
-  // extra: e-postanın sonuna eklenen belge (ön bilgilendirme formu, sözleşme).
-  const notify = async (r, event, text, dedupeKey = event + ":" + r.reference, extra = "") =>
+  // ticket: true → mail kısa bilet kartı olarak gider (onay/ön rezervasyon);
+  // documents: [{ title, filename, text }] PDF eki olur, gövdeye yazılmaz.
+  const notify = async (r, event, text, dedupeKey = event + ":" + r.reference, { ticket = false, documents = null } = {}) =>
     r.email &&
     notifications.enqueue({
       email: r.email,
       subject: "Rota Kars · " + text,
       body:
-        `Merhaba ${r.name},\n${r.reference} · ${tours.find((t) => t.id === r.tourId)?.name || r.tourId}\nTarih: ${r.date} · Saat: ${r.start_time}\nBuluşma: ${r.pickup}\n${text}\nKoltuklar: ${r.seats.join(", ")}.` +
+        `Merhaba ${r.name},\n${r.reference} · ${tourName(r)}\nTarih: ${r.date} · Saat: ${r.start_time}\nBuluşma: ${r.pickup}\n${text}\nKoltuklar: ${r.seats.join(", ")}.` +
         (r.transfer ? `\n${transferLine(r.transfer)}.` : "") +
-        (extra ? "\n\n" + "—".repeat(24) + "\n\n" + extra : ""),
+        (documents?.length ? `\nEkler: ${documents.map((d) => d.title).join(", ")} (PDF).` : ""),
       actionUrl: (env.PUBLIC_BASE_URL || "") + "/bilet/" + r.ticket_token,
       kind: event,
       dedupeKey,
+      ticket: ticket
+        ? {
+            headline: text,
+            name: r.name,
+            tour: tourName(r),
+            date: r.date,
+            time: r.start_time,
+            pickup: r.pickup,
+            seats: r.seats,
+            reference: r.reference,
+            transfer: r.transfer ? transferLine(r.transfer) : null,
+            total: r.total,
+            paid: r.net_paid || 0,
+            balance: r.balance_due ?? r.total,
+            status: r.status === "confirmed" ? "confirmed" : "pending",
+          }
+        : null,
+      documents: documents?.length ? documents : null,
     });
+  const legalDoc = (kind, r, text) =>
+    text && {
+      title: kind === "contract" ? "Tur Hizmet Sözleşmesi" : "Ön Bilgilendirme Formu",
+      filename: `${kind === "contract" ? "Tur-Hizmet-Sozlesmesi" : "On-Bilgilendirme-Formu"}-${r.reference}.pdf`,
+      text,
+    };
   const tourName = (r) => tours.find((t) => t.id === r.tourId)?.name || r.tourId;
   const waLink = (phone) => {
     const digits = String(phone || "").replace(/\D/g, "");
@@ -175,7 +200,7 @@ export async function createWorkflow(
     // legal: siteden gelen kayıtta müşterinin onayladığı ön bilgilendirme formu
     // ({ onlinePayment, depositPercent, othersDeclared }). Metin onay anındaki
     // hâliyle kayda yazılır ve e-postaya eklenir.
-    async created(reference, { byAgency = false, legal = null } = {}) {
+    async created(reference, { byAgency = false, legal = null, notifyCustomer = true } = {}) {
       let r = await api.get(reference);
       let extra = "";
       if (legal) {
@@ -200,12 +225,12 @@ export async function createWorkflow(
         );
         r = await api.get(reference, { fresh: false });
       }
-      await notify(
+      if (notifyCustomer) await notify(
         r,
         "reservation_created",
         "Ön rezervasyon talebiniz alındı; henüz kesin bilet veya ödeme değildir.",
         undefined,
-        extra,
+        { ticket: true, documents: [legalDoc("pre_info", r, extra)].filter(Boolean) },
       );
       // Acentenin kendi eklediği kayıt için ekibe "yeni rezervasyon" bildirimi gitmez.
       if (!byAgency) await agencyAlert(r, "reservation_created", "Yeni ön rezervasyon");
@@ -260,7 +285,7 @@ export async function createWorkflow(
           );
           updated = await api.get(reference, { fresh: false });
         }
-        const extra = [contract, updated.pre_info_text].filter(Boolean).join("\n\n" + "—".repeat(24) + "\n\n");
+        const documents = [legalDoc("contract", updated, contract), legalDoc("pre_info", updated, updated.pre_info_text)].filter(Boolean);
         await notify(
           updated,
           "reservation_confirmed",
@@ -268,7 +293,7 @@ export async function createWorkflow(
             ? "Ödemeniz alındı, rezervasyonunuz onaylandı."
             : "Rezervasyonunuz acente tarafından onaylandı.",
           undefined,
-          extra,
+          { ticket: true, documents },
         );
         return updated;
       });

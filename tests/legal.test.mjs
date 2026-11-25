@@ -163,7 +163,12 @@ test("rezervasyonda ön bilgilendirme onayı kaydedilir, e-postaya eklenir; onay
   const createdMail = (await store.db.find("notification_outbox", {})).find(
     (m) => m.kind === "reservation_created",
   );
-  assert.match(createdMail.body, /ÖN BİLGİLENDİRME FORMU/);
+  // Ön bilgilendirme formu gövdeye değil PDF ekine gider; mail kısa bir bilet kartıdır.
+  assert.equal(createdMail.ticket.status, "pending");
+  assert.deepEqual(createdMail.documents.map((d) => d.title), ["Ön Bilgilendirme Formu"]);
+  assert.equal(createdMail.documents[0].filename, `On-Bilgilendirme-Formu-${ref}.pdf`);
+  assert.match(createdMail.documents[0].text, /ÖN BİLGİLENDİRME FORMU/);
+  assert.doesNotMatch(createdMail.body, /ÖN BİLGİLENDİRME FORMU/);
 
   const r = await store.workflow.get(ref);
   await store.workflow.payment(ref, {
@@ -179,8 +184,19 @@ test("rezervasyonda ön bilgilendirme onayı kaydedilir, e-postaya eklenir; onay
   const confirmMail = (await store.db.find("notification_outbox", {})).find(
     (m) => m.kind === "reservation_confirmed",
   );
-  assert.match(confirmMail.body, /TUR HİZMET SÖZLEŞMESİ/);
-  assert.match(confirmMail.body, /ÖN BİLGİLENDİRME FORMU/);
+  assert.equal(confirmMail.ticket.status, "confirmed");
+  assert.equal(confirmMail.ticket.headline, "Rezervasyonunuz acente tarafından onaylandı.");
+  assert.equal(confirmMail.ticket.reference, ref);
+  assert.equal(confirmMail.ticket.paid, r.deposit);
+  assert.equal(confirmMail.ticket.balance, r.total - r.deposit);
+  assert.deepEqual(confirmMail.documents.map((d) => d.title), ["Tur Hizmet Sözleşmesi", "Ön Bilgilendirme Formu"]);
+  assert.deepEqual(confirmMail.documents.map((d) => d.filename), [
+    `Tur-Hizmet-Sozlesmesi-${ref}.pdf`,
+    `On-Bilgilendirme-Formu-${ref}.pdf`,
+  ]);
+  assert.match(confirmMail.documents[0].text, /TUR HİZMET SÖZLEŞMESİ/);
+  assert.match(confirmMail.documents[1].text, /ÖN BİLGİLENDİRME FORMU/);
+  assert.doesNotMatch(confirmMail.body, /TUR HİZMET SÖZLEŞMESİ|ÖN BİLGİLENDİRME FORMU/);
 });
 
 test("rezervasyon hatası hangi alanın yanlış olduğunu söyler; eski sekme yenilemeye yönlendirilir; reddedilen deneme sınırdan düşmez", async (t) => {

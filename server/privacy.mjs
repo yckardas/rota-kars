@@ -316,7 +316,8 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx, pii
         created_at: { $lt: now - retention.requestDays * DAY },
       });
       result.notificationsDeleted = await db.remove("notification_outbox", {
-        status: { $in: ["sent", "failed"] },
+        // Panelden iptal edilenler de kişisel veri taşır; saklama süresi dolunca silinir.
+        status: { $in: ["sent", "failed", "cancelled"] },
         created_at: { $lt: now - retention.notificationDays * DAY },
       });
       result.auditDeleted = await db.remove("admin_audit", { at: { $lt: now - retention.auditDays * DAY } });

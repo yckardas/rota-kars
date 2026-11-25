@@ -8,7 +8,7 @@ import { business } from "./catalog.mjs";
 export const LEGAL_VERSION = "2026-11-16";
 export const DEFAULT_DEPOSIT_PERCENT = 30;
 
-const tl = (kurus) =>
+export const tl = (kurus) =>
   (Number(kurus || 0) / 100).toLocaleString("tr-TR", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
