@@ -433,7 +433,12 @@ export function createApp(
               ? "hold"
               : req.method === "POST" && req.path === "/reservations"
                 ? "booking"
-                : "api",
+                : // Yönetim paneli kendi sınırını kullanır: sefer düzenlerken art arda
+                  // yüklemeler sitenin genel sınırını doldurup paneli (ve aynı ofis
+                  // IP'sindeki müşterileri) kilitlemesin.
+                  req.path.startsWith("/admin/")
+                  ? "admin"
+                  : "api",
       key = clientKey(req) + ":" + bucket,
       now = Date.now();
     let l = limits.get(key);
@@ -456,12 +461,16 @@ export function createApp(
         booking: Number(env.BOOKING_LIMIT_PER_15MIN || 6),
         // Kart denemesi: çalıntı kart denemelerine karşı IP başına ayrıca sınırlı.
         card: 12,
+        admin: Number(env.ADMIN_LIMIT_PER_15MIN || 3000),
         api: 300,
       }[bucket]
     )
-      return res.status(429).json({
-        message: "Çok fazla istek. Biraz sonra tekrar deneyin.",
-      });
+      return res
+        .status(429)
+        .set("Retry-After", String(Math.max(1, Math.ceil((l.reset - now) / 1000))))
+        .json({
+          message: "Çok fazla istek. Biraz sonra tekrar deneyin.",
+        });
     // Reddedilen rezervasyon denemesi (eksik/yanlış bilgi) sınırdan düşülmez;
     // müşteri bilgisini düzeltip yeniden gönderirken "çok fazla istek"e takılmasın.
     if (bucket === "booking")

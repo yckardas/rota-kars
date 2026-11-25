@@ -249,6 +249,12 @@ function AdminPanel({
   useEffect(() => {
     loadMe();
   }, []);
+  // Açılışta oturum kontrolü düşerse 20 saniyede bir kendiliğinden yeniden denenir.
+  useEffect(() => {
+    if (me !== undefined || !error) return;
+    const t = setTimeout(loadMe, 20000);
+    return () => clearTimeout(t);
+  }, [me, error]);
   async function logout() {
     try {
       await disablePush();
@@ -261,7 +267,18 @@ function AdminPanel({
     return (
       <div className="app-loading">
         <img src="/images/logo.png" alt="Rota Kars" />
-        <p>Yönetim paneli hazırlanıyor…</p>
+        {error ? (
+          // Oturum kontrolü 401 dışında bir hatayla dönerse (ör. "Çok fazla istek")
+          // sonsuz bekleme yerine hata ve yeniden deneme gösterilir.
+          <>
+            <p role="alert">{error}</p>
+            <button className="btn" onClick={loadMe}>
+              Tekrar dene
+            </button>
+          </>
+        ) : (
+          <p>Yönetim paneli hazırlanıyor…</p>
+        )}
       </div>
     );
   if (me === null)
