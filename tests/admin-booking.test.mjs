@@ -384,3 +384,39 @@ test("agency may confirm below the deposit only when it explicitly accepts; the 
   assert.equal(direct.status, "confirmed");
   assert.equal(direct.net_paid, 10000);
 });
+
+test("overview warns about today's and tomorrow's booked departures without a guide or plate", async (t) => {
+  const { s } = await setup(t);
+  const dep = (date, startTime, extra = {}) =>
+    s.departures.save({ tourId: "sarikamis", date, startTime, pickup: "Kars", guideName: "", guidePhone: "", price: 100000, vehicleModel: "vip-midibus", passengerSeats: 18, active: true, ...extra });
+  const noGuideToday = await dep("2026-10-17", "18:00");
+  const staffedTomorrow = await dep("2026-10-18", "08:00", { guideName: "Rehber Ali", guidePhone: "05550000000" });
+  const emptyTomorrow = await dep("2026-10-18", "10:00");
+  const laterNoGuide = await dep("2026-10-19", "08:00");
+  for (const d of [noGuideToday, staffedTomorrow, laterNoGuide])
+    await s.adminReserve(base(d, { seats: [1], passengers: ["Yolcu"], confirm: true }), AGENT);
+  const o = await s.overview();
+  // Boş sefer ve iki günden sonrası uyarı vermez; rehberi olan seferde yalnız plaka eksik.
+  assert.deepEqual(
+    o.staffing.map((x) => [x.date, x.startTime, x.missing]),
+    [
+      ["2026-10-17", "18:00", ["rehber", "plaka"]],
+      ["2026-10-18", "08:00", ["plaka"]],
+    ],
+  );
+  assert.equal(o.staffing[0].booked, 1);
+  assert.ok(!o.staffing.some((x) => x.id === emptyTomorrow.id));
+});
+
+test("staffing alert: counts real bookings (not checkout holds) and includes departures closed to online sale", async (t) => {
+  const { s } = await setup(t);
+  const dep = (startTime, extra = {}) =>
+    s.departures.save({ tourId: "sarikamis", date: "2026-10-17", startTime, pickup: "Kars", guideName: "", guidePhone: "", price: 100000, vehicleModel: "vip-midibus", passengerSeats: 18, active: true, ...extra });
+  const closedWithBooking = await dep("19:00");
+  await s.adminReserve(base(closedWithBooking, { seats: [1, 2], confirm: true }), AGENT);
+  await s.departures.save({ ...{ tourId: "sarikamis", date: "2026-10-17", startTime: "19:00", pickup: "Kars", guideName: "", guidePhone: "", price: 100000, vehicleModel: "vip-midibus", passengerSeats: 18 }, id: closedWithBooking.id, active: false });
+  const holdOnly = await dep("21:00");
+  await s.hold(holdOnly.id, [5]);
+  const o = await s.overview();
+  assert.deepEqual(o.staffing.map((x) => [x.startTime, x.booked]), [["19:00", 2]], "satışa kapalı ama yolculu sefer uyarılır; yalnız ödeme ekranındaki tutma uyarı vermez");
+});

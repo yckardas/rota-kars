@@ -2460,3 +2460,244 @@
 .rk-admin .finance-bars .bar.neg {
   background: var(--red);
 }
+
+/* Özet: bugün/yarın rehberi veya plakası eksik seferler */
+.rk-admin .staffing-alert {
+  border: 1px solid var(--red);
+  background: var(--red-wash);
+  border-radius: 4px;
+  padding: 12px 14px;
+}
+.rk-admin .staffing-alert h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--red-deep);
+}
+.rk-admin .staffing-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 8px 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.rk-admin .staffing-row time {
+  min-width: 82px;
+  font-weight: 600;
+}
+.rk-admin .staffing-row span {
+  flex: 1;
+  min-width: 0;
+}
+.rk-admin .staffing-row strong,
+.rk-admin .staffing-row small {
+  display: block;
+}
+.rk-admin .staffing-row small {
+  color: var(--red-deep);
+}
+.rk-admin .staffing-row em {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--red-deep);
+}
+/* Uygulama olarak ekleme önerisi yalnız telefon/tablette; bilgisayarda Hesabım'da durur. */
+@media (min-width: 1024px) and (hover: hover) {
+  .rk-admin .app-install {
+    display: none;
+  }
+}
+/* Rezervasyon listesi: iptal ve süresi dolan kayıtlar soluk */
+.rk-admin .desk-table tr.row-inactive td {
+  opacity: 0.6;
+}
+
+/* Sefer takvimi: okunur doluluk, kapalı etiketi ve işaret açıklaması */
+.rk-admin .calendar-chip.closed {
+  text-decoration: none;
+}
+.rk-admin .calendar-chip.closed .chip-name {
+  text-decoration: line-through;
+}
+.rk-admin .calendar-chip .chip-closed {
+  background: var(--closed-wash);
+  color: var(--closed);
+}
+.rk-admin .calendar-chip .chip-load {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+.rk-admin .calendar-chip.full .chip-load {
+  color: var(--red);
+  font-weight: 600;
+}
+.rk-admin .chip-load-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--mortar-soft);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.rk-admin .chip-load-bar span {
+  display: block;
+  height: 100%;
+  background: var(--lichen);
+}
+.rk-admin .calendar-chip.full .chip-load-bar span {
+  background: var(--red);
+}
+.rk-admin .calendar-states {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.rk-admin .calendar-states li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rk-admin .calendar-states .chip-vehicle {
+  font-size: 11px;
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+.rk-admin .calendar-states .chip-demand {
+  color: var(--red);
+}
+.rk-admin .legend-full {
+  color: var(--red);
+}
+.rk-admin .calendar-states .chip-vehicle {
+  background: var(--ochre-wash);
+  color: var(--ochre);
+  font-weight: 700;
+}
+.rk-admin .calendar-states .chip-vehicle.chip-closed {
+  background: var(--closed-wash);
+  color: var(--closed);
+}
+.rk-admin .calendar-states .chip-vehicle.chip-demand {
+  color: var(--red);
+}
+
+/* Menü: açılıp kapanan grup başlığı */
+.rk-admin .nav-group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+.rk-admin .nav-group-toggle svg {
+  transition: transform 0.15s;
+}
+.rk-admin .nav-group-toggle svg.open {
+  transform: rotate(180deg);
+}
+/* Tur ayarı sayfaları arasında kısa yollar */
+.rk-admin .related-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+/* Bekleme ve ön kayıt: iş önce, ayar katlı */
+.rk-admin .interest-heading {
+  font-size: 16px;
+  margin: 18px 0 10px;
+}
+.rk-admin .interest-settings {
+  margin-top: 24px;
+  border-top: 1px solid var(--mortar);
+  padding-top: 12px;
+}
+.rk-admin .interest-settings summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-bottom: 12px;
+}
+
+/* Kampanya çarkı: dilimler tek tabloda */
+.rk-admin .campaign-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0 12px;
+  font-size: 14px;
+}
+.rk-admin .campaign-table th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--mortar);
+}
+.rk-admin .campaign-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--mortar-soft);
+  vertical-align: middle;
+}
+.rk-admin .campaign-table input,
+.rk-admin .campaign-table select {
+  width: 100%;
+  min-width: 70px;
+  max-width: 140px;
+}
+.rk-admin .campaign-table td[data-label="Şans"] strong {
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 640px) {
+  .rk-admin .campaign-table thead {
+    display: none;
+  }
+  .rk-admin .campaign-table tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--mortar);
+  }
+  .rk-admin .campaign-table td {
+    border: 0;
+    padding: 0;
+  }
+  .rk-admin .campaign-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+  .rk-admin .campaign-table input,
+  .rk-admin .campaign-table select {
+    max-width: none;
+  }
+}
+/* Açıklamadaki etiketler renk karesi kuralından (.calendar-legend span) etkilenmesin. */
+.rk-admin .calendar-states li span.chip-vehicle {
+  width: auto;
+  height: auto;
+  display: inline-block;
+  line-height: 1.4;
+  white-space: nowrap;
+}

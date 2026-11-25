@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Plus,
   Check,
@@ -72,9 +72,12 @@ const WEEKDAYS = [
 export function DepartureManager({
   catalog,
   startCreating = false,
+  openId = "",
 }: {
   catalog: Catalog;
   startCreating?: boolean;
+  // Özet'teki "Atama eksik" satırından gelince bu sefer düzenlemede açılır.
+  openId?: string;
 }) {
   const feedback = useFeedback();
   const [items, setItems] = useState<Departure[]>([]),
@@ -134,6 +137,17 @@ export function DepartureManager({
   useEffect(() => {
     load().catch(feedback.error);
   }, [tourFilter]);
+  // Derin bağlantı bir kez uygulanır; sonra filtre değişse de editör kendiliğinden açılmaz.
+  const openedFromLink = useRef(false);
+  useEffect(() => {
+    if (!openId || openedFromLink.current) return;
+    const target = items.find((d) => d.id === openId);
+    if (target) {
+      openedFromLink.current = true;
+      setEditing(target);
+      window.scrollTo({ top: 0 });
+    }
+  }, [openId, items]);
   async function remove(d: Departure) {
     const ok = await feedback.confirm({
       title: "Sefer silinsin mi?",
@@ -395,7 +409,7 @@ export function DepartureManager({
                   {d.date >= today() && !d.demand && (
                     <button className="text-link" onClick={() => setClosing(d.id)}>
                       <Armchair size={14} />
-                      Koltuk kapat
+                      Rezervasyon ekle
                     </button>
                   )}
                   {d.date >= today() && (
@@ -722,7 +736,7 @@ function DepartureEditor({
         </button>
         {closeSeats && (
           <button className="btn btn-outline" type="button" onClick={closeSeats}>
-            <Armchair size={16} /> Koltuk kapat (telefon rezervasyonu)
+            <Armchair size={16} /> Bu sefere rezervasyon ekle
           </button>
         )}
         {openDate && (
@@ -764,6 +778,7 @@ const STATUS_FILTERS = [
   ["cancelled", "İptal"],
 ] as const;
 const PAGE = 50;
+const RES_FILTERS = "rota-reservation-filters";
 const AUDIT_LABELS: Record<string, string> = {
   created: "Kayıt oluşturuldu",
   confirmed: "Acente onayı verildi",
@@ -813,14 +828,28 @@ export function ReservationManager({
   startCreating?: boolean;
 }) {
   const feedback = useFeedback();
+  // Üstteki "Yenile" sekmeyi yeniden kurar; filtreler bu sekme boyunca korunur.
+  // Özet'ten/aramadan belirli bir filtreyle gelinirse o filtre geçerlidir.
+  const linked = Boolean(initialStatus || initialFlag || openRef);
+  const kept = (() => {
+    if (linked) return null;
+    try {
+      const v = JSON.parse(sessionStorage.getItem(RES_FILTERS) || "null");
+      return v && typeof v === "object" ? (v as { from?: string; to?: string; filter?: string; query?: string }) : null;
+    } catch {
+      return null;
+    }
+  })();
   const [rows, setRows] = useState<Reservation[]>([]),
     [loading, setLoading] = useState(true),
     [selected, setSelected] = useState(openRef.toUpperCase()),
     [busy, setBusy] = useState(false),
-    [date, setDate] = useState(""),
-    [filter, setFilter] = useState(initialFlag ? "flag:" + initialFlag : initialStatus),
-    [search, setSearch] = useState(openRef),
-    [query, setQuery] = useState(openRef),
+    // Tur tarihi aralığı (iki uç dahil); boşsa tüm tarihler.
+    [from, setFrom] = useState(kept?.from || ""),
+    [to, setTo] = useState(kept?.to || ""),
+    [filter, setFilter] = useState(initialFlag ? "flag:" + initialFlag : initialStatus || kept?.filter || ""),
+    [search, setSearch] = useState(openRef || kept?.query || ""),
+    [query, setQuery] = useState(openRef || kept?.query || ""),
     [shown, setShown] = useState(PAGE),
     [creating, setCreating] = useState(startCreating);
   // Arama yazarken her tuşta değil, kısa bir duraksamadan sonra sorgulanır.
@@ -830,7 +859,8 @@ export function ReservationManager({
   }, [search]);
   async function load() {
     const params = new URLSearchParams();
-    if (date) params.set("date", date);
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
     if (filter.startsWith("flag:")) params.set("flag", filter.slice(5));
     else if (filter) params.set("status", filter);
     if (query) params.set("q", query);
@@ -845,7 +875,10 @@ export function ReservationManager({
   useEffect(() => {
     setShown(PAGE);
     load();
-  }, [date, filter, query]);
+    try {
+      sessionStorage.setItem(RES_FILTERS, JSON.stringify({ from, to, filter, query }));
+    } catch {}
+  }, [from, to, filter, query]);
   async function action(ref: string, path: string, body: unknown = {}, done = "Kaydedildi.") {
     setBusy(true);
     try {
@@ -861,6 +894,12 @@ export function ReservationManager({
     }
   }
   const tourName = (id: string) => catalog.tours.find((t) => t.id === id)?.name || id;
+  // "Tümü"nde iptal ve süresi dolan kayıtlar en sona iner (kendi içinde en yeni üstte kalır).
+  const ordered = filter
+    ? rows
+    : [...rows].sort(
+        (a, b) => Number(["cancelled", "expired"].includes(a.status)) - Number(["cancelled", "expired"].includes(b.status)),
+      );
   function exportCsv() {
     downloadCsv("rezervasyonlar-" + today() + ".csv", [
       ["Referans", "Durum", "Tur", "Tarih", "Saat", "Koltuk", "Müşteri", "Telefon", "E-posta", "Yolcular", "Toplam", "Net tahsilat", "Kalan", "Not"],
@@ -888,8 +927,8 @@ export function ReservationManager({
       <div className="desk-toolbar">
         {canCreate && (
           <button className="btn" onClick={() => setCreating(true)}>
-            <Armchair size={16} />
-            Koltuk kapat / rezervasyon
+            <Plus size={16} />
+            Yeni rezervasyon
           </button>
         )}
         <label className="field reservation-search">
@@ -903,14 +942,37 @@ export function ReservationManager({
           />
         </label>
         <label className="field">
-          Tur günü
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          Tur tarihi · başlangıç
+          <input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} />
+        </label>
+        <label className="field">
+          Bitiş
+          <input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} />
         </label>
         <div className="desk-toolbar-actions">
-          <button className="text-link" onClick={load}>
-            <RefreshCw size={15} />
-            Yenile
+          <button
+            className="text-link"
+            onClick={() => {
+              const start = today(),
+                d = new Date(start + "T12:00:00Z");
+              d.setUTCDate(d.getUTCDate() + ((7 - d.getUTCDay()) % 7));
+              setFrom(start);
+              setTo(d.toISOString().slice(0, 10));
+            }}
+          >
+            Bu hafta
           </button>
+          {(from || to) && (
+            <button
+              className="text-link"
+              onClick={() => {
+                setFrom("");
+                setTo("");
+              }}
+            >
+              Tarihi temizle
+            </button>
+          )}
           {!isNativeApp() && rows.length > 0 && (
             <button className="text-link" onClick={exportCsv}>
               <Download size={15} />
@@ -944,10 +1006,11 @@ export function ReservationManager({
             </tr>
           </thead>
           <tbody>
-            {rows.slice(0, shown).map((r) => {
+            {ordered.slice(0, shown).map((r) => {
               const wa = waNumber(r.phone);
+              const inactive = ["cancelled", "expired"].includes(r.status);
               return (
-                <tr key={r.reference} className="clickable-row" onClick={() => setSelected(r.reference)}>
+                <tr key={r.reference} className={"clickable-row" + (inactive ? " row-inactive" : "")} onClick={() => setSelected(r.reference)}>
                   <td>
                     <strong>{r.reference}</strong>
                     <small>
@@ -969,7 +1032,10 @@ export function ReservationManager({
                         </>
                       )}
                     </small>
-                    <small>{r.passengers.join(", ")}</small>
+                    {/* Tek yolcu iletişim kişisiyle aynıysa tekrar yazılmaz. */}
+                    {!(r.passengers.length === 1 && r.passengers[0].trim().toLocaleLowerCase("tr") === r.name.trim().toLocaleLowerCase("tr")) && (
+                      <small>{r.passengers.join(", ")}</small>
+                    )}
                     {r.notes && <small className="row-note">Not: {r.notes}</small>}
                     {r.transfer && (
                       <small className="row-note">
@@ -1462,6 +1528,7 @@ function BookingControls({
                 {stamp(p.created_at)} · {p.kind === "refund" ? "İade" : "Tahsilat"} · {currency(p.amount)} ·{" "}
                 {methodLabel(p.method)}
                 {receiptText(p) && ` · ${receiptText(p)}`}
+                {p.recorded_by?.name && ` · kaydeden: ${p.recorded_by.name}`}
               </p>
             ))}
           </div>
@@ -1523,72 +1590,87 @@ export function CampaignManager({ catalog }: { catalog: Catalog }) {
           </label>
           <h2>Çark dilimleri</h2>
           <p className="muted">
-            Her dilim bir indirimdir. Şans, dilimin ağırlığının toplama oranıdır;
-            çarkta bütün dilimler eşit genişlikte görünür, şanslar sitede yazılı
-            olarak gösterilir. 4 ile 8 dilim arası.
+            Her satır çarkta bir dilimdir. "Pay" o dilimin ne sık çıkacağını belirler; şans, payın
+            toplam paya oranıdır ve kendiliğinden hesaplanır. Çarkta dilimler eşit genişlikte görünür,
+            şanslar sitede yazılı gösterilir. 4 ile 8 dilim arası.
           </p>
-          <div className="campaign-sectors">
-            {sectors.map((sec, i) => (
-              <fieldset className="campaign-sector" key={i}>
-                <legend>
-                  {i + 1}. dilim · %{odds[i]} şans
-                </legend>
-                <label className="field">
-                  Tür
-                  <select
-                    value={sec.kind}
-                    onChange={(e) =>
-                      setSector(i, {
-                        kind: e.target.value as WheelSector["kind"],
-                        value: e.target.value === "amount" ? 10000 : 5,
-                      })
-                    }
-                  >
-                    <option value="percent">Yüzde (%)</option>
-                    <option value="amount">Tutar (TL)</option>
-                  </select>
-                </label>
-                <label className="field">
-                  {sec.kind === "amount" ? "İndirim (TL)" : "İndirim (%)"}
-                  <input
-                    type="number"
-                    required
-                    min={sec.kind === "amount" ? 10 : 1}
-                    max={sec.kind === "amount" ? 1000 : 50}
-                    value={sec.kind === "amount" ? sec.value / 100 : sec.value}
-                    onChange={(e) =>
-                      setSector(i, {
-                        value:
-                          sec.kind === "amount"
-                            ? Math.round(Number(e.target.value) * 100)
-                            : Number(e.target.value),
-                      })
-                    }
-                  />
-                </label>
-                <label className="field">
-                  Ağırlık
-                  <input
-                    type="number"
-                    required
-                    min={1}
-                    max={1000}
-                    value={sec.weight}
-                    onChange={(e) => setSector(i, { weight: Number(e.target.value) })}
-                  />
-                </label>
-                {sectors.length > 4 && (
-                  <button
-                    type="button"
-                    className="text-link danger-text"
-                    onClick={() => setSectors(sectors.filter((_, k) => k !== i))}
-                  >
-                    Dilimi kaldır
-                  </button>
-                )}
-              </fieldset>
-            ))}
-          </div>
+          <table className="campaign-table">
+            <thead>
+              <tr>
+                <th>Dilim</th>
+                <th>İndirim</th>
+                <th>Tür</th>
+                <th>Pay</th>
+                <th>Şans</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {sectors.map((sec, i) => (
+                <tr key={i}>
+                  <td data-label="Dilim">{i + 1}</td>
+                  <td data-label="İndirim">
+                    <input
+                      type="number"
+                      required
+                      aria-label={`${i + 1}. dilim indirimi`}
+                      min={sec.kind === "amount" ? 10 : 1}
+                      max={sec.kind === "amount" ? 1000 : 50}
+                      value={sec.kind === "amount" ? sec.value / 100 : sec.value}
+                      onChange={(e) =>
+                        setSector(i, {
+                          value:
+                            sec.kind === "amount"
+                              ? Math.round(Number(e.target.value) * 100)
+                              : Number(e.target.value),
+                        })
+                      }
+                    />
+                  </td>
+                  <td data-label="Tür">
+                    <select
+                      aria-label={`${i + 1}. dilim türü`}
+                      value={sec.kind}
+                      onChange={(e) =>
+                        setSector(i, {
+                          kind: e.target.value as WheelSector["kind"],
+                          value: e.target.value === "amount" ? 10000 : 5,
+                        })
+                      }
+                    >
+                      <option value="percent">% indirim</option>
+                      <option value="amount">TL indirim</option>
+                    </select>
+                  </td>
+                  <td data-label="Pay">
+                    <input
+                      type="number"
+                      required
+                      aria-label={`${i + 1}. dilim payı`}
+                      min={1}
+                      max={1000}
+                      value={sec.weight}
+                      onChange={(e) => setSector(i, { weight: Number(e.target.value) })}
+                    />
+                  </td>
+                  <td data-label="Şans">
+                    <strong>%{odds[i]}</strong>
+                  </td>
+                  <td>
+                    {sectors.length > 4 && (
+                      <button
+                        type="button"
+                        className="text-link danger-text"
+                        onClick={() => setSectors(sectors.filter((_, k) => k !== i))}
+                      >
+                        Kaldır
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
           {sectors.length < 8 && (
             <button
               type="button"
@@ -1881,13 +1963,7 @@ export function NotificationManager() {
               }}
             >
               {busy && <LoaderCircle size={15} className="spin" />}
-              Hatırlatmaları ve kuyruğu işle
-            </button>
-            <button
-              className="text-link"
-              onClick={() => load().catch((e) => setError(e.message))}
-            >
-              Yenile
+              Bekleyenleri şimdi gönder
             </button>
           </div>
           {!data.items.length && <p className="admin-empty">Kuyrukta mesaj yok.</p>}
@@ -1908,8 +1984,14 @@ export function NotificationManager() {
                           cancelled: "İptal edildi",
                         } as Record<string, string>
                       )[item.status]
-                    }{" "}
-                    · {item.attempts} deneme
+                    }
+                    {item.status === "sent"
+                      ? item.attempts > 1
+                        ? ` (${item.attempts}. denemede)`
+                        : ""
+                      : item.attempts
+                        ? ` · ${item.attempts} kez denendi`
+                        : ""}
                   </small>
                 </div>
                 <details>

@@ -36,6 +36,7 @@ import {
   Plug,
   Search,
   Wallet,
+  ChevronDown,
 } from "lucide-react";
 import { MonthReport } from "../components/admin/MonthReport";
 import { FinancePanel } from "../components/admin/FinancePanel";
@@ -85,18 +86,37 @@ const ALL_TABS = [
   ["finance", "Finans", Wallet, "Satış"],
   ["reports", "Aylık rapor", BarChart3, "Satış"],
   ["campaigns", "Kampanyalar", Gift, "Satış"],
-  ["notifications", "Bildirim kuyruğu", Mail, "Satış"],
-  ["content", "Site içerikleri", FileText, "Site"],
-  ["articles", "Rehber yazıları", Newspaper, "Site"],
-  ["operations", "Tur ve araç planı", Bus, "Site"],
-  ["hotels", "Anlaşmalı oteller", BedDouble, "Site"],
-  ["reviews", "Google yorumları", Star, "Site"],
-  ["instagram", "Instagram", Instagram, "Site"],
+  ["content", "Tur ve site metinleri", FileText, "Turlar ve site"],
+  ["operations", "Araç düzeni ve transfer", Bus, "Turlar ve site"],
+  ["articles", "Rehber yazıları", Newspaper, "Turlar ve site"],
+  ["hotels", "Anlaşmalı oteller", BedDouble, "Turlar ve site"],
+  // Seyrek kullanılanlar: menüde kapalı gelir.
+  ["notifications", "Bildirim kuyruğu", Mail, "Yönetim"],
+  ["reviews", "Google yorumları", Star, "Yönetim"],
+  ["instagram", "Instagram", Instagram, "Yönetim"],
   ["integrations", "Bağlantılar", Plug, "Yönetim"],
   ["users", "Kullanıcılar", Users, "Yönetim"],
   ["audit", "Denetim kaydı", ScrollText, "Yönetim"],
   ["kvkk", "KVKK", ShieldCheck, "Yönetim"],
 ] as const;
+// Tura ait ayarların bulunduğu sayfalar arasında kısa yollar.
+const RELATED: Record<string, [string, string][]> = {
+  departures: [
+    ["content", "Tur metni, fotoğrafı ve fiyatı → Tur ve site metinleri"],
+    ["operations", "Araç düzeni, satış açık/kapalı ve transfer fiyatları → Araç düzeni ve transfer"],
+  ],
+  operations: [
+    ["departures", "Tarih, saat, rehber ve plaka → Sefer planı"],
+    ["content", "Tur metni, fotoğrafı ve fiyatı → Tur ve site metinleri"],
+  ],
+  content: [
+    ["departures", "Tarih, saat, rehber ve plaka → Sefer planı"],
+    ["operations", "Araç düzeni ve transfer fiyatları → Araç düzeni ve transfer"],
+  ],
+};
+// Menüde açılıp kapanan gruplar (seçim tarayıcıda hatırlanır; içindeki sekme açıksa grup açık görünür).
+const COLLAPSIBLE_GROUPS = ["Yönetim"];
+const NAV_OPEN_KEY = "rota-nav-open-groups";
 type Tab = (typeof ALL_TABS)[number];
 // Telefonda alt çubukta duran sekmeler; diğerleri "Diğer" menüsünde.
 const MOBILE_PRIMARY = ["overview", "reservations", "departures", "daily"];
@@ -174,6 +194,14 @@ function AdminPanel({
     [moreOpen, setMoreOpen] = useState(false),
     [palette, setPalette] = useState(false),
     [counts, setCounts] = useState<Counts | null>(null),
+    [openGroups, setOpenGroups] = useState<string[]>(() => {
+      try {
+        const v = JSON.parse(localStorage.getItem(NAV_OPEN_KEY) || "[]");
+        return Array.isArray(v) ? v : [];
+      } catch {
+        return [];
+      }
+    }),
     mainRef = useRef<HTMLElement>(null),
     navigate = useNavigate();
   useTableLabels(mainRef);
@@ -311,6 +339,14 @@ function AdminPanel({
             ? counts.newRequests
             : 0,
     groups = [...new Set(tabs.map((t) => t[3]))],
+    toggleGroup = (g: string) =>
+      setOpenGroups((cur) => {
+        const next = cur.includes(g) ? cur.filter((x) => x !== g) : [...cur, g];
+        try {
+          localStorage.setItem(NAV_OPEN_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      }),
     pick = (id: string, options: Omit<Nav, "n"> = {}) => {
       setNav((cur) => ({ n: cur.n + 1, ...options }));
       if (id !== tab) setParams({ sekme: id });
@@ -340,10 +376,25 @@ function AdminPanel({
           <kbd>{/Mac|iPhone/.test(navigator.platform) ? "⌘K" : "Ctrl K"}</kbd>
         </button>
         <nav>
-          {groups.map((group) => (
+          {groups.map((group) => {
+            // İçindeki sekme açıkken grup açık kalır ve başlık düz yazıdır (kapatılamaz).
+            const holdsActive = tabs.some((t) => t[3] === group && t[0] === tab),
+              collapsible = COLLAPSIBLE_GROUPS.includes(group) && groups.length > 1 && !holdsActive,
+              open = !collapsible || openGroups.includes(group);
+            return (
             <div className="admin-nav-group" key={group}>
-              {groups.length > 1 && <h2>{group}</h2>}
-              {tabs
+              {groups.length > 1 &&
+                (collapsible ? (
+                  <h2>
+                    <button type="button" className="nav-group-toggle" aria-expanded={open} onClick={() => toggleGroup(group)}>
+                      {group}
+                      <ChevronDown size={14} className={open ? "open" : ""} aria-hidden="true" />
+                    </button>
+                  </h2>
+                ) : (
+                  <h2>{group}</h2>
+                ))}
+              {open && tabs
                 .filter((t) => t[3] === group)
                 .map(([id, label, Icon]) => (
                   <button
@@ -362,7 +413,8 @@ function AdminPanel({
                   </button>
                 ))}
             </div>
-          ))}
+            );
+          })}
         </nav>
         <div className="admin-user-chip">
           <span className="admin-initials" aria-hidden="true">
@@ -453,6 +505,17 @@ function AdminPanel({
         {tab === "users" && <UserManager key={key("users")} currentId={me.user.id} />}
         {tab === "audit" && <AuditLog key={key("audit")} />}
         {tab === "kvkk" && <KvkkTools />}
+        {RELATED[tab] && (
+          // Tur ayarları üç sayfaya dağılmış: hangisinin nerede olduğu her sayfanın başında yazar.
+          <nav className="related-tabs" aria-label="İlgili sayfalar">
+            <span>İlgili:</span>
+            {RELATED[tab].map(([id, text]) => (
+              <button key={id} type="button" className="text-link" onClick={() => pick(id)}>
+                {text}
+              </button>
+            ))}
+          </nav>
+        )}
         {tab === "overview" && <Overview key={key("overview")} go={pick} />}
         {tab === "reservations" && (
           <ReservationManager
@@ -465,14 +528,14 @@ function AdminPanel({
           />
         )}
         {tab === "departures" && (
-          <DepartureManager key={key("dep")} catalog={catalog} startCreating={Boolean(nav.create)} />
+          <DepartureManager key={key("dep")} catalog={catalog} startCreating={Boolean(nav.create)} openId={nav.ref || ""} />
         )}
         {tab === "campaigns" && <CampaignManager key={key("camp")} catalog={catalog} />}
         {tab === "daily" && <DailyReport key={key("daily")} catalog={catalog} />}
         {tab === "finance" && <FinancePanel key={key("fin")} onReservation={(ref) => pick("reservations", { ref })} />}
         {tab === "reports" && <MonthReport key={key("rep")} />}
         {tab === "notifications" && <NotificationManager key={key("notif")} />}
-        {tab === "requests" && <RequestManager key={key("req")} initialQuery={nav.q || ""} tours={catalog.tours} />}
+        {tab === "requests" && <RequestManager key={key("req")} initialQuery={nav.q || ""} tours={catalog.tours} catalog={catalog} />}
         {tab === "hotels" && <HotelManager key={key("hotels")} />}
         {tab === "articles" && <ArticleManager key={key("articles")} catalog={catalog} />}
         {tab === "interest" && <InterestManager key={key("interest")} onChange={refreshCatalog} />}
@@ -702,17 +765,56 @@ function BackupCard({ owner }: { owner: boolean }) {
     </article>
   );
 }
+type IntegrationStatus = {
+  payment: { enabled: boolean; provider: string | null; test: boolean; simulator: boolean };
+  email: { delivery: "resend" | "smtp" | null };
+};
+// Bağlantılar: durumlar sunucudaki gerçek ayardan okunur (/admin/integrations).
 function Integrations({ catalog, owner }: { catalog: Catalog; owner: boolean }) {
+  const [st, setSt] = useState<IntegrationStatus | null>(null),
+    [failed, setFailed] = useState(false);
+  useEffect(() => {
+    api<IntegrationStatus>("/admin/integrations")
+      .then(setSt)
+      .catch(() => setFailed(true));
+  }, []);
+  const unknown = failed ? "Durum okunamadı" : "Yükleniyor…";
+  const pay = st?.payment,
+    mail = st?.email.delivery;
   return (
     <div className="integration-list">
       <BackupCard owner={owner} />
       <article>
         <h3>Sanal POS</h3>
-        <span className="status-tag">Banka anlaşması bekleniyor</span>
+        {!st ? (
+          <span className="status-tag inactive">{unknown}</span>
+        ) : pay?.enabled && !pay.test ? (
+          <span className="status-tag status-confirmed">Canlı · gerçek tahsilat</span>
+        ) : pay?.enabled ? (
+          <span className="status-tag">{pay.simulator ? "Simülatör" : "Test ortamı"} · gerçek para çekilmez</span>
+        ) : (
+          <span className="status-tag inactive">Kapalı</span>
+        )}
         <p>
-          Ödeme ekranı devre dışıdır. Kart verisi alınmaz. Sağlayıcı
-          seçildiğinde doğrulanan sunucu bildirimi ve ödeme adapteri
-          eklenir.
+          {pay?.enabled
+            ? `${pay.provider === "vakifbank" ? "Vakıfbank sanal POS" : "Ödeme sağlayıcısı"} bağlı. Kart bilgisi sitenin formunda alınır, 3D Secure ile bankada doğrulanır; veritabanına yazılmaz. Karta iade rezervasyon kartının İade sekmesinden yapılır.`
+            : "Online kartla ödeme kapalı. Müşteriler ön rezervasyon bırakır; tahsilat havale, nakit veya POS ile elle kaydedilir."}
+        </p>
+      </article>
+      <article>
+        <h3>E-posta</h3>
+        {!st ? (
+          <span className="status-tag inactive">{unknown}</span>
+        ) : mail ? (
+          <span className="status-tag status-confirmed">Gönderiliyor · {mail === "resend" ? "Resend" : "SMTP"}</span>
+        ) : (
+          <span className="status-tag inactive">Gönderim kapalı</span>
+        )}
+        <p>
+          {mail
+            ? "Müşteri ve ekip e-postaları bildirim kuyruğundan otomatik gönderilir; gönderilemeyenler orada yeniden denenir."
+            : "E-postalar bildirim kuyruğunda bekler, gönderilmez. Gönderim hizmeti ve site adresi tanımlanınca otomatik gönderim başlar."}{" "}
+          SMS bağlantısı yok.
         </p>
       </article>
       <article>
@@ -724,15 +826,6 @@ function Integrations({ catalog, owner }: { catalog: Catalog; owner: boolean }) 
         <a href={catalog.business.mapsUrl} target="_blank" rel="noreferrer">
           İşletme bağlantısı <ExternalLink size={14} />
         </a>
-      </article>
-      <article>
-        <h3>E-posta ve SMS</h3>
-        <span className="status-tag">Sağlayıcı bağlı değil</span>
-        <p>
-          E-postalar bildirim kuyruğunda saklanır. Gönderim hizmeti (Resend
-          veya SMTP) ve site adresi tanımlandığında otomatik gönderim başlar. SMS için sağlayıcı
-          bağlantısı gerekir.
-        </p>
       </article>
     </div>
   );

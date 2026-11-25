@@ -968,6 +968,22 @@ export function createApp(
   // Gece yedeği: durum herkese açık değil, yalnız yönetim paneline. Elle yedek sahibe özel.
   app.locals.backup = backup;
   app.get("/api/admin/backup", requireAdmin, route(async (_q, r) => r.json(await backup.status())));
+  // Bağlantılar sayfası: ödeme ve e-posta hizmetinin gerçek durumu (anahtarlar istemciye gitmez).
+  app.get(
+    "/api/admin/integrations",
+    requireAdmin,
+    route(async (_q, r) =>
+      r.json({
+        payment: {
+          enabled: Boolean(paymentStatus.enabled),
+          provider: paymentStatus.provider || null,
+          test: Boolean(paymentStatus.test),
+          simulator: Boolean(paymentStatus.simulator),
+        },
+        email: { delivery: store.notifications.delivery || null },
+      }),
+    ),
+  );
   app.post(
     "/api/admin/backup",
     requireAdmin,
@@ -1241,7 +1257,7 @@ export function createApp(
         await store.privacy.recordConsent({ email: input.email, memberId: q.member?.id, type: "others_declaration", source: "booking" });
       if (input.marketingConsent)
         await store.privacy.recordConsent({ email: input.email, memberId: q.member?.id, type: "marketing", source: "booking" });
-      r.status(201).json(await receipt(reservation, q, env));
+      r.status(201).json(await receipt(reservation, q, env, { customer: true }));
     }),
   );
   app.post(
@@ -1254,7 +1270,7 @@ export function createApp(
         })
         .parse(q.body);
       r.json(
-        await receipt(await store.lookup(input.reference, input.email), q, env),
+        await receipt(await store.lookup(input.reference, input.email), q, env, { customer: true }),
       );
     }),
   );
@@ -1268,7 +1284,7 @@ export function createApp(
         })
         .parse(q.body);
       r.json(
-        await receipt(await store.cancel(input.reference, input.email), q, env),
+        await receipt(await store.cancel(input.reference, input.email), q, env, { customer: true }),
       );
     }),
   );
@@ -1552,6 +1568,7 @@ export function createApp(
           externalReference: refund.requestId ? "PANEL-" + refund.requestId : undefined,
           note: refund.note ?? refund.externalReference ?? "",
           kind: "refund",
+          by: q.admin,
         });
         refundResult = { status: "succeeded", amount: refund.amount, message: "İade kaydedildi." };
       }

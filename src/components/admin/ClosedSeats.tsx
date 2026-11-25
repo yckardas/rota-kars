@@ -6,7 +6,7 @@ import type { Departure, Seat, Vehicle } from "../../lib/types";
 import { useFeedback } from "./feedback";
 
 // Seferde online satışa kapalı koltuklar (ör. arka dörtlü). Müşteri bu koltukları dolu
-// görür; acenta "Koltuk kapat / rezervasyon" ekranından yine yazabilir.
+// görür; acenta "Yeni rezervasyon" ekranından yine yazabilir.
 export function ClosedSeats({ departure, onSaved }: { departure: Departure; onSaved: () => void }) {
   const feedback = useFeedback();
   const [data, setData] = useState<{ seats: Seat[]; vehicle: Vehicle } | null>(null),
@@ -69,7 +69,7 @@ export function ClosedSeats({ departure, onSaved }: { departure: Departure; onSa
         <Lock size={15} /> Satışa kapalı koltuklar
       </legend>
       <p className="muted">
-        Koltuğa tıklayarak online satışa kapatın ya da açın. Müşteri kapalı koltuğu dolu görür; siz "Koltuk kapat"
+        Koltuğa tıklayarak online satışa kapatın ya da açın. Müşteri kapalı koltuğu dolu görür; siz "Rezervasyon ekle"
         ekranından yine yazabilirsiniz. Satılmış koltuk kapatılamaz.
       </p>
       <SeatMap vehicle={data.vehicle} seats={shown} onSelect={toggle} />

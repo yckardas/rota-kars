@@ -156,13 +156,15 @@ export async function createWorkflow(
       );
     },
     // Panel listesi: tur günü, durum ve serbest arama (referans, ad, telefon, e-posta).
-    async list({ date, all = false, status, q, flag } = {}) {
+    // from/to: tur tarihi aralığı (iki uç dahil); date tek gün içindir.
+    async list({ date, from, to, all = false, status, q, flag } = {}) {
       await cleanup();
-      const filter = date
+      const dateFilter = date ? { date } : from || to ? { date: { ...(from ? { $gte: from } : {}), ...(to ? { $lte: to } : {}) } } : null;
+      const filter = dateFilter
         ? {
             departure_id: {
               $in: (
-                await db.find("departures", { date }, { projection: { id: 1 } })
+                await db.find("departures", dateFilter, { projection: { id: 1 } })
               ).map((d) => d.id),
             },
           }
@@ -309,7 +311,7 @@ export async function createWorkflow(
     // Böylece kısa, boş ya da tekrar eden not bir tahsilatı engellemez.
     async payment(
       reference,
-      { amount, method, externalReference, note = "", kind = "payment" },
+      { amount, method, externalReference, note = "", kind = "payment", by = null },
     ) {
       if (!externalReference) {
         // Online ödemenin referansı bankanın işlem numarasıdır; eksikse çift tahsilat koruması
@@ -358,6 +360,8 @@ export async function createWorkflow(
           method,
           external_reference: externalReference,
           note,
+          // Panelden elle girilen kayıtta kaydeden yönetici (online ödemede yok).
+          recorded_by: by ? { id: by.id || null, name: by.name || by.email || "" } : null,
           created_at: clock(),
         });
         if (kind === "payment") {

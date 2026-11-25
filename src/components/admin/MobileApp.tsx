@@ -56,6 +56,7 @@ function useInstall() {
 const INSTALL_DISMISS = "rota-install-dismissed";
 
 // Panelin üstünde bir kez önerilir; "Şimdi değil" denince bir daha çıkmaz.
+// Bilgisayarda gizlidir (admin.css); orada Hesabım sekmesinden yüklenir.
 export function InstallBanner() {
   const install = useInstall();
   const [hidden, setHidden] = useState(() => {

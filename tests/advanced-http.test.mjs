@@ -304,3 +304,71 @@ test("admin panel traffic has its own rate limit bucket; public API limit is unt
   assert.ok(blocked, "panel sınırı da işler");
   assert.ok(Number(blocked.headers.get("retry-after")) > 0, "Retry-After başlığı");
 });
+
+test("integrations endpoint reports the real payment and e-mail setup", async (t) => {
+  const run = async (extra) => {
+    const password = randomBytes(32).toString("hex"),
+      env = { ADMIN_PASSWORD: password, ...extra },
+      store = await openStore(":memory:", { env });
+    const server = createApp(store, { env }).listen(0, "127.0.0.1");
+    await once(server, "listening");
+    t.after(async () => {
+      await new Promise((r) => server.close(r));
+      await store.db.close();
+    });
+    const base = "http://127.0.0.1:" + server.address().port;
+    const h = { "Content-Type": "application/json", "X-Rota-Client": "web" };
+    assert.equal((await fetch(base + "/api/admin/integrations")).status, 401);
+    const login = await fetch(base + "/api/admin/login", { method: "POST", headers: h, body: JSON.stringify({ password }) });
+    return (await fetch(base + "/api/admin/integrations", { headers: { Cookie: login.headers.get("set-cookie").split(";")[0] } })).json();
+  };
+  const off = await run({});
+  assert.deepEqual(off.payment, { enabled: false, provider: null, test: false, simulator: false });
+  assert.equal(off.email.delivery, null);
+  const on = await run({ PAYMENT_PROVIDER: "test", MAIL_FROM: "Rota <info@ornek.test>", PUBLIC_BASE_URL: "https://ornek.test", RESEND_API_KEY: "re_test" });
+  assert.equal(on.payment.enabled, true);
+  assert.equal(on.payment.provider, "test");
+  assert.equal(on.payment.test, true);
+  assert.equal(on.email.delivery, "resend");
+  assert.ok(!JSON.stringify(on).includes("re_test"), "anahtar istemciye gitmez");
+});
+
+test("reservation list filters by a tour date range; manual payments record who entered them", async (t) => {
+  const { store: s, req, login } = await fixture(t);
+  await login();
+  const deps = await s.listDepartures("ani-cildir");
+  const [d1, d2, d3] = [deps[0], deps[1], deps[2]];
+  const book = async (d, seat) => {
+    const h = await s.hold(d.id, [seat]);
+    return s.reserve({ holdToken: h.token, name: "Aralık " + d.date, email: "aralik@example.com", phone: "05550000000", passengers: ["Aralık"], paymentMode: "deposit" });
+  };
+  const a = await book(d1, 2),
+    b = await book(d2, 2);
+  await book(d3, 2);
+  const list = await (await req(`/admin/reservations?from=${d1.date}&to=${d2.date}`)).json();
+  assert.deepEqual(list.map((r) => r.reference).sort(), [a.reference, b.reference].sort());
+  assert.equal((await req(`/admin/reservations?from=${d2.date}&to=${d1.date}`)).status, 400);
+  // Elle tahsilat kaydı, kaydeden yöneticiyi taşır.
+  await req("/admin/reservations/" + a.reference + "/payments", { amount: 1000, method: "cash", note: "elden", recordedExternally: true });
+  const row = (await s.workflow.get(a.reference)).ledger[0];
+  assert.ok(row.recorded_by?.name, "kaydeden adı yazılır: " + JSON.stringify(row.recorded_by));
+});
+
+test("customer lookup does not expose staff names, internal notes or payment references", async (t) => {
+  const { store: s, req, login } = await fixture(t),
+    d = (await s.listDepartures("ani-cildir"))[0];
+  await login();
+  const h = await s.hold(d.id, [9]);
+  const r = await s.reserve({ holdToken: h.token, name: "Gizli Yolcu", email: "gizli@example.com", phone: "05550000000", passengers: ["Gizli Yolcu"], paymentMode: "deposit" });
+  await req("/admin/reservations/" + r.reference + "/payments", { amount: 1000, method: "cash", note: "Ahmet Bey elden verdi", recordedExternally: true });
+  const pub = await (await req("/reservations/lookup", { reference: r.reference, email: "gizli@example.com" }, false)).json();
+  const text = JSON.stringify(pub);
+  assert.equal(pub.reference, r.reference);
+  assert.equal(pub.net_paid, 1000, "tahsilat toplamı müşteride görünür");
+  assert.ok(!("ledger" in pub), "ledger ayrıntısı müşteriye gitmez");
+  assert.ok(!text.includes("Ahmet Bey"), "tahsilat notu sızmaz");
+  assert.ok(!text.includes("recorded_by") && !text.includes("PANEL-"), "kaydeden ve iç referans sızmaz");
+  // Panel aynı kaydı ayrıntısıyla görmeye devam eder.
+  const admin = await (await req("/admin/reservations?q=" + r.reference)).json();
+  assert.equal(admin[0].ledger[0].note, "Ahmet Bey elden verdi");
+});

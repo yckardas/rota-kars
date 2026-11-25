@@ -80,6 +80,10 @@ export function InterestManager({ onChange }: { onChange: () => void }) {
       setBusy("");
     }
   }
+  // Talep toplayan tur ya da online turdaki talep tarihi (seferde satış modu) üstte görünür.
+  const collecting = (t: TourMode) => t.mode === "demand" || t.dates.length > 0,
+    demandTours = tours.filter(collecting),
+    onlineTours = tours.filter((t) => !collecting(t));
   return (
     <>
       <div className="operations-intro">
@@ -100,8 +104,11 @@ export function InterestManager({ onChange }: { onChange: () => void }) {
           <Check size={17} /> {notice}
         </p>
       )}
-      <div className="interest-tours">
-        {tours.map((t) => (
+      {/* Önce iş: talep toplanan turlar (eşik, tarihler, "Satışa aç"). */}
+      <h2 className="interest-heading">Talep toplanan turlar</h2>
+      {demandTours.length ? (
+        <div className="interest-tours">
+          {demandTours.map((t) => (
           <ModeCard
             key={t.id + t.mode + t.demand.threshold + t.demand.showProgress}
             tour={t}
@@ -145,8 +152,12 @@ export function InterestManager({ onChange }: { onChange: () => void }) {
               })
             }
           />
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <p className="admin-empty">Talep toplama modunda tur yok. Bir turu aşağıdaki "Satış modu ayarları"ndan talep toplamaya alabilirsiniz.</p>
+      )}
+      <h2 className="interest-heading">Bekleme listesi ve ön kayıtlar</h2>
       <div className="status-filters" role="group" aria-label="Kayıt türü">
         {(
           [
@@ -217,6 +228,57 @@ export function InterestManager({ onChange }: { onChange: () => void }) {
           </article>
         ))}
       </div>
+      {/* Ayar: online satıştaki turlar katlanmış durur; talep toplamaya almak için açılır. */}
+      <details className="interest-settings">
+        <summary>Satış modu ayarları · {onlineTours.length} tur online satışta</summary>
+        <div className="interest-tours">
+          {onlineTours.map((t) => (
+          <ModeCard
+            key={t.id + t.mode + t.demand.threshold + t.demand.showProgress}
+            tour={t}
+            busy={busy === t.id}
+            save={(mode, threshold, showProgress) =>
+              run(t.id, async () => {
+                await post(`/admin/operations/${t.id}/mode`, { mode, threshold, showProgress });
+                return `${t.name}: ${mode === "demand" ? "talep toplama" : "online satış"} kaydedildi.`;
+              })
+            }
+            openDate={(x) =>
+              run(t.id, async () => {
+                if (
+                  !(await feedback.confirm({
+                    title: `${t.name} · ${dateLabel(x.date)} satışa açılsın mı?`,
+                    body: x.count
+                      ? `Bu tarihe kayıtlı ${x.count} kişiye rezervasyon bağlantısı e-postayla gider.`
+                      : "Bu tarihe henüz ön kayıt yok; tarih online satışa geçer.",
+                    confirmLabel: "Satışa aç",
+                  }))
+                )
+                  return "";
+                const r = await post<{ notified: number }>(`/admin/departures/${encodeURIComponent(x.id)}/open-sales`, {});
+                return `${t.name} · ${dateLabel(x.date)} satışa açıldı; ${r.notified} kişiye haber verildi.`;
+              })
+            }
+            open={() =>
+              run(t.id, async () => {
+                if (
+                  !(await feedback.confirm({
+                    title: `${t.name} satışa açılsın mı?`,
+                    body: t.dates.length
+                      ? `Tur online satışa geçer; tarih belirtmeyen ${t.preregCount} kişiye ve satışa geçen tarihlere kayıtlı olanlara e-posta gider. "Talep toplama" olarak işaretli tarihler talepte kalır.`
+                      : `Tur online satışa geçer ve bekleyen ${t.preregCount} kişilik ön kayda rezervasyon bağlantısı e-postayla gider.`,
+                    confirmLabel: "Satışı aç ve haber ver",
+                  }))
+                )
+                  return "";
+                const r = await post<{ notified: number }>(`/admin/operations/${t.id}/open-sales`, {});
+                return `${t.name} satışa açıldı; ${r.notified} ön kayıtlıya haber verildi.`;
+              })
+            }
+          />
+          ))}
+        </div>
+      </details>
     </>
   );
 }

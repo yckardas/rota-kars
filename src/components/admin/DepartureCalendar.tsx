@@ -1,13 +1,16 @@
 import { useMemo, useState } from "react";
-import { SeatCourse } from "./SeatCourse";
 import { groupSizes, soldSeats, vehicleTag } from "./vehicleGroup";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { today, type Catalog, type Departure } from "../../lib/types";
 
 const MONTHS = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 const DAYS = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
-// Tur renkleri Ani taşlarından: tüf, okr, liken, bazalt mavisi, gül taşı.
-const COLORS = ["#7A6A58", "#B07A2A", "#5E7A4E", "#3F5A6E", "#8E5A6B", "#6B6A3A", "#2F6A68"];
+// Tur renkleri: 16 tur yan yana ayırt edilebilsin diye ton, açıklık ve doygunluk
+// birbirinden uzak seçildi (ilk ikisi Ani taşının tüf ve okr rengi).
+const COLORS = [
+  "#7A5C43", "#C8871A", "#2E7D4F", "#2B5C8A", "#A23B5A", "#6E7F1E", "#1F8A8A", "#7B4FA0",
+  "#C4502E", "#4A4A4A", "#3E8ED0", "#D1A400", "#8C6D9E", "#5B8C3A", "#B5654A", "#1C4E4E",
+];
 const ymd = (y: number, m: number, d: number) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
 // Seferlerin ay takvimi: her günde saat, tur ve boş koltuk; dokununca düzenleme.
@@ -74,26 +77,43 @@ export function DepartureCalendar({
                   type="button"
                   className={"calendar-chip" + (d.active ? "" : " closed") + (d.available === 0 ? " full" : "")}
                   onClick={() => onPick(d)}
-                  title={`${short(d.tour_id)} · ${d.start_time}${vehicleTag(d, sizes) ? " · " + vehicleTag(d, sizes) : ""} · ${d.available} boş koltuk`}
+                  title={`${short(d.tour_id)} · ${d.start_time}${vehicleTag(d, sizes) ? " · " + vehicleTag(d, sizes) : ""} · ${d.available} boş koltuk${d.active ? "" : " · satışa kapalı"}`}
                 >
                   <span className="chip-line">
                     <i className="tour-stone" style={{ background: color(d.tour_id) }} aria-hidden="true" />
                     <strong>{d.start_time}</strong> <span className="chip-name">{short(d.tour_id)}</span>
                     {vehicleTag(d, sizes) && <span className="chip-vehicle">{d.vehicle_no}. araç</span>}
                     {d.demand && <span className="chip-vehicle chip-demand">Talep</span>}
+                    {!d.active && <span className="chip-vehicle chip-closed">Kapalı</span>}
                   </span>
-                  <SeatCourse
-                    sold={soldSeats(d)}
-                    total={d.vehicle?.sellableSeats || 0}
-                    size="xs"
-                    guide={false}
-                  />
+                  {/* Doluluk okunur sayıyla: satılan / satılabilir koltuk. */}
+                  <span className="chip-load">
+                    <span className="chip-load-bar" aria-hidden="true">
+                      <span style={{ width: (d.vehicle?.sellableSeats ? Math.min(100, (soldSeats(d) / d.vehicle.sellableSeats) * 100) : 0) + "%" }} />
+                    </span>
+                    <span>{d.available === 0 ? "Dolu" : `${soldSeats(d)}/${d.vehicle?.sellableSeats || 0}`}</span>
+                  </span>
                 </button>
               ))}
             </div>
           );
         })}
       </div>
+      <ul className="calendar-legend calendar-states" aria-label="Takvim işaretleri">
+        <li>
+          <strong>3/18</strong> satılan / satılabilir koltuk
+        </li>
+        <li>
+          <span className="chip-vehicle chip-closed">Kapalı</span> online satışa kapalı sefer
+        </li>
+        <li>
+          <span className="chip-vehicle chip-demand">Talep</span> ön kayıt toplanıyor, henüz satışta değil
+        </li>
+        <li>
+          <strong className="legend-full">Dolu</strong> boş koltuk kalmadı
+        </li>
+        <li>Soluk günler geçmiş tarihtir.</li>
+      </ul>
       <ul className="calendar-legend">
         {shown.map((t) => (
           <li key={t.id}>

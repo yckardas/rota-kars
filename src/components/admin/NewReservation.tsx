@@ -25,16 +25,28 @@ const waNumber = (phone: string) => {
 
 // Telefon/WhatsApp ile gelen müşteri için panelden rezervasyon: seçilen koltuklar
 // sitede satıştan düşer (koltuk kapatma). Seferler listesinden açılınca sefer seçili gelir.
+// Gelen talepten açılınca müşteri bilgisi dolu gelir; turu ve tarihi tutan sefer seçilir.
+export type ReservationPrefill = {
+  name: string;
+  phone: string;
+  email: string;
+  tourId?: string;
+  date?: string;
+  guests?: number;
+  notes?: string;
+};
 export function NewReservation({
   catalog,
   initialDepartureId = "",
+  prefill,
   onClose,
   onCreated,
 }: {
   catalog: Catalog;
   initialDepartureId?: string;
+  prefill?: ReservationPrefill;
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (created: Reservation) => void;
 }) {
   const feedback = useFeedback();
   const [departures, setDepartures] = useState<Departure[]>([]),
@@ -43,7 +55,7 @@ export function NewReservation({
     [ids, setIds] = useState<Record<number, IdDraft>>({}),
     [seatData, setSeatData] = useState<{ seats: Seat[]; vehicle: Vehicle } | null>(null),
     [selected, setSelected] = useState<number[]>([]),
-    [name, setName] = useState(""),
+    [name, setName] = useState(prefill?.name || ""),
     [passengers, setPassengers] = useState<string[]>([]),
     [paymentMode, setPaymentMode] = useState<"on_tour" | "deposit" | "full">("on_tour"),
     [paid, setPaid] = useState(false),
@@ -56,7 +68,17 @@ export function NewReservation({
   useEffect(() => {
     api<Departure[]>("/admin/departures")
       // Talep toplayan tarihe rezervasyon yazılmaz; önce "Satışa aç".
-      .then((rows) => setDepartures(rows.filter((d) => d.date >= today() && !d.demand)))
+      .then((rows) => {
+        const open = rows.filter((d) => d.date >= today() && !d.demand);
+        setDepartures(open);
+        // Talepteki tur ve tarihte açık sefer varsa o seçilir.
+        if (!initialDepartureId && prefill?.tourId && prefill.date) {
+          // Aynı tarihte birden çok araç varsa boş koltuğu olan ilk araç seçilir.
+          const same = open.filter((d) => d.tour_id === prefill.tourId && d.date === prefill.date),
+            match = same.find((d) => (d.available ?? 1) > 0) || same[0];
+          if (match) setDepartureId(match.id);
+        }
+      })
       .catch((e) => setError(e.message));
   }, []);
   useEffect(() => {
@@ -118,7 +140,7 @@ export function NewReservation({
         belowDeposit,
       });
       setResult(r);
-      onCreated();
+      onCreated(r);
     } catch (e) {
       setError((e as Error).message);
       if (departureId)
@@ -164,7 +186,7 @@ export function NewReservation({
     );
   }
   return (
-    <Modal title="Koltuk kapat · telefon rezervasyonu" onClose={onClose} wide>
+    <Modal title="Yeni rezervasyon · telefon / WhatsApp" onClose={onClose} wide>
       <form className="admin-editor new-reservation" onSubmit={submit}>
         <p className="muted">
           Telefon veya WhatsApp ile satılan koltukları kapatın: seçtiğiniz koltuklar sitede satıştan düşer. Yolcu,
@@ -190,6 +212,7 @@ export function NewReservation({
             <SeatMap vehicle={seatData.vehicle} seats={seatData.seats} selected={selected} onSelect={toggleSeat} />
             <p className="muted">
               {selected.length ? `Seçilen koltuk: ${selected.join(", ")} · Tutar ${currency(total)}` : "Koltuk seçin."}
+              {prefill?.guests ? ` Talepte ${prefill.guests} kişi.` : ""}
             </p>
           </div>
         )}
@@ -200,11 +223,11 @@ export function NewReservation({
           </label>
           <label className="field">
             Telefon
-            <input name="phone" type="tel" inputMode="tel" required minLength={10} maxLength={24} autoComplete="off" />
+            <input name="phone" type="tel" inputMode="tel" required minLength={10} maxLength={24} autoComplete="off" defaultValue={prefill?.phone} />
           </label>
           <label className="field">
             E-posta (isteğe bağlı)
-            <input name="email" type="email" maxLength={254} autoComplete="off" />
+            <input name="email" type="email" maxLength={254} autoComplete="off" defaultValue={prefill?.email} />
           </label>
         </div>
         {selected.length > 0 && (
@@ -280,7 +303,7 @@ export function NewReservation({
         </label>
         <label className="field">
           Not (isteğe bağlı)
-          <textarea name="notes" maxLength={500} rows={2} placeholder="Ör. otelden alınacak, çocuk koltuğu" />
+          <textarea name="notes" maxLength={500} rows={2} placeholder="Ör. otelden alınacak, çocuk koltuğu" defaultValue={prefill?.notes} />
         </label>
         {error && (
           <p className="error" role="alert">

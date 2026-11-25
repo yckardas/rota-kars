@@ -5,6 +5,7 @@ import {
   LoaderCircle,
   Plus,
   QrCode,
+  TriangleAlert,
   Users,
 } from "lucide-react";
 import { api } from "../../lib/api";
@@ -41,6 +42,8 @@ type OverviewData = {
   cancellationRequests: number;
   newRequests: number;
   week: { departures: number; booked: number; capacity: number };
+  // Bugün/yarın yolcusu olup rehberi veya plakası atanmamış seferler.
+  staffing?: { id: string; tourName: string; date: string; startTime: string; booked: number; missing: string[] }[];
 };
 
 const timeLeft = (at: number) => {
@@ -119,6 +122,32 @@ export function Overview({
           <span>7 günlük doluluk · {data.week.departures} sefer</span>
         </button>
       </div>
+
+      {data.staffing?.length ? (
+        <section className="overview-section staffing-alert" role="alert">
+          <h2>
+            <TriangleAlert size={18} /> Atama eksik · bugün ve yarın
+          </h2>
+          <ul className="overview-list">
+            {data.staffing.map((x) => (
+              <li key={x.id}>
+                <button type="button" className="staffing-row" onClick={() => go("departures", { ref: x.id })}>
+                  <time>
+                    {x.date === data.today ? "Bugün" : "Yarın"} {x.startTime}
+                  </time>
+                  <span>
+                    <strong>{x.tourName}</strong>
+                    <small>
+                      {x.booked} yolcu · {x.missing.join(" ve ")} atanmadı
+                    </small>
+                  </span>
+                  <em>Ata</em>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section className="overview-section">
         <h2>Bugün kalkan seferler · {dateLabel(data.today)}</h2>
