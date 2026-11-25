@@ -496,6 +496,13 @@ export function Booking({ catalog }: { catalog: Catalog }) {
       clearInterval(timer);
     };
   }, [vehicleId, step]);
+  // Talep tarihi seçiliyken koltuk yenilemesi çalışmaz; acenta tarihi satışa açarsa sayfa
+  // tarih listesini yenileyip koltuk planına kendiliğinden geçer.
+  useEffect(() => {
+    if (!demandPick || step !== 0) return;
+    const timer = setInterval(() => refreshDates(), 15000);
+    return () => clearInterval(timer);
+  }, [demandPick?.id, step]);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
@@ -970,6 +977,13 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                     </a>
                   </p>
                 </div>
+              )}
+              {tour?.mode === "demand" && departures.length > 0 && !demandPick && (
+                <p className="muted">
+                  <button type="button" className="text-link" onClick={() => setInterest("prereg")}>
+                    {t("Başka bir tarih için ücretsiz ön kayıt")}
+                  </button>
+                </p>
               )}
               {demandPick && (
                 <div className="info-note waitlist-note">

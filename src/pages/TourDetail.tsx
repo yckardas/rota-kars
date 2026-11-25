@@ -528,6 +528,12 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
             />
           )}
           {cta("btn block")}
+          {/* Talep turunda satışa açılmış tarih olsa da tarih belirtmeden ön kayıt yolu kalır. */}
+          {t.mode === "demand" && !demand && !t.inquiryOnly && (
+            <button type="button" className="text-link demand-dates-more" onClick={() => setPrereg({})}>
+              {tx("Başka bir tarih için ücretsiz ön kayıt")}
+            </button>
+          )}
           <div className="aside-benefits">
             <span>
               <Armchair size={15} />

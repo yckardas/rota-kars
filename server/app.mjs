@@ -1005,8 +1005,9 @@ export function createApp(
         // "ilk hareket" olur; talep toplayan tarihler ayrıca listelenir. Talep toplama turunda
         // ilerleme açıksa tarihsiz ön kayıtlı kişi sayısı da verilir.
         const showProgress = Boolean(t.demand?.showProgress),
-          open = await store.listDepartures(t.id).catch(() => []),
-          demandDates = await store.interest.demandDates(t.id, { withCount: showProgress }).catch(() => []),
+          rows = await store.departures.list({ tourId: t.id }).catch(() => []),
+          open = await store.listDepartures(t.id, { rows }).catch(() => []),
+          demandDates = await store.interest.demandDates(t.id, { withCount: showProgress, rows }).catch(() => []),
           [d] = open,
           // Anasayfa, tur kartı ve tur detayı aynı "…’den" fiyatını gösterir.
           fromPrice = open.length ? Math.min(...open.map((x) => x.price)) : t.price;

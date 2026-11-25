@@ -162,12 +162,23 @@ export async function createInterest(db, { clock, tx, departures, operations, no
     },
     // Sitede gösterilecek talep tarihleri: tarih başına tek satır (1. aracın id'si), aktif,
     // satış kesimi geçmemiş, rezervasyonu olmayan tarihler.
-    async demandDates(tourId, { withCount = false } = {}) {
-      const rows = (await departures.list({ tourId })).filter(
+    async demandDates(tourId, { withCount = false, rows } = {}) {
+      const listed = (rows || (await departures.list({ tourId }))).filter(
         (d) => d.demand && d.active && !d.departed && d.date >= localDate(clock()),
       );
+      if (!listed.length) return [];
       const groups = new Map();
-      for (const d of rows) if (!groups.has(d.group_id) || d.id === d.group_id) groups.set(d.group_id, d);
+      for (const d of listed) if (!groups.has(d.group_id) || d.id === d.group_id) groups.set(d.group_id, d);
+      // Sayaçlar tek sorguda: bu turun tarihli bekleyen/haber verilen kayıtları.
+      const counts = new Map();
+      if (withCount)
+        for (const r of await db.find("interest_list", {
+          tour_id: tourId,
+          kind: "prereg",
+          status: { $in: ["waiting", "notified"] },
+          departure_id: { $in: [...groups.keys()] },
+        }))
+          counts.set(r.departure_id, (counts.get(r.departure_id) || 0) + (Number(r.count) || 0));
       const out = [];
       for (const [gid, d] of groups) {
         if (await departures.hasActiveBookings(gid)) continue;
@@ -176,7 +187,7 @@ export async function createInterest(db, { clock, tx, departures, operations, no
           date: d.date,
           start_time: d.start_time,
           price: d.price,
-          ...(withCount ? { count: await api.demandCount(tourId, gid) } : {}),
+          ...(withCount ? { count: counts.get(gid) || 0 } : {}),
         });
       }
       return out.sort((a, b) => (a.date + a.start_time).localeCompare(b.date + b.start_time));
@@ -215,9 +226,13 @@ export async function createInterest(db, { clock, tx, departures, operations, no
     async openSales(tourId) {
       const ops = await operations.get(tourId);
       const open = await departures.list({ tourId });
-      const upcoming = open.filter((d) => d.active && d.date >= localDate(clock()));
+      // Tur online'a geçince satılabilecek seferler: "Talep toplama"ya sabitlenmiş ya da
+      // fiyatı olmayan tarih sayılmaz (haber e-postası boş tarih listesiyle gitmesin).
+      const upcoming = open.filter(
+        (d) => d.active && d.date >= localDate(clock()) && d.sales_mode !== "demand" && d.price > 0 && !d.departed,
+      );
       if (!upcoming.length)
-        throw new AppError(409, "Satışı açmadan önce bu tur için en az bir sefer oluşturun.");
+        throw new AppError(409, "Satışı açmadan önce bu tur için satışa açılabilecek en az bir sefer oluşturun.");
       await operations.setMode(tourId, {
         mode: "online",
         threshold: ops.demand.threshold,

@@ -628,6 +628,8 @@ export const site: Record<string, string> = {
     "estimated {price}",
   "Başka bir tarih istiyorum":
     "I'd like another date",
+  "Başka bir tarih için ücretsiz ön kayıt":
+    "Pre-register for free for another date",
   "{tour} · {date} için ücretsiz ön kayıt bırakın. Ödeme alınmaz; tarih kesinleşince size haber verip rezervasyonu açarız.":
     "Leave a free pre-registration for {tour} · {date}. No payment is taken; we'll let you know and open booking once the date is confirmed.",
   "yeterli talep olursa":

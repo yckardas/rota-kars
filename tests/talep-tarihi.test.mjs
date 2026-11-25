@@ -265,3 +265,13 @@ test("the catalog lists demand dates without leaking internals; an opened date s
   assert.equal(g.fromPrice, 250000);
   assert.equal((await call("/tours/guneydogu/departures")).json.length, 1);
 });
+
+test("tour-wide open refuses when every upcoming date is pinned to demand", async (t) => {
+  const { call, departure, outbox } = await fixture(t);
+  await departure("guneydogu", { price: 250000, salesMode: "demand" });
+  await call("/interest", { kind: "prereg", tourId: "guneydogu", ...person({ email: "u@example.com" }) });
+  const r = await call("/admin/operations/guneydogu/open-sales", {});
+  assert.equal(r.status, 409, JSON.stringify(r.json));
+  assert.equal((await call("/catalog")).json.tours.find((x) => x.id === "guneydogu").mode, "demand");
+  assert.equal((await outbox()).filter((m) => m.kind === "interest_open").length, 0);
+});
