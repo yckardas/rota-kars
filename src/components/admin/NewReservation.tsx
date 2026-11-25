@@ -15,6 +15,7 @@ import { Modal } from "../Modal";
 import { SeatMap } from "../SeatMap";
 import { groupSizes, vehicleTag } from "./vehicleGroup";
 import { PassengerIdFields, detailFrom, emptyId, idProblem, type IdDraft } from "./PassengerIdFields";
+import { useFeedback } from "./feedback";
 
 const waNumber = (phone: string) => {
   const digits = phone.replace(/\D/g, "");
@@ -35,6 +36,7 @@ export function NewReservation({
   onClose: () => void;
   onCreated: () => void;
 }) {
+  const feedback = useFeedback();
   const [departures, setDepartures] = useState<Departure[]>([]),
     [departureId, setDepartureId] = useState(initialDepartureId),
     // Koltuk numarasına göre kimlik taslağı; koltuk kaldırılıp yeniden seçilince korunur.
@@ -82,10 +84,25 @@ export function NewReservation({
     const drafts = selected.map((seat) => ids[seat] || emptyId),
       problem = drafts.map((d, i) => idProblem(d, `Koltuk ${selected[i]}`)).find(Boolean);
     if (problem) return setError(problem);
+    const amountKurus = Math.round(Number(String(amount).replace(",", ".")) * 100),
+      paidKurus = paid && amountKurus > 0 ? amountKurus : 0,
+      pct = catalog.payment?.depositPercent ?? 30,
+      required = paymentMode === "on_tour" ? 0 : paymentMode === "full" ? total : Math.round((total * pct) / 100);
+    // Hemen onayda tahsilat kaporanın altındaysa acente uyarıyı görüp yine de ilerleyebilir.
+    let belowDeposit = false;
+    if (confirm && paidKurus < required) {
+      const rule = paymentMode === "full" ? "tam ödeme" : `%${pct}`,
+        label = paymentMode === "full" ? "tam ödeme" : `${rule} kapora`;
+      belowDeposit = await feedback.confirm({
+        title: `Tahsilat ${label} tutarının altında`,
+        body: `Girilen tahsilat ${currency(paidKurus)}, gereken ${label} ${currency(required)}. Girilen tutar ${rule} kuralının altında kalıyor; yine de ilerlemek istiyor musunuz? Kalan ${currency(total - paidKurus)} borç olarak görünür.`,
+        confirmLabel: "Evet, kaydet ve onayla",
+      });
+      if (!belowDeposit) return;
+    }
     setBusy(true);
     setError("");
     try {
-      const amountKurus = Math.round(Number(String(amount).replace(",", ".")) * 100);
       const r = await post<Reservation>("/admin/reservations", {
         departureId,
         seats: selected,
@@ -96,8 +113,9 @@ export function NewReservation({
         passengerDetails: drafts.map(detailFrom),
         paymentMode,
         notes: String(f.get("notes") || "").trim(),
-        ...(paid && amountKurus > 0 ? { payment: { amount: amountKurus, method } } : {}),
+        ...(paidKurus ? { payment: { amount: paidKurus, method } } : {}),
         confirm,
+        belowDeposit,
       });
       setResult(r);
       onCreated();
@@ -258,7 +276,7 @@ export function NewReservation({
         )}
         <label className="checkbox-label">
           <input type="checkbox" checked={confirm} onChange={(e) => setConfirm(e.target.checked)} />
-          <span>Hemen onayla (kapora/tam ödeme seçildiyse tahsilat gerekir)</span>
+          <span>Hemen onayla (tahsilat kaporanın altındaysa önce uyarı gösterilir)</span>
         </label>
         <label className="field">
           Not (isteğe bağlı)

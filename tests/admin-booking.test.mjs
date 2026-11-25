@@ -347,3 +347,30 @@ test("a mail that cannot be rendered is marked as such, not as a provider failur
   assert.match(row.last_error, /hazırlanamadı \(RENDER_FAILED\)/);
   assert.doesNotMatch(row.last_error, /sağlayıcısına ulaşılamadı/);
 });
+
+test("agency may confirm below the deposit only when it explicitly accepts; the exception is audited", async (t) => {
+  const { s, d } = await setup(t);
+  // 2 × 1.500 TL = 3.000 TL; %30 kapora 900 TL; müşteri 200 TL vermiş.
+  const r = await s.adminReserve(base(d, { paymentMode: "deposit", payment: { amount: 20000, method: "cash" } }), AGENT);
+  assert.equal(r.status, "pending_agency");
+  assert.equal(r.deposit, 90000);
+  // İzin verilmeden kural aynen geçerli; mesaj tutarları söyler.
+  await assert.rejects(s.workflow.confirm(r.reference), (e) => e.status === 409 && /200,00/.test(e.message) && /900,00/.test(e.message));
+  assert.equal((await s.workflow.get(r.reference)).status, "pending_agency");
+  const ok = await s.workflow.confirm(r.reference, { belowDeposit: true });
+  assert.equal(ok.status, "confirmed");
+  assert.equal(ok.deposit, 90000, "kapora tutarı değişmez; kalan borç olarak görünür");
+  const audit = await s.db.find("reservation_audit", { reservation_id: r.id, event: "confirmed" });
+  assert.deepEqual(audit[0].details.belowDeposit, { paid: 20000, deposit: 90000 });
+  // Panelden yeni kayıtta da aynı izin: kapora altı tahsilatla hemen onay.
+  await assert.rejects(
+    s.adminReserve(base(d, { seats: [7], passengers: ["Z Yolcu"], paymentMode: "deposit", payment: { amount: 10000, method: "cash" }, confirm: true }), AGENT),
+    (e) => e.status === 409,
+  );
+  const direct = await s.adminReserve(
+    base(d, { seats: [7], passengers: ["Z Yolcu"], paymentMode: "deposit", payment: { amount: 10000, method: "cash" }, confirm: true, belowDeposit: true }),
+    AGENT,
+  );
+  assert.equal(direct.status, "confirmed");
+  assert.equal(direct.net_paid, 10000);
+});

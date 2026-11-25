@@ -8,6 +8,7 @@ import { tours, business } from "./catalog.mjs";
 import { LEGAL_VERSION, contractText, legalDataFromReservation, preInfoText } from "./legal.mjs";
 import { countryName } from "./passenger-id.mjs";
 const longExpiry = (now) => now + 365 * 86400000;
+const tl = (kurus) => (kurus / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 });
 export async function createWorkflow(
   db,
   { clock, tx, departures, members, notifications, env, cleanup, pii },
@@ -237,7 +238,9 @@ export async function createWorkflow(
       return r;
     },
     // via: "online" (kartla ödeme sonrası otomatik) | "agency" (panelden onay).
-    async confirm(reference, { via = "agency", depositPercent } = {}) {
+    // belowDeposit: acente, tahsilat kaporanın altındayken uyarıyı görüp yine de onaylar.
+    // Yalnız panel onayında geçerlidir; istisna denetim kaydına tutarlarıyla yazılır.
+    async confirm(reference, { via = "agency", depositPercent, belowDeposit = false } = {}) {
       return tx(async () => {
         await cleanup();
         const r = await api.get(reference);
@@ -247,10 +250,11 @@ export async function createWorkflow(
             409,
             "Yalnız bekleyen ön rezervasyon onaylanabilir.",
           );
-        if (r.net_paid < r.deposit)
+        const short = r.net_paid < r.deposit;
+        if (short && !(belowDeposit && via === "agency"))
           throw new AppError(
             409,
-            "Onay için en az seçilen kapora/tam ödeme tutarının tahsilatı kaydedilmeli.",
+            `Onay için en az seçilen kapora/tam ödeme tutarının tahsilatı kaydedilmeli (kayıtlı ${tl(r.net_paid)} TL, gereken ${tl(r.deposit)} TL).`,
           );
         await db.update(
           "reservations",
@@ -266,7 +270,7 @@ export async function createWorkflow(
           { owner: r.reference },
           { expires_at: longExpiry(clock()) },
         );
-        await audit(r, "confirmed", { via });
+        await audit(r, "confirmed", short ? { via, belowDeposit: { paid: r.net_paid, deposit: r.deposit } } : { via });
         let updated = await api.get(reference);
         // Sözleşme onay anında kurulur; metni kayda yazılır ve onay e-postasıyla gider.
         const tour = tours.find((t) => t.id === updated.tourId);
