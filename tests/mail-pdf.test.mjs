@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as fontkit from "fontkit";
-import { documentPdf, PDF_FONT_PATH } from "../server/mail-pdf.mjs";
+import { documentPdf, pdfSafe, PDF_FONT_PATH } from "../server/mail-pdf.mjs";
 
 const pages = (pdf) =>
   (pdf.toString("latin1").match(/\/Type\s*\/Page(?!s)/g) || []).length;
@@ -42,4 +42,22 @@ test("long legal text flows onto several pages and stays small", async () => {
   const pdf = await documentPdf({ title: "Ön Bilgilendirme Formu", text });
   assert.ok(pages(pdf) > 1, `sayfa sayısı ${pages(pdf)}`);
   assert.ok(pdf.length < 500 * 1024, `boyut ${pdf.length} bayt`);
+});
+
+// Onest'te olmayan karakterler (ör. transfer satırındaki "↔", Gürcüce/Ermenice adlar)
+// PDF'te boş kutu olarak basılırdı; yazı tipinde karşılığı olanlarla değiştirilir.
+test("characters the font lacks are replaced so no blank boxes reach the PDF", () => {
+  const font = fontkit.openSync(PDF_FONT_PATH);
+  assert.equal(
+    pdfSafe("Transfer: Kars Havalimanı ↔ Kars merkez"),
+    "Transfer: Kars Havalimanı – Kars merkez",
+  );
+  assert.equal(pdfSafe("Yolcu: ნინო"), "Yolcu: ????");
+  assert.equal(
+    pdfSafe("Çıldır · ğüşöç İ 2.400,00 TL"),
+    "Çıldır · ğüşöç İ 2.400,00 TL",
+    "Türkçe metin aynen kalır",
+  );
+  for (const ch of pdfSafe("Kars ↔ Ani · ნ Ա 😀"))
+    assert.ok(font.hasGlyphForCodePoint(ch.codePointAt(0)), `glif yok: ${ch}`);
 });

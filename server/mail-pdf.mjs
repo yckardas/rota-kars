@@ -2,6 +2,7 @@
 // kalıcı veri saklayıcısı). Türkçe karakterler için sitenin yazı tipi Onest gömülür;
 // pdfkit'in standart yazı tipleri ğ, ş, ı, İ harflerini basamaz.
 import PDFDocument from "pdfkit";
+import * as fontkit from "fontkit";
 import { fileURLToPath } from "node:url";
 
 export const PDF_FONT_PATH = fileURLToPath(
@@ -10,6 +11,17 @@ export const PDF_FONT_PATH = fileURLToPath(
 const LOGO_PATH = fileURLToPath(
   new URL("./assets/mail-logo.png", import.meta.url),
 );
+const font = fontkit.openSync(PDF_FONT_PATH);
+// Yazı tipinde olmayan karakter PDF'te boş kutu olur: transfer satırındaki "↔" kısa
+// tireye, diğerleri (Gürcüce/Ermenice harfler, emoji) "?" işaretine çevrilir.
+const REPLACEMENTS = { "↔": "–" };
+export const pdfSafe = (text) =>
+  Array.from(String(text ?? ""), (ch) => {
+    const cp = ch.codePointAt(0);
+    if (cp < 0x20) return " ";
+    if (font.hasGlyphForCodePoint(cp)) return ch;
+    return REPLACEMENTS[ch] ?? "?";
+  }).join("");
 const INK = "#1a2846",
   MUTED = "#47536e",
   RULE = "#dde5eb";
@@ -31,7 +43,7 @@ export function documentPdf({ title, text }) {
     doc.registerFont("body", PDF_FONT_PATH).font("body");
     doc.image(LOGO_PATH, doc.page.margins.left, doc.y, { width: 110 });
     doc.moveDown(3.5);
-    doc.fillColor(INK).fontSize(16).text(title);
+    doc.fillColor(INK).fontSize(16).text(pdfSafe(title));
     doc.moveDown(0.6);
     doc.fillColor(INK).fontSize(10);
     const width =
@@ -49,7 +61,7 @@ export function documentPdf({ title, text }) {
         doc.moveDown(0.6);
         continue;
       }
-      doc.text(line || " ", { width, lineGap: 2 });
+      doc.text(pdfSafe(line) || " ", { width, lineGap: 2 });
     }
 
     const range = doc.bufferedPageRange();
@@ -61,7 +73,7 @@ export function documentPdf({ title, text }) {
         .fillColor(MUTED)
         .fontSize(8)
         .text(
-          `Rota Kars Turizm · ${title} · Sayfa ${i + 1} / ${range.count}`,
+          `Rota Kars Turizm · ${pdfSafe(title)} · Sayfa ${i + 1} / ${range.count}`,
           doc.page.margins.left,
           doc.page.height - 40,
           {
