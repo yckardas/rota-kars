@@ -7,6 +7,7 @@ import { localDate } from "./departures.mjs";
 import { tours, business } from "./catalog.mjs";
 import { LEGAL_VERSION, contractText, legalDataFromReservation, preInfoText } from "./legal.mjs";
 import { countryName } from "./passenger-id.mjs";
+import { buildFinance } from "./finance.mjs";
 const longExpiry = (now) => now + 365 * 86400000;
 const tl = (kurus) => (kurus / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 });
 export async function createWorkflow(
@@ -783,6 +784,20 @@ export async function createWorkflow(
     },
     // Aylık rapor. Tur bazında: o ay yapılan seferlerin doluluğu ve cirosu (tur
     // tarihine göre). Tahsilat: o ay kasaya giren/çıkan para (işlem tarihine göre).
+    // Finans paneli: dönem cirosu/tahsilatı, alacaklar, beklenen ödemeler, talep hattı.
+    async financeReport({ from, to, bucket = "day" }) {
+      return buildFinance({
+        reservations: await api.list({ all: true }),
+        ledger: await db.find("payment_ledger", {}),
+        departures: await departures.list(),
+        requests: await db.find("requests", {}),
+        tours,
+        today: localDate(clock()),
+        from,
+        to,
+        bucket,
+      });
+    },
     async monthReport(month) {
       const prefix = month + "-";
       const ds = (await departures.list()).filter((d) => d.date.startsWith(prefix));
