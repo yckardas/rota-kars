@@ -2588,3 +2588,35 @@
 .rk-admin .calendar-states .chip-vehicle.chip-demand {
   color: var(--red);
 }
+
+/* Menü: açılıp kapanan grup başlığı */
+.rk-admin .nav-group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+.rk-admin .nav-group-toggle svg {
+  transition: transform 0.15s;
+}
+.rk-admin .nav-group-toggle svg.open {
+  transform: rotate(180deg);
+}
+/* Tur ayarı sayfaları arasında kısa yollar */
+.rk-admin .related-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}

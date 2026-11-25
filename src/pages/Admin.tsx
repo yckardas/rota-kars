@@ -36,6 +36,7 @@ import {
   Plug,
   Search,
   Wallet,
+  ChevronDown,
 } from "lucide-react";
 import { MonthReport } from "../components/admin/MonthReport";
 import { FinancePanel } from "../components/admin/FinancePanel";
@@ -85,18 +86,37 @@ const ALL_TABS = [
   ["finance", "Finans", Wallet, "Satış"],
   ["reports", "Aylık rapor", BarChart3, "Satış"],
   ["campaigns", "Kampanyalar", Gift, "Satış"],
-  ["notifications", "Bildirim kuyruğu", Mail, "Satış"],
-  ["content", "Site içerikleri", FileText, "Site"],
-  ["articles", "Rehber yazıları", Newspaper, "Site"],
-  ["operations", "Tur ve araç planı", Bus, "Site"],
-  ["hotels", "Anlaşmalı oteller", BedDouble, "Site"],
-  ["reviews", "Google yorumları", Star, "Site"],
-  ["instagram", "Instagram", Instagram, "Site"],
+  ["content", "Tur ve site metinleri", FileText, "Turlar ve site"],
+  ["operations", "Araç düzeni ve transfer", Bus, "Turlar ve site"],
+  ["articles", "Rehber yazıları", Newspaper, "Turlar ve site"],
+  ["hotels", "Anlaşmalı oteller", BedDouble, "Turlar ve site"],
+  // Seyrek kullanılanlar: menüde kapalı gelir.
+  ["notifications", "Bildirim kuyruğu", Mail, "Yönetim"],
+  ["reviews", "Google yorumları", Star, "Yönetim"],
+  ["instagram", "Instagram", Instagram, "Yönetim"],
   ["integrations", "Bağlantılar", Plug, "Yönetim"],
   ["users", "Kullanıcılar", Users, "Yönetim"],
   ["audit", "Denetim kaydı", ScrollText, "Yönetim"],
   ["kvkk", "KVKK", ShieldCheck, "Yönetim"],
 ] as const;
+// Tura ait ayarların bulunduğu sayfalar arasında kısa yollar.
+const RELATED: Record<string, [string, string][]> = {
+  departures: [
+    ["content", "Tur metni, fotoğrafı ve fiyatı → Tur ve site metinleri"],
+    ["operations", "Araç düzeni, satış açık/kapalı ve transfer fiyatları → Araç düzeni ve transfer"],
+  ],
+  operations: [
+    ["departures", "Tarih, saat, rehber ve plaka → Sefer planı"],
+    ["content", "Tur metni, fotoğrafı ve fiyatı → Tur ve site metinleri"],
+  ],
+  content: [
+    ["departures", "Tarih, saat, rehber ve plaka → Sefer planı"],
+    ["operations", "Araç düzeni ve transfer fiyatları → Araç düzeni ve transfer"],
+  ],
+};
+// Menüde açılıp kapanan gruplar (seçim tarayıcıda hatırlanır; içindeki sekme açıksa grup açık görünür).
+const COLLAPSIBLE_GROUPS = ["Yönetim"];
+const NAV_OPEN_KEY = "rota-nav-open-groups";
 type Tab = (typeof ALL_TABS)[number];
 // Telefonda alt çubukta duran sekmeler; diğerleri "Diğer" menüsünde.
 const MOBILE_PRIMARY = ["overview", "reservations", "departures", "daily"];
@@ -174,6 +194,13 @@ function AdminPanel({
     [moreOpen, setMoreOpen] = useState(false),
     [palette, setPalette] = useState(false),
     [counts, setCounts] = useState<Counts | null>(null),
+    [openGroups, setOpenGroups] = useState<string[]>(() => {
+      try {
+        return JSON.parse(localStorage.getItem(NAV_OPEN_KEY) || "[]");
+      } catch {
+        return [];
+      }
+    }),
     mainRef = useRef<HTMLElement>(null),
     navigate = useNavigate();
   useTableLabels(mainRef);
@@ -311,6 +338,14 @@ function AdminPanel({
             ? counts.newRequests
             : 0,
     groups = [...new Set(tabs.map((t) => t[3]))],
+    toggleGroup = (g: string) =>
+      setOpenGroups((cur) => {
+        const next = cur.includes(g) ? cur.filter((x) => x !== g) : [...cur, g];
+        try {
+          localStorage.setItem(NAV_OPEN_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      }),
     pick = (id: string, options: Omit<Nav, "n"> = {}) => {
       setNav((cur) => ({ n: cur.n + 1, ...options }));
       if (id !== tab) setParams({ sekme: id });
@@ -340,10 +375,23 @@ function AdminPanel({
           <kbd>{/Mac|iPhone/.test(navigator.platform) ? "⌘K" : "Ctrl K"}</kbd>
         </button>
         <nav>
-          {groups.map((group) => (
+          {groups.map((group) => {
+            const collapsible = COLLAPSIBLE_GROUPS.includes(group) && groups.length > 1,
+              open = !collapsible || openGroups.includes(group) || tabs.some((t) => t[3] === group && t[0] === tab);
+            return (
             <div className="admin-nav-group" key={group}>
-              {groups.length > 1 && <h2>{group}</h2>}
-              {tabs
+              {groups.length > 1 &&
+                (collapsible ? (
+                  <h2>
+                    <button type="button" className="nav-group-toggle" aria-expanded={open} onClick={() => toggleGroup(group)}>
+                      {group}
+                      <ChevronDown size={14} className={open ? "open" : ""} aria-hidden="true" />
+                    </button>
+                  </h2>
+                ) : (
+                  <h2>{group}</h2>
+                ))}
+              {open && tabs
                 .filter((t) => t[3] === group)
                 .map(([id, label, Icon]) => (
                   <button
@@ -362,7 +410,8 @@ function AdminPanel({
                   </button>
                 ))}
             </div>
-          ))}
+            );
+          })}
         </nav>
         <div className="admin-user-chip">
           <span className="admin-initials" aria-hidden="true">
@@ -453,6 +502,17 @@ function AdminPanel({
         {tab === "users" && <UserManager key={key("users")} currentId={me.user.id} />}
         {tab === "audit" && <AuditLog key={key("audit")} />}
         {tab === "kvkk" && <KvkkTools />}
+        {RELATED[tab] && (
+          // Tur ayarları üç sayfaya dağılmış: hangisinin nerede olduğu her sayfanın başında yazar.
+          <nav className="related-tabs" aria-label="İlgili sayfalar">
+            <span>İlgili:</span>
+            {RELATED[tab].map(([id, text]) => (
+              <button key={id} type="button" className="text-link" onClick={() => pick(id)}>
+                {text}
+              </button>
+            ))}
+          </nav>
+        )}
         {tab === "overview" && <Overview key={key("overview")} go={pick} />}
         {tab === "reservations" && (
           <ReservationManager

@@ -1929,13 +1929,7 @@ export function NotificationManager() {
               }}
             >
               {busy && <LoaderCircle size={15} className="spin" />}
-              Hatırlatmaları ve kuyruğu işle
-            </button>
-            <button
-              className="text-link"
-              onClick={() => load().catch((e) => setError(e.message))}
-            >
-              Yenile
+              Bekleyenleri şimdi gönder
             </button>
           </div>
           {!data.items.length && <p className="admin-empty">Kuyrukta mesaj yok.</p>}
@@ -1956,8 +1950,14 @@ export function NotificationManager() {
                           cancelled: "İptal edildi",
                         } as Record<string, string>
                       )[item.status]
-                    }{" "}
-                    · {item.attempts} deneme
+                    }
+                    {item.status === "sent"
+                      ? item.attempts > 1
+                        ? ` (${item.attempts}. denemede)`
+                        : ""
+                      : item.attempts
+                        ? ` · ${item.attempts} kez denendi`
+                        : ""}
                   </small>
                 </div>
                 <details>
