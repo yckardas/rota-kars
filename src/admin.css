@@ -2620,3 +2620,76 @@
   font-size: 13px;
   color: var(--ink-soft);
 }
+
+/* Bekleme ve ön kayıt: iş önce, ayar katlı */
+.rk-admin .interest-heading {
+  font-size: 16px;
+  margin: 18px 0 10px;
+}
+.rk-admin .interest-settings {
+  margin-top: 24px;
+  border-top: 1px solid var(--mortar);
+  padding-top: 12px;
+}
+.rk-admin .interest-settings summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-bottom: 12px;
+}
+
+/* Kampanya çarkı: dilimler tek tabloda */
+.rk-admin .campaign-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0 12px;
+  font-size: 14px;
+}
+.rk-admin .campaign-table th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--mortar);
+}
+.rk-admin .campaign-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--mortar-soft);
+  vertical-align: middle;
+}
+.rk-admin .campaign-table input,
+.rk-admin .campaign-table select {
+  width: 100%;
+  min-width: 70px;
+  max-width: 140px;
+}
+.rk-admin .campaign-table td[data-label="Şans"] strong {
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 640px) {
+  .rk-admin .campaign-table thead {
+    display: none;
+  }
+  .rk-admin .campaign-table tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--mortar);
+  }
+  .rk-admin .campaign-table td {
+    border: 0;
+    padding: 0;
+  }
+  .rk-admin .campaign-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+  .rk-admin .campaign-table input,
+  .rk-admin .campaign-table select {
+    max-width: none;
+  }
+}

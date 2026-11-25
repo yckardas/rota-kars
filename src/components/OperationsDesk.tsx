@@ -1571,72 +1571,87 @@ export function CampaignManager({ catalog }: { catalog: Catalog }) {
           </label>
           <h2>Çark dilimleri</h2>
           <p className="muted">
-            Her dilim bir indirimdir. Şans, dilimin ağırlığının toplama oranıdır;
-            çarkta bütün dilimler eşit genişlikte görünür, şanslar sitede yazılı
-            olarak gösterilir. 4 ile 8 dilim arası.
+            Her satır çarkta bir dilimdir. "Pay" o dilimin ne sık çıkacağını belirler; şans, payın
+            toplam paya oranıdır ve kendiliğinden hesaplanır. Çarkta dilimler eşit genişlikte görünür,
+            şanslar sitede yazılı gösterilir. 4 ile 8 dilim arası.
           </p>
-          <div className="campaign-sectors">
-            {sectors.map((sec, i) => (
-              <fieldset className="campaign-sector" key={i}>
-                <legend>
-                  {i + 1}. dilim · %{odds[i]} şans
-                </legend>
-                <label className="field">
-                  Tür
-                  <select
-                    value={sec.kind}
-                    onChange={(e) =>
-                      setSector(i, {
-                        kind: e.target.value as WheelSector["kind"],
-                        value: e.target.value === "amount" ? 10000 : 5,
-                      })
-                    }
-                  >
-                    <option value="percent">Yüzde (%)</option>
-                    <option value="amount">Tutar (TL)</option>
-                  </select>
-                </label>
-                <label className="field">
-                  {sec.kind === "amount" ? "İndirim (TL)" : "İndirim (%)"}
-                  <input
-                    type="number"
-                    required
-                    min={sec.kind === "amount" ? 10 : 1}
-                    max={sec.kind === "amount" ? 1000 : 50}
-                    value={sec.kind === "amount" ? sec.value / 100 : sec.value}
-                    onChange={(e) =>
-                      setSector(i, {
-                        value:
-                          sec.kind === "amount"
-                            ? Math.round(Number(e.target.value) * 100)
-                            : Number(e.target.value),
-                      })
-                    }
-                  />
-                </label>
-                <label className="field">
-                  Ağırlık
-                  <input
-                    type="number"
-                    required
-                    min={1}
-                    max={1000}
-                    value={sec.weight}
-                    onChange={(e) => setSector(i, { weight: Number(e.target.value) })}
-                  />
-                </label>
-                {sectors.length > 4 && (
-                  <button
-                    type="button"
-                    className="text-link danger-text"
-                    onClick={() => setSectors(sectors.filter((_, k) => k !== i))}
-                  >
-                    Dilimi kaldır
-                  </button>
-                )}
-              </fieldset>
-            ))}
-          </div>
+          <table className="campaign-table">
+            <thead>
+              <tr>
+                <th>Dilim</th>
+                <th>İndirim</th>
+                <th>Tür</th>
+                <th>Pay</th>
+                <th>Şans</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {sectors.map((sec, i) => (
+                <tr key={i}>
+                  <td data-label="Dilim">{i + 1}</td>
+                  <td data-label="İndirim">
+                    <input
+                      type="number"
+                      required
+                      aria-label={`${i + 1}. dilim indirimi`}
+                      min={sec.kind === "amount" ? 10 : 1}
+                      max={sec.kind === "amount" ? 1000 : 50}
+                      value={sec.kind === "amount" ? sec.value / 100 : sec.value}
+                      onChange={(e) =>
+                        setSector(i, {
+                          value:
+                            sec.kind === "amount"
+                              ? Math.round(Number(e.target.value) * 100)
+                              : Number(e.target.value),
+                        })
+                      }
+                    />
+                  </td>
+                  <td data-label="Tür">
+                    <select
+                      aria-label={`${i + 1}. dilim türü`}
+                      value={sec.kind}
+                      onChange={(e) =>
+                        setSector(i, {
+                          kind: e.target.value as WheelSector["kind"],
+                          value: e.target.value === "amount" ? 10000 : 5,
+                        })
+                      }
+                    >
+                      <option value="percent">% indirim</option>
+                      <option value="amount">TL indirim</option>
+                    </select>
+                  </td>
+                  <td data-label="Pay">
+                    <input
+                      type="number"
+                      required
+                      aria-label={`${i + 1}. dilim payı`}
+                      min={1}
+                      max={1000}
+                      value={sec.weight}
+                      onChange={(e) => setSector(i, { weight: Number(e.target.value) })}
+                    />
+                  </td>
+                  <td data-label="Şans">
+                    <strong>%{odds[i]}</strong>
+                  </td>
+                  <td>
+                    {sectors.length > 4 && (
+                      <button
+                        type="button"
+                        className="text-link danger-text"
+                        onClick={() => setSectors(sectors.filter((_, k) => k !== i))}
+                      >
+                        Kaldır
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
           {sectors.length < 8 && (
             <button
               type="button"
