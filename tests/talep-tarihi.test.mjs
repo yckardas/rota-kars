@@ -131,3 +131,108 @@ test("a demand date with pre-registrations cannot be deleted; a date change carr
   await departure("guneydogu", { id: d.id, price: 250000, date: "2026-10-31" });
   assert.equal((await store.db.one("interest_list", { _id: "k1" })).departure_date, "2026-10-31");
 });
+
+const to = (m) => m.recipient || m.email;
+
+test("pre-registration for a demand date binds to the date's first vehicle", async (t) => {
+  const { store, call, departure, outbox } = await fixture(t);
+  const d = await departure("guneydogu", { price: 250000 });
+  const v2 = await store.departures.addVehicle(d.id);
+  const r = await call("/interest", { kind: "prereg", tourId: "guneydogu", departureId: v2.id, ...person() });
+  assert.equal(r.status, 201, JSON.stringify(r.json));
+  const row = await store.db.one("interest_list", { email: "onkayit@example.com" });
+  assert.equal(row.departure_id, d.id);
+  assert.equal(row.departure_date, DATE);
+  assert.equal(await store.interest.demandCount("guneydogu", d.id), 2);
+  assert.equal(await store.interest.demandCount("guneydogu"), 0, "tarihsiz sayaç ayrı");
+  const mails = await outbox();
+  assert.match(mails.find((m) => to(m) === "onkayit@example.com").body, /2026-10-24/);
+  assert.ok(mails.some((m) => to(m) !== "onkayit@example.com" && /2026-10-24/.test(m.body)), "acenta bildirimi tarihli");
+  const a = await departure("ani-cildir");
+  const sale = await call("/interest", { kind: "prereg", tourId: "ani-cildir", departureId: a.id, ...person() });
+  assert.equal(sale.status, 409);
+  assert.match(sale.json.message, /ön kayıt alınmıyor/);
+  const other = await call("/interest", { kind: "prereg", tourId: "butik-mardin", departureId: d.id, ...person() });
+  assert.equal(other.status, 400, "başka turun seferi");
+});
+
+test("an undated pre-registration does not overwrite a dated one from the same e-mail", async (t) => {
+  const { store, call, departure } = await fixture(t);
+  const d = await departure("guneydogu", { price: 250000 });
+  await call("/interest", { kind: "prereg", tourId: "guneydogu", departureId: d.id, ...person() });
+  const undated = await call("/interest", { kind: "prereg", tourId: "guneydogu", ...person({ count: 3 }) });
+  assert.equal(undated.json.updated, false);
+  const rows = await store.db.find("interest_list", { email: "onkayit@example.com" });
+  assert.equal(rows.length, 2);
+  assert.equal(rows.find((x) => x.departure_id === d.id).count, 2);
+  assert.equal(await store.interest.demandCount("guneydogu"), 3);
+});
+
+test("opening a date e-mails only that date's waiting guests, once", async (t) => {
+  const { store, call, departure, outbox } = await fixture(t);
+  const d1 = await departure("guneydogu", { price: 250000 });
+  const v2 = await store.departures.addVehicle(d1.id);
+  const d2 = await departure("guneydogu", { price: 250000, date: "2026-10-31" });
+  await call("/interest", { kind: "prereg", tourId: "guneydogu", departureId: d1.id, ...person({ email: "a@example.com" }) });
+  await call("/interest", { kind: "prereg", tourId: "guneydogu", departureId: d2.id, ...person({ email: "b@example.com" }) });
+  await call("/interest", { kind: "prereg", tourId: "guneydogu", departureId: d1.id, ...person({ email: "c@example.com" }) });
+  const c = await store.db.one("interest_list", { email: "c@example.com" });
+  await store.interest.setStatus(c.id, "cancelled");
+  const opened = await call(`/admin/departures/${d1.id}/open-sales`, {});
+  assert.equal(opened.status, 200, JSON.stringify(opened.json));
+  assert.equal(opened.json.notified, 1);
+  assert.equal((await store.departures.get(d1.id)).salesOpen, true);
+  assert.equal((await store.departures.get(v2.id)).salesOpen, true, "tarihin tüm araçları açılır");
+  assert.equal((await store.departures.get(d2.id, { allowClosed: true })).demand, true);
+  const sale = (await outbox()).filter((m) => m.kind === "interest_open");
+  assert.deepEqual(sale.map(to), ["a@example.com"]);
+  assert.match(sale[0].action_url, /\?date=2026-10-24$/);
+  assert.match(sale[0].subject, /2026-10-24/);
+  await store.interest.notifyDemandDates();
+  await store.interest.notifyDemandDates();
+  assert.equal((await outbox()).filter((m) => m.kind === "interest_open").length, 1);
+  assert.equal((await call(`/admin/departures/${d1.id}/open-sales`, {})).status, 409, "zaten satışta");
+  const off = await departure("guneydogu", { price: 250000, date: "2026-11-07", active: false });
+  const inactive = await call(`/admin/departures/${off.id}/open-sales`, {});
+  assert.equal(inactive.status, 409);
+  assert.match(inactive.json.message, /aktif/);
+});
+
+test("a date that becomes sellable another way still notifies its guests", async (t) => {
+  const { store, call, departure, outbox } = await fixture(t);
+  const d = await departure("guneydogu", { price: 250000 });
+  await call("/interest", { kind: "prereg", tourId: "guneydogu", departureId: d.id, ...person() });
+  assert.equal((await store.interest.notifyDemandDates()).notified, 0);
+  await departure("guneydogu", { id: d.id, price: 250000, salesMode: "online" });
+  assert.equal((await store.interest.notifyDemandDates()).notified, 1);
+  assert.equal((await outbox()).filter((m) => m.kind === "interest_open").length, 1);
+});
+
+test("tour-wide open keeps pinned demand dates collecting", async (t) => {
+  const { store, call, departure, outbox } = await fixture(t);
+  const d1 = await departure("guneydogu", { price: 250000 });
+  const d2 = await departure("guneydogu", { price: 250000, date: "2026-10-31", salesMode: "demand" });
+  await call("/interest", { kind: "prereg", tourId: "guneydogu", ...person({ email: "u@example.com" }) });
+  await call("/interest", { kind: "prereg", tourId: "guneydogu", departureId: d1.id, ...person({ email: "a@example.com" }) });
+  await call("/interest", { kind: "prereg", tourId: "guneydogu", departureId: d2.id, ...person({ email: "b@example.com" }) });
+  const opened = await call("/admin/operations/guneydogu/open-sales", {});
+  assert.equal(opened.status, 200, JSON.stringify(opened.json));
+  assert.equal(opened.json.notified, 2);
+  const sale = (await outbox()).filter((m) => m.kind === "interest_open");
+  assert.deepEqual(sale.map(to).sort(), ["a@example.com", "u@example.com"]);
+  assert.equal((await store.departures.get(d2.id, { allowClosed: true })).demand, true);
+  assert.equal((await store.db.one("interest_list", { email: "b@example.com" })).status, "waiting");
+});
+
+test("the admin interest view lists each tour's dates with their own counts", async (t) => {
+  const { call, departure } = await fixture(t);
+  const d = await departure("guneydogu", { price: 250000 });
+  await call("/interest", { kind: "prereg", tourId: "guneydogu", departureId: d.id, ...person() });
+  await call("/interest", { kind: "prereg", tourId: "guneydogu", ...person({ email: "u@example.com", count: 5 }) });
+  const tour = (await call("/admin/interest")).json.tours.find((x) => x.id === "guneydogu");
+  assert.equal(tour.preregCount, 5);
+  assert.deepEqual(
+    tour.dates.map((x) => [x.id, x.date, x.count, x.demand]),
+    [[d.id, DATE, 2, true]],
+  );
+});

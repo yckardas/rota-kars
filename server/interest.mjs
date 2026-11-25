@@ -51,15 +51,23 @@ export async function createInterest(db, { clock, tx, departures, operations, no
           if ((await openVehicles(departure)).some((d) => d.available >= input.count))
             throw new AppError(409, "Bu seferde yer var; hemen rezervasyon yapabilirsiniz.");
           departure = { ...departure, id: departure.group_id };
+        } else if (input.departureId) {
+          // Tarihli ön kayıt: talep toplayan tarihe bağlanır (tarihin 1. aracının id'si).
+          departure = await departures.get(input.departureId, { allowClosed: true });
+          if (departure.tour_id !== input.tourId) throw new AppError(400, "Sefer bu tura ait değil.");
+          if (!departure.demand || !departure.active || departure.departed)
+            throw new AppError(409, "Bu tarih için ön kayıt alınmıyor.");
+          departure = { ...departure, id: departure.group_id };
         } else if (ops.mode !== "demand")
           throw new AppError(409, "Bu tur için ön kayıt değil, doğrudan rezervasyon alınıyor.");
         const email = input.email.toLowerCase();
+        // Tarihsiz kayıt yalnız tarihsiz kaydı günceller; tarihli kayıt ezilmez.
         const existing = await db.one("interest_list", {
           email,
           tour_id: input.tourId,
           kind: input.kind,
           status: "waiting",
-          ...(departure ? { departure_id: departure.id } : {}),
+          departure_id: departure?.id ?? null,
         });
         const fields = {
           name: input.name,
@@ -94,7 +102,9 @@ export async function createInterest(db, { clock, tx, departures, operations, no
         const what =
           input.kind === "waitlist"
             ? `${tourName(input.tourId)} · ${departure.date} ${departure.start_time} seferi için bekleme listesine`
-            : `${tourName(input.tourId)} için ön kayda`;
+            : departure
+              ? `${tourName(input.tourId)} · ${departure.date} ${departure.start_time} için ön kayda`
+              : `${tourName(input.tourId)} için ön kayda`;
         if (!existing) {
           // Alıcı başına günlük otomatik yanıt sınırı (farklı turlara art arda kayıtla bir
           // adrese e-posta yağdırılamaz); kayıt ve acente bildirimi yine yapılır. Sayıma
@@ -140,9 +150,49 @@ export async function createInterest(db, { clock, tx, departures, operations, no
       });
     },
     // Talep toplama özeti (site ve panel): bekleyen ön kayıtların toplam kişi sayısı.
-    async demandCount(tourId) {
-      const rows = await db.find("interest_list", { tour_id: tourId, kind: "prereg", status: { $in: ["waiting", "notified"] } });
+    // Tarih verilmezse yalnız tarihsiz kayıtlar sayılır; tarihli sayaçlar tarih başınadır.
+    async demandCount(tourId, departureId = null) {
+      const rows = await db.find("interest_list", {
+        tour_id: tourId,
+        kind: "prereg",
+        status: { $in: ["waiting", "notified"] },
+        departure_id: departureId,
+      });
       return rows.reduce((n, r) => n + (Number(r.count) || 0), 0);
+    },
+    // Sitede gösterilecek talep tarihleri: tarih başına tek satır (1. aracın id'si), aktif,
+    // satış kesimi geçmemiş, rezervasyonu olmayan tarihler.
+    async demandDates(tourId, { withCount = false } = {}) {
+      const rows = (await departures.list({ tourId })).filter(
+        (d) => d.demand && d.active && !d.departed && d.date >= localDate(clock()),
+      );
+      const groups = new Map();
+      for (const d of rows) if (!groups.has(d.group_id) || d.id === d.group_id) groups.set(d.group_id, d);
+      const out = [];
+      for (const [gid, d] of groups) {
+        if (await departures.hasActiveBookings(gid)) continue;
+        out.push({
+          id: gid,
+          date: d.date,
+          start_time: d.start_time,
+          price: d.price,
+          ...(withCount ? { count: await api.demandCount(tourId, gid) } : {}),
+        });
+      }
+      return out.sort((a, b) => (a.date + a.start_time).localeCompare(b.date + b.start_time));
+    },
+    // Panel: turun tarihleri (talep toplayan ya da bekleyen ön kaydı olan) ve sayaçları.
+    async adminDates(tourId) {
+      const rows = (await departures.list({ tourId })).filter((d) => d.date >= localDate(clock()));
+      const groups = new Map();
+      for (const d of rows) if (!groups.has(d.group_id) || d.id === d.group_id) groups.set(d.group_id, d);
+      const out = [];
+      for (const [gid, d] of groups) {
+        const count = await api.demandCount(tourId, gid);
+        if (!d.demand && !count) continue;
+        out.push({ id: gid, date: d.date, start_time: d.start_time, count, demand: d.demand, salesOpen: d.salesOpen });
+      }
+      return out.sort((a, b) => (a.date + a.start_time).localeCompare(b.date + b.start_time));
     },
     async list({ tourId } = {}) {
       return db.find("interest_list", tourId ? { tour_id: tourId } : {}, { sort: { created_at: -1 }, limit: 500 });
@@ -173,8 +223,16 @@ export async function createInterest(db, { clock, tx, departures, operations, no
         threshold: ops.demand.threshold,
         showProgress: ops.demand.showProgress,
       });
-      const waiting = await db.find("interest_list", { tour_id: tourId, kind: "prereg", status: "waiting" });
-      const dates = upcoming
+      // Tarihsiz bekleyenlere tarih listesi; tarihli bekleyenlere yalnız satışa geçen
+      // tarihleri için kendi e-postaları (talepte kalan tarihlere dokunulmaz).
+      const waiting = await db.find("interest_list", {
+        tour_id: tourId,
+        kind: "prereg",
+        status: "waiting",
+        departure_id: null,
+      });
+      const dates = (await departures.list({ tourId }))
+        .filter((d) => d.salesOpen && d.date >= localDate(clock()))
         .slice(0, 6)
         .map((d) => `${d.date} ${d.start_time}`)
         .join(", ");
@@ -191,7 +249,62 @@ export async function createInterest(db, { clock, tx, departures, operations, no
         });
         await db.update("interest_list", { _id: row.id }, { status: "notified", notified_at: clock() });
       }
-      return { notified: waiting.length };
+      const dated = await api.notifyDemandDates({ tourId });
+      return { notified: waiting.length + dated.notified };
+    },
+    // Panel: tek bir talep tarihini satışa aç (tarihin tüm araçları) ve o tarihin
+    // bekleyenlerine hemen haber ver.
+    async openDate(departureId) {
+      return tx(async () => {
+        const d = await departures.get(departureId, { allowClosed: true });
+        if (!d.demand) throw new AppError(409, "Bu tarih zaten satışta.");
+        if (d.departed) throw new AppError(409, "Bu seferin satış süresi geçti.");
+        if (!d.active) throw new AppError(409, "Önce seferi aktif yapın.");
+        if (!(d.price > 0)) throw new AppError(409, "Satışa açmadan önce bu tarihe fiyat girin.");
+        if (!(await operations.get(d.tour_id)).salesOpen)
+          throw new AppError(409, "Tur satışa kapalı; önce turu satışa açın.");
+        const gid = d.group_id;
+        await db.updateMany("departures", { _id: gid }, { sales_mode: "online" });
+        await db.updateMany("departures", { group_id: gid }, { sales_mode: "online" });
+        return api.notifyDemandDates({ tourId: d.tour_id });
+      });
+    },
+    // Talep tarihi satılabilir olunca (Satışa aç, düzenleyicide mod, tur modunun değişmesi,
+    // fiyat/aktiflik) o tarihin bekleyenlerine e-posta. Dakikalık iş ve "Satışa aç" çağırır.
+    async notifyDemandDates({ tourId } = {}) {
+      const waiting = await db.find("interest_list", {
+        kind: "prereg",
+        status: "waiting",
+        departure_id: { $ne: null },
+        ...(tourId ? { tour_id: tourId } : {}),
+      });
+      let notified = 0;
+      const byDeparture = new Map();
+      for (const row of waiting) byDeparture.set(row.departure_id, [...(byDeparture.get(row.departure_id) || []), row]);
+      for (const [departureId, rows] of byDeparture) {
+        let d;
+        try {
+          d = await departures.get(departureId, { allowClosed: true });
+        } catch {
+          continue;
+        }
+        if (!d.salesOpen) continue;
+        for (const row of rows) {
+          await notifications.enqueue({
+            email: row.email,
+            subject: `Rota Kars · ${tourName(d.tour_id)} · ${d.date} kesinleşti, rezervasyon açıldı`,
+            body:
+              `Merhaba ${row.name},\nÖn kayıt bıraktığınız ${tourName(d.tour_id)} · ${d.date} ${d.start_time} için yeterli talep oluştu ve rezervasyon açıldı.\n` +
+              `Ön kaydınız: ${row.count} kişi. Koltuklar ilk rezervasyon yapana ayrılır.`,
+            actionUrl: bookingUrl(d.tour_id, d.date),
+            kind: "interest_open",
+            dedupeKey: "interest-open:" + row.id,
+          });
+          await db.update("interest_list", { _id: row.id }, { status: "notified", notified_at: clock() });
+          notified++;
+        }
+      }
+      return { notified };
     },
     // Arka plan işi (dakikada bir): yer açılan seferin bekleme listesine haber verir.
     async notifyOpenings() {

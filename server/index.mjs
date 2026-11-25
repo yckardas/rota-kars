@@ -66,6 +66,8 @@ const jobs = setInterval(async () => {
     await store.workflow.reminders();
     // Bekleme listesi: yer açılan seferi bekleyenlere haber (e-posta kuyruğuna yazılır).
     await store.interest.notifyOpenings();
+    // Talep tarihi satılabilir olunca o tarihe ön kayıt bırakanlara haber.
+    await store.interest.notifyDemandDates();
     await store.notifications.processBatch();
   } catch (e) {
     console.error(

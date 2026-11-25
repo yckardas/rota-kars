@@ -876,6 +876,16 @@ export function createApp(
       r.json(await store.interest.openSales(id));
     }),
   );
+  // Tek bir talep tarihini satışa aç: tarihin tüm araçları online satışa geçer, o tarihe
+  // ön kayıt bırakanlara rezervasyon bağlantısı gider.
+  app.post(
+    "/api/admin/departures/:id/open-sales",
+    requireAdmin,
+    route(async (q, r) => {
+      const id = z.string().min(1).max(100).parse(q.params.id);
+      r.json(await store.interest.openDate(id));
+    }),
+  );
   app.get(
     "/api/admin/interest",
     requireAdmin,
@@ -890,6 +900,7 @@ export function createApp(
             mode: t.mode,
             demand: t.demand,
             preregCount: await store.interest.demandCount(t.id),
+            dates: await store.interest.adminDates(t.id),
           })),
         ),
       });
