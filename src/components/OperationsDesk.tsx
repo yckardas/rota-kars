@@ -1707,6 +1707,7 @@ export function DailyReport({ catalog }: { catalog: Catalog }) {
   );
 }
 export function NotificationManager() {
+  const feedback = useFeedback();
   const [data, setData] = useState<{
       configured: boolean;
       preview: boolean;
@@ -1787,6 +1788,7 @@ export function NotificationManager() {
                           sending: "Gönderiliyor",
                           sent: "Gönderildi",
                           failed: "Başarısız",
+                          cancelled: "İptal edildi",
                         } as Record<string, string>
                       )[item.status]
                     }{" "}
@@ -1807,24 +1809,55 @@ export function NotificationManager() {
                     </a>
                   )}
                 </details>
-                {item.last_error && <p className="error">{item.last_error}</p>}
-                {item.status === "failed" && (
-                  <button
-                    className="text-link"
-                    onClick={async () => {
-                      try {
-                        await post(
-                          "/admin/notifications/" + item.id + "/retry",
-                          {},
-                        );
-                        await load();
-                      } catch (e) {
-                        setError((e as Error).message);
-                      }
-                    }}
-                  >
-                    Yeniden kuyruğa al
-                  </button>
+                {item.last_error && item.status !== "cancelled" && (
+                  <p className="error">{item.last_error}</p>
+                )}
+                {(item.status === "queued" || item.status === "failed") && (
+                  <div className="button-row">
+                    {item.status === "failed" && (
+                      <button
+                        className="text-link"
+                        onClick={async () => {
+                          try {
+                            await post(
+                              "/admin/notifications/" + item.id + "/retry",
+                              {},
+                            );
+                            await load();
+                          } catch (e) {
+                            setError((e as Error).message);
+                          }
+                        }}
+                      >
+                        Yeniden kuyruğa al
+                      </button>
+                    )}
+                    <button
+                      className="text-link"
+                      onClick={async () => {
+                        const ok = await feedback.confirm({
+                          title: "Mesaj gönderilmesin mi?",
+                          body: `"${item.subject}" · ${item.recipient}. Mesaj listede "İptal edildi" olarak kalır, bir daha gönderilmez.`,
+                          confirmLabel: "Göndermeyi iptal et",
+                          danger: true,
+                        });
+                        if (!ok) return;
+                        setError("");
+                        try {
+                          await post(
+                            "/admin/notifications/" + item.id + "/cancel",
+                            {},
+                          );
+                          feedback.ok("Mesaj iptal edildi.");
+                        } catch (e) {
+                          setError((e as Error).message);
+                        }
+                        await load().catch(() => {});
+                      }}
+                    >
+                      Göndermeyi iptal et
+                    </button>
+                  </div>
                 )}
               </article>
             ))}

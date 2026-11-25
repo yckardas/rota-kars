@@ -561,6 +561,14 @@ export function attachAdvancedApi(
     }),
   );
   app.post(
+    "/api/admin/notifications/:id/cancel",
+    requireAdmin,
+    route(async (q, r) => {
+      await store.notifications.cancel(z.string().uuid().parse(q.params.id));
+      r.json({ ok: true });
+    }),
+  );
+  app.post(
     "/api/admin/notifications/process",
     requireAdmin,
     route(async (_q, r) => {

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import nodemailer from "nodemailer";
 import { renderMail } from "./mail-template.mjs";
+import { AppError } from "./store.mjs";
 export async function createNotifications(db, { clock, tx, env = {}, push = null }) {
   await Promise.all([
     db.index("notification_outbox", { id: 1 }, { unique: true }),
@@ -114,6 +115,16 @@ export async function createNotifications(db, { clock, tx, env = {}, push = null
           { id, status: "failed" },
           { status: "queued", attempts: 0, next_attempt_at: clock(), last_error: null },
         );
+    },
+    // Yönetici bekleyen veya başarısız bir mesajı göndermekten vazgeçebilir. Kayıt silinmez,
+    // "cancelled" olarak listede kalır; gönderilen ya da o an gönderilmekte olan mesaja dokunulmaz.
+    async cancel(id) {
+      const n = await db.update(
+        "notification_outbox",
+        { id, status: { $in: ["queued", "failed"] } },
+        { status: "cancelled", lease_until: 0, cancelled_at: clock() },
+      );
+      if (!n) throw new AppError(409, "Bu mesaj gönderildi ya da şu an gönderiliyor; iptal edilemez.");
     },
     async processBatch({
       send = transport
