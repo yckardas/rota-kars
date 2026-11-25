@@ -229,6 +229,7 @@ export type Reservation = {
     method: string;
     external_reference: string;
     note?: string;
+    recorded_by?: { id: string | null; name: string } | null;
     created_at?: number;
   }[];
   vehicle?: Vehicle | null;

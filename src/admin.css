@@ -2513,3 +2513,7 @@
     display: none;
   }
 }
+/* Rezervasyon listesi: iptal ve süresi dolan kayıtlar soluk */
+.rk-admin .desk-table tr.row-inactive td {
+  opacity: 0.6;
+}

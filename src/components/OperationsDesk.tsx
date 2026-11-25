@@ -406,7 +406,7 @@ export function DepartureManager({
                   {d.date >= today() && !d.demand && (
                     <button className="text-link" onClick={() => setClosing(d.id)}>
                       <Armchair size={14} />
-                      Koltuk kapat
+                      Rezervasyon ekle
                     </button>
                   )}
                   {d.date >= today() && (
@@ -733,7 +733,7 @@ function DepartureEditor({
         </button>
         {closeSeats && (
           <button className="btn btn-outline" type="button" onClick={closeSeats}>
-            <Armchair size={16} /> Koltuk kapat (telefon rezervasyonu)
+            <Armchair size={16} /> Bu sefere rezervasyon ekle
           </button>
         )}
         {openDate && (
@@ -828,7 +828,9 @@ export function ReservationManager({
     [loading, setLoading] = useState(true),
     [selected, setSelected] = useState(openRef.toUpperCase()),
     [busy, setBusy] = useState(false),
-    [date, setDate] = useState(""),
+    // Tur tarihi aralığı (iki uç dahil); boşsa tüm tarihler.
+    [from, setFrom] = useState(""),
+    [to, setTo] = useState(""),
     [filter, setFilter] = useState(initialFlag ? "flag:" + initialFlag : initialStatus),
     [search, setSearch] = useState(openRef),
     [query, setQuery] = useState(openRef),
@@ -841,7 +843,8 @@ export function ReservationManager({
   }, [search]);
   async function load() {
     const params = new URLSearchParams();
-    if (date) params.set("date", date);
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
     if (filter.startsWith("flag:")) params.set("flag", filter.slice(5));
     else if (filter) params.set("status", filter);
     if (query) params.set("q", query);
@@ -856,7 +859,7 @@ export function ReservationManager({
   useEffect(() => {
     setShown(PAGE);
     load();
-  }, [date, filter, query]);
+  }, [from, to, filter, query]);
   async function action(ref: string, path: string, body: unknown = {}, done = "Kaydedildi.") {
     setBusy(true);
     try {
@@ -872,6 +875,12 @@ export function ReservationManager({
     }
   }
   const tourName = (id: string) => catalog.tours.find((t) => t.id === id)?.name || id;
+  // "Tümü"nde iptal ve süresi dolan kayıtlar en sona iner (kendi içinde en yeni üstte kalır).
+  const ordered = filter
+    ? rows
+    : [...rows].sort(
+        (a, b) => Number(["cancelled", "expired"].includes(a.status)) - Number(["cancelled", "expired"].includes(b.status)),
+      );
   function exportCsv() {
     downloadCsv("rezervasyonlar-" + today() + ".csv", [
       ["Referans", "Durum", "Tur", "Tarih", "Saat", "Koltuk", "Müşteri", "Telefon", "E-posta", "Yolcular", "Toplam", "Net tahsilat", "Kalan", "Not"],
@@ -899,8 +908,8 @@ export function ReservationManager({
       <div className="desk-toolbar">
         {canCreate && (
           <button className="btn" onClick={() => setCreating(true)}>
-            <Armchair size={16} />
-            Koltuk kapat / rezervasyon
+            <Plus size={16} />
+            Yeni rezervasyon
           </button>
         )}
         <label className="field reservation-search">
@@ -914,14 +923,37 @@ export function ReservationManager({
           />
         </label>
         <label className="field">
-          Tur günü
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          Tur tarihi · başlangıç
+          <input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} />
+        </label>
+        <label className="field">
+          Bitiş
+          <input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} />
         </label>
         <div className="desk-toolbar-actions">
-          <button className="text-link" onClick={load}>
-            <RefreshCw size={15} />
-            Yenile
+          <button
+            className="text-link"
+            onClick={() => {
+              const start = today(),
+                d = new Date(start + "T12:00:00Z");
+              d.setUTCDate(d.getUTCDate() + ((7 - d.getUTCDay()) % 7));
+              setFrom(start);
+              setTo(d.toISOString().slice(0, 10));
+            }}
+          >
+            Bu hafta
           </button>
+          {(from || to) && (
+            <button
+              className="text-link"
+              onClick={() => {
+                setFrom("");
+                setTo("");
+              }}
+            >
+              Tarihi temizle
+            </button>
+          )}
           {!isNativeApp() && rows.length > 0 && (
             <button className="text-link" onClick={exportCsv}>
               <Download size={15} />
@@ -955,10 +987,11 @@ export function ReservationManager({
             </tr>
           </thead>
           <tbody>
-            {rows.slice(0, shown).map((r) => {
+            {ordered.slice(0, shown).map((r) => {
               const wa = waNumber(r.phone);
+              const inactive = ["cancelled", "expired"].includes(r.status);
               return (
-                <tr key={r.reference} className="clickable-row" onClick={() => setSelected(r.reference)}>
+                <tr key={r.reference} className={"clickable-row" + (inactive ? " row-inactive" : "")} onClick={() => setSelected(r.reference)}>
                   <td>
                     <strong>{r.reference}</strong>
                     <small>
@@ -980,7 +1013,10 @@ export function ReservationManager({
                         </>
                       )}
                     </small>
-                    <small>{r.passengers.join(", ")}</small>
+                    {/* Tek yolcu iletişim kişisiyle aynıysa tekrar yazılmaz. */}
+                    {!(r.passengers.length === 1 && r.passengers[0].trim().toLocaleLowerCase("tr") === r.name.trim().toLocaleLowerCase("tr")) && (
+                      <small>{r.passengers.join(", ")}</small>
+                    )}
                     {r.notes && <small className="row-note">Not: {r.notes}</small>}
                     {r.transfer && (
                       <small className="row-note">
@@ -1473,6 +1509,7 @@ function BookingControls({
                 {stamp(p.created_at)} · {p.kind === "refund" ? "İade" : "Tahsilat"} · {currency(p.amount)} ·{" "}
                 {methodLabel(p.method)}
                 {receiptText(p) && ` · ${receiptText(p)}`}
+                {p.recorded_by?.name && ` · kaydeden: ${p.recorded_by.name}`}
               </p>
             ))}
           </div>

@@ -1568,6 +1568,7 @@ export function createApp(
           externalReference: refund.requestId ? "PANEL-" + refund.requestId : undefined,
           note: refund.note ?? refund.externalReference ?? "",
           kind: "refund",
+          by: q.admin,
         });
         refundResult = { status: "succeeded", amount: refund.amount, message: "İade kaydedildi." };
       }

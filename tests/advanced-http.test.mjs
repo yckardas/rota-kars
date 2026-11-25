@@ -332,3 +332,24 @@ test("integrations endpoint reports the real payment and e-mail setup", async (t
   assert.equal(on.email.delivery, "resend");
   assert.ok(!JSON.stringify(on).includes("re_test"), "anahtar istemciye gitmez");
 });
+
+test("reservation list filters by a tour date range; manual payments record who entered them", async (t) => {
+  const { store: s, req, login } = await fixture(t);
+  await login();
+  const deps = await s.listDepartures("ani-cildir");
+  const [d1, d2, d3] = [deps[0], deps[1], deps[2]];
+  const book = async (d, seat) => {
+    const h = await s.hold(d.id, [seat]);
+    return s.reserve({ holdToken: h.token, name: "Aralık " + d.date, email: "aralik@example.com", phone: "05550000000", passengers: ["Aralık"], paymentMode: "deposit" });
+  };
+  const a = await book(d1, 2),
+    b = await book(d2, 2);
+  await book(d3, 2);
+  const list = await (await req(`/admin/reservations?from=${d1.date}&to=${d2.date}`)).json();
+  assert.deepEqual(list.map((r) => r.reference).sort(), [a.reference, b.reference].sort());
+  assert.equal((await req(`/admin/reservations?from=${d2.date}&to=${d1.date}`)).status, 400);
+  // Elle tahsilat kaydı, kaydeden yöneticiyi taşır.
+  await req("/admin/reservations/" + a.reference + "/payments", { amount: 1000, method: "cash", note: "elden", recordedExternally: true });
+  const row = (await s.workflow.get(a.reference)).ledger[0];
+  assert.ok(row.recorded_by?.name, "kaydeden adı yazılır: " + JSON.stringify(row.recorded_by));
+});

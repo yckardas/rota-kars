@@ -281,10 +281,13 @@ export function attachAdvancedApi(
       const input = z
         .object({
           date: ymd.optional(),
+          from: ymd.optional(),
+          to: ymd.optional(),
           status: z.enum(["pending_agency", "confirmed", "cancelled", "expired", "completed", "no_show"]).optional(),
           q: z.string().max(80).optional(),
           flag: z.enum(["cancel_request", "balance"]).optional(),
         })
+        .refine((x) => !x.from || !x.to || x.from <= x.to, { message: "Başlangıç tarihi bitişten sonra olamaz." })
         .parse(q.query);
       await store.cleanup();
       r.json(await store.workflow.list(input));
@@ -419,6 +422,7 @@ export function attachAdvancedApi(
             externalReference: input.requestId ? "PANEL-" + input.requestId : undefined,
             note: input.note ?? input.externalReference ?? "",
             kind,
+            by: q.admin,
           }),
         );
       }),

@@ -164,7 +164,7 @@ export function NewReservation({
     );
   }
   return (
-    <Modal title="Koltuk kapat · telefon rezervasyonu" onClose={onClose} wide>
+    <Modal title="Yeni rezervasyon · telefon / WhatsApp" onClose={onClose} wide>
       <form className="admin-editor new-reservation" onSubmit={submit}>
         <p className="muted">
           Telefon veya WhatsApp ile satılan koltukları kapatın: seçtiğiniz koltuklar sitede satıştan düşer. Yolcu,
