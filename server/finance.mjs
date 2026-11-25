@@ -41,11 +41,18 @@ export function matchTours(notes) {
   return [...new Set(kept.flatMap((kw) => TOUR_KEYWORDS.find(([k]) => k === kw)[1]))];
 }
 
-// "Önceki tur" fiyatı: bugünden önceki en son sefer; yoksa en yakın gelecek sefer; yoksa katalog.
-export function unitPrice(tourId, departures, today, tours) {
+// "Önceki tur" fiyatı: bugünden önceki en son seferde müşterilerin ödediği koltuk fiyatı
+// (rezervasyonun o anki subtotal'ı / koltuk); o seferde satış yoksa seferin fiyatı;
+// geçmiş sefer yoksa en yakın gelecek sefer; o da yoksa katalog.
+export function unitPrice(tourId, departures, today, tours, reservations = []) {
   const own = departures.filter((d) => d.tour_id === tourId && Number(d.price) > 0);
   const past = own.filter((d) => d.date < today).sort((a, b) => b.date.localeCompare(a.date));
-  if (past.length) return Number(past[0].price);
+  if (past.length) {
+    const paid = reservations
+      .filter((r) => r.departure_id === past[0].id && !["cancelled", "expired"].includes(r.status) && Number(r.subtotal) > 0 && r.seats?.length)
+      .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+    return paid.length ? Math.round(Number(paid[0].subtotal) / paid[0].seats.length) : Number(past[0].price);
+  }
   const next = own.filter((d) => d.date >= today).sort((a, b) => a.date.localeCompare(b.date));
   if (next.length) return Number(next[0].price);
   const t = tours.find((x) => x.id === tourId);
@@ -53,12 +60,12 @@ export function unitPrice(tourId, departures, today, tours) {
 }
 
 const ESTIMATED_KINDS = ["tour-info", "private-tour"];
-export function requestEstimate(req, { departures, tours, today }) {
+export function requestEstimate(req, { departures, tours, today, reservations = [] }) {
   if (!ESTIMATED_KINDS.includes(req.kind)) return null;
   const body = req.body || {};
   const candidates = body.tourId ? [body.tourId] : matchTours(body.notes);
   const priced = candidates
-    .map((id) => ({ id, price: unitPrice(id, departures, today, tours) }))
+    .map((id) => ({ id, price: unitPrice(id, departures, today, tours, reservations) }))
     .filter((x) => x.price != null);
   if (!priced.length) return null;
   const average = Math.round(priced.reduce((n, x) => n + x.price, 0) / priced.length);
@@ -78,6 +85,32 @@ const live = (r) => !["cancelled", "expired"].includes(r.status);
 const balanceOf = (r) => Math.max(0, Number(r.total) - Number(r.net_paid || 0));
 const sum = (rows, f) => rows.reduce((n, x) => n + f(x), 0);
 const METHOD_KEYS = { cash: "cash", bank_transfer: "bankTransfer", pos: "pos", "online:vakifbank": "card" };
+
+// Tur bazında satış (Finans ve Aylık rapor ortak): katalog sırası, sonra katalogdan kalkmış turlar.
+// reservations: dönemdeki canlı rezervasyonlar; departures: dönemdeki seferler.
+export function tourRows({ tours, departures, reservations }) {
+  const name = (id) => tours.find((t) => t.id === id)?.name || id;
+  const ids = [...tours.map((t) => t.id), ...new Set(reservations.map((r) => r.tourId).filter((id) => !tours.some((t) => t.id === id)))];
+  return ids
+    .map((id) => {
+      const tds = departures.filter((d) => d.tour_id === id),
+        trs = reservations.filter((r) => r.tourId === id),
+        capacity = sum(tds, (d) => d.vehicle?.sellableSeats || 0),
+        guests = sum(trs, (r) => r.seats.length);
+      return {
+        tourId: id,
+        tourName: name(id),
+        departures: tds.length,
+        capacity,
+        guests,
+        occupancy: capacity ? Math.round((guests / capacity) * 100) : 0,
+        reservations: trs.length,
+        revenue: sum(trs, (r) => Number(r.total)),
+        collected: sum(trs, (r) => Number(r.net_paid || 0)),
+      };
+    })
+    .filter((x) => x.departures || x.reservations);
+}
 
 export function buildFinance({ reservations, ledger, departures, requests, tours, today, from, to, bucket = "day" }) {
   const tourName = (id) => tours.find((t) => t.id === id)?.name || id;
@@ -115,31 +148,10 @@ export function buildFinance({ reservations, ledger, departures, requests, tours
   });
   const person = (r) => ({ reference: r.reference, name: r.name, phone: r.phone, tourName: tourName(r.tourId), date: r.date });
 
-  // Tur bazında satış: Aylık rapordaki byTour ile aynı tanım (katalog sırası, sonra bilinmeyen turlar).
-  const periodDeps = departures.filter((d) => inRange(d.date));
-  const tourIds = [...tours.map((t) => t.id), ...new Set(sold.map((r) => r.tourId).filter((id) => !tours.some((t) => t.id === id)))];
-  const byTour = tourIds
-    .map((id) => {
-      const tds = periodDeps.filter((d) => d.tour_id === id),
-        trs = sold.filter((r) => r.tourId === id),
-        capacity = sum(tds, (d) => d.vehicle?.sellableSeats || 0),
-        guests = sum(trs, (r) => r.seats.length);
-      return {
-        tourId: id,
-        tourName: tourName(id),
-        departures: tds.length,
-        capacity,
-        guests,
-        occupancy: capacity ? Math.round((guests / capacity) * 100) : 0,
-        reservations: trs.length,
-        revenue: sum(trs, (r) => Number(r.total)),
-        collected: sum(trs, (r) => Number(r.net_paid || 0)),
-      };
-    })
-    .filter((x) => x.departures || x.reservations);
+  const byTour = tourRows({ tours, departures: departures.filter((d) => inRange(d.date)), reservations: sold });
 
   // Talep hattı: dönemde gelen talepler; tahmin yalnız turla eşleşenlere.
-  const ctx = { departures, tours, today };
+  const ctx = { departures, tours, today, reservations };
   const periodRequests = requests.filter((q) => inRange(localDate(q.created_at)));
   const stages = Object.entries(REQUEST_STATUS).map(([status, label]) => {
     const rows = periodRequests.filter((q) => q.status === status),
@@ -169,7 +181,9 @@ export function buildFinance({ reservations, ledger, departures, requests, tours
             .sort((a, b) => a.created_at - b.created_at)
             .map((p) => {
               const r = byId.get(p.reservation_id);
-              return { at: p.created_at, reference: r?.reference || "", name: r?.name || "", kind: p.kind, method: p.method, amount: p.amount, note: p.note || "" };
+              // Eski kayıtlarda dekont numarası external_reference'tadır; iç referans (PANEL-…) gösterilmez.
+              const note = p.note || (String(p.external_reference || "").startsWith("PANEL-") ? "" : p.external_reference || "");
+              return { at: p.created_at, reference: r?.reference || "", name: r?.name || "", kind: p.kind, method: p.method, amount: p.amount, note };
             }),
         }
       : null;

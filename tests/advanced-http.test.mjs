@@ -252,3 +252,27 @@ test("manual payment retried with the same form id is recorded once; refund too"
   assert.equal((await refund()).status, 200);
   assert.equal((await s.workflow.get(r.reference)).net_paid, 1000);
 });
+
+test("finance endpoint: readable date messages and a one-year (366 day) limit", async (t) => {
+  const { req, login } = await fixture(t);
+  await login();
+  for (const q of ["from=bozuk&to=2026-11-30", "to=2026-11-30"]) {
+    const r = await req("/admin/finance?" + q);
+    assert.equal(r.status, 400);
+    assert.match((await r.json()).message, /tarih/i, q);
+  }
+  assert.equal((await req("/admin/finance?from=2026-01-01&to=2027-01-01")).status, 200, "366 gün (iki uç dahil)");
+  assert.equal((await req("/admin/finance?from=2026-01-01&to=2027-01-02")).status, 400, "367 gün");
+});
+
+test("manual payment accepts the note under its own name; externalReference stays as a legacy alias", async (t) => {
+  const { store: s, req, login } = await fixture(t),
+    d = (await s.listDepartures("ani-cildir"))[0];
+  await login();
+  const h = await s.hold(d.id, [6]);
+  const r = await s.reserve({ holdToken: h.token, name: "Not Adı", email: "notadi@example.com", phone: "05550000000", passengers: ["Not Adı"], paymentMode: "deposit" });
+  const post = (body) => req("/admin/reservations/" + r.reference + "/payments", { amount: 1000, method: "cash", recordedExternally: true, ...body });
+  assert.equal((await post({ note: "yeni ad" })).status, 200);
+  assert.equal((await post({ externalReference: "eski ad" })).status, 200);
+  assert.deepEqual((await s.workflow.get(r.reference)).ledger.map((p) => p.note).sort(), ["eski ad", "yeni ad"]);
+});

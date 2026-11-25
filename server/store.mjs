@@ -564,7 +564,7 @@ export async function openStore(
               amount: input.payment.amount,
               method: input.payment.method,
               externalReference: "PANEL-" + r.reference,
-              note: input.payment.externalReference || "",
+              note: input.payment.note ?? input.payment.externalReference ?? "",
               kind: "payment",
             });
           if (input.confirm) await workflow.confirm(r.reference, { belowDeposit: Boolean(input.belowDeposit) });

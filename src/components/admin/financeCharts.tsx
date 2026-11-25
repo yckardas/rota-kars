@@ -2,7 +2,8 @@ import { currency } from "../../lib/types";
 
 // Finans paneli grafikleri: kütüphanesiz, CSS ile çizilir; dar ekranda sıkışır, kaymaz.
 
-const pct = (v: number, max: number) => (max > 0 ? Math.max(0, Math.min(100, (v / max) * 100)) : 0);
+const pct = (v: number, max: number) =>
+  max > 0 ? Math.max(0, Math.min(100, (v / max) * 100)) : 0;
 
 // Dilim başına yan yana iki çubuk (ör. ciro ve tahsilat). Etiketler kalabalıksa seyreltilir.
 export function BarPairs({
@@ -14,22 +15,45 @@ export function BarPairs({
   aLabel: string;
   bLabel: string;
 }) {
-  const max = Math.max(0, ...data.map((d) => Math.max(d.a, d.b)));
+  // İadenin tahsilattan fazla olduğu gün eksi değer taşır: çubuk kırmızı çizilir.
+  const max = Math.max(
+    0,
+    ...data.map((d) => Math.max(Math.abs(d.a), Math.abs(d.b))),
+  );
   const every = Math.max(1, Math.ceil(data.length / 10));
+  const negative = data.some((d) => d.b < 0);
   return (
     <figure className="finance-chart">
       <div className="finance-legend">
         <span className="swatch a" /> {aLabel}
         <span className="swatch b" /> {bLabel}
+        {negative && (
+          <>
+            <span className="swatch neg" /> İade fazlası
+          </>
+        )}
       </div>
-      <div className="finance-bars" role="img" aria-label={`${aLabel} ve ${bLabel} grafiği`}>
+      <div
+        className="finance-bars"
+        role="img"
+        aria-label={`${aLabel} ve ${bLabel} grafiği`}
+      >
         {data.map((d, i) => (
-          <div key={d.key} className="finance-bar-col" title={`${d.label}\n${aLabel}: ${currency(d.a)}\n${bLabel}: ${currency(d.b)}`}>
+          <div
+            key={d.key}
+            className="finance-bar-col"
+            title={`${d.label}\n${aLabel}: ${currency(d.a)}\n${bLabel}: ${currency(d.b)}`}
+          >
             <div className="finance-bar-pair">
               <span className="bar a" style={{ height: pct(d.a, max) + "%" }} />
-              <span className="bar b" style={{ height: pct(d.b, max) + "%" }} />
+              <span
+                className={"bar " + (d.b < 0 ? "neg" : "b")}
+                style={{ height: pct(Math.abs(d.b), max) + "%" }}
+              />
             </div>
-            <small className={(i / every) % 2 ? "alt" : ""}>{i % every === 0 ? d.label : ""}</small>
+            <small className={(i / every) % 2 ? "alt" : ""}>
+              {i % every === 0 ? d.label : ""}
+            </small>
           </div>
         ))}
       </div>
@@ -55,16 +79,23 @@ export function DayBars({
         <button
           key={d.key}
           type="button"
-          className={"finance-bar-col" + (selected === d.key ? " selected" : "")}
+          className={
+            "finance-bar-col" + (selected === d.key ? " selected" : "")
+          }
           title={`${d.label}: ${currency(d.value)} · ${d.count} kayıt`}
           aria-label={`${d.label}: ${currency(d.value)}, ${d.count} kayıt`}
           aria-pressed={selected === d.key}
           onClick={() => onSelect(selected === d.key ? "" : d.key)}
         >
           <div className="finance-bar-pair">
-            <span className="bar c" style={{ height: pct(d.value, max) + "%" }} />
+            <span
+              className="bar c"
+              style={{ height: pct(d.value, max) + "%" }}
+            />
           </div>
-          <small className={(i / every) % 2 ? "alt" : ""}>{i % every === 0 ? d.label : ""}</small>
+          <small className={(i / every) % 2 ? "alt" : ""}>
+            {i % every === 0 ? d.label : ""}
+          </small>
         </button>
       ))}
     </div>
@@ -75,7 +106,14 @@ export function DayBars({
 export function HBars({
   rows,
 }: {
-  rows: { key: string; label: string; value: number; sub?: string; estimate?: boolean; fill?: number }[];
+  rows: {
+    key: string;
+    label: string;
+    value: number;
+    sub?: string;
+    estimate?: boolean;
+    fill?: number;
+  }[];
 }) {
   const max = Math.max(0, ...rows.map((r) => r.value));
   return (
@@ -101,13 +139,28 @@ export function HBars({
 }
 
 // Tek yığılmış çubuk + açıklama (ödeme yöntemleri).
-export function StackBar({ parts }: { parts: { key: string; label: string; value: number; tone: string }[] }) {
+export function StackBar({
+  parts,
+}: {
+  parts: { key: string; label: string; value: number; tone: string }[];
+}) {
   const total = parts.reduce((n, p) => n + Math.max(0, p.value), 0);
   return (
     <div className="finance-stack">
-      <div className="finance-stack-bar" role="img" aria-label="Ödeme yöntemi payları">
+      <div
+        className="finance-stack-bar"
+        role="img"
+        aria-label="Ödeme yöntemi payları"
+      >
         {parts.map((p) =>
-          p.value > 0 ? <span key={p.key} className={"tone-" + p.tone} style={{ width: pct(p.value, total) + "%" }} title={p.label} /> : null,
+          p.value > 0 ? (
+            <span
+              key={p.key}
+              className={"tone-" + p.tone}
+              style={{ width: pct(p.value, total) + "%" }}
+              title={p.label}
+            />
+          ) : null,
         )}
       </div>
       <ul>
@@ -115,7 +168,10 @@ export function StackBar({ parts }: { parts: { key: string; label: string; value
           <li key={p.key}>
             <span className={"swatch tone-" + p.tone} /> {p.label}
             <strong>{currency(p.value)}</strong>
-            <small>%{total > 0 ? Math.round((Math.max(0, p.value) / total) * 100) : 0}</small>
+            <small>
+              %
+              {total > 0 ? Math.round((Math.max(0, p.value) / total) * 100) : 0}
+            </small>
           </li>
         ))}
       </ul>

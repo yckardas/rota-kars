@@ -1123,7 +1123,7 @@ function BookingControls({
         {
           amount: Math.round(Number(f.get("amount")) * 100),
           method: f.get("method"),
-          externalReference: f.get("externalReference"),
+          note: f.get("externalReference"),
           recordedExternally: f.get("recordedExternally") === "on",
           // Yeniden denemede aynı kimlik gider; sunucu işlemi ikinci kez yazmaz.
           requestId: entryId,

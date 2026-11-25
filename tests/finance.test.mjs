@@ -54,7 +54,7 @@ test("requestEstimate: tourId önceliklidir; nottan çoklu eşleşmede ortalama;
 });
 
 // ---- buildFinance ----
-import { buildFinance } from "../server/finance.mjs";
+import { buildFinance, tourRows } from "../server/finance.mjs";
 import { openStore } from "../server/store.mjs";
 
 const at = (ymd, hm = "12:00") => Date.parse(`${ymd}T${hm}:00+03:00`);
@@ -243,4 +243,65 @@ test("financeReport matches monthReport for a month", async (t) => {
   assert.equal(f.summary.revenue, m.totals.revenue);
   assert.equal(f.summary.collected, m.cash.net);
   assert.equal(f.methods.pos, m.cash.pos);
+});
+
+// ---- inceleme sonrası küçük bulgular ----
+import { roleAllows } from "../server/admin-auth.mjs";
+
+test("unitPrice uses what past customers actually paid (subtotal per seat) over today's price", () => {
+  const deps = [{ id: "d-old", tour_id: "batum", date: "2026-10-01", price: 250000 }];
+  const tours = [{ id: "batum", price: 250000 }];
+  const rs = [
+    { departure_id: "d-old", tourId: "batum", status: "completed", seats: [1, 2], subtotal: 400000, created_at: 1 },
+    { departure_id: "d-old", tourId: "batum", status: "cancelled", seats: [3], subtotal: 999999, created_at: 2 },
+  ];
+  assert.equal(unitPrice("batum", deps, "2026-11-25", tours, rs), 200000, "o seferde satılan koltuk fiyatı");
+  assert.equal(unitPrice("batum", deps, "2026-11-25", tours, []), 250000, "satış yoksa seferin fiyatı");
+});
+
+test("day view shows legacy receipt numbers but hides internal PANEL- references", () => {
+  const r = res({ date: "2026-11-10" });
+  const f = buildFinance(
+    input({
+      from: "2026-11-10",
+      to: "2026-11-10",
+      reservations: [r],
+      ledger: [
+        { ...led(r, 100, "2026-11-10", { hm: "09:00" }), note: undefined, external_reference: "EFT-123" },
+        { ...led(r, 200, "2026-11-10", { hm: "10:00" }), note: "", external_reference: "PANEL-abc" },
+      ],
+    }),
+  );
+  assert.deepEqual(f.day.ledger.map((p) => p.note), ["EFT-123", ""]);
+});
+
+test("guide cannot open the finance endpoint; operations can", () => {
+  assert.equal(roleAllows("guide", "GET", "/api/admin/finance"), false);
+  assert.equal(roleAllows("operations", "GET", "/api/admin/finance"), true);
+});
+
+test("tourRows (shared by Finans and Aylık rapor) keeps a tour that left the catalog", () => {
+  const rows = tourRows({
+    tours: [{ id: "batum", name: "Günübirlik Batum" }],
+    departures: [{ id: "d1", tour_id: "batum", date: "2026-11-10", vehicle: { sellableSeats: 18 } }],
+    reservations: [res({ tourId: "katalogdan-kalkan", total: 150000, net_paid: 50000, seats: [1, 2] })],
+  });
+  assert.deepEqual(rows.map((x) => [x.tourId, x.tourName, x.revenue, x.collected, x.guests]), [
+    ["batum", "Günübirlik Batum", 0, 0, 0],
+    ["katalogdan-kalkan", "katalogdan-kalkan", 150000, 50000, 2],
+  ]);
+});
+
+test("online payment without a bank reference is refused instead of silently getting a random one", async (t) => {
+  const s = await openStore(":memory:");
+  t.after(() => s.db.close());
+  const d = (await s.listDepartures("ani-cildir"))[0];
+  const h = await s.hold(d.id, [7]);
+  const r = await s.reserve({ holdToken: h.token, name: "Kart Yolcu", email: "kart@example.com", phone: "05550000000", passengers: ["Kart Yolcu"], paymentMode: "deposit" });
+  await assert.rejects(s.workflow.payment(r.reference, { amount: 1000, method: "online:vakifbank" }), (e) => e.status === 500);
+  await assert.rejects(s.workflow.payment(r.reference, { amount: 1000, method: "online:vakifbank", externalReference: "" }), (e) => e.status === 500);
+  assert.equal((await s.workflow.get(r.reference)).ledger.length, 0);
+  // Elle yöntemlerde iç referans otomatik üretilir.
+  await s.workflow.payment(r.reference, { amount: 1000, method: "cash", note: "elden" });
+  assert.equal((await s.workflow.get(r.reference)).ledger.length, 1);
 });

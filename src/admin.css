@@ -2456,3 +2456,7 @@
 .rk-admin .finance-more p {
   margin: 6px 0 0;
 }
+.rk-admin .swatch.neg,
+.rk-admin .finance-bars .bar.neg {
+  background: var(--red);
+}

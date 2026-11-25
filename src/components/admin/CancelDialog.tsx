@@ -68,7 +68,7 @@ export function CancelDialog({
           : {
               amount: cents,
               method,
-              ...(method === "card" ? {} : { externalReference: String(f.get("externalReference") || ""), requestId }),
+              ...(method === "card" ? {} : { note: String(f.get("externalReference") || ""), requestId }),
             };
     const ok = await feedback.confirm({
       title: r.reference + " iptal edilsin mi?",

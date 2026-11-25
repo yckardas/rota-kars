@@ -1499,6 +1499,7 @@ export function createApp(
             .object({
               amount: z.number().int().min(1).max(100000000),
               method: z.enum(["card", "cash", "bank_transfer", "pos"]),
+              note: z.string().trim().max(200).optional(),
               externalReference: z.string().trim().max(200).optional(),
               requestId: z.string().uuid().optional(),
             })
@@ -1540,7 +1541,7 @@ export function createApp(
           amount: refund.amount,
           method: refund.method,
           externalReference: refund.requestId ? "PANEL-" + refund.requestId : undefined,
-          note: refund.externalReference || "",
+          note: refund.note ?? refund.externalReference ?? "",
           kind: "refund",
         });
         refundResult = { status: "succeeded", amount: refund.amount, message: "İade kaydedildi." };
