@@ -343,6 +343,44 @@ test("notification queue stays unsent without SMTP, retries and deduplicates sch
     (await s.notifications.list()).items.every((n) => n.status === "sent"),
   );
 });
+test("admin can cancel queued or failed notifications; cancelled ones are never sent or re-queued", async (t) => {
+  const { s, advance } = await setup(t),
+    d = await departure(s),
+    r = await booking(s, d);
+  await pay(s, r);
+  await s.workflow.confirm(r.reference);
+  await s.workflow.reminders();
+  const items = (await s.notifications.list()).items;
+  const reminder = items.find((n) => n.kind === "departure_reminder");
+  assert.ok(reminder && items.length >= 2);
+  await s.notifications.cancel(reminder.id);
+  // Aynı olay için hatırlatma tekrar üretilmez, iptal kaydı korunur.
+  await s.workflow.reminders();
+  let list = (await s.notifications.list()).items;
+  assert.equal(list.filter((n) => n.kind === "departure_reminder").length, 1);
+  assert.equal(list.find((n) => n.id === reminder.id).status, "cancelled");
+  // Başarısız mesaj da iptal edilebilir; yeniden deneme onu geri getirmez.
+  const other = list.find((n) => n.id !== reminder.id);
+  await s.notifications.processBatch({ send: async (m) => { if (m.id === other.id) throw new Error("x"); } });
+  for (let i = 0; i < 6; i++) {
+    advance(3600001);
+    await s.notifications.processBatch({ send: async (m) => { if (m.id === other.id) throw new Error("x"); } });
+  }
+  assert.equal((await s.notifications.list()).items.find((n) => n.id === other.id).status, "failed");
+  await s.notifications.cancel(other.id);
+  await s.notifications.retry(other.id);
+  const sent = [];
+  advance(3600001);
+  await s.notifications.processBatch({ send: async (m) => sent.push(m.id) });
+  assert.ok(!sent.includes(reminder.id) && !sent.includes(other.id));
+  list = (await s.notifications.list()).items;
+  assert.equal(list.find((n) => n.id === other.id).status, "cancelled");
+  // Gönderilmiş mesaj iptal edilemez.
+  const delivered = list.find((n) => n.status === "sent");
+  if (delivered)
+    await assert.rejects(s.notifications.cancel(delivered.id), (e) => e.status === 409);
+  await assert.rejects(s.notifications.cancel(reminder.id), (e) => e.status === 409);
+});
 test("daily report reconciles collections and passenger CSV escapes spreadsheet formulas", async (t) => {
   const { s } = await setup(t),
     d = await departure(s),
