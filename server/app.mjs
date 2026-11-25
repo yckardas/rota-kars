@@ -1500,6 +1500,7 @@ export function createApp(
               amount: z.number().int().min(1).max(100000000),
               method: z.enum(["card", "cash", "bank_transfer", "pos"]),
               externalReference: z.string().trim().max(200).optional(),
+              requestId: z.string().uuid().optional(),
             })
             .optional(),
         })
@@ -1538,6 +1539,7 @@ export function createApp(
         await store.workflow.payment(reference, {
           amount: refund.amount,
           method: refund.method,
+          externalReference: refund.requestId ? "PANEL-" + refund.requestId : undefined,
           note: refund.externalReference || "",
           kind: "refund",
         });

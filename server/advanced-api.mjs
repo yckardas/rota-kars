@@ -404,12 +404,16 @@ export function attachAdvancedApi(
             // Dekont / makbuz alanı serbest metin: boş, kısa ya da tekrar eden olabilir.
             externalReference: z.string().trim().max(200).default(""),
             recordedExternally: z.literal(true),
+            // Form açılınca üretilen kimlik: bağlantı kopup "Kaydet"e yeniden basılırsa
+            // aynı işlem ikinci kez yazılmaz (iç referans PANEL-<requestId> olur).
+            requestId: z.string().uuid().optional(),
           })
           .parse(q.body);
         r.json(
           await store.workflow.payment(q.params.reference, {
             amount: input.amount,
             method: input.method,
+            externalReference: input.requestId ? "PANEL-" + input.requestId : undefined,
             note: input.externalReference,
             kind,
           }),

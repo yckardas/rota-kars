@@ -1073,6 +1073,8 @@ function BookingControls({
       vehicle: NonNullable<Reservation["vehicle"]>;
     } | null>(null),
     [history, setHistory] = useState<AuditRow[] | null>(null),
+    // Elle tahsilat/iade formunun tekrar koruması: başarılı kayıttan sonra yenilenir.
+    [entryId, setEntryId] = useState(() => crypto.randomUUID()),
     // Yolcular sekmesi: kimlik taslakları (koltuk sırasıyla), kayıt yenilenince sıfırlanır.
     [idDrafts, setIdDrafts] = useState<IdDraft[]>(() => r.seats.map((_, i) => draftFrom(r.passenger_details?.[i])));
   useEffect(() => {
@@ -1123,11 +1125,15 @@ function BookingControls({
           method: f.get("method"),
           externalReference: f.get("externalReference"),
           recordedExternally: f.get("recordedExternally") === "on",
+          // Yeniden denemede aynı kimlik gider; sunucu işlemi ikinci kez yazmaz.
+          requestId: entryId,
         },
         current === "payment" ? "Tahsilat kaydedildi." : "İade kaydedildi.",
       )
-    )
+    ) {
       form.reset();
+      setEntryId(crypto.randomUUID());
+    }
   }
   // Geri alınamayan durum değişiklikleri önce onay ister.
   async function guarded(path: string, title: string, body: string, label: string, done: string) {

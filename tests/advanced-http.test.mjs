@@ -235,3 +235,20 @@ test("finance endpoint: auth, range validation, shape", async (t) => {
   assert.equal(body.day, null);
   assert.equal(body.series[0].key, "2026-10-26");
 });
+
+test("manual payment retried with the same form id is recorded once; refund too", async (t) => {
+  const { store: s, req, login } = await fixture(t),
+    d = (await s.listDepartures("ani-cildir"))[0];
+  await login();
+  const h = await s.hold(d.id, [4]);
+  const r = await s.reserve({ holdToken: h.token, name: "Tekrar Yolcu", email: "tekrar@example.com", phone: "05550000000", passengers: ["Tekrar Yolcu"], paymentMode: "deposit" });
+  const requestId = "0b6f6d1e-3c1a-4f5e-9d2b-7a8c9e0f1a2b";
+  const pay = () => req("/admin/reservations/" + r.reference + "/payments", { amount: 1500, method: "cash", externalReference: "elden", recordedExternally: true, requestId });
+  assert.equal((await pay()).status, 200);
+  assert.equal((await pay()).status, 200, "tekrar deneme hata vermez");
+  assert.equal((await s.workflow.get(r.reference)).ledger.length, 1, "bağlantı kopup yeniden gönderilen tahsilat bir kez yazılır");
+  const refund = () => req("/admin/reservations/" + r.reference + "/refunds", { amount: 500, method: "cash", externalReference: "", recordedExternally: true, requestId: "1c7e7e2f-4d2b-4a6f-8e3c-8b9d0f1a2b3c" });
+  assert.equal((await refund()).status, 200);
+  assert.equal((await refund()).status, 200);
+  assert.equal((await s.workflow.get(r.reference)).net_paid, 1000);
+});

@@ -35,6 +35,8 @@ export function CancelDialog({
   onDone: () => Promise<void> | void;
 }) {
   const feedback = useFeedback();
+  // Elle iadenin tekrar koruması: pencere açıkken aynı kimlik gider.
+  const [requestId] = useState(() => crypto.randomUUID());
   const [quote, setQuote] = useState<Quote | null>(null),
     [who, setWho] = useState<"customer" | "agency">(r.cancellation_requested_at ? "customer" : "agency"),
     [method, setMethod] = useState<Method>("later"),
@@ -66,7 +68,7 @@ export function CancelDialog({
           : {
               amount: cents,
               method,
-              ...(method === "card" ? {} : { externalReference: String(f.get("externalReference") || "") }),
+              ...(method === "card" ? {} : { externalReference: String(f.get("externalReference") || ""), requestId }),
             };
     const ok = await feedback.confirm({
       title: r.reference + " iptal edilsin mi?",
