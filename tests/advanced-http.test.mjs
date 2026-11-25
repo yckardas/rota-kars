@@ -218,3 +218,20 @@ test("manual payment receipt field is free text: short, empty or repeated notes 
   const refund = await req("/admin/reservations/" + a.reference + "/refunds", { amount: 500, method: "cash", externalReference: "", recordedExternally: true });
   assert.equal(refund.status, 200);
 });
+
+test("finance endpoint: auth, range validation, shape", async (t) => {
+  const { req, login } = await fixture(t);
+  assert.equal((await req("/admin/finance?from=2026-11-01&to=2026-11-30")).status, 401);
+  await login();
+  const reversed = await req("/admin/finance?from=2026-11-10&to=2026-11-01");
+  assert.equal(reversed.status, 400);
+  assert.match((await reversed.json()).message, /Başlangıç/);
+  assert.equal((await req("/admin/finance?from=2026-01-01&to=2027-01-03")).status, 400);
+  assert.equal((await req("/admin/finance?from=bozuk&to=2026-11-30")).status, 400);
+  const ok = await req("/admin/finance?from=2026-11-01&to=2026-11-30&bucket=week");
+  assert.equal(ok.status, 200);
+  const body = await ok.json();
+  for (const key of ["summary", "series", "expected", "byTour", "methods", "pipeline", "overdue", "day"]) assert.ok(key in body, key);
+  assert.equal(body.day, null);
+  assert.equal(body.series[0].key, "2026-10-26");
+});

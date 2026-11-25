@@ -457,6 +457,19 @@ export function attachAdvancedApi(
     requireAdmin,
     route(async (q, r) => r.json(await store.workflow.monthReport(month.parse(q.query.month)))),
   );
+  // Finans paneli: dönem (gün/hafta/ay/aralık) raporu; en fazla bir yıllık aralık.
+  app.get(
+    "/api/admin/finance",
+    requireAdmin,
+    route(async (q, r) => {
+      const input = z
+        .object({ from: ymd, to: ymd, bucket: z.enum(["day", "week"]).default("day") })
+        .refine((x) => x.from <= x.to, { message: "Başlangıç tarihi bitişten sonra olamaz." })
+        .refine((x) => Date.parse(x.to) - Date.parse(x.from) <= 366 * 86400000, { message: "En fazla bir yıllık aralık seçin." })
+        .parse(q.query);
+      r.json(await store.workflow.financeReport(input));
+    }),
+  );
   // Excel'in doğrudan açtığı CSV: noktalı virgül ayraç, UTF-8 BOM, formül enjeksiyonu engelli.
   app.get(
     "/api/admin/reports/month.csv",
