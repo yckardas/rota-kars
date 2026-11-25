@@ -216,8 +216,13 @@ export function Booking({ catalog }: { catalog: Catalog }) {
   const sameRow = (d: Departure, id: string) => d.id === id || Boolean(d.vehicles?.some((v) => v.id === id));
   const pickVehicle = (row: Departure | undefined, n: number) =>
     row?.vehicles?.find((v) => v.available >= n)?.id ?? row?.vehicles?.[0]?.id ?? row?.id ?? "";
+  // Talep toplayan tarih (katalogdan): seçilince koltuk planı yerine ön kayıt gösterilir.
+  const demandDates = tour && !tour.inquiryOnly ? tour.demandDates || [] : [],
+    demandPick = departures.some((d) => sameRow(d, departureId))
+      ? undefined
+      : demandDates.find((d) => d.id === departureId);
   const dateRow = departures.find((d) => sameRow(d, departureId)),
-    vehicleId = pickVehicle(dateRow, count) || departureId,
+    vehicleId = demandPick ? "" : pickVehicle(dateRow, count) || departureId,
     splitGroup = Boolean(
       dateRow?.vehicles &&
         dateRow.vehicles.length > 1 &&
@@ -413,7 +418,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     };
   }, [barShown]);
   const departure = departures.find((d) => sameRow(d, departureId)),
-    subtotal = (departure?.price || tour?.price || 0) * count,
+    subtotal = (departure?.price || demandPick?.price || tour?.price || 0) * count,
     total = quote?.total ?? subtotal;
   useEffect(() => {
     let active = true;
@@ -425,9 +430,10 @@ export function Booking({ catalog }: { catalog: Catalog }) {
           if (!active) return;
           setDepartures(ds);
           const wanted = params.get("date"),
-            match = ds.find((d) => d.date === wanted);
-          setDepartureId(match?.id || ds[0]?.id || "");
-          setDateNotice(Boolean(wanted && !match && ds.length));
+            planned = tour.demandDates || [],
+            match = ds.find((d) => d.date === wanted) || planned.find((d) => d.date === wanted);
+          setDepartureId(match?.id || ds[0]?.id || planned[0]?.id || "");
+          setDateNotice(Boolean(wanted && !match && (ds.length || planned.length)));
           setLoaded(true);
         })
         .catch((e) => {
@@ -817,7 +823,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
           <span>
             {departure
               ? `${dateLabel(departure.date)} · ${departure.start_time}`
-              : t("Tarih seçin")}
+              : demandPick
+                ? `${dateLabel(demandPick.date)} · ${demandPick.start_time} · ${t("ön kayıt")}`
+                : t("Tarih seçin")}
             {selected.length ? ` · ${seatList}` : ""}
           </span>
         </div>
@@ -899,13 +907,26 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                     <option value="" disabled>
                       {loaded ? t("Uygun tarih seçin") : t("Tarihler yükleniyor…")}
                     </option>
-                    {departures.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {dateLabel(d.date)} · {d.start_time} ·{" "}
-                        {currency(d.price)}
-                        {d.available <= 0 ? " · " + t("dolu") : ""}
-                      </option>
-                    ))}
+                    {[
+                      ...departures.map((d) => ({
+                        id: d.id,
+                        key: d.date + d.start_time,
+                        label: `${dateLabel(d.date)} · ${d.start_time} · ${currency(d.price)}${d.available <= 0 ? " · " + t("dolu") : ""}`,
+                      })),
+                      ...demandDates
+                        .filter((p) => !departures.some((d) => sameRow(d, p.id)))
+                        .map((p) => ({
+                          id: p.id,
+                          key: p.date + p.start_time,
+                          label: `${dateLabel(p.date)} · ${p.start_time} · ${t("ön kayıt")}`,
+                        })),
+                    ]
+                      .sort((a, b) => a.key.localeCompare(b.key))
+                      .map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.label}
+                        </option>
+                      ))}
                   </select>
                 </label>
                 <label className="field">
@@ -939,7 +960,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   </p>
                 </div>
               )}
-              {loaded && !departures.length && tour?.mode !== "demand" && (
+              {loaded && !departures.length && !demandDates.length && tour?.mode !== "demand" && (
                 <div className="info-note">
                   <Info size={18} />
                   <p>
@@ -950,7 +971,16 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   </p>
                 </div>
               )}
-              {tour?.mode === "demand" && (
+              {demandPick && (
+                <div className="info-note waitlist-note">
+                  <Info size={18} />
+                  <p>{t("Bu tarih yeterli talep olursa yapılacak; şu an koltuk satılmıyor.")}</p>
+                  <button type="button" className="btn btn-small" onClick={() => setInterest("prereg")}>
+                    {t("Ücretsiz ön kayıt bırakın")}
+                  </button>
+                </div>
+              )}
+              {tour?.mode === "demand" && loaded && !departures.length && !demandDates.length && (
                 <div className="info-note waitlist-note">
                   <Info size={18} />
                   <p>{t("Bu tur yeterli talep olursa yapılacak; şu an koltuk satılmıyor. Ücretsiz ön kayıt bırakın, tur kesinleşince size haber verelim.")}</p>
@@ -983,6 +1013,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   </button>
                 </div>
               )}
+              {!demandPick && (
               <div className="seat-selection">
                 <SeatMap
                   vehicle={vehicle}
@@ -1068,18 +1099,21 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   </div>
                 </div>
               </div>
+              )}
               <div className="flow-error" role="alert">
                 {error}
               </div>
-              <button
-                className="btn"
-                ref={continueRef}
-                disabled={busy || !departureId}
-                onClick={chooseSeats}
-              >
-                {busy ? <LoaderCircle className="spin" size={17} /> : null}
-                {t("Yolcu bilgilerine geç")} <ArrowRight size={17} />
-              </button>
+              {!demandPick && (
+                <button
+                  className="btn"
+                  ref={continueRef}
+                  disabled={busy || !departureId}
+                  onClick={chooseSeats}
+                >
+                  {busy ? <LoaderCircle className="spin" size={17} /> : null}
+                  {t("Yolcu bilgilerine geç")} <ArrowRight size={17} />
+                </button>
+              )}
               {selected.length > 0 && (
                 <div
                   className={
@@ -1672,12 +1706,16 @@ export function Booking({ catalog }: { catalog: Catalog }) {
             <h3>{tour.name}</h3>
             <p>
               <CalendarDays size={15} />
-              {departure ? dateLabel(departure.date) : t("Tarih seçin")}
+              {departure
+                ? dateLabel(departure.date)
+                : demandPick
+                  ? `${dateLabel(demandPick.date)} · ${t("ön kayıt")}`
+                  : t("Tarih seçin")}
             </p>
             <p>
               <Clock3 size={15} />
               {t("{time} hareket", {
-                time: departure?.start_time || tour.departure,
+                time: departure?.start_time || demandPick?.start_time || tour.departure,
               })}
             </p>
             <p>
@@ -1809,6 +1847,9 @@ export function Booking({ catalog }: { catalog: Catalog }) {
           tourId={tour.id}
           tourName={tour.name}
           departureId={interest === "waitlist" ? departure?.id : undefined}
+          dates={interest === "prereg" ? demandDates : undefined}
+          initialDateId={demandPick?.id}
+          allowUndated={tour.mode === "demand"}
           departureLabel={departure ? `${dateLabel(departure.date)} · ${departure.start_time}` : undefined}
           initialCount={count}
           onClose={() => setInterest(null)}

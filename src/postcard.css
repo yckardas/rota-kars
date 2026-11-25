@@ -5614,6 +5614,58 @@ html:has(.kp) {
 .rk-admin .interest-progress progress::-moz-progress-bar {
   background: var(--kp-red, #c2342b);
 }
+/* Talep toplayan tarihler (tur detayı) */
+.kp .demand-dates {
+  margin: 0 0 16px;
+}
+.kp .demand-dates h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: var(--kp-ink);
+}
+.kp .demand-dates ul {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.kp .demand-dates li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--kp-hair, #e3e8ee);
+}
+.kp .demand-dates li:last-child {
+  border-bottom: 1px solid var(--kp-hair, #e3e8ee);
+}
+.kp .demand-date-head {
+  display: grid;
+  gap: 2px;
+  font-size: 14px;
+}
+.kp .demand-date-head span {
+  color: var(--kp-ink-2);
+  font-size: 13px;
+}
+.kp .demand-dates .demand-progress {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
+  font-size: 12px;
+}
+.kp .demand-dates-more {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
 .kp .waitlist-note {
   display: grid;
   grid-template-columns: auto 1fr;

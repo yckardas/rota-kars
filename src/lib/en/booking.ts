@@ -463,4 +463,7 @@ export const booking: Record<string, string> = {
   "Havalimanı, otogar ya da tren garından konaklama yerinize, dönüşte de geri. Fiyat grubunuzun toplamıdır; rezervasyonda ekleyebilirsiniz.":
     "From the airport, bus station or train station to where you are staying, and back on return. The price is the total for your group; add it while booking.",
   "Tarih seçip transfer ekleyin": "Pick a date and add a transfer",
+  "ön kayıt": "pre-registration",
+  "Bu tarih yeterli talep olursa yapılacak; şu an koltuk satılmıyor.":
+    "This date runs if enough people sign up; seats aren't on sale yet.",
 };
