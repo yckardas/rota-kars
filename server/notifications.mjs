@@ -128,9 +128,9 @@ export async function createNotifications(db, { clock, tx, env = {}, push = null
       send = delivery === "resend"
         ? resendSender(env)
         : transport
-          ? (item) =>
-              // Düz metin + logolu HTML (bkz. mail-template.mjs).
-              transport.sendMail({ from: env.MAIL_FROM, ...renderMail(item) })
+          ? async (item) =>
+              // Düz metin + logolu HTML, varsa bilet QR'ı ve PDF belgeler (bkz. mail-template.mjs).
+              transport.sendMail({ from: env.MAIL_FROM, ...(await renderMail(item)) })
           : null,
     } = {}) {
       if (!send) return { sent: 0, configured: false };

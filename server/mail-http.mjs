@@ -13,7 +13,7 @@ export function mailDelivery(env = {}) {
 
 export function resendSender(env, fetchImpl = fetch) {
   return async (item) => {
-    const mail = renderMail(item);
+    const mail = await renderMail(item);
     const res = await fetchImpl("https://api.resend.com/emails", {
       method: "POST",
       headers: {

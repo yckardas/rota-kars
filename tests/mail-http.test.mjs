@@ -79,3 +79,47 @@ test("delivery choice: Resend wins over SMTP; nothing is ready without MAIL_FROM
     null,
   );
 });
+
+test("Resend: ticket mails send the QR and PDF documents as base64 attachments", async () => {
+  let body;
+  const send = resendSender(env, async (_url, init) => {
+    body = JSON.parse(init.body);
+    return new Response("{}", { status: 200 });
+  });
+  await send({
+    ...item,
+    ticket: {
+      headline: "Ödemeniz alındı, rezervasyonunuz onaylandı.",
+      name: "Ayşe",
+      tour: "Ani",
+      date: "2026-11-28",
+      time: "08:30",
+      pickup: "Kars",
+      seats: [4],
+      reference: "RK-1",
+      transfer: null,
+      total: 100000,
+      paid: 100000,
+      balance: 0,
+      status: "confirmed",
+    },
+    documents: [
+      {
+        title: "Tur Hizmet Sözleşmesi",
+        filename: "Tur-Hizmet-Sozlesmesi-RK-1.pdf",
+        text: "SÖZLEŞME",
+      },
+    ],
+  });
+  const pdf = body.attachments.find(
+    (a) => a.filename === "Tur-Hizmet-Sozlesmesi-RK-1.pdf",
+  );
+  assert.equal(pdf.content_type, "application/pdf");
+  assert.equal(
+    Buffer.from(pdf.content, "base64").subarray(0, 5).toString(),
+    "%PDF-",
+  );
+  assert.ok(
+    body.attachments.some((a) => a.content_id === "qr@rotakarsturizm.com"),
+  );
+});
