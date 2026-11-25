@@ -302,10 +302,14 @@ export async function createWorkflow(
         return updated;
       });
     },
+    // Panelden elle girilen tahsilat/iadede externalReference verilmez: kayda tekil bir
+    // iç referans yazılır, acentenin yazdığı serbest metin (dekont/makbuz no, not) note olur.
+    // Böylece kısa, boş ya da tekrar eden not bir tahsilatı engellemez.
     async payment(
       reference,
-      { amount, method, externalReference, kind = "payment" },
+      { amount, method, externalReference, note = "", kind = "payment" },
     ) {
+      externalReference ||= "PANEL-" + randomUUID();
       return tx(async () => {
         await cleanup();
         const r = await api.get(reference),
@@ -346,6 +350,7 @@ export async function createWorkflow(
           amount,
           method,
           external_reference: externalReference,
+          note,
           created_at: clock(),
         });
         if (kind === "payment") {
@@ -360,7 +365,7 @@ export async function createWorkflow(
             { expires_at: longExpiry(clock()) },
           );
         }
-        await audit(r, kind, { amount, method, externalReference });
+        await audit(r, kind, { amount, method, externalReference, note });
         const updated = await api.get(reference);
         if (kind === "payment" && updated.net_paid >= updated.total)
           await members.rewardReferral(r.member_id, "paid");

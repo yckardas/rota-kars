@@ -179,8 +179,8 @@ export function CancelDialog({
                   <p className="error">Bu seçenek bankaya iade göndermez; kartla alınan ödeme kartta kalır.</p>
                 )}
                 <label className="field">
-                  Dekont / makbuz referansı
-                  <input name="externalReference" minLength={3} maxLength={100} required />
+                  Dekont / makbuz no veya not (isteğe bağlı)
+                  <input name="externalReference" maxLength={200} placeholder="Ör. dekont no, makbuz no, elden alındı" />
                 </label>
               </>
             )}

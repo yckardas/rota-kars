@@ -317,7 +317,7 @@ export function attachAdvancedApi(
             .object({
               amount: z.number().int().min(1).max(100000000),
               method: z.enum(["cash", "bank_transfer", "pos"]),
-              externalReference: z.string().trim().min(3).max(100).optional(),
+              externalReference: z.string().trim().max(200).optional(),
             })
             .optional(),
           confirm: z.boolean().default(false),
@@ -401,12 +401,18 @@ export function attachAdvancedApi(
           .object({
             amount: z.number().int().min(1).max(100000000),
             method: z.enum(["cash", "bank_transfer", "pos"]),
-            externalReference: z.string().trim().min(3).max(100),
+            // Dekont / makbuz alanı serbest metin: boş, kısa ya da tekrar eden olabilir.
+            externalReference: z.string().trim().max(200).default(""),
             recordedExternally: z.literal(true),
           })
           .parse(q.body);
         r.json(
-          await store.workflow.payment(q.params.reference, { ...input, kind }),
+          await store.workflow.payment(q.params.reference, {
+            amount: input.amount,
+            method: input.method,
+            note: input.externalReference,
+            kind,
+          }),
         );
       }),
     );

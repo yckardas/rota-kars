@@ -228,6 +228,7 @@ export type Reservation = {
     amount: number;
     method: string;
     external_reference: string;
+    note?: string;
     created_at?: number;
   }[];
   vehicle?: Vehicle | null;

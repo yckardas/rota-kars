@@ -192,3 +192,29 @@ test("panel booking accepts a missing passenger id but rejects a half-filled one
   );
   assert.equal(ok.status, 403);
 });
+
+test("manual payment receipt field is free text: short, empty or repeated notes are all accepted", async (t) => {
+  const { store: s, req, login } = await fixture(t),
+    d = (await s.listDepartures("ani-cildir"))[0];
+  await login();
+  const book = async (seat) => {
+    const h = await s.hold(d.id, [seat]);
+    return s.reserve({ holdToken: h.token, name: "Not Yolcu", email: "not@example.com", phone: "05550000000", passengers: ["Not Yolcu"], paymentMode: "deposit" });
+  };
+  const a = await book(2),
+    b = await book(3);
+  const pay = (r, externalReference, amount = 1000) =>
+    req("/admin/reservations/" + r.reference + "/payments", { amount, method: "cash", externalReference, recordedExternally: true });
+  // Kısa metin, boş alan ve aynı not iki kez aynı kayıtta ve başka kayıtta.
+  for (const [r, note] of [[a, "x"], [a, ""], [a, "elden alındı"], [a, "elden alındı"], [b, "elden alındı"]])
+    assert.equal((await pay(r, note)).status, 200, `not kabul edilmeli: "${note}"`);
+  const ledger = (await s.workflow.get(a.reference)).ledger;
+  assert.equal(ledger.length, 4, "aynı not ve tutarla ikinci tahsilat da yazılır");
+  assert.deepEqual(ledger.map((p) => p.note).sort(), ["", "elden alındı", "elden alındı", "x"]);
+  assert.equal((await s.workflow.get(b.reference)).net_paid, 1000);
+  // Uzun not sınırı korunur.
+  assert.equal((await pay(a, "y".repeat(201))).status, 400);
+  // İade de serbest notla kaydedilir.
+  const refund = await req("/admin/reservations/" + a.reference + "/refunds", { amount: 500, method: "cash", externalReference: "", recordedExternally: true });
+  assert.equal(refund.status, 200);
+});
