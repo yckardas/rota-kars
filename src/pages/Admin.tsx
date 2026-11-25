@@ -708,8 +708,8 @@ function Integrations({ catalog, owner }: { catalog: Catalog; owner: boolean }) 
         <h3>E-posta ve SMS</h3>
         <span className="status-tag">Sağlayıcı bağlı değil</span>
         <p>
-          E-postalar bildirim kuyruğunda saklanır. SMTP ve site adresi
-          tanımlandığında otomatik gönderim başlar. SMS için sağlayıcı
+          E-postalar bildirim kuyruğunda saklanır. Gönderim hizmeti (Resend
+          veya SMTP) ve site adresi tanımlandığında otomatik gönderim başlar. SMS için sağlayıcı
           bağlantısı gerekir.
         </p>
       </article>

@@ -121,7 +121,7 @@ BUCKET="${{buffered-basket.BUCKET}}"
 
 ## E-posta, hesap güvenliği ve bildirimler
 
-`SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` ve mutlak `PUBLIC_BASE_URL` tanımlanır. Gönderim hizmeti tanımlı değilse e-postalar kuyrukta bekler, gönderilmiş sayılmaz. SMTP sağlayıcısında gönderici adresini ve domainin SPF/DKIM kayıtlarını doğrulayın. SMS hizmeti henüz bağlı değildir.
+`MAIL_FROM`, mutlak `PUBLIC_BASE_URL` ve `RESEND_API_KEY` tanımlanır. Railway bu projede dışarı giden SMTP bağlantılarını zaman aşımına düşürdüğü için (Ekim–Kasım 2026'da tüm denemeler `ETIMEDOUT`) canlıda e-posta Resend'in HTTPS API'siyle gider; `MAIL_FROM` alan adı Resend'de SPF/DKIM kayıtlarıyla doğrulanmalıdır. `RESEND_API_KEY` boşsa yedek olarak `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD` kullanılır. Başarısız mesajlarda yönetim panelinde hata kodu (ör. `ETIMEDOUT`, `HTTP_403`) görünür. Gönderim hizmeti tanımlı değilse e-postalar kuyrukta bekler, gönderilmiş sayılmaz. SMTP sağlayıcısında gönderici adresini ve domainin SPF/DKIM kayıtlarını doğrulayın. SMS hizmeti henüz bağlı değildir.
 
 Kayıt sonrası e-posta doğrulaması (24 saat), parola yenileme (1 saat), ön rezervasyon, acente onayı, tarih/buluşma güncellemesi, hareketten önce hatırlatma ve tamamlanan tur sonrası Google yorum isteği kuyruğa yazılır. Arka plan işi 30 saniyede bir kuyruğu işler; geçici hatalarda artan aralıklarla en fazla 5 deneme yapar. Yönetici başarısız mesajı yeniden kuyruğa alabilir. SMTP teslimatı alıcının gelen kutusuna düşme garantisi değildir; ağ kopmasıyla belirsiz teslimat durumunda tekrar mesaj ihtimali vardır.
 

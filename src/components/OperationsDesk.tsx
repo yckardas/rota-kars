@@ -1824,8 +1824,8 @@ export function NotificationManager() {
             <Mail size={21} />
             <p>
               {data.configured
-                ? "SMTP bağlantısı tanımlı. Bekleyen mesajlar arka planda gönderilir."
-                : "SMTP gönderimi tanımlı değil. Mesajlar kuyrukta tutulur; gönderilmiş sayılmaz."}
+                ? "E-posta gönderimi tanımlı. Bekleyen mesajlar arka planda gönderilir."
+                : "E-posta gönderimi tanımlı değil. Mesajlar kuyrukta tutulur; gönderilmiş sayılmaz."}
               {data.preview
                 ? " Demo önizleme bağlantıları yalnız bu yönetim ekranında görünür."
                 : ""}
