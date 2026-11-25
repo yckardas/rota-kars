@@ -28,6 +28,8 @@ type TourMode = {
   mode: "online" | "demand";
   demand: { threshold: number; showProgress: boolean };
   preregCount: number;
+  // Talep toplayan ya da bekleyen ön kaydı olan tarihler (tarihin 1. aracının id'si).
+  dates: { id: string; date: string; start_time: string; count: number; demand: boolean; salesOpen: boolean }[];
 };
 const STATUS: Record<InterestRow["status"], string> = {
   waiting: "Bekliyor",
@@ -110,12 +112,30 @@ export function InterestManager({ onChange }: { onChange: () => void }) {
                 return `${t.name}: ${mode === "demand" ? "talep toplama" : "online satış"} kaydedildi.`;
               })
             }
+            openDate={(x) =>
+              run(t.id, async () => {
+                if (
+                  !(await feedback.confirm({
+                    title: `${t.name} · ${dateLabel(x.date)} satışa açılsın mı?`,
+                    body: x.count
+                      ? `Bu tarihe kayıtlı ${x.count} kişiye rezervasyon bağlantısı e-postayla gider.`
+                      : "Bu tarihe henüz ön kayıt yok; tarih online satışa geçer.",
+                    confirmLabel: "Satışa aç",
+                  }))
+                )
+                  return "";
+                const r = await post<{ notified: number }>(`/admin/departures/${encodeURIComponent(x.id)}/open-sales`, {});
+                return `${t.name} · ${dateLabel(x.date)} satışa açıldı; ${r.notified} kişiye haber verildi.`;
+              })
+            }
             open={() =>
               run(t.id, async () => {
                 if (
                   !(await feedback.confirm({
                     title: `${t.name} satışa açılsın mı?`,
-                    body: `Tur online satışa geçer ve bekleyen ${t.preregCount} kişilik ön kayda rezervasyon bağlantısı e-postayla gider.`,
+                    body: t.dates.length
+                      ? `Tur online satışa geçer; tarih belirtmeyen ${t.preregCount} kişiye ve satışa geçen tarihlere kayıtlı olanlara e-posta gider. "Talep toplama" olarak işaretli tarihler talepte kalır.`
+                      : `Tur online satışa geçer ve bekleyen ${t.preregCount} kişilik ön kayda rezervasyon bağlantısı e-postayla gider.`,
                     confirmLabel: "Satışı aç ve haber ver",
                   }))
                 )
@@ -206,11 +226,13 @@ function ModeCard({
   busy,
   save,
   open,
+  openDate,
 }: {
   tour: TourMode;
   busy: boolean;
   save: (mode: "online" | "demand", threshold: number, showProgress: boolean) => void;
   open: () => void;
+  openDate: (date: TourMode["dates"][number]) => void;
 }) {
   const [mode, setMode] = useState(t.mode),
     [threshold, setThreshold] = useState(t.demand.threshold),
@@ -241,10 +263,34 @@ function ModeCard({
       {(t.mode === "demand" || t.preregCount > 0) && (
         <div className="interest-progress">
           <span>
-            Ön kayıt: <b>{t.preregCount}</b> / {t.demand.threshold} kişi
+            {t.dates.length ? "Tarih belirtmeyen ön kayıt" : "Ön kayıt"}: <b>{t.preregCount}</b> / {t.demand.threshold} kişi
           </span>
           <progress max={100} value={pct} />
         </div>
+      )}
+      {t.dates.length > 0 && (
+        <ul className="interest-dates">
+          {t.dates.map((x) => (
+            <li key={x.id}>
+              <strong>
+                {dateLabel(x.date)} · {x.start_time}
+              </strong>
+              {x.demand ? (
+                <button className="btn btn-small btn-outline" type="button" disabled={busy} onClick={() => openDate(x)}>
+                  Satışa aç
+                </button>
+              ) : (
+                <span className="operation-status open">Satışta</span>
+              )}
+              <div className="interest-progress">
+                <span>
+                  Ön kayıt: <b>{x.count}</b> / {t.demand.threshold} kişi
+                </span>
+                <progress max={100} value={Math.min(100, Math.round((x.count / Math.max(1, t.demand.threshold)) * 100))} />
+              </div>
+            </li>
+          ))}
+        </ul>
       )}
       <div className="interest-actions">
         <button

@@ -187,6 +187,10 @@ export type Departure = {
   vehicles?: { id: string; available: number }[];
   // Panel listesi: online satış şu an açık mı (tarih geçmemiş, aktif, kesim saatinden önce).
   salesOpen?: boolean;
+  // Satış modu: sales_mode null ise turun moduna uyar; demand = talep toplayan tarih.
+  sales_mode?: "demand" | "online" | null;
+  mode?: "demand" | "online";
+  demand?: boolean;
 };
 // "closed": satışa kapalı koltuk; yalnız panelde gelir (müşteriye "occupied").
 export type Seat = { number: number; status: "occupied" | "available" | "closed" };
