@@ -456,6 +456,8 @@ export function createPayments(
       method: CARD_METHOD,
       externalReference: x.id,
       kind: "refund",
+      // İadeyi panelden başlatan yönetici (kart iadesi kaydında tutulur).
+      by: x.by || null,
     });
   return {
     config,

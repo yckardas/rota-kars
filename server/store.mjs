@@ -683,6 +683,13 @@ export async function openStore(
           total: r.total,
           expiresAt: r.expires_at,
         }));
+      const soon = upcoming.filter((d) => d.date <= tomorrow),
+        bookedSeats = new Map();
+      for (const r of await db.find("reservations", {
+        departure_id: { $in: soon.map((d) => d.id) },
+        status: { $in: ["pending_agency", "confirmed"] },
+      }))
+        bookedSeats.set(r.departure_id, (bookedSeats.get(r.departure_id) || 0) + (r.seats?.length || 0));
       const cancellationRequests = await db.count("reservations", {
         cancellation_requested_at: { $exists: true, $ne: null },
         status: { $in: ["pending_agency", "confirmed"] },
@@ -702,17 +709,18 @@ export async function openStore(
             active: Boolean(d.active),
           })),
         // Bugün ve yarın yolcusu olan, rehberi veya plakası atanmamış seferler.
-        staffing: upcoming
-          .filter((d) => d.date <= tomorrow && d.active && seatsOf(d) - d.available - (d.closed || 0) > 0)
+        // Yolcu sayısı gerçek rezervasyonlardan (ödeme ekranındaki geçici tutma sayılmaz);
+        // online satışa kapatılmış ama yolcusu olan sefer de kalkacağı için uyarılır.
+        staffing: soon
           .map((d) => ({
             id: d.id,
             tourName: tourName(d.tour_id),
             date: d.date,
             startTime: d.start_time,
-            booked: seatsOf(d) - d.available - (d.closed || 0),
+            booked: bookedSeats.get(d.id) || 0,
             missing: [!d.guide_name && "rehber", !d.vehicle_id && "plaka"].filter(Boolean),
           }))
-          .filter((x) => x.missing.length)
+          .filter((x) => x.booked > 0 && x.missing.length)
           .sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime)),
         pending: { count: pending.length, items: pending.slice(0, 8) },
         cancellationRequests,

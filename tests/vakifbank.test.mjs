@@ -702,6 +702,7 @@ test("karta iade: aynı gün yalnız tamamı iptal (Cancel) edilir, ikinci iade 
   assert.equal(ledger.length, 1);
   assert.equal(ledger[0].method, "online:vakifbank");
   assert.equal(ledger[0].external_reference, ok.json.refund.id);
+  assert.ok(ledger[0].recorded_by?.name, "karta iadeyi başlatan yönetici tahsilat satırında görünür");
   // Çift iade: tutar kalmadı, bankaya ikinci istek gitmez.
   assert.equal((await refund(payment.id, r.deposit)).status, 409);
   assert.equal(sent.length, 1);

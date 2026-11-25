@@ -407,3 +407,16 @@ test("overview warns about today's and tomorrow's booked departures without a gu
   assert.equal(o.staffing[0].booked, 1);
   assert.ok(!o.staffing.some((x) => x.id === emptyTomorrow.id));
 });
+
+test("staffing alert: counts real bookings (not checkout holds) and includes departures closed to online sale", async (t) => {
+  const { s } = await setup(t);
+  const dep = (startTime, extra = {}) =>
+    s.departures.save({ tourId: "sarikamis", date: "2026-10-17", startTime, pickup: "Kars", guideName: "", guidePhone: "", price: 100000, vehicleModel: "vip-midibus", passengerSeats: 18, active: true, ...extra });
+  const closedWithBooking = await dep("19:00");
+  await s.adminReserve(base(closedWithBooking, { seats: [1, 2], confirm: true }), AGENT);
+  await s.departures.save({ ...{ tourId: "sarikamis", date: "2026-10-17", startTime: "19:00", pickup: "Kars", guideName: "", guidePhone: "", price: 100000, vehicleModel: "vip-midibus", passengerSeats: 18 }, id: closedWithBooking.id, active: false });
+  const holdOnly = await dep("21:00");
+  await s.hold(holdOnly.id, [5]);
+  const o = await s.overview();
+  assert.deepEqual(o.staffing.map((x) => [x.startTime, x.booked]), [["19:00", 2]], "satışa kapalı ama yolculu sefer uyarılır; yalnız ödeme ekranındaki tutma uyarı vermez");
+});
