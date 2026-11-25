@@ -235,6 +235,23 @@ html:has(.kp) {
   height: 100%;
   object-fit: cover;
 }
+/* Sessiz vitrin videosu: fotoğrafın üstünde, oynamaya başlayınca belirir. */
+.rk-slide > .rk-slide-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+.rk-slide > .rk-slide-video[data-ready] {
+  opacity: 1;
+}
+/* Video gerçek çekim: oynarken fotoğrafın "temsili" notu gizlenir. */
+.rk-slide-video[data-ready] ~ .kp-photo-disclosure {
+  display: none;
+}
 /* Okunurluk için soldan koyu, alttan rota renginde örtü. */
 .rk-slide::before,
 .rk-slide::after {
@@ -2714,7 +2731,12 @@ html:has(.kp .site-header) {
       rk-bob 4.5s ease-in-out 1.3s infinite;
   }
   .rk-hello {
-    animation: rk-swing 0.9s var(--rk-spring) 0.2s both;
+    animation: rk-swing 0.9s var(--rk-spring) 0.35s both;
+  }
+  /* Açılış: vitrin içeriden dışa doğru açılan bir perde gibi gelir. Hiçbir şeyi
+     gizlemez (fotoğraf ilk karede görünür), yalnız kırpar; bitince kırpma kalkar. */
+  .rk-stage {
+    animation: rk-curtain 1.1s var(--rk-ease) backwards;
   }
   /* Arama çubuğu yalnız kayar, hiç gizlenmez: sekme arka plandayken de görünür. */
   .rk-search {
@@ -2746,6 +2768,14 @@ html:has(.kp .site-header) {
   }
   to {
     transform: scale(1.02) translate3d(0, 0, 0);
+  }
+}
+@keyframes rk-curtain {
+  from {
+    clip-path: inset(7% 5% round 48px);
+  }
+  to {
+    clip-path: inset(0 round 0);
   }
 }
 @keyframes rk-rise {
