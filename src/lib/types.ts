@@ -210,6 +210,7 @@ export type Reservation = {
   ticketUrl?: string;
   qrDataUrl?: string;
   net_paid?: number;
+  payment_mode?: "deposit" | "full" | "on_tour";
   paid_total?: number;
   refunded_total?: number;
   balance_due?: number;

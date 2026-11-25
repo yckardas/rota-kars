@@ -321,6 +321,8 @@ export function attachAdvancedApi(
             })
             .optional(),
           confirm: z.boolean().default(false),
+          // Acente, kapora altı tahsilatta uyarıyı onaylayıp yine de onaylar.
+          belowDeposit: z.boolean().default(false),
         })
         .parse(q.body);
       if (q.adminCtx?.bootstrap)
@@ -329,8 +331,15 @@ export function attachAdvancedApi(
       r.status(201).json(await receipt(created, q, env));
     }),
   );
+  app.post(
+    "/api/admin/reservations/:reference/confirm",
+    requireAdmin,
+    route(async (q, r) => {
+      const { belowDeposit } = z.object({ belowDeposit: z.boolean().default(false) }).parse(q.body || {});
+      r.json(await receipt(await store.workflow.confirm(q.params.reference, { belowDeposit }), q, env));
+    }),
+  );
   for (const [action, method] of [
-    ["confirm", "confirm"],
     // İptal (isteğe bağlı iadeyle) app.mjs'de: karta iade ödeme modülünü kullanır.
     ["complete", "complete"],
     ["no-show", "noShow"],

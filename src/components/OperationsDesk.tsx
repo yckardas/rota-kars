@@ -1034,6 +1034,8 @@ export function ReservationManager({
   );
 }
 type AuditRow = { id: string; event: string; details: Record<string, unknown>; created_at: number };
+// Kapora altı verilen onayın tutarları (sunucu "confirmed" kaydına yazar).
+const belowDeposit = (d?: Record<string, unknown>) => d?.belowDeposit as { paid: number; deposit: number } | undefined;
 function BookingControls({
   booking: r,
   tourName,
@@ -1127,6 +1129,21 @@ function BookingControls({
   async function guarded(path: string, title: string, body: string, label: string, done: string) {
     if (await feedback.confirm({ title, body, confirmLabel: label, danger: true }))
       await action(r.reference, path, {}, done);
+  }
+  // Tahsilat kaporanın altındaysa acente uyarıyı görür; "yine de onayla" derse onay
+  // kapora altı istisna olarak verilir (sunucu bunu denetim kaydına yazar).
+  async function confirmBooking() {
+    const paid = Number(r.net_paid) || 0;
+    if (paid >= r.deposit) return action(r.reference, "confirm", {}, "Acente onayı verildi.");
+    const full = r.payment_mode === "full",
+      rule = full ? "tam ödeme" : `%${Math.round((r.deposit / r.total) * 100)}`,
+      label = full ? "tam ödeme" : `${rule} kapora`;
+    const ok = await feedback.confirm({
+      title: `Tahsilat ${label} tutarının altında`,
+      body: `Kayıtlı tahsilat ${currency(paid)}, gereken ${label} ${currency(r.deposit)}. Girilen tutar ${rule} kuralının altında kalıyor; yine de ilerlemek istiyor musunuz? Kalan ${currency(r.total - paid)} borç olarak görünmeye devam eder.`,
+      confirmLabel: "Evet, yine de onayla",
+    });
+    if (ok) await action(r.reference, "confirm", { belowDeposit: true }, "Acente onayı verildi (kapora altı).");
   }
   const wa = waNumber(r.phone),
     pastOrToday = r.date <= today(),
@@ -1239,7 +1256,7 @@ function BookingControls({
             <button
               className="btn btn-small"
               disabled={busy}
-              onClick={() => action(r.reference, "confirm", {}, "Acente onayı verildi.")}
+              onClick={confirmBooking}
             >
               <Check size={15} /> Acente onayı ver
             </button>
@@ -1304,15 +1321,19 @@ function BookingControls({
             {!history && <p className="muted">Yükleniyor…</p>}
             {history && !history.length && <p className="muted">Kayıt yok.</p>}
             <ol className="audit-timeline">
-              {history?.map((a) => (
-                <li key={a.id}>
-                  <time>{stamp(a.created_at)}</time>
-                  <span>
-                    {AUDIT_LABELS[a.event] || a.event}
-                    {typeof a.details?.amount === "number" && " · " + currency(a.details.amount)}
-                  </span>
-                </li>
-              ))}
+              {history?.map((a) => {
+                const low = belowDeposit(a.details);
+                return (
+                  <li key={a.id}>
+                    <time>{stamp(a.created_at)}</time>
+                    <span>
+                      {AUDIT_LABELS[a.event] || a.event}
+                      {typeof a.details?.amount === "number" && " · " + currency(a.details.amount)}
+                      {low && ` · kapora altı (tahsilat ${currency(low.paid)}, kapora ${currency(low.deposit)})`}
+                    </span>
+                  </li>
+                );
+              })}
             </ol>
           </div>
         ) : (

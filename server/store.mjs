@@ -539,7 +539,7 @@ export async function openStore(
           deposit = input.paymentMode === "on_tour" ? 0 : input.paymentMode === "deposit" ? depositFor(total) : total,
           paid = input.payment?.amount || 0;
         if (paid > total) throw new AppError(400, "Tahsilat tutarı rezervasyon toplamını aşamaz.");
-        if (input.confirm && paid < deposit)
+        if (input.confirm && paid < deposit && !input.belowDeposit)
           throw new AppError(
             409,
             "Onay için en az seçilen kapora/tam ödeme tutarının tahsilatı kaydedilmeli.",
@@ -566,7 +566,7 @@ export async function openStore(
               externalReference: input.payment.externalReference || "PANEL-" + r.reference,
               kind: "payment",
             });
-          if (input.confirm) await workflow.confirm(r.reference);
+          if (input.confirm) await workflow.confirm(r.reference, { belowDeposit: Boolean(input.belowDeposit) });
           return workflow.get(r.reference);
         } catch (error) {
           if (r) {

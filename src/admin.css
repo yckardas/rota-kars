@@ -1173,9 +1173,12 @@
 }
 
 /* Bildirim ve hızlı arama */
+/* Hata bildirimi "toast error" sınıfını taşır; genel .rk-admin .error (koyu kırmızı yazı)
+   rengini ezmesin diye yazı rengi burada açıkça beyaz verilir. */
 .rk-admin .toast {
   border-radius: 4px;
   background: var(--tufa);
+  color: #fff;
   font-size: 14px;
   box-shadow: 0 12px 32px #14100e40;
 }
