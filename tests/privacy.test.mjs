@@ -100,11 +100,15 @@ test("retention job anonymizes old unpaid bookings and clears old requests and n
   const r = await book("eski@example.com");
   await store.workflow.cancel(r.reference);
   await store.request("private-tour", { name: "Eski Talep", email: "eski@example.com" });
+  // Panelden iptal edilen kuyruk mesajı da saklama süresi dolunca silinir (kişisel veri içerir).
+  await store.notifications.enqueue({ email: "eski@example.com", subject: "S", body: "B", kind: "test", dedupeKey: "iptal-1" });
+  await store.db.update("notification_outbox", { _id: "iptal-1" }, { status: "cancelled" });
   advance(800 * 86400000);
   const result = await store.privacy.runRetention();
   assert.equal(result.anonymizedUnpaid, 1);
   assert.equal(result.requestsDeleted, 1);
   assert.equal((await store.db.one("reservations", { reference: r.reference })).name, "Anonim");
+  assert.equal(await store.db.count("notification_outbox", { status: "cancelled" }), 0);
 });
 
 test("chat does not send questions abroad without explicit consent", async () => {

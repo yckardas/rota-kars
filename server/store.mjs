@@ -413,6 +413,7 @@ export async function openStore(
       notes = "",
       legal = null,
       transfer = null,
+      confirmNow = false,
     }) {
       return tx(async () => {
         await cleanup();
@@ -517,7 +518,12 @@ export async function openStore(
           { owner: reference, expires_at: expires },
         );
         await db.remove("holds", { _id: holdToken });
-        return workflow.created(reference, { byAgency: Boolean(agent), legal: agent ? null : legal });
+        return workflow.created(reference, {
+          byAgency: Boolean(agent),
+          legal: agent ? null : legal,
+          // Acente hemen onaylıyorsa müşteriye "onay bekliyor" maili gitmez; tek mail onaydır.
+          notifyCustomer: !(agent && confirmNow),
+        });
       });
     },
     // Telefon/WhatsApp ile gelen müşteriyi acente panelden kaydeder: koltuk, kayıt,
@@ -551,6 +557,7 @@ export async function openStore(
             paymentMode: input.paymentMode,
             agent,
             notes: input.notes,
+            confirmNow: Boolean(input.confirm),
           });
           if (input.payment)
             await workflow.payment(r.reference, {

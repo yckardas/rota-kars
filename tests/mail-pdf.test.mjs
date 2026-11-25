@@ -40,7 +40,8 @@ test("long legal text flows onto several pages and stays small", async () => {
       `MADDE ${i + 1}. Müşteri, iptal ve iade koşullarını okuduğunu kabul eder.`,
   ).join("\n");
   const pdf = await documentPdf({ title: "Ön Bilgilendirme Formu", text });
-  assert.ok(pages(pdf) > 1, `sayfa sayısı ${pages(pdf)}`);
+  // 400 satır ≈ 8 A4 sayfası: satırlar kırpılmadan akarsa sayfa sayısı buna yakın olur.
+  assert.ok(pages(pdf) >= 7, `sayfa sayısı ${pages(pdf)}`);
   assert.ok(pdf.length < 500 * 1024, `boyut ${pdf.length} bayt`);
 });
 

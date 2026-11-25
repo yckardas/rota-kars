@@ -36,7 +36,7 @@ const row = (...cells) =>
   `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed"><tr>${cells
     .map(
       (c) =>
-        `<td valign="top" width="${Math.floor(100 / cells.length)}%" style="padding:8px 0;font-family:Arial,Helvetica,sans-serif;word-break:break-word">${c}</td>`,
+        `<td valign="top" width="${Math.floor(100 / cells.length)}%" style="padding:8px 0;font-family:Arial,Helvetica,sans-serif;word-break:break-word;overflow-wrap:anywhere">${c}</td>`,
     )
     .join("")}</tr></table>`;
 const longDate = (ymd, time) =>
@@ -58,13 +58,15 @@ const qrPng = (url) =>
 
 function ticketCard(t, { qr }) {
   const confirmed = t.status === "confirmed";
-  const amounts = confirmed
+  const paidRows = confirmed
     ? [t.paid > 0 && cell("Ödenen", escape(tl(t.paid))), t.balance > 0 && cell("Kalan bakiye", escape(tl(t.balance)))].filter(Boolean)
-    : [cell("Toplam tutar", escape(tl(t.total)))];
+    : [];
+  // Ödenecek ve ödenen yoksa (ör. ücretsiz kayıt) toplam yine görünür.
+  const amounts = paidRows.length ? paidRows : [cell("Toplam tutar", escape(tl(t.total)))];
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f8fa;border:1px solid #dde5eb;border-radius:6px;margin:4px 0 18px">
 <tr><td style="padding:18px 20px">
 ${confirmed ? "" : `<div style="display:inline-block;margin:0 0 10px;padding:3px 9px;border-radius:3px;background:#fff4d6;color:#7a5a00;font:600 12px Arial,Helvetica,sans-serif">Onay bekliyor</div>`}
-<div style="font:700 17px Arial,Helvetica,sans-serif;color:#1a2846;letter-spacing:.02em;line-height:1.35;word-break:break-word">${escape(String(t.tour || "").toLocaleUpperCase("tr-TR"))}</div>
+<div style="font:700 17px Arial,Helvetica,sans-serif;color:#1a2846;letter-spacing:.02em;line-height:1.35;word-break:break-word;overflow-wrap:anywhere">${escape(String(t.tour || "").toLocaleUpperCase("tr-TR"))}</div>
 <div style="font:15px Arial,Helvetica,sans-serif;color:#c2342b;margin:4px 0 6px">${escape(longDate(t.date, t.time))}</div>
 ${row(cell("Buluşma", escape(t.pickup)))}
 ${t.transfer ? row(cell("Transfer", escape(t.transfer))) : ""}
@@ -77,6 +79,15 @@ ${
     : ""
 }
 </td></tr></table>`;
+}
+
+// Mail hazırlanamazsa (PDF/QR) hata sağlayıcı hatasından ayrılır: panel doğru sebebi gösterir.
+export async function renderForSend(item) {
+  try {
+    return await renderMail(item);
+  } catch (e) {
+    throw Object.assign(new Error(`Mail hazırlanamadı: ${e?.message || e}`), { code: "RENDER_FAILED" });
+  }
 }
 
 export async function renderMail({ recipient, subject, body, action_url: url, ticket = null, documents = null }) {
@@ -119,13 +130,16 @@ async function renderTicketMail({ recipient, subject, url, ticket: t, documents 
   const names = documents.map((d) => d.title);
   const amountText =
     t.status === "confirmed"
-      ? [t.paid > 0 && `Ödenen: ${tl(t.paid)}`, t.balance > 0 && `Kalan bakiye: ${tl(t.balance)}`].filter(Boolean).join(" · ")
+      ? [t.paid > 0 && `Ödenen: ${tl(t.paid)}`, t.balance > 0 && `Kalan bakiye: ${tl(t.balance)}`].filter(Boolean).join(" · ") ||
+        `Toplam tutar: ${tl(t.total)}`
       : `Toplam tutar: ${tl(t.total)} (onay bekliyor)`;
   const text = [
     t.headline,
     `Merhaba ${t.name},`,
     `${t.reference} · ${t.tour}`,
     `${longDate(t.date, t.time)} · Koltuk: ${(t.seats || []).join(", ")}`,
+    t.pickup ? `Buluşma: ${t.pickup}` : "",
+    t.transfer || "",
     amountText,
     url || "",
     names.length ? `Ekler: ${names.join(", ")} (PDF)` : "",

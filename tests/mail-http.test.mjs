@@ -123,3 +123,17 @@ test("Resend: ticket mails send the QR and PDF documents as base64 attachments",
     body.attachments.some((a) => a.content_id === "qr@rotakarsturizm.com"),
   );
 });
+
+test("Resend: a mail that cannot be rendered fails with RENDER_FAILED, not as a provider error", async () => {
+  let called = false;
+  const send = resendSender(env, async () => {
+    called = true;
+    return new Response("{}", { status: 200 });
+  });
+  const broken = { toString() { throw new Error("bozuk belge"); } };
+  await assert.rejects(
+    send({ ...item, ticket: { name: "A", tour: "Ani", date: "2026-11-28", seats: [1], status: "pending", total: 1 }, documents: [{ title: "X", filename: "x.pdf", text: broken }] }),
+    (e) => e.code === "RENDER_FAILED",
+  );
+  assert.equal(called, false, "sağlayıcıya istek gitmez");
+});

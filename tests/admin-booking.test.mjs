@@ -321,4 +321,29 @@ test("agency booking confirmed with an e-mail gets a ticket mail with only the c
   assert.deepEqual(mail.ticket.seats, [3, 4]);
   // Acente kaydında ön bilgilendirme formu yok; yalnız sözleşme ek olur.
   assert.deepEqual(mail.documents.map((x) => x.title), ["Tur Hizmet Sözleşmesi"]);
+  // Anında onaylanan kayıtta müşteriye önce "Onay bekliyor" maili gitmez; tek mail onaydır.
+  assert.equal(await s.db.count("notification_outbox", { kind: "reservation_created" }), 0);
+  // Panel listesi belge metinlerini ve bilet alanlarını taşımaz (göstermez, yük olur).
+  const listed = (await s.notifications.list()).items.find((m) => m.kind === "reservation_confirmed");
+  assert.equal(listed.documents, undefined);
+  assert.equal(listed.ticket, undefined);
+  assert.equal(listed.recipient, "telefon@example.com");
+});
+
+test("agency booking left unconfirmed still tells the customer it awaits approval", async (t) => {
+  const { s, d } = await setup(t);
+  await s.adminReserve(base(d, { email: "bekleyen@example.com", confirm: false }), AGENT);
+  const mail = await s.db.one("notification_outbox", { kind: "reservation_created" });
+  assert.equal(mail.recipient, "bekleyen@example.com");
+  assert.equal(mail.ticket.status, "pending");
+});
+
+test("a mail that cannot be rendered is marked as such, not as a provider failure", async (t) => {
+  const { s } = await setup(t);
+  await s.notifications.enqueue({ email: "a@example.com", subject: "S", body: "B", kind: "test", dedupeKey: "render-1" });
+  const error = Object.assign(new Error("bozuk belge"), { code: "RENDER_FAILED" });
+  await s.notifications.processBatch({ send: async () => { throw error; } });
+  const row = await s.db.one("notification_outbox", { _id: "render-1" });
+  assert.match(row.last_error, /hazırlanamadı \(RENDER_FAILED\)/);
+  assert.doesNotMatch(row.last_error, /sağlayıcısına ulaşılamadı/);
 });

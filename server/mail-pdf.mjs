@@ -40,7 +40,6 @@ export function documentPdf({ title, text }) {
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    doc.registerFont("body", PDF_FONT_PATH).font("body");
     doc.image(LOGO_PATH, doc.page.margins.left, doc.y, { width: 110 });
     doc.moveDown(3.5);
     doc.fillColor(INK).fontSize(16).text(pdfSafe(title));

@@ -200,7 +200,7 @@ export async function createWorkflow(
     // legal: siteden gelen kayıtta müşterinin onayladığı ön bilgilendirme formu
     // ({ onlinePayment, depositPercent, othersDeclared }). Metin onay anındaki
     // hâliyle kayda yazılır ve e-postaya eklenir.
-    async created(reference, { byAgency = false, legal = null } = {}) {
+    async created(reference, { byAgency = false, legal = null, notifyCustomer = true } = {}) {
       let r = await api.get(reference);
       let extra = "";
       if (legal) {
@@ -225,7 +225,7 @@ export async function createWorkflow(
         );
         r = await api.get(reference, { fresh: false });
       }
-      await notify(
+      if (notifyCustomer) await notify(
         r,
         "reservation_created",
         "Ön rezervasyon talebiniz alındı; henüz kesin bilet veya ödeme değildir.",

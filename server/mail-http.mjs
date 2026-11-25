@@ -1,6 +1,6 @@
 // E-posta HTTPS üzerinden (Resend API, 443) gönderilir: Railway SMTP bağlantılarını
 // zaman aşımına düşürüyor (2026-10'dan beri tüm denemeler ETIMEDOUT). SMTP yedek olarak kalır.
-import { renderMail } from "./mail-template.mjs";
+import { renderForSend } from "./mail-template.mjs";
 
 // Hangi yolla gönderileceği: RESEND_API_KEY varsa Resend, yoksa SMTP_HOST varsa SMTP.
 export function mailDelivery(env = {}) {
@@ -13,7 +13,7 @@ export function mailDelivery(env = {}) {
 
 export function resendSender(env, fetchImpl = fetch) {
   return async (item) => {
-    const mail = await renderMail(item);
+    const mail = await renderForSend(item);
     const res = await fetchImpl("https://api.resend.com/emails", {
       method: "POST",
       headers: {

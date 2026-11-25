@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import nodemailer from "nodemailer";
-import { renderMail } from "./mail-template.mjs";
+import { renderForSend } from "./mail-template.mjs";
 import { AppError } from "./store.mjs";
 import { mailDelivery, resendSender } from "./mail-http.mjs";
 export async function createNotifications(db, { clock, tx, env = {}, push = null }) {
@@ -94,7 +94,8 @@ export async function createNotifications(db, { clock, tx, env = {}, push = null
       return {
         configured: ready,
         preview: env.DEMO_MODE === "1" || env.NODE_ENV !== "production",
-        items: rows.map((row) => {
+        // Belge metinleri ve bilet alanları panelde gösterilmez; listeye taşınmaz.
+        items: rows.map(({ documents, ticket, ...row }) => {
           if (
             // Hesap güvenliği bağlantıları canlıda (demo dahil) yöneticiye hiç gösterilmez.
             row.kind.startsWith("auth_") &&
@@ -133,7 +134,7 @@ export async function createNotifications(db, { clock, tx, env = {}, push = null
         : transport
           ? async (item) =>
               // Düz metin + logolu HTML, varsa bilet QR'ı ve PDF belgeler (bkz. mail-template.mjs).
-              transport.sendMail({ from: env.MAIL_FROM, ...(await renderMail(item)) })
+              transport.sendMail({ from: env.MAIL_FROM, ...(await renderForSend(item)) })
           : null,
     } = {}) {
       if (!send) return { sent: 0, configured: false };
@@ -179,7 +180,12 @@ export async function createNotifications(db, { clock, tx, env = {}, push = null
           sent++;
         } catch (e) {
           const code = String(e?.code || e?.responseCode || e?.name || "unknown").slice(0, 40);
-          console.error(`Notification send failed (${item.kind}): ${code}`);
+          const renderFailed = code === "RENDER_FAILED";
+          // Hazırlama hatasında ayrıntı loga yazılır (kişisel veri değil, kod hatası).
+          console.error(
+            `Notification send failed (${item.kind}): ${code}` +
+              (renderFailed ? ` ${String(e?.message || "").slice(0, 200)}` : ""),
+          );
           const attempts = item.attempts + 1;
           await db.update(
             "notification_outbox",
@@ -189,7 +195,9 @@ export async function createNotifications(db, { clock, tx, env = {}, push = null
               next_attempt_at: clock() + Math.min(3600000, 60000 * 2 ** attempts),
               lease_until: 0,
               // Yalnız hata kodu (ETIMEDOUT, EAUTH, HTTP_422…) panelde görünür; ayrıntı/sır içermez.
-              last_error: `Gönderim sağlayıcısına ulaşılamadı (${code}). Ayarları kontrol edin.`,
+              last_error: renderFailed
+                ? `E-posta hazırlanamadı (${code}). Teknik destek gerekir; sağlayıcı ayarları sorunsuz.`
+                : `Gönderim sağlayıcısına ulaşılamadı (${code}). Ayarları kontrol edin.`,
             },
           );
         }

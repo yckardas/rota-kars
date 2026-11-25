@@ -119,4 +119,20 @@ test("ticket card escapes customer text and wraps very long values", async () =>
   assert.ok(mail.html.includes("Ayşe &lt;b&gt;Y&lt;/b&gt; &amp; Co"));
   assert.ok(!mail.html.includes("<b>Y</b>"));
   assert.match(mail.html, /word-break:break-word/);
+  // Outlook masaüstü word-break'i tanımaz: overflow-wrap da gerekir; sütunlar sabit düzende.
+  const cells = mail.html.match(/<td valign="top"[^>]*>/g);
+  assert.ok(cells.length >= 3);
+  assert.ok(cells.every((c) => /overflow-wrap:anywhere/.test(c)), "her hücrede overflow-wrap");
+  assert.match(mail.html, /table-layout:fixed/);
+});
+
+test("plain-text version keeps the meeting point and the transfer", async () => {
+  const mail = await renderMail(ticketItem({ transfer: "Transfer: Kars Havalimanı ↔ Kars merkez · Gidiş" }));
+  assert.match(mail.text, /Buluşma: Kars merkezde ev, otel ve yakın noktalardan alıp bırakma/);
+  assert.match(mail.text, /Transfer: Kars Havalimanı ↔ Kars merkez · Gidiş/);
+});
+
+test("a free booking (nothing paid, nothing due) still shows its total", async () => {
+  const mail = await renderMail(ticketItem({ total: 0, paid: 0, balance: 0 }));
+  assert.match(mail.html, /Toplam tutar[\s\S]*?0,00 TL/);
 });
