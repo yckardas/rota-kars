@@ -3,6 +3,7 @@ import { Download, LoaderCircle, Mail, MessageCircle, Phone, Ticket } from "luci
 import { api, post } from "../../lib/api";
 import { dateLabel, type Catalog, type Hotel, type Tour } from "../../lib/types";
 import { NewReservation } from "./NewReservation";
+import { useFeedback } from "./feedback";
 import { downloadCsv } from "../../lib/csv";
 import { isNativeApp } from "../../lib/native";
 
@@ -83,6 +84,7 @@ export function RequestManager({
 }) {
   // Talepten açılan yeni rezervasyon penceresi.
   const [booking, setBooking] = useState<RequestRecord | null>(null);
+  const feedback = useFeedback();
   const [items, setItems] = useState<RequestRecord[] | null>(null),
     [hotels, setHotels] = useState<Hotel[]>([]),
     [kind, setKind] = useState("all"),
@@ -289,8 +291,16 @@ export function RequestManager({
             notes: booking.body.notes ? booking.body.notes.slice(0, 500) : "",
           }}
           onClose={() => setBooking(null)}
-          // Rezervasyon yazılınca talep "Rezervasyona döndü" olur ve referansı not düşülür.
-          onCreated={(created) => update(booking.id, { status: "won", note: "Rezervasyon oluşturuldu: " + created.reference })}
+          // Onaylı rezervasyonda talep "Rezervasyona döndü" olur; ön rezervasyonda (süresi
+          // dolabilir) yalnız not düşülür. Güncelleme düşerse pencerenin üstünde uyarı çıkar.
+          onCreated={async (created) => {
+            const confirmed = created.status === "confirmed";
+            const ok = await update(booking.id, {
+              ...(confirmed ? { status: "won" } : {}),
+              note: (confirmed ? "Rezervasyon oluşturuldu: " : "Ön rezervasyon oluşturuldu (onay bekliyor): ") + created.reference,
+            });
+            if (!ok) feedback.error(new Error("Rezervasyon yazıldı ama talep güncellenemedi; talebin durumunu elle değiştirin."));
+          }}
         />
       )}
     </>

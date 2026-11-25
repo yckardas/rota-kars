@@ -196,7 +196,8 @@ function AdminPanel({
     [counts, setCounts] = useState<Counts | null>(null),
     [openGroups, setOpenGroups] = useState<string[]>(() => {
       try {
-        return JSON.parse(localStorage.getItem(NAV_OPEN_KEY) || "[]");
+        const v = JSON.parse(localStorage.getItem(NAV_OPEN_KEY) || "[]");
+        return Array.isArray(v) ? v : [];
       } catch {
         return [];
       }
@@ -376,8 +377,10 @@ function AdminPanel({
         </button>
         <nav>
           {groups.map((group) => {
-            const collapsible = COLLAPSIBLE_GROUPS.includes(group) && groups.length > 1,
-              open = !collapsible || openGroups.includes(group) || tabs.some((t) => t[3] === group && t[0] === tab);
+            // İçindeki sekme açıkken grup açık kalır ve başlık düz yazıdır (kapatılamaz).
+            const holdsActive = tabs.some((t) => t[3] === group && t[0] === tab),
+              collapsible = COLLAPSIBLE_GROUPS.includes(group) && groups.length > 1 && !holdsActive,
+              open = !collapsible || openGroups.includes(group);
             return (
             <div className="admin-nav-group" key={group}>
               {groups.length > 1 &&
@@ -768,12 +771,14 @@ type IntegrationStatus = {
 };
 // Bağlantılar: durumlar sunucudaki gerçek ayardan okunur (/admin/integrations).
 function Integrations({ catalog, owner }: { catalog: Catalog; owner: boolean }) {
-  const [st, setSt] = useState<IntegrationStatus | null>(null);
+  const [st, setSt] = useState<IntegrationStatus | null>(null),
+    [failed, setFailed] = useState(false);
   useEffect(() => {
     api<IntegrationStatus>("/admin/integrations")
       .then(setSt)
-      .catch(() => setSt(null));
+      .catch(() => setFailed(true));
   }, []);
+  const unknown = failed ? "Durum okunamadı" : "Yükleniyor…";
   const pay = st?.payment,
     mail = st?.email.delivery;
   return (
@@ -782,7 +787,7 @@ function Integrations({ catalog, owner }: { catalog: Catalog; owner: boolean }) 
       <article>
         <h3>Sanal POS</h3>
         {!st ? (
-          <span className="status-tag inactive">Durum okunamadı</span>
+          <span className="status-tag inactive">{unknown}</span>
         ) : pay?.enabled && !pay.test ? (
           <span className="status-tag status-confirmed">Canlı · gerçek tahsilat</span>
         ) : pay?.enabled ? (
@@ -799,7 +804,7 @@ function Integrations({ catalog, owner }: { catalog: Catalog; owner: boolean }) 
       <article>
         <h3>E-posta</h3>
         {!st ? (
-          <span className="status-tag inactive">Durum okunamadı</span>
+          <span className="status-tag inactive">{unknown}</span>
         ) : mail ? (
           <span className="status-tag status-confirmed">Gönderiliyor · {mail === "resend" ? "Resend" : "SMTP"}</span>
         ) : (

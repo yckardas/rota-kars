@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Plus,
   Check,
@@ -137,14 +137,17 @@ export function DepartureManager({
   useEffect(() => {
     load().catch(feedback.error);
   }, [tourFilter]);
+  // Derin bağlantı bir kez uygulanır; sonra filtre değişse de editör kendiliğinden açılmaz.
+  const openedFromLink = useRef(false);
   useEffect(() => {
-    if (!openId) return;
+    if (!openId || openedFromLink.current) return;
     const target = items.find((d) => d.id === openId);
     if (target) {
+      openedFromLink.current = true;
       setEditing(target);
       window.scrollTo({ top: 0 });
     }
-  }, [openId, items.length > 0]);
+  }, [openId, items]);
   async function remove(d: Departure) {
     const ok = await feedback.confirm({
       title: "Sefer silinsin mi?",
@@ -775,6 +778,7 @@ const STATUS_FILTERS = [
   ["cancelled", "İptal"],
 ] as const;
 const PAGE = 50;
+const RES_FILTERS = "rota-reservation-filters";
 const AUDIT_LABELS: Record<string, string> = {
   created: "Kayıt oluşturuldu",
   confirmed: "Acente onayı verildi",
@@ -824,16 +828,28 @@ export function ReservationManager({
   startCreating?: boolean;
 }) {
   const feedback = useFeedback();
+  // Üstteki "Yenile" sekmeyi yeniden kurar; filtreler bu sekme boyunca korunur.
+  // Özet'ten/aramadan belirli bir filtreyle gelinirse o filtre geçerlidir.
+  const linked = Boolean(initialStatus || initialFlag || openRef);
+  const kept = (() => {
+    if (linked) return null;
+    try {
+      const v = JSON.parse(sessionStorage.getItem(RES_FILTERS) || "null");
+      return v && typeof v === "object" ? (v as { from?: string; to?: string; filter?: string; query?: string }) : null;
+    } catch {
+      return null;
+    }
+  })();
   const [rows, setRows] = useState<Reservation[]>([]),
     [loading, setLoading] = useState(true),
     [selected, setSelected] = useState(openRef.toUpperCase()),
     [busy, setBusy] = useState(false),
     // Tur tarihi aralığı (iki uç dahil); boşsa tüm tarihler.
-    [from, setFrom] = useState(""),
-    [to, setTo] = useState(""),
-    [filter, setFilter] = useState(initialFlag ? "flag:" + initialFlag : initialStatus),
-    [search, setSearch] = useState(openRef),
-    [query, setQuery] = useState(openRef),
+    [from, setFrom] = useState(kept?.from || ""),
+    [to, setTo] = useState(kept?.to || ""),
+    [filter, setFilter] = useState(initialFlag ? "flag:" + initialFlag : initialStatus || kept?.filter || ""),
+    [search, setSearch] = useState(openRef || kept?.query || ""),
+    [query, setQuery] = useState(openRef || kept?.query || ""),
     [shown, setShown] = useState(PAGE),
     [creating, setCreating] = useState(startCreating);
   // Arama yazarken her tuşta değil, kısa bir duraksamadan sonra sorgulanır.
@@ -859,6 +875,9 @@ export function ReservationManager({
   useEffect(() => {
     setShown(PAGE);
     load();
+    try {
+      sessionStorage.setItem(RES_FILTERS, JSON.stringify({ from, to, filter, query }));
+    } catch {}
   }, [from, to, filter, query]);
   async function action(ref: string, path: string, body: unknown = {}, done = "Kaydedildi.") {
     setBusy(true);

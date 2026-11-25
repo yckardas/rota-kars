@@ -73,7 +73,9 @@ export function NewReservation({
         setDepartures(open);
         // Talepteki tur ve tarihte açık sefer varsa o seçilir.
         if (!initialDepartureId && prefill?.tourId && prefill.date) {
-          const match = open.find((d) => d.tour_id === prefill.tourId && d.date === prefill.date);
+          // Aynı tarihte birden çok araç varsa boş koltuğu olan ilk araç seçilir.
+          const same = open.filter((d) => d.tour_id === prefill.tourId && d.date === prefill.date),
+            match = same.find((d) => (d.available ?? 1) > 0) || same[0];
           if (match) setDepartureId(match.id);
         }
       })
