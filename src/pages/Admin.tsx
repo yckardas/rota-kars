@@ -465,7 +465,7 @@ function AdminPanel({
           />
         )}
         {tab === "departures" && (
-          <DepartureManager key={key("dep")} catalog={catalog} startCreating={Boolean(nav.create)} />
+          <DepartureManager key={key("dep")} catalog={catalog} startCreating={Boolean(nav.create)} openId={nav.ref || ""} />
         )}
         {tab === "campaigns" && <CampaignManager key={key("camp")} catalog={catalog} />}
         {tab === "daily" && <DailyReport key={key("daily")} catalog={catalog} />}

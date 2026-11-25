@@ -665,7 +665,8 @@ export async function openStore(
       await cleanup();
       const now = clock(),
         today = localDate(now),
-        week = localDate(now + 7 * 86400000);
+        week = localDate(now + 7 * 86400000),
+        tomorrow = localDate(now + 86400000);
       const tourName = (id) => tours.find((t) => t.id === id)?.name || id;
       const upcoming = (await departures.list()).filter((d) => d.date >= today && d.date <= week);
       const seatsOf = (d) => d.vehicle.sellableSeats;
@@ -699,6 +700,19 @@ export async function openStore(
             capacity: seatsOf(d),
             active: Boolean(d.active),
           })),
+        // Bugün ve yarın yolcusu olan, rehberi veya plakası atanmamış seferler.
+        staffing: upcoming
+          .filter((d) => d.date <= tomorrow && d.active && seatsOf(d) - d.available - (d.closed || 0) > 0)
+          .map((d) => ({
+            id: d.id,
+            tourName: tourName(d.tour_id),
+            date: d.date,
+            startTime: d.start_time,
+            booked: seatsOf(d) - d.available - (d.closed || 0),
+            missing: [!d.guide_name && "rehber", !d.vehicle_id && "plaka"].filter(Boolean),
+          }))
+          .filter((x) => x.missing.length)
+          .sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime)),
         pending: { count: pending.length, items: pending.slice(0, 8) },
         cancellationRequests,
         newRequests: await db.count("requests", { status: "new" }),

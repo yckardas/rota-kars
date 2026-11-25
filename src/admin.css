@@ -2460,3 +2460,56 @@
 .rk-admin .finance-bars .bar.neg {
   background: var(--red);
 }
+
+/* Özet: bugün/yarın rehberi veya plakası eksik seferler */
+.rk-admin .staffing-alert {
+  border: 1px solid var(--red);
+  background: var(--red-wash);
+  border-radius: 4px;
+  padding: 12px 14px;
+}
+.rk-admin .staffing-alert h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--red-deep);
+}
+.rk-admin .staffing-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 8px 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.rk-admin .staffing-row time {
+  min-width: 82px;
+  font-weight: 600;
+}
+.rk-admin .staffing-row span {
+  flex: 1;
+  min-width: 0;
+}
+.rk-admin .staffing-row strong,
+.rk-admin .staffing-row small {
+  display: block;
+}
+.rk-admin .staffing-row small {
+  color: var(--red-deep);
+}
+.rk-admin .staffing-row em {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--red-deep);
+}
+/* Uygulama olarak ekleme önerisi yalnız telefon/tablette; bilgisayarda Hesabım'da durur. */
+@media (min-width: 1024px) and (hover: hover) {
+  .rk-admin .app-install {
+    display: none;
+  }
+}

@@ -72,9 +72,12 @@ const WEEKDAYS = [
 export function DepartureManager({
   catalog,
   startCreating = false,
+  openId = "",
 }: {
   catalog: Catalog;
   startCreating?: boolean;
+  // Özet'teki "Atama eksik" satırından gelince bu sefer düzenlemede açılır.
+  openId?: string;
 }) {
   const feedback = useFeedback();
   const [items, setItems] = useState<Departure[]>([]),
@@ -134,6 +137,14 @@ export function DepartureManager({
   useEffect(() => {
     load().catch(feedback.error);
   }, [tourFilter]);
+  useEffect(() => {
+    if (!openId) return;
+    const target = items.find((d) => d.id === openId);
+    if (target) {
+      setEditing(target);
+      window.scrollTo({ top: 0 });
+    }
+  }, [openId, items.length > 0]);
   async function remove(d: Departure) {
     const ok = await feedback.confirm({
       title: "Sefer silinsin mi?",
