@@ -65,7 +65,7 @@ export async function createNotifications(db, { clock, tx, env = {}, push = null
       }
       return api.enqueueNow(message);
     },
-    async enqueueNow({ email, subject, body, actionUrl = null, kind, dedupeKey }) {
+    async enqueueNow({ email, subject, body, actionUrl = null, kind, dedupeKey, ticket = null, documents = null }) {
       // dedupe_key _id olarak kullanılır: aynı olay için ikinci mesaj kuyruğa girmez.
       await db.insertIfAbsent("notification_outbox", dedupeKey, {
         id: randomUUID(),
@@ -73,6 +73,9 @@ export async function createNotifications(db, { clock, tx, env = {}, push = null
         subject,
         body,
         action_url: actionUrl,
+        // Bilet kartı ve PDF belgeler: onay anının kopyası; gönderimde HTML/QR/PDF'e çevrilir.
+        ticket,
+        documents,
         kind,
         dedupe_key: dedupeKey,
         status: "queued",

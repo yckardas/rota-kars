@@ -309,3 +309,16 @@ test("agency booking stores optional passenger ids and can complete them later",
   const plain = await s.adminReserve(base(d, { seats: [7], passengers: ["Tek Yolcu"] }), AGENT);
   assert.deepEqual((await s.workflow.passengers(plain.reference, ["Tek Yolcu"], [null])).passenger_details, [null]);
 });
+
+test("agency booking confirmed with an e-mail gets a ticket mail with only the contract PDF", async (t) => {
+  const { s, d } = await setup(t);
+  const r = await s.adminReserve(base(d, { email: "telefon@example.com", confirm: true }), AGENT);
+  const mail = await s.db.one("notification_outbox", { kind: "reservation_confirmed" });
+  assert.equal(mail.recipient, "telefon@example.com");
+  assert.equal(mail.ticket.status, "confirmed");
+  assert.equal(mail.ticket.paid, 0);
+  assert.equal(mail.ticket.balance, r.total, "ödeme yoksa kalan bakiye toplam tutardır");
+  assert.deepEqual(mail.ticket.seats, [3, 4]);
+  // Acente kaydında ön bilgilendirme formu yok; yalnız sözleşme ek olur.
+  assert.deepEqual(mail.documents.map((x) => x.title), ["Tur Hizmet Sözleşmesi"]);
+});
