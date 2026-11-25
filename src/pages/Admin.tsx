@@ -35,8 +35,10 @@ import {
   Star,
   Plug,
   Search,
+  Wallet,
 } from "lucide-react";
 import { MonthReport } from "../components/admin/MonthReport";
+import { FinancePanel } from "../components/admin/FinancePanel";
 import { ContentManager } from "../components/admin/ContentManager";
 import { Overview } from "../components/admin/Overview";
 import { RequestManager } from "../components/admin/RequestManager";
@@ -80,6 +82,7 @@ const ALL_TABS = [
   ["daily", "Günlük operasyon", ClipboardCheck, "Operasyon"],
   ["requests", "Gelen talepler", Inbox, "Operasyon"],
   ["interest", "Bekleme ve ön kayıt", BellRing, "Operasyon"],
+  ["finance", "Finans", Wallet, "Satış"],
   ["reports", "Aylık rapor", BarChart3, "Satış"],
   ["campaigns", "Kampanyalar", Gift, "Satış"],
   ["notifications", "Bildirim kuyruğu", Mail, "Satış"],
@@ -449,6 +452,7 @@ function AdminPanel({
         )}
         {tab === "campaigns" && <CampaignManager key={key("camp")} catalog={catalog} />}
         {tab === "daily" && <DailyReport key={key("daily")} catalog={catalog} />}
+        {tab === "finance" && <FinancePanel key={key("fin")} onReservation={(ref) => pick("reservations", { ref })} />}
         {tab === "reports" && <MonthReport key={key("rep")} />}
         {tab === "notifications" && <NotificationManager key={key("notif")} />}
         {tab === "requests" && <RequestManager key={key("req")} initialQuery={nav.q || ""} tours={catalog.tours} />}
