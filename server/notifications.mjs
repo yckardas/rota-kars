@@ -2,18 +2,16 @@ import { randomUUID } from "node:crypto";
 import nodemailer from "nodemailer";
 import { renderMail } from "./mail-template.mjs";
 import { AppError } from "./store.mjs";
+import { mailDelivery, resendSender } from "./mail-http.mjs";
 export async function createNotifications(db, { clock, tx, env = {}, push = null }) {
   await Promise.all([
     db.index("notification_outbox", { id: 1 }, { unique: true }),
     db.index("notification_outbox", { status: 1, next_attempt_at: 1 }),
     db.index("notification_outbox", { created_at: -1 }),
   ]);
-  const ready = Boolean(
-    env.SMTP_HOST &&
-    env.MAIL_FROM &&
-    /^https?:\/\//.test(env.PUBLIC_BASE_URL || ""),
-  );
-  const transport = ready
+  const delivery = mailDelivery(env);
+  const ready = Boolean(delivery);
+  const transport = delivery === "smtp"
     ? nodemailer.createTransport({
         host: env.SMTP_HOST,
         port: Number(env.SMTP_PORT || 587),
@@ -127,11 +125,13 @@ export async function createNotifications(db, { clock, tx, env = {}, push = null
       if (!n) throw new AppError(409, "Bu mesaj gönderildi ya da şu an gönderiliyor; iptal edilemez.");
     },
     async processBatch({
-      send = transport
-        ? (item) =>
-            // Düz metin + logolu HTML (bkz. mail-template.mjs).
-            transport.sendMail({ from: env.MAIL_FROM, ...renderMail(item) })
-        : null,
+      send = delivery === "resend"
+        ? resendSender(env)
+        : transport
+          ? (item) =>
+              // Düz metin + logolu HTML (bkz. mail-template.mjs).
+              transport.sendMail({ from: env.MAIL_FROM, ...renderMail(item) })
+          : null,
     } = {}) {
       if (!send) return { sent: 0, configured: false };
       let sent = 0;
@@ -175,9 +175,8 @@ export async function createNotifications(db, { clock, tx, env = {}, push = null
             );
           sent++;
         } catch (e) {
-          console.error(
-            `Notification send failed (${item.kind}): ${e?.code || e?.responseCode || e?.message || "unknown"}`,
-          );
+          const code = String(e?.code || e?.responseCode || e?.name || "unknown").slice(0, 40);
+          console.error(`Notification send failed (${item.kind}): ${code}`);
           const attempts = item.attempts + 1;
           await db.update(
             "notification_outbox",
@@ -186,7 +185,8 @@ export async function createNotifications(db, { clock, tx, env = {}, push = null
               status: attempts >= 5 ? "failed" : "queued",
               next_attempt_at: clock() + Math.min(3600000, 60000 * 2 ** attempts),
               lease_until: 0,
-              last_error: "Gönderim sağlayıcısına ulaşılamadı. Ayarları kontrol edin.",
+              // Yalnız hata kodu (ETIMEDOUT, EAUTH, HTTP_422…) panelde görünür; ayrıntı/sır içermez.
+              last_error: `Gönderim sağlayıcısına ulaşılamadı (${code}). Ayarları kontrol edin.`,
             },
           );
         }
