@@ -28,10 +28,17 @@ const actionLabel = (url) =>
 
 // Bilet kartı satırı: etiket küçük gri, değer lacivert; uzun metin taşmadan kırılır.
 const cell = (label, value) =>
-  `<td valign="top" style="padding:8px 0;font-family:Arial,Helvetica,sans-serif;word-break:break-word">
-<div style="font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#47536e">${escape(label)}</div>
-<div style="font-size:15px;color:#1a2846;font-weight:600;line-height:1.4">${value}</div></td>`;
-const row = (...cells) => `<tr>${cells.join('<td width="16"></td>')}</tr>`;
+  `<div style="font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#47536e">${escape(label)}</div>
+<div style="font-size:15px;color:#1a2846;font-weight:600;line-height:1.4">${value}</div>`;
+// İki sütunlu satırlarda sütunlar eşit genişlikte (dar sütunda rezervasyon no kırılmasın).
+// Her satır kendi tablosu: tek ve iki sütunlu satırlar birbirinin genişliğini bozmaz.
+const row = (...cells) =>
+  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed"><tr>${cells
+    .map(
+      (c) =>
+        `<td valign="top" width="${Math.floor(100 / cells.length)}%" style="padding:8px 0;font-family:Arial,Helvetica,sans-serif;word-break:break-word">${c}</td>`,
+    )
+    .join("")}</tr></table>`;
 const longDate = (ymd, time) =>
   new Date(`${ymd}T12:00:00Z`).toLocaleDateString("tr-TR", {
     weekday: "long",
@@ -59,12 +66,10 @@ function ticketCard(t, { qr }) {
 ${confirmed ? "" : `<div style="display:inline-block;margin:0 0 10px;padding:3px 9px;border-radius:3px;background:#fff4d6;color:#7a5a00;font:600 12px Arial,Helvetica,sans-serif">Onay bekliyor</div>`}
 <div style="font:700 17px Arial,Helvetica,sans-serif;color:#1a2846;letter-spacing:.02em;line-height:1.35;word-break:break-word">${escape(String(t.tour || "").toLocaleUpperCase("tr-TR"))}</div>
 <div style="font:15px Arial,Helvetica,sans-serif;color:#c2342b;margin:4px 0 6px">${escape(longDate(t.date, t.time))}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
 ${row(cell("Buluşma", escape(t.pickup)))}
 ${t.transfer ? row(cell("Transfer", escape(t.transfer))) : ""}
 ${row(cell((t.seats || []).length > 1 ? "Koltuklar" : "Koltuk", escape((t.seats || []).join(", "))), cell("Rezervasyon", escape(t.reference)))}
 ${amounts.length ? row(...amounts) : ""}
-</table>
 ${
   qr
     ? `<div style="text-align:center;margin:14px 0 0"><img src="cid:${QR_CID}" width="180" height="180" alt="Bilet QR kodu" style="display:inline-block;border:0;width:180px;height:180px">
