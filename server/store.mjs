@@ -23,7 +23,7 @@ import { articleSeed } from "./articles-seed.mjs";
 import { createInterest } from "./interest.mjs";
 import { describeRequest, formMailPerDay, REQUEST_KINDS, statusLabel } from "./requests.mjs";
 import { applyStandardTransfer, priceTransfer } from "./transfer.mjs";
-import { applyAniMinibus, applyCustomerCorrections } from "./corrections.mjs";
+import { applyAniMinibus, applyCustomerCorrections, removeTestReservations } from "./corrections.mjs";
 export class AppError extends Error {
   constructor(status, message) {
     super(message);
@@ -163,6 +163,8 @@ export async function openStore(
       );
     const minibus = await applyAniMinibus(db, { clock });
     if (minibus.applied) console.log("Ani-Çıldır seferleri minibüse geçti:", minibus.changed);
+    const testRecords = await removeTestReservations(db, { clock });
+    if (testRecords.applied) console.log("Deneme rezervasyonları silindi:", JSON.stringify(testRecords));
   }
   await Promise.all([
     db.index("push_devices", { admin_id: 1 }),

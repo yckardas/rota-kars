@@ -178,3 +178,64 @@ export async function applyAniMinibus(db, { clock }) {
   });
   return { applied: true, changed };
 }
+
+// 26 Kasım 2026: canlıdaki deneme rezervasyonları sahibinin onayıyla kalıcı silinir.
+// Liste numarayla sabittir; belirsiz görülen üç kayıt (RK-264BB35C11, RK-EFF13EA2AF,
+// RK-34699F91B9) bilerek dışarıda bırakıldı. Güvenlik: o anda iptal
+// ya da süresi dolmuş olmayan, ya da net tahsilatı sıfır olmayan kayda dokunulmaz.
+export const TEST_RESERVATIONS_RELEASE = "test_rezervasyonlari_2026_11_26";
+export const TEST_RESERVATIONS = [
+  "RK-06AE3816FE",
+  "RK-1AF51A0A0C",
+  "RK-B77232C951",
+  "RK-4FF9F37F05",
+  "RK-91D640C74C",
+  "RK-00E380E1C3",
+  "RK-8191C02BB0",
+  "RK-69446A0569",
+  "RK-EAEAECE1CC",
+  "RK-B2BB0E889E",
+  "RK-5A9698489E",
+  "RK-1E6CABD1C7",
+  "RK-BFAFEF2014",
+  "RK-1F89288F7E",
+  "RK-2591BF9308",
+  "RK-1C1F32FACC",
+  "RK-8E1F0F0AB7",
+];
+export async function removeTestReservations(db, { clock, references = TEST_RESERVATIONS }) {
+  if (await db.one("integration_settings", { _id: TEST_RESERVATIONS_RELEASE })) return { applied: false };
+  const removed = [],
+    skipped = [];
+  for (const reference of references) {
+    const r = await db.one("reservations", { reference });
+    if (!r) {
+      skipped.push({ reference, reason: "bulunamadı" });
+      continue;
+    }
+    const ledger = await db.find("payment_ledger", { reservation_id: r.id });
+    const net = ledger.reduce((n, p) => n + (p.kind === "refund" ? -1 : 1) * Number(p.amount), 0);
+    if (!["cancelled", "expired"].includes(r.status) || net !== 0) {
+      skipped.push({ reference, reason: `durum ${r.status}, net ${net}` });
+      continue;
+    }
+    const sessions = await db.find("payment_sessions", { reference });
+    if (sessions.length) await db.remove("payment_attempts", { session_id: { $in: sessions.map((x) => x.id) } });
+    await db.remove("payment_sessions", { reference });
+    await db.remove("card_refunds", { reference });
+    await db.remove("payment_locks", { _id: reference });
+    await db.remove("payment_ledger", { reservation_id: r.id });
+    await db.remove("reservation_audit", { reservation_id: r.id });
+    await db.remove("seat_locks", { owner: reference });
+    // E-posta kuyruğu kaydı (gönderilmiş mesajın kopyası) referansı anahtarında taşır.
+    await db.remove("notification_outbox", { dedupe_key: { $regex: reference.replace(/[^A-Z0-9-]/g, "") } });
+    await db.remove("reservations", { _id: r.id });
+    removed.push(reference);
+  }
+  await db.upsert("integration_settings", TEST_RESERVATIONS_RELEASE, {
+    id: TEST_RESERVATIONS_RELEASE,
+    body: { appliedAt: clock(), removed, skipped },
+    updated_at: clock(),
+  });
+  return { applied: true, removed, skipped };
+}
