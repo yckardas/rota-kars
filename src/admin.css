@@ -2517,3 +2517,74 @@
 .rk-admin .desk-table tr.row-inactive td {
   opacity: 0.6;
 }
+
+/* Sefer takvimi: okunur doluluk, kapalı etiketi ve işaret açıklaması */
+.rk-admin .calendar-chip.closed {
+  text-decoration: none;
+}
+.rk-admin .calendar-chip.closed .chip-name {
+  text-decoration: line-through;
+}
+.rk-admin .calendar-chip .chip-closed {
+  background: var(--closed-wash);
+  color: var(--closed);
+}
+.rk-admin .calendar-chip .chip-load {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+.rk-admin .calendar-chip.full .chip-load {
+  color: var(--red);
+  font-weight: 600;
+}
+.rk-admin .chip-load-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--mortar-soft);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.rk-admin .chip-load-bar span {
+  display: block;
+  height: 100%;
+  background: var(--lichen);
+}
+.rk-admin .calendar-chip.full .chip-load-bar span {
+  background: var(--red);
+}
+.rk-admin .calendar-states {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.rk-admin .calendar-states li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rk-admin .calendar-states .chip-vehicle {
+  font-size: 11px;
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+.rk-admin .calendar-states .chip-demand {
+  color: var(--red);
+}
+.rk-admin .legend-full {
+  color: var(--red);
+}
+.rk-admin .calendar-states .chip-vehicle {
+  background: var(--ochre-wash);
+  color: var(--ochre);
+  font-weight: 700;
+}
+.rk-admin .calendar-states .chip-vehicle.chip-closed {
+  background: var(--closed-wash);
+  color: var(--closed);
+}
+.rk-admin .calendar-states .chip-vehicle.chip-demand {
+  color: var(--red);
+}
