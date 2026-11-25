@@ -276,3 +276,31 @@ test("manual payment accepts the note under its own name; externalReference stay
   assert.equal((await post({ externalReference: "eski ad" })).status, 200);
   assert.deepEqual((await s.workflow.get(r.reference)).ledger.map((p) => p.note).sort(), ["eski ad", "yeni ad"]);
 });
+
+test("admin panel traffic has its own rate limit bucket; public API limit is untouched", async (t) => {
+  const store = await openStore(":memory:"),
+    password = randomBytes(32).toString("hex");
+  const server = createApp(store, { env: { ADMIN_PASSWORD: password, ADMIN_LIMIT_PER_15MIN: "400" } }).listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(async () => {
+    await new Promise((r) => server.close(r));
+    await store.db.close();
+  });
+  const base = "http://127.0.0.1:" + server.address().port;
+  const login = await fetch(base + "/api/admin/login", { method: "POST", headers: { "Content-Type": "application/json", "X-Rota-Client": "web" }, body: JSON.stringify({ password }) });
+  const cookie = login.headers.get("set-cookie").split(";")[0];
+  const get = (path) => fetch(base + "/api" + path, { headers: { Cookie: cookie } });
+  // Sefer düzenlerken art arda yüklemeler: genel 300 sınırı panel işini kesmemeli.
+  const statuses = [];
+  for (let i = 0; i < 320; i++) statuses.push((await get("/admin/session")).status);
+  assert.ok(statuses.every((s) => s === 200), "panel 300 istekten sonra da çalışır: " + statuses.filter((s) => s !== 200).length + " red");
+  assert.equal((await get("/catalog")).status, 200, "panel trafiği sitenin genel sınırından yemez");
+  // Panelin kendi sınırı da var; dolunca ne zaman açılacağı söylenir.
+  let blocked;
+  for (let i = 0; i < 100 && !blocked; i++) {
+    const r = await get("/admin/session");
+    if (r.status === 429) blocked = r;
+  }
+  assert.ok(blocked, "panel sınırı da işler");
+  assert.ok(Number(blocked.headers.get("retry-after")) > 0, "Retry-After başlığı");
+});
