@@ -250,16 +250,26 @@ test("monthly report: occupancy and revenue by tour date, cash by payment date, 
   assert.equal((await s.workflow.monthReport("2026-11")).totals.reservations, 0);
 });
 
-test("agency booking: a late failure (reused bank reference) leaves no half-written booking in either Mongo mode", async (t) => {
+test("agency booking: a late failure (payment write fails) leaves no half-written booking in either Mongo mode", async (t) => {
   const { s, d } = await setup(t);
   const pay = (seat) =>
     base(d, { paymentMode: "full", seats: [seat], passengers: ["Yolcu " + seat], payment: { amount: 150000, method: "bank_transfer", externalReference: "EFT-2026-001" }, confirm: true });
   await s.adminReserve(pay(10), AGENT);
-  await assert.rejects(s.adminReserve(pay(11), AGENT), (e) => e.status === 409);
+  // Aynı dekont notu artık serbest; geç hatayı tahsilat yazımının düşmesiyle canlandırırız.
+  const original = s.workflow.payment;
+  s.workflow.payment = async () => {
+    throw Object.assign(new Error("yazılamadı"), { status: 500 });
+  };
+  t.after(() => (s.workflow.payment = original));
+  await assert.rejects(s.adminReserve(pay(11), AGENT), (e) => e.status === 500);
+  s.workflow.payment = original;
   assert.equal((await s.availability(d.id)).seats.find((x) => x.number === 11).status, "available");
   assert.equal(await s.db.count("reservations", {}), 1);
   assert.equal(await s.db.count("payment_ledger", {}), 1);
   assert.equal(await s.db.count("holds", {}), 0);
+  // Aynı dekont notuyla ikinci kayıt da yapılabilir.
+  const again = await s.adminReserve(pay(11), AGENT);
+  assert.equal(again.ledger[0].note, "EFT-2026-001");
 });
 
 test("quick filters, no-show and removing an unused departure", async (t) => {

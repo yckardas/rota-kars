@@ -192,3 +192,87 @@ test("panel booking accepts a missing passenger id but rejects a half-filled one
   );
   assert.equal(ok.status, 403);
 });
+
+test("manual payment receipt field is free text: short, empty or repeated notes are all accepted", async (t) => {
+  const { store: s, req, login } = await fixture(t),
+    d = (await s.listDepartures("ani-cildir"))[0];
+  await login();
+  const book = async (seat) => {
+    const h = await s.hold(d.id, [seat]);
+    return s.reserve({ holdToken: h.token, name: "Not Yolcu", email: "not@example.com", phone: "05550000000", passengers: ["Not Yolcu"], paymentMode: "deposit" });
+  };
+  const a = await book(2),
+    b = await book(3);
+  const pay = (r, externalReference, amount = 1000) =>
+    req("/admin/reservations/" + r.reference + "/payments", { amount, method: "cash", externalReference, recordedExternally: true });
+  // Kısa metin, boş alan ve aynı not iki kez aynı kayıtta ve başka kayıtta.
+  for (const [r, note] of [[a, "x"], [a, ""], [a, "elden alındı"], [a, "elden alındı"], [b, "elden alındı"]])
+    assert.equal((await pay(r, note)).status, 200, `not kabul edilmeli: "${note}"`);
+  const ledger = (await s.workflow.get(a.reference)).ledger;
+  assert.equal(ledger.length, 4, "aynı not ve tutarla ikinci tahsilat da yazılır");
+  assert.deepEqual(ledger.map((p) => p.note).sort(), ["", "elden alındı", "elden alındı", "x"]);
+  assert.equal((await s.workflow.get(b.reference)).net_paid, 1000);
+  // Uzun not sınırı korunur.
+  assert.equal((await pay(a, "y".repeat(201))).status, 400);
+  // İade de serbest notla kaydedilir.
+  const refund = await req("/admin/reservations/" + a.reference + "/refunds", { amount: 500, method: "cash", externalReference: "", recordedExternally: true });
+  assert.equal(refund.status, 200);
+});
+
+test("finance endpoint: auth, range validation, shape", async (t) => {
+  const { req, login } = await fixture(t);
+  assert.equal((await req("/admin/finance?from=2026-11-01&to=2026-11-30")).status, 401);
+  await login();
+  const reversed = await req("/admin/finance?from=2026-11-10&to=2026-11-01");
+  assert.equal(reversed.status, 400);
+  assert.match((await reversed.json()).message, /Başlangıç/);
+  assert.equal((await req("/admin/finance?from=2026-01-01&to=2027-01-03")).status, 400);
+  assert.equal((await req("/admin/finance?from=bozuk&to=2026-11-30")).status, 400);
+  const ok = await req("/admin/finance?from=2026-11-01&to=2026-11-30&bucket=week");
+  assert.equal(ok.status, 200);
+  const body = await ok.json();
+  for (const key of ["summary", "series", "expected", "byTour", "methods", "pipeline", "overdue", "day"]) assert.ok(key in body, key);
+  assert.equal(body.day, null);
+  assert.equal(body.series[0].key, "2026-10-26");
+});
+
+test("manual payment retried with the same form id is recorded once; refund too", async (t) => {
+  const { store: s, req, login } = await fixture(t),
+    d = (await s.listDepartures("ani-cildir"))[0];
+  await login();
+  const h = await s.hold(d.id, [4]);
+  const r = await s.reserve({ holdToken: h.token, name: "Tekrar Yolcu", email: "tekrar@example.com", phone: "05550000000", passengers: ["Tekrar Yolcu"], paymentMode: "deposit" });
+  const requestId = "0b6f6d1e-3c1a-4f5e-9d2b-7a8c9e0f1a2b";
+  const pay = () => req("/admin/reservations/" + r.reference + "/payments", { amount: 1500, method: "cash", externalReference: "elden", recordedExternally: true, requestId });
+  assert.equal((await pay()).status, 200);
+  assert.equal((await pay()).status, 200, "tekrar deneme hata vermez");
+  assert.equal((await s.workflow.get(r.reference)).ledger.length, 1, "bağlantı kopup yeniden gönderilen tahsilat bir kez yazılır");
+  const refund = () => req("/admin/reservations/" + r.reference + "/refunds", { amount: 500, method: "cash", externalReference: "", recordedExternally: true, requestId: "1c7e7e2f-4d2b-4a6f-8e3c-8b9d0f1a2b3c" });
+  assert.equal((await refund()).status, 200);
+  assert.equal((await refund()).status, 200);
+  assert.equal((await s.workflow.get(r.reference)).net_paid, 1000);
+});
+
+test("finance endpoint: readable date messages and a one-year (366 day) limit", async (t) => {
+  const { req, login } = await fixture(t);
+  await login();
+  for (const q of ["from=bozuk&to=2026-11-30", "to=2026-11-30"]) {
+    const r = await req("/admin/finance?" + q);
+    assert.equal(r.status, 400);
+    assert.match((await r.json()).message, /tarih/i, q);
+  }
+  assert.equal((await req("/admin/finance?from=2026-01-01&to=2027-01-01")).status, 200, "366 gün (iki uç dahil)");
+  assert.equal((await req("/admin/finance?from=2026-01-01&to=2027-01-02")).status, 400, "367 gün");
+});
+
+test("manual payment accepts the note under its own name; externalReference stays as a legacy alias", async (t) => {
+  const { store: s, req, login } = await fixture(t),
+    d = (await s.listDepartures("ani-cildir"))[0];
+  await login();
+  const h = await s.hold(d.id, [6]);
+  const r = await s.reserve({ holdToken: h.token, name: "Not Adı", email: "notadi@example.com", phone: "05550000000", passengers: ["Not Adı"], paymentMode: "deposit" });
+  const post = (body) => req("/admin/reservations/" + r.reference + "/payments", { amount: 1000, method: "cash", recordedExternally: true, ...body });
+  assert.equal((await post({ note: "yeni ad" })).status, 200);
+  assert.equal((await post({ externalReference: "eski ad" })).status, 200);
+  assert.deepEqual((await s.workflow.get(r.reference)).ledger.map((p) => p.note).sort(), ["eski ad", "yeni ad"]);
+});

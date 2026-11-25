@@ -960,15 +960,9 @@ test("POS tahsilatı ve POS / havale iadesiyle iptal kaydedilir; rapor POS ve on
     cookie: p.ops,
   });
   assert.equal(pos.status, 200, JSON.stringify(pos.json));
-  // Elle iade dekont referansı olmadan yapılmaz; iptal de yapılmaz.
-  const noRef = await p.call(`/admin/reservations/${ref}/cancel`, {
-    body: { refund: { amount: 5000, method: "pos" } },
-    cookie: p.ops,
-  });
-  assert.equal(noRef.status, 400);
-  assert.equal((await p.store.workflow.get(ref)).status, "confirmed");
+  // Dekont / makbuz alanı serbest: elle iade referanssız da kaydedilir.
   const ok = await p.call(`/admin/reservations/${ref}/cancel`, {
-    body: { refund: { amount: 5000, method: "pos", externalReference: "POS-IADE-1" } },
+    body: { refund: { amount: 5000, method: "pos" } },
     cookie: p.ops,
   });
   assert.equal(ok.status, 200, JSON.stringify(ok.json));
@@ -976,6 +970,7 @@ test("POS tahsilatı ve POS / havale iadesiyle iptal kaydedilir; rapor POS ve on
   assert.equal(after.status, "cancelled");
   assert.equal(after.net_paid, p.r.deposit);
   assert.ok(after.ledger.some((l) => l.kind === "refund" && l.method === "pos" && l.amount === 5000));
+  assert.ok(after.ledger.some((l) => l.kind === "payment" && l.method === "pos" && l.note === "POS-0001"));
   assert.equal(p.sent.length, 0, "elle iade bankaya gitmez");
   const month = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Istanbul" }).slice(0, 7);
   const rep = await p.store.workflow.monthReport(month);

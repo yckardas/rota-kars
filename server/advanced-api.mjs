@@ -317,7 +317,8 @@ export function attachAdvancedApi(
             .object({
               amount: z.number().int().min(1).max(100000000),
               method: z.enum(["cash", "bank_transfer", "pos"]),
-              externalReference: z.string().trim().min(3).max(100).optional(),
+              note: z.string().trim().max(200).optional(),
+              externalReference: z.string().trim().max(200).optional(),
             })
             .optional(),
           confirm: z.boolean().default(false),
@@ -401,12 +402,24 @@ export function attachAdvancedApi(
           .object({
             amount: z.number().int().min(1).max(100000000),
             method: z.enum(["cash", "bank_transfer", "pos"]),
-            externalReference: z.string().trim().min(3).max(100),
+            // Dekont / makbuz alanı serbest not: boş, kısa ya da tekrar eden olabilir.
+            // externalReference eski istemciler için aynı alanın eski adıdır.
+            note: z.string().trim().max(200).optional(),
+            externalReference: z.string().trim().max(200).optional(),
             recordedExternally: z.literal(true),
+            // Form açılınca üretilen kimlik: bağlantı kopup "Kaydet"e yeniden basılırsa
+            // aynı işlem ikinci kez yazılmaz (iç referans PANEL-<requestId> olur).
+            requestId: z.string().uuid().optional(),
           })
           .parse(q.body);
         r.json(
-          await store.workflow.payment(q.params.reference, { ...input, kind }),
+          await store.workflow.payment(q.params.reference, {
+            amount: input.amount,
+            method: input.method,
+            externalReference: input.requestId ? "PANEL-" + input.requestId : undefined,
+            note: input.note ?? input.externalReference ?? "",
+            kind,
+          }),
         );
       }),
     );
@@ -450,6 +463,30 @@ export function attachAdvancedApi(
     "/api/admin/reports/month",
     requireAdmin,
     route(async (q, r) => r.json(await store.workflow.monthReport(month.parse(q.query.month)))),
+  );
+  // Finans paneli: dönem (gün/hafta/ay/aralık) raporu; en fazla bir yıllık aralık.
+  const DATE_MSG = "Başlangıç ve bitiş tarihini YYYY-AA-GG biçiminde seçin.";
+  // Özel kural: eksik ya da bozuk tarihte genel "Bilgileri kontrol edin" yerine bu mesaj görünür.
+  const dateParam = z
+    .unknown()
+    .refine((v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v), DATE_MSG)
+    .pipe(ymd);
+  app.get(
+    "/api/admin/finance",
+    requireAdmin,
+    route(async (q, r) => {
+      const input = z
+        .object({
+          from: dateParam,
+          to: dateParam,
+          bucket: z.enum(["day", "week"]).default("day"),
+        })
+        .refine((x) => x.from <= x.to, { message: "Başlangıç tarihi bitişten sonra olamaz." })
+        // En fazla 366 gün (iki uç dahil).
+        .refine((x) => Date.parse(x.to) - Date.parse(x.from) <= 365 * 86400000, { message: "En fazla bir yıllık aralık seçin." })
+        .parse(q.query);
+      r.json(await store.workflow.financeReport(input));
+    }),
   );
   // Excel'in doğrudan açtığı CSV: noktalı virgül ayraç, UTF-8 BOM, formül enjeksiyonu engelli.
   app.get(

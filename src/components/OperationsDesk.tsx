@@ -789,6 +789,10 @@ const methodLabel = (m: string) =>
         : m.startsWith("online:")
           ? "Online kart (Vakıfbank)"
           : m;
+// Tahsilat satırında acentenin yazdığı not; eski kayıtlarda girilen dekont referansı.
+// Panelin kendi ürettiği iç referans (PANEL-…) gösterilmez.
+const receiptText = (p: { note?: string; external_reference: string }) =>
+  p.note || (p.external_reference.startsWith("PANEL-") ? "" : p.external_reference);
 const stamp = (ms?: number) =>
   ms
     ? new Date(ms).toLocaleString("tr-TR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
@@ -1069,6 +1073,8 @@ function BookingControls({
       vehicle: NonNullable<Reservation["vehicle"]>;
     } | null>(null),
     [history, setHistory] = useState<AuditRow[] | null>(null),
+    // Elle tahsilat/iade formunun tekrar koruması: başarılı kayıttan sonra yenilenir.
+    [entryId, setEntryId] = useState(() => crypto.randomUUID()),
     // Yolcular sekmesi: kimlik taslakları (koltuk sırasıyla), kayıt yenilenince sıfırlanır.
     [idDrafts, setIdDrafts] = useState<IdDraft[]>(() => r.seats.map((_, i) => draftFrom(r.passenger_details?.[i])));
   useEffect(() => {
@@ -1117,13 +1123,17 @@ function BookingControls({
         {
           amount: Math.round(Number(f.get("amount")) * 100),
           method: f.get("method"),
-          externalReference: f.get("externalReference"),
+          note: f.get("externalReference"),
           recordedExternally: f.get("recordedExternally") === "on",
+          // Yeniden denemede aynı kimlik gider; sunucu işlemi ikinci kez yazmaz.
+          requestId: entryId,
         },
         current === "payment" ? "Tahsilat kaydedildi." : "İade kaydedildi.",
       )
-    )
+    ) {
       form.reset();
+      setEntryId(crypto.randomUUID());
+    }
   }
   // Geri alınamayan durum değişiklikleri önce onay ister.
   async function guarded(path: string, title: string, body: string, label: string, done: string) {
@@ -1429,8 +1439,8 @@ function BookingControls({
                   </label>
                 </div>
                 <label className="field">
-                  Dekont / makbuz referansı
-                  <input name="externalReference" minLength={3} maxLength={100} required />
+                  Dekont / makbuz no veya not (isteğe bağlı)
+                  <input name="externalReference" maxLength={200} placeholder="Ör. dekont no, makbuz no, elden alındı" />
                 </label>
                 <label className="checkbox-label">
                   <input name="recordedExternally" type="checkbox" required />
@@ -1450,7 +1460,8 @@ function BookingControls({
             {r.ledger.map((p) => (
               <p key={p.id}>
                 {stamp(p.created_at)} · {p.kind === "refund" ? "İade" : "Tahsilat"} · {currency(p.amount)} ·{" "}
-                {methodLabel(p.method)} · {p.external_reference}
+                {methodLabel(p.method)}
+                {receiptText(p) && ` · ${receiptText(p)}`}
               </p>
             ))}
           </div>

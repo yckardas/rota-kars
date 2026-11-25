@@ -7,7 +7,9 @@ import { localDate } from "./departures.mjs";
 import { tours, business } from "./catalog.mjs";
 import { LEGAL_VERSION, contractText, legalDataFromReservation, preInfoText } from "./legal.mjs";
 import { countryName } from "./passenger-id.mjs";
+import { buildFinance, tourRows } from "./finance.mjs";
 const longExpiry = (now) => now + 365 * 86400000;
+const MANUAL_METHODS = ["cash", "bank_transfer", "pos"];
 const tl = (kurus) => (kurus / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 });
 export async function createWorkflow(
   db,
@@ -302,10 +304,19 @@ export async function createWorkflow(
         return updated;
       });
     },
+    // Panelden elle girilen tahsilat/iadede externalReference verilmez: kayda tekil bir
+    // iç referans yazılır, acentenin yazdığı serbest metin (dekont/makbuz no, not) note olur.
+    // Böylece kısa, boş ya da tekrar eden not bir tahsilatı engellemez.
     async payment(
       reference,
-      { amount, method, externalReference, kind = "payment" },
+      { amount, method, externalReference, note = "", kind = "payment" },
     ) {
+      if (!externalReference) {
+        // Online ödemenin referansı bankanın işlem numarasıdır; eksikse çift tahsilat koruması
+        // sessizce kaybolmasın diye işlem durdurulur.
+        if (!MANUAL_METHODS.includes(method)) throw new AppError(500, "Ödeme referansı eksik; işlem kaydedilmedi.");
+        externalReference = "PANEL-" + randomUUID();
+      }
       return tx(async () => {
         await cleanup();
         const r = await api.get(reference),
@@ -346,6 +357,7 @@ export async function createWorkflow(
           amount,
           method,
           external_reference: externalReference,
+          note,
           created_at: clock(),
         });
         if (kind === "payment") {
@@ -360,7 +372,7 @@ export async function createWorkflow(
             { expires_at: longExpiry(clock()) },
           );
         }
-        await audit(r, kind, { amount, method, externalReference });
+        await audit(r, kind, { amount, method, externalReference, note });
         const updated = await api.get(reference);
         if (kind === "payment" && updated.net_paid >= updated.total)
           await members.rewardReferral(r.member_id, "paid");
@@ -783,25 +795,8 @@ export async function createWorkflow(
       const ds = (await departures.list()).filter((d) => d.date.startsWith(prefix));
       const rs = (await api.list({ all: true })).filter((r) => r.date?.startsWith(prefix));
       const live = (r) => !["cancelled", "expired"].includes(r.status);
-      const byTour = tours
-        .map((t) => {
-          const tds = ds.filter((d) => d.tour_id === t.id),
-            trs = rs.filter((r) => r.tourId === t.id && live(r)),
-            capacity = tds.reduce((n, d) => n + d.vehicle.sellableSeats, 0),
-            guests = trs.reduce((n, r) => n + r.seats.length, 0);
-          return {
-            tourId: t.id,
-            tourName: t.name,
-            departures: tds.length,
-            capacity,
-            guests,
-            occupancy: capacity ? Math.round((guests / capacity) * 100) : 0,
-            reservations: trs.length,
-            revenue: trs.reduce((n, r) => n + r.total, 0),
-            collected: trs.reduce((n, r) => n + r.net_paid, 0),
-          };
-        })
-        .filter((x) => x.departures || x.reservations);
+      // Finans paneliyle aynı hesap: katalogdan kalkmış turun satışı da sayılır.
+      const byTour = tourRows({ tours, departures: ds, reservations: rs.filter(live) });
       const start = Date.parse(month + "-01T00:00:00+03:00"),
         [y, m] = month.split("-").map(Number),
         end = Date.parse(`${m === 12 ? y + 1 : y}-${String(m === 12 ? 1 : m + 1).padStart(2, "0")}-01T00:00:00+03:00`);
@@ -847,6 +842,20 @@ export async function createWorkflow(
             paid: r.net_paid,
           })),
       };
+    },
+    // Finans paneli: dönem cirosu/tahsilatı, alacaklar, beklenen ödemeler, talep hattı.
+    async financeReport({ from, to, bucket = "day" }) {
+      return buildFinance({
+        reservations: await api.list({ all: true }),
+        ledger: await db.find("payment_ledger", {}),
+        departures: await departures.list(),
+        requests: await db.find("requests", {}),
+        tours,
+        today: localDate(clock()),
+        from,
+        to,
+        bucket,
+      });
     },
     // Telefondaki yolcu listesi: arama/WhatsApp ve biniş işaretleme için.
     async passengerList(departureId) {

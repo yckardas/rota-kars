@@ -1499,7 +1499,9 @@ export function createApp(
             .object({
               amount: z.number().int().min(1).max(100000000),
               method: z.enum(["card", "cash", "bank_transfer", "pos"]),
-              externalReference: z.string().trim().min(3).max(100).optional(),
+              note: z.string().trim().max(200).optional(),
+              externalReference: z.string().trim().max(200).optional(),
+              requestId: z.string().uuid().optional(),
             })
             .optional(),
         })
@@ -1513,8 +1515,7 @@ export function createApp(
         if (refund.method === "card") {
           ownerOnly(q);
           await payments.checkCardRefund(reference, refund.amount);
-        } else if (!refund.externalReference)
-          throw new AppError(400, "Havale, nakit veya POS iadesi için dekont / makbuz referansı girin.");
+        }
       }
       const amountText = refund ? (refund.amount / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 }) + " TL" : "";
       const cancelled = await store.workflow.cancel(reference, {
@@ -1539,7 +1540,8 @@ export function createApp(
         await store.workflow.payment(reference, {
           amount: refund.amount,
           method: refund.method,
-          externalReference: refund.externalReference,
+          externalReference: refund.requestId ? "PANEL-" + refund.requestId : undefined,
+          note: refund.note ?? refund.externalReference ?? "",
           kind: "refund",
         });
         refundResult = { status: "succeeded", amount: refund.amount, message: "İade kaydedildi." };
