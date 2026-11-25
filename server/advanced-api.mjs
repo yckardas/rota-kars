@@ -8,10 +8,14 @@ import { localDate } from "./departures.mjs";
 import { siteBase as configuredBase } from "./seo.mjs";
 import { maskDetails, passengerDetail } from "./passenger-id.mjs";
 export const siteBase = (q, env) => configuredBase(env, q);
-export async function receipt(reservation, q, env) {
+// customer: true → müşteriye dönen yanıt; tahsilat satırları (personel adı, dekont
+// notu, iç referans) ve kaydı açan yöneticinin kimliği çıkarılır. Toplamlar kalır.
+export async function receipt(reservation, q, env, { customer = false } = {}) {
   const ticketUrl = siteBase(q, env) + "/bilet/" + reservation.ticket_token;
+  // eslint-disable-next-line no-unused-vars
+  const { ledger, created_by, ...safe } = reservation;
   return {
-    ...reservation,
+    ...(customer ? safe : reservation),
     // Müşteriye dönen belgede kimlik numaraları maskelenir.
     passenger_details: maskDetails(reservation.passenger_details),
     ticketUrl,

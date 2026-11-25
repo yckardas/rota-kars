@@ -353,3 +353,22 @@ test("reservation list filters by a tour date range; manual payments record who 
   const row = (await s.workflow.get(a.reference)).ledger[0];
   assert.ok(row.recorded_by?.name, "kaydeden adı yazılır: " + JSON.stringify(row.recorded_by));
 });
+
+test("customer lookup does not expose staff names, internal notes or payment references", async (t) => {
+  const { store: s, req, login } = await fixture(t),
+    d = (await s.listDepartures("ani-cildir"))[0];
+  await login();
+  const h = await s.hold(d.id, [9]);
+  const r = await s.reserve({ holdToken: h.token, name: "Gizli Yolcu", email: "gizli@example.com", phone: "05550000000", passengers: ["Gizli Yolcu"], paymentMode: "deposit" });
+  await req("/admin/reservations/" + r.reference + "/payments", { amount: 1000, method: "cash", note: "Ahmet Bey elden verdi", recordedExternally: true });
+  const pub = await (await req("/reservations/lookup", { reference: r.reference, email: "gizli@example.com" }, false)).json();
+  const text = JSON.stringify(pub);
+  assert.equal(pub.reference, r.reference);
+  assert.equal(pub.net_paid, 1000, "tahsilat toplamı müşteride görünür");
+  assert.ok(!("ledger" in pub), "ledger ayrıntısı müşteriye gitmez");
+  assert.ok(!text.includes("Ahmet Bey"), "tahsilat notu sızmaz");
+  assert.ok(!text.includes("recorded_by") && !text.includes("PANEL-"), "kaydeden ve iç referans sızmaz");
+  // Panel aynı kaydı ayrıntısıyla görmeye devam eder.
+  const admin = await (await req("/admin/reservations?q=" + r.reference)).json();
+  assert.equal(admin[0].ledger[0].note, "Ahmet Bey elden verdi");
+});

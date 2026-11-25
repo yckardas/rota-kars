@@ -1257,7 +1257,7 @@ export function createApp(
         await store.privacy.recordConsent({ email: input.email, memberId: q.member?.id, type: "others_declaration", source: "booking" });
       if (input.marketingConsent)
         await store.privacy.recordConsent({ email: input.email, memberId: q.member?.id, type: "marketing", source: "booking" });
-      r.status(201).json(await receipt(reservation, q, env));
+      r.status(201).json(await receipt(reservation, q, env, { customer: true }));
     }),
   );
   app.post(
@@ -1270,7 +1270,7 @@ export function createApp(
         })
         .parse(q.body);
       r.json(
-        await receipt(await store.lookup(input.reference, input.email), q, env),
+        await receipt(await store.lookup(input.reference, input.email), q, env, { customer: true }),
       );
     }),
   );
@@ -1284,7 +1284,7 @@ export function createApp(
         })
         .parse(q.body);
       r.json(
-        await receipt(await store.cancel(input.reference, input.email), q, env),
+        await receipt(await store.cancel(input.reference, input.email), q, env, { customer: true }),
       );
     }),
   );
