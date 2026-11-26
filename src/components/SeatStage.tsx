@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { Box, Grid2x2, RotateCcw } from "lucide-react";
 import { SeatMap } from "./SeatMap";
 import { useLang } from "../lib/i18n";
@@ -28,30 +29,47 @@ export function SeatStage(props: Parameters<typeof SeatMap>[0]) {
     { t } = useLang(),
     photos = vehicle.photos,
     [view, setView] = useState<View>(readView),
+    // Koltuklar 15 sn'de bir yenilenirken araç nesnesi (ve photos) yeniden gelir;
+    // girişi sıfırlamamak için kimlik yerine adreslere bakılır.
+    photoKey = photos ? photos.exterior + "|" + photos.interior : "",
     stage = useRef<HTMLDivElement>(null),
-    running = useRef<Animation[]>([]);
+    running = useRef<Animation[]>([]),
+    // Her durdurma/başlatma yeni bir kuşak açar; bekleyen eski giriş kendini bırakır.
+    generation = useRef(0);
   const firstPhase = useCallback(
     (v: View): Phase =>
-      photos && v === "depth" && !played.has(vehicle.id) && !reducedMotion() ? "cover" : "done",
-    [photos, vehicle.id],
+      photoKey && v === "depth" && !played.has(vehicle.id) && !reducedMotion() ? "cover" : "done",
+    [photoKey, vehicle.id],
   );
   const [phase, setPhase] = useState<Phase>(() => firstPhase(view));
 
   const stop = useCallback(() => {
+    generation.current++;
     running.current.forEach((a) => a.cancel());
     running.current = [];
   }, []);
 
-  const play = useCallback(() => {
+  const play = useCallback(async () => {
     const el = stage.current;
     if (!el) return;
-    const dis = el.querySelector<HTMLElement>(".seat-stage-photo.dis"),
-      ic = el.querySelector<HTMLElement>(".seat-stage-photo.ic"),
+    const dis = el.querySelector<HTMLImageElement>(".seat-stage-photo.dis"),
+      ic = el.querySelector<HTMLImageElement>(".seat-stage-photo.ic"),
       map = el.querySelector<HTMLElement>(".seat-map"),
       body = el.querySelector<HTMLElement>(".vehicle-body");
     if (!dis || !ic || !map || !body || typeof el.animate !== "function") return setPhase("done");
     stop();
+    const gen = generation.current;
     played.add(vehicle.id);
+    // Yavaş bağlantıda boş kutuya dalılmasın: iki fotoğraf da hazır olmalı.
+    const ready = await Promise.race([
+      Promise.all([dis.decode(), ic.decode()]).then(
+        () => true,
+        () => false,
+      ),
+      new Promise<boolean>((r) => setTimeout(() => r(false), 2500)),
+    ]);
+    if (gen !== generation.current) return;
+    if (!ready) return setPhase("done");
     setPhase("intro");
     const tilt = getComputedStyle(map).getPropertyValue("--tilt").trim() || "40deg",
       go = (node: Element, frames: Keyframe[], o: KeyframeAnimationOptions) => {
@@ -107,8 +125,11 @@ export function SeatStage(props: Parameters<typeof SeatMap>[0]) {
     });
     Promise.all(running.current.map((a) => a.finished))
       .then(() => {
+        if (gen !== generation.current) return;
+        // Önce katman kalksın, sonra dolgular iptal olsun: aksi halde dış fotoğraf
+        // bir kare plana biner.
+        flushSync(() => setPhase("done"));
         stop();
-        setPhase("done");
       })
       .catch(() => {});
   }, [stop, vehicle.id]);
@@ -125,14 +146,19 @@ export function SeatStage(props: Parameters<typeof SeatMap>[0]) {
     const el = stage.current;
     if (phase !== "cover" || !el) return;
     if (typeof IntersectionObserver === "undefined") return setPhase("done");
+    // Yarısı görünür ya da ekranın yarısını dolduruyorsa (yakınlaştırılmış ekranda
+    // sahne ekrandan uzun olabilir) giriş başlar.
     const io = new IntersectionObserver(
       ([e]) => {
-        if (e.isIntersecting) {
+        if (
+          e.isIntersecting &&
+          (e.intersectionRatio >= 0.5 || e.intersectionRect.height >= innerHeight * 0.5)
+        ) {
           io.disconnect();
-          play();
+          void play();
         }
       },
-      { threshold: 0.5 },
+      { threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5] },
     );
     io.observe(el);
     return () => io.disconnect();
