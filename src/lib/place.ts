@@ -1,7 +1,8 @@
 import type { Tour } from "./types";
-// Kartpostal şeridindeki yer adı: güzergâhta geçen ve tur adında da yer alan
-// ilk durak (Kars hariç); yoksa son durak.
-export function placeName(tour: Pick<Tour, "name" | "location">) {
+// Kartpostal şeridindeki yer adı: panelde yazılmışsa kart şeridi yazısı; yoksa
+// güzergâhta geçen ve tur adında da yer alan ilk durak (Kars hariç); yoksa son durak.
+export function placeName(tour: Pick<Tour, "name" | "location"> & { cardLabel?: string }) {
+  if (tour.cardLabel?.trim()) return tour.cardLabel.trim();
   const stops = tour.location.split(" · ").filter(Boolean);
   return (
     stops.find((s) => s !== "Kars" && tour.name.includes(s)) ||

@@ -281,3 +281,18 @@ test("required documents: abroad tours have defaults, panel edits reach the cata
   assert.equal((await call("/admin/content/tours/nahcivan", { body: { ...info.current, documents: tooMany }, cookie: ops })).status, 400);
   await store.content.resetTour("nahcivan");
 });
+
+test("card ribbon text: optional per tour, panel edit reaches the catalog, 24 characters at most", async (t) => {
+  const { store, call, ops, root } = await fixture(t);
+  const info = (await call("/admin/content/tours/buyuk-azerbaycan", { cookie: ops })).json;
+  assert.equal(info.current.cardLabel, "", "varsayılan boş: şerit güzergâhtan gelir");
+  const saved = await call("/admin/content/tours/buyuk-azerbaycan", { body: { ...info.current, cardLabel: "Bakü'de Yılbaşı" }, cookie: ops });
+  assert.equal(saved.status, 200, JSON.stringify(saved.json));
+  const catalog = await (await fetch(root + "/api/catalog")).json();
+  assert.equal(catalog.tours.find((x) => x.id === "buyuk-azerbaycan").cardLabel, "Bakü'de Yılbaşı");
+  // Alanı göndermeyen eski panel kaydı da kabul edilir.
+  const { cardLabel: _omit, ...legacy } = info.current;
+  assert.equal((await call("/admin/content/tours/buyuk-azerbaycan", { body: legacy, cookie: ops })).status, 200);
+  assert.equal((await call("/admin/content/tours/buyuk-azerbaycan", { body: { ...info.current, cardLabel: "x".repeat(25) }, cookie: ops })).status, 400);
+  await store.content.resetTour("buyuk-azerbaycan");
+});

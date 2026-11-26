@@ -63,6 +63,17 @@ export const fleetVehicles = [
     passengerSeats: 19,
     note: "Port bagajlı",
   },
+  // Kasım 2026'da alınan ikinci Sprinter: 36 ABN 916 ile aynı özellikler.
+  {
+    id: "36ABV339",
+    plan: "sprinter-19",
+    plate: "36 ABV 339",
+    name: "Mercedes Sprinter",
+    year: 2025,
+    vehicleModel: "vip-midibus",
+    passengerSeats: 19,
+    note: "Port bagajlı",
+  },
   {
     id: "36EA491",
     plan: "sprinter-19",

@@ -32,6 +32,8 @@ export const TOUR_FIELDS = [
   // iptal edileceği. 0 = belirlenmedi. Ön bilgilendirme formu ve sözleşmede yazılır.
   "minParticipants",
   "minNoticeHours",
+  // Kart fotoğrafındaki şerit yazısı; boşsa güzergâhtaki yer adı (ör. "Bakü") yazar.
+  "cardLabel",
 ];
 export const BUSINESS_FIELDS = [
   "phone",
@@ -52,7 +54,7 @@ const DEFAULT_ANNOUNCEMENT = { enabled: false, text: "", textEn: "", link: "" };
 export const announcement = structuredClone(DEFAULT_ANNOUNCEMENT);
 const pick = (obj, keys) => Object.fromEntries(keys.filter((k) => obj[k] !== undefined).map((k) => [k, structuredClone(obj[k])]));
 const DEFAULT_TOURS = new Map(
-  tours.map((t) => [t.id, { minParticipants: 0, minNoticeHours: 0, documents: [], ...pick(t, TOUR_FIELDS) }]),
+  tours.map((t) => [t.id, { minParticipants: 0, minNoticeHours: 0, documents: [], cardLabel: "", ...pick(t, TOUR_FIELDS) }]),
 );
 const DEFAULT_BUSINESS = pick(business, BUSINESS_FIELDS);
 // Kod içindeki turlar; panelden kopyalanan turlar (custom_tours) bunlara eklenir.
