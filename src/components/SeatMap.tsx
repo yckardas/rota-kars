@@ -70,8 +70,11 @@ export function SeatMap({
     );
   return (
     <div
-      className={"seat-map kp-await shape-" + shape}
-      // Sınıf değil nitelik: React className'i yazınca watchReveal'ın "is-in"i silinmesin.
+      // className sabit kalmalı: watchReveal "is-in"i DOM'dan ekler, React className'i
+      // yeniden yazarsa (örn. araç tipi değişince) silinir ve hareketler donar.
+      // Değişen her şey bu yüzden sınıf değil nitelik.
+      className="seat-map kp-await"
+      data-shape={shape}
       data-depth={depth ? "" : undefined}
       data-long={depth && rows.length >= 8 ? "" : undefined}
       ref={root}
