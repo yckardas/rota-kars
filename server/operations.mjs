@@ -29,6 +29,11 @@ export const vehicleModels = [
     max: 19,
     seats: 18,
     columns: 3,
+    // Sınıf fotoğrafı: koltuk seçiminde dıştan içe geçiş animasyonu (SeatStage).
+    photos: {
+      exterior: "/images/fleet/vip-midibus-dis.webp",
+      interior: "/images/fleet/vip-midibus-ic.webp",
+    },
   },
   {
     id: "midibus",
@@ -213,6 +218,7 @@ export function makeVehicle(modelId, passengerSeats) {
       ...defaultVehicle,
       modelId,
       shape: model.shape,
+      ...(model.photos && { photos: model.photos }),
     };
   // Binek araçta koridor yoktur: arka sıra yan yana üç koltuktur.
   const aisle =
@@ -239,6 +245,7 @@ export function makeVehicle(modelId, passengerSeats) {
     guideSeats: 1,
     sellableSeats: passengerSeats - 1,
     layout: [cockpit, ...rows],
+    ...(model.photos && { photos: model.photos }),
     description: `${passengerSeats}+1 araç; ön koltuk rehbere ayrılır, ${passengerSeats - 1} misafir koltuğu seçilebilir.`,
   };
 }

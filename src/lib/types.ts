@@ -81,6 +81,8 @@ export type Vehicle = {
   description: string;
   // Gövde çizimi: binek, minibüs, midibüs, turizm midibüsü, otobüs.
   shape?: "car" | "van" | "midibus" | "bus" | "coach";
+  // Araç sınıfının fotoğrafları; koltuk seçiminde dıştan içe geçişte kullanılır.
+  photos?: { exterior: string; interior: string };
   // Sefere filodan bir araç atanmışsa; plaka yalnız panel yanıtlarında gelir.
   unit?: { id: string; name: string; year: number; plate?: string };
 };

@@ -2,12 +2,14 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { once } from "node:events";
 import { randomBytes } from "node:crypto";
+import { existsSync } from "node:fs";
 import { openStore } from "../server/store.mjs";
 import { createApp } from "../server/app.mjs";
 import {
   makeVehicle,
   fleetVehicles,
   seatPlans,
+  fleetVehicleLayout,
 } from "../server/operations.mjs";
 async function fixture(t) {
   const store = await openStore(":memory:"),
@@ -146,4 +148,19 @@ test("yeni araç 36 ABV 339: 36 ABN 916 ile aynı özellikler, yalnız plaka far
   const { id: _b, plate: _q, ...copy } = added;
   assert.deepEqual(copy, same);
   assert.equal(new Set(fleetVehicles.map((v) => v.id)).size, fleetVehicles.length, "kimlikler tekil");
+});
+
+test("araç sınıfının fotoğrafları araca eklenir", () => {
+  const photos = {
+    exterior: "/images/fleet/vip-midibus-dis.webp",
+    interior: "/images/fleet/vip-midibus-ic.webp",
+  };
+  assert.deepEqual(makeVehicle("vip-midibus", 19).photos, photos);
+  assert.deepEqual(makeVehicle("vip-midibus", 15).photos, photos);
+  assert.equal(makeVehicle("coach", 46).photos, undefined);
+  for (const p of Object.values(photos))
+    assert.ok(existsSync(new URL("../public" + p, import.meta.url)), p);
+  // Filo aracı atanmış seferde de fotoğraf korunur.
+  const unit = fleetVehicles.find((v) => v.plan === "sprinter-19");
+  assert.deepEqual(fleetVehicleLayout(unit, makeVehicle("vip-midibus", 19)).photos, photos);
 });
