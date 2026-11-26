@@ -1,0 +1,123 @@
+/* Yarı 3D koltuk planı (SeatMap depth). Plan, aracın arkasından öne bakan
+   bir kamerayla eğilir; koltuklar yerde oturak, ayakta sırtlık olarak çizilir.
+   Sırtlık yolcunun arkasında, yani kameraya bakan taraftadır. */
+.seat-map.is-depth {
+  --tilt: 40deg;
+  perspective: 1100px;
+  perspective-origin: 50% 0%;
+}
+/* Uzun araçta (otobüs) plan çok derine kaçmasın */
+.seat-map.is-depth[data-long] {
+  --tilt: 26deg;
+}
+.kp .seat-map.is-depth .vehicle-body {
+  transform: rotateX(var(--tilt));
+  transform-origin: 50% 100%;
+  transform-style: preserve-3d;
+  /* Düz plandaki "araç süzülür" girişi transform'u ezer; sahnenin kendi girişi var */
+  animation: none;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.seat-map.is-depth .seat-row,
+.seat-map.is-depth .vehicle-seat {
+  transform-style: preserve-3d;
+}
+.kp .seat-map.is-depth .passenger-row {
+  animation: none;
+}
+.kp .seat-map.is-depth .vehicle-seat,
+.kp .seat-map.is-depth .vehicle-seat:not(.occupied):not(.selected):not(:disabled):hover {
+  background: none;
+  border: 0;
+  padding: 0;
+  box-shadow: none;
+  transform: none;
+  outline: none;
+}
+.kp .seat-map.is-depth .vehicle-seat::after {
+  display: none;
+}
+.kp .seat-map.is-depth .vehicle-seat > .seat-cushion {
+  position: absolute;
+  inset: 8% 6% 24%;
+  border: 1px solid var(--kp-rule);
+  border-radius: 8px 8px 5px 5px;
+  background: var(--kp-hair);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.kp .seat-map.is-depth .vehicle-seat > .seat-back {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 0;
+  top: auto;
+  height: 90%;
+  display: grid;
+  place-items: center;
+  transform-origin: 50% 100%;
+  transform: rotateX(-82deg);
+  border: 1px solid var(--kp-rule);
+  border-radius: 12px 12px 5px 5px;
+  background: linear-gradient(var(--kp-card), #eef2f6);
+  box-shadow: 0 6px 10px -6px rgba(26, 40, 70, 0.35);
+  transition:
+    transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.3),
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+/* Başlık */
+.kp .seat-map.is-depth .seat-back::before {
+  content: "";
+  position: absolute;
+  top: 7%;
+  left: 20%;
+  right: 20%;
+  height: 16%;
+  border-radius: 6px;
+  background: var(--kp-hair);
+}
+.kp .seat-map.is-depth .seat-back > span {
+  position: relative;
+  top: 8%;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--kp-ink);
+}
+.kp .seat-map.is-depth .vehicle-seat:not(.occupied):not(.selected):not(:disabled):hover > .seat-back {
+  transform: rotateX(-72deg);
+  border-color: var(--kp-ink-2);
+}
+.kp .seat-map.is-depth .vehicle-seat:focus-visible > .seat-back {
+  outline: 2px solid var(--kp-red);
+  outline-offset: 2px;
+}
+.kp .seat-map.is-depth .vehicle-seat.selected > .seat-back,
+.kp .seat-map.is-depth .vehicle-seat.selected > .seat-cushion {
+  background: var(--kp-red);
+  border-color: var(--kp-red-d);
+}
+.kp .seat-map.is-depth .vehicle-seat.selected > .seat-back::before {
+  background: rgba(255, 255, 255, 0.3);
+}
+.kp .seat-map.is-depth .vehicle-seat.selected > .seat-back > span {
+  color: #fff;
+}
+.kp .seat-map.is-depth .vehicle-seat.occupied > .seat-back {
+  border-color: var(--kp-hair);
+  background: repeating-linear-gradient(-45deg, #f1f4f7 0 4px, var(--kp-hair) 4px 5px);
+  box-shadow: none;
+}
+.kp .seat-map.is-depth .vehicle-seat.occupied > .seat-back > span {
+  color: var(--kp-ink-2);
+  opacity: 0.7;
+}
+.kp .seat-map.is-depth .vehicle-seat .seat-check {
+  transform: translateZ(34px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .kp .seat-map.is-depth .vehicle-body,
+  .kp .seat-map.is-depth .vehicle-seat > .seat-back {
+    transition: none;
+  }
+}

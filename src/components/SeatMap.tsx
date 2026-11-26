@@ -9,6 +9,7 @@ import { useEffect, useRef, type CSSProperties } from "react";
 import type { Seat, Vehicle } from "../lib/types";
 import { useLang } from "../lib/i18n";
 import { watchReveal } from "../lib/reveal";
+import "./seat-stage.css";
 // Ekranda görünen etkileşimli koltuk haritası sayısı: mobilde sohbet/WhatsApp
 // düğmeleri koltukların üstüne binmesin diye gövdeye işaret konur.
 let visibleMaps = 0;
@@ -23,12 +24,15 @@ export function SeatMap({
   selected = [],
   onSelect,
   interactive = true,
+  depth = false,
 }: {
   vehicle: Vehicle;
   seats?: Seat[];
   selected?: number[];
   onSelect?: (n: number) => void;
   interactive?: boolean;
+  // Yarı 3D: plan perspektifle eğilir, koltuklar oturak + sırtlık olarak çizilir.
+  depth?: boolean;
 }) {
   const { t } = useLang();
   const [cockpit, ...rows] = vehicle.layout,
@@ -65,7 +69,11 @@ export function SeatMap({
         : [{ cell, j, span: cell === "door" && row[j + 1] === "door" ? 2 : 1 }],
     );
   return (
-    <div className={"seat-map kp-await shape-" + shape} ref={root}>
+    <div
+      className={"seat-map kp-await shape-" + shape + (depth ? " is-depth" : "")}
+      data-long={depth && rows.length >= 8 ? "" : undefined}
+      ref={root}
+    >
       <div className="vehicle-roof">
         <span>VIP</span>
         <span>{t("Ön taraf")}</span>
@@ -74,7 +82,7 @@ export function SeatMap({
       <div
         className="vehicle-body"
         key={vehicle.id + (vehicle.unit?.id || "")}
-        style={{ "--cols": cols } as CSSProperties}
+        style={{ "--cols": cols, "--rows": rows.length } as CSSProperties}
       >
         <span className="vehicle-mirror left" aria-hidden="true" />
         <span className="vehicle-mirror right" aria-hidden="true" />
@@ -161,8 +169,19 @@ export function SeatMap({
                   })}
                   aria-pressed={st === "selected"}
                 >
-                  <Armchair size={26} strokeWidth={1.3} />
-                  <span>{cell}</span>
+                  {depth ? (
+                    <>
+                      <span className="seat-cushion" aria-hidden="true" />
+                      <span className="seat-back">
+                        <span>{cell}</span>
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Armchair size={26} strokeWidth={1.3} />
+                      <span>{cell}</span>
+                    </>
+                  )}
                   {st === "selected" && (
                     <Check size={12} className="seat-check" />
                   )}
