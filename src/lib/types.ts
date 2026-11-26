@@ -2,6 +2,8 @@ import { localeOf } from "./i18n";
 import type { PricedTransfer, TransferConfig } from "./transfer";
 export type DemandDate = { id: string; date: string; start_time: string; price: number; count?: number };
 export type Tour = {
+  // Kart fotoğrafındaki şerit yazısı (panelden); boşsa güzergâhtaki yer adı.
+  cardLabel?: string;
   // Satışı açık turun ilk seferi (katalogda sunucu ekler).
   next?: { date: string; startTime: string; available: number };
   // Açık seferlerin en düşük fiyatı (yoksa tur fiyatı); "…’den" gösterimleri bunu kullanır.

@@ -25,6 +25,7 @@ type TourFields = {
   documents: string[];
   minParticipants: number;
   minNoticeHours: number;
+  cardLabel?: string;
 };
 type BusinessFields = Record<
   "phone" | "mobile" | "email" | "address" | "hours" | "whatsapp" | "whatsappLabel" | "instagram" | "facebook" | "mapsUrl",
@@ -368,6 +369,16 @@ function TourEditor({
         {text("category", "Kategori", 30)}
         {text("duration", "Süre", 40)}
         {text("location", "Güzergâh", 80)}
+        <label className="field">
+          Kart şeridi yazısı (isteğe bağlı)
+          <input
+            value={f.cardLabel || ""}
+            maxLength={24}
+            placeholder="Boşsa güzergâhtaki yer adı yazar"
+            onChange={(e) => set("cardLabel", e.target.value)}
+          />
+          <small className="muted">Tur kartındaki fotoğrafın altındaki renkli şeritte görünür. Ör. "Bakü'de Yılbaşı".</small>
+        </label>
         {text("season", "Sezon", 40)}
         {text("departure", "Hareket saati", 20)}
         {text("end", "Dönüş saati", 40)}

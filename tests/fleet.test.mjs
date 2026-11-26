@@ -90,7 +90,7 @@ test("sefere filodan araç atanır; sınıf araçtan gelir, aynı gün çakışm
   assert.equal((await req("/admin/vehicles")).status, 401);
   await login();
   const fleet = await (await req("/admin/vehicles")).json();
-  assert.equal(fleet.length, 7);
+  assert.equal(fleet.length, 8); // 36 ABV 339 ile sekiz araç
   assert.ok(!JSON.stringify(fleet).toLocaleLowerCase("tr").includes("özmal"));
 
   // Sınıf ve kapasite gönderilenden değil, seçilen araçtan alınır.
@@ -135,4 +135,15 @@ test("sefere filodan araç atanır; sınıf araçtan gelir, aynı gün çakışm
       .status,
     400,
   );
+});
+
+test("yeni araç 36 ABV 339: 36 ABN 916 ile aynı özellikler, yalnız plaka farklı, sefere atanabilir", () => {
+  const base = fleetVehicles.find((v) => v.id === "36ABN916"),
+    added = fleetVehicles.find((v) => v.id === "36ABV339");
+  assert.ok(added, "araç listede");
+  assert.equal(added.plate, "36 ABV 339");
+  const { id: _a, plate: _p, ...same } = base;
+  const { id: _b, plate: _q, ...copy } = added;
+  assert.deepEqual(copy, same);
+  assert.equal(new Set(fleetVehicles.map((v) => v.id)).size, fleetVehicles.length, "kimlikler tekil");
 });

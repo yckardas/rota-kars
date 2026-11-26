@@ -225,6 +225,7 @@ const TOUR_LABELS = {
   note: "Not",
   minParticipants: "Asgari katılımcı sayısı",
   minNoticeHours: "İptal bildirim süresi",
+  cardLabel: "Kart şeridi yazısı",
 };
 const STEP_LABELS = { time: "saati", title: "başlığı", text: "açıklaması" };
 const LIST_ITEMS = { gallery: "fotoğraf", included: "madde", excluded: "madde", itinerary: "adım" };
@@ -2050,6 +2051,7 @@ export function createApp(
     documents: z.array(line(300).min(1)).max(12).default([]),
     minParticipants: z.number().int().min(0).max(60).default(0),
     minNoticeHours: z.number().int().min(0).max(720).default(0),
+    cardLabel: line(24).default(""),
   }).refine((t) => !t.minParticipants || t.minNoticeHours >= 1, {
     message: "Asgari katılımcı sayısı girildiyse iptal bildirim süresi de girilmeli.",
     path: ["minNoticeHours"],
