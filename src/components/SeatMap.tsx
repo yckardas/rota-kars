@@ -70,7 +70,9 @@ export function SeatMap({
     );
   return (
     <div
-      className={"seat-map kp-await shape-" + shape + (depth ? " is-depth" : "")}
+      className={"seat-map kp-await shape-" + shape}
+      // Sınıf değil nitelik: React className'i yazınca watchReveal'ın "is-in"i silinmesin.
+      data-depth={depth ? "" : undefined}
       data-long={depth && rows.length >= 8 ? "" : undefined}
       ref={root}
     >
