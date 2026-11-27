@@ -77,6 +77,7 @@ export function SeatMap({
       data-shape={shape}
       data-depth={depth ? "" : undefined}
       data-long={depth && rows.length >= 8 ? "" : undefined}
+      style={{ "--rows": rows.length } as CSSProperties}
       ref={root}
     >
       <div className="vehicle-roof">

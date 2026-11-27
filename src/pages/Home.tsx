@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { responsive } from "../lib/images";
 import { Link, useLang } from "../lib/i18n";
 import {
@@ -55,8 +55,13 @@ export function Home({ catalog }: { catalog: Catalog }) {
   const previewTour = catalog.tours.find((t) => t.salesOpen),
     previewVehicle = previewTour?.vehicle || catalog.vehicle;
   const { t, locale } = useLang();
-  const heroCard = useRef<HTMLFormElement>(null);
+  const heroCard = useRef<HTMLFormElement>(null),
+    trustRow = useRef<HTMLParagraphElement>(null),
+    heroParts = useMemo(() => [heroCard, trustRow], []);
   useClearOfLaunchers(heroCard);
+  // Telefonda da: arama kutusu ve güven satırı görünürken WhatsApp ve asistan
+  // düğmeleri "Rotamı bul"un ve satırın üstüne binmesin.
+  useClearOfLaunchers(heroParts, "actionVisible");
   // Vitrinde önce satışta olan rotalar; yeterince yoksa bütün rotalardan seçilir.
   const onSale = catalog.tours.filter((tour) => tour.salesOpen),
     insetTours = heroTours(onSale.length >= 3 ? onSale : catalog.tours);
@@ -78,7 +83,7 @@ export function Home({ catalog }: { catalog: Catalog }) {
     <>
       <HeroSlider tours={insetTours} title={t("Kars’tan selamlar.")}>
         <HeroSearch catalog={catalog} formRef={heroCard} />
-        <p className="rk-trust">
+        <p className="rk-trust" ref={trustRow}>
           <span>
             <BadgeCheck size={16} aria-hidden="true" />
             {t("TÜRSAB A Grubu {no}", { no: catalog.business.tursabNo })}

@@ -17,6 +17,7 @@ export function InterestForm({
   departureId,
   departureLabel,
   initialCount = 1,
+  available,
   dates = [],
   initialDateId,
   threshold,
@@ -29,6 +30,8 @@ export function InterestForm({
   departureId?: string;
   departureLabel?: string;
   initialCount?: number;
+  // Bekleme listesi: seferde kalan yer. Birkaç yer kaldıysa başlık "yer kalmadı" demez.
+  available?: number;
   // Ön kayıt: talep toplayan tarihler; müşteri yalnız bunlardan birini seçer ve kayıt o tarihe
   // bağlanır. Tarih yoksa (talep turu) serbest "Tercih ettiğiniz dönem" kutusu görünür.
   dates?: DemandDate[];
@@ -124,7 +127,9 @@ export function InterestForm({
             {notify
               ? t("Bu tur şu an satışa kapalı.")
               : waitlist
-                ? t("Bu seferde yer kalmadı.")
+                ? available && available > 0
+                  ? t("Bu seferde {n} kişilik yer kaldı.", { n: available })
+                  : t("Bu seferde yer kalmadı.")
                 : t("Bu tur yeterli talep olursa yapılacak.")}
           </h2>
           <p className="muted">

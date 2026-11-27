@@ -82,13 +82,14 @@ const ymd = z
   );
 const requestSchema = z
   .object({
-    kind: z.enum(["hotel", "tour-info", "private-tour", "vehicle"]),
+    // message: iletişim sayfasındaki "Bize yazın"; tarih ve kişi sayısı sorulmaz.
+    kind: z.enum(["hotel", "tour-info", "private-tour", "vehicle", "message"]),
     name: clean,
     email,
     phone,
-    checkIn: ymd,
+    checkIn: ymd.optional(),
     checkOut: ymd.optional(),
-    guests: z.number().int().min(1).max(50),
+    guests: z.number().int().min(1).max(50).optional(),
     hotelId: z.string().uuid().optional(),
     // Tur sayfasından gelen talepte (konaklama, tur bilgisi) tourId de olur.
     tourId: tourIdSchema.optional(),
@@ -99,9 +100,35 @@ const requestSchema = z
     notes: z.string().trim().max(2000).default(""),
     consent: z.literal(true),
   })
-  .refine((r) => r.checkIn >= new Date().toISOString().slice(0, 10), {
-    message: "Gelecek bir tarih seçin.",
+  .superRefine((r, ctx) => {
+    if (r.kind === "message") {
+      if (r.notes.length < 2)
+        ctx.addIssue({
+          code: "custom",
+          path: ["notes"],
+          message: "Mesajınızı yazın.",
+        });
+      return;
+    }
+    if (!r.checkIn)
+      ctx.addIssue({
+        code: "custom",
+        path: ["checkIn"],
+        message: "Bir tarih seçin.",
+      });
+    if (r.guests === undefined)
+      ctx.addIssue({
+        code: "custom",
+        path: ["guests"],
+        message: "Kişi sayısını yazın.",
+      });
   })
+  .refine(
+    (r) => !r.checkIn || r.checkIn >= new Date().toISOString().slice(0, 10),
+    {
+      message: "Gelecek bir tarih seçin.",
+    },
+  )
   .refine((r) => r.kind !== "tour-info" || r.tourId, {
     message: "Bilgi almak istediğiniz turu seçin.",
   })

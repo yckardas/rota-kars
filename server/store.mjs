@@ -639,7 +639,9 @@ export async function openStore(
             `Merhaba,\n${label.toLocaleLowerCase("tr-TR")} kaydedildi. Referans: ${reference}\n\n${customerSummary}\n\n` +
             (kind === "hotel"
               ? "Bu bir kesin rezervasyon değildir. Anlaşmalı otellerimizle görüşüp müsaitlik ve fiyatla size en kısa sürede dönüyoruz."
-              : "Bu bir kesin rezervasyon değildir. Ekibimiz en kısa sürede sizinle iletişime geçecek."),
+              : kind === "message"
+                ? "Mesajınızı aldık. Ekibimiz en kısa sürede size dönecek."
+                : "Bu bir kesin rezervasyon değildir. Ekibimiz en kısa sürede sizinle iletişime geçecek."),
           kind: "request_received",
           dedupeKey: "request-received:" + id,
         });

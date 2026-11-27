@@ -42,7 +42,7 @@ Kaporayı veya tamamını kartla online öderseniz rezervasyonunuz ödemeyle bir
 | Tur | Kesintisiz iptal | Bu süreden sonra | Gelmeme |
 |---|---|---|---|
 | **Yurt içi turlar** (Ani–Çıldır, Sarıkamış, Van günübirlik, konaklamalı Van vb.) | Tur hareketinden **3 gün (72 saat) öncesine kadar**: kapora dahil ödediğiniz tutarın **tamamı** iade edilir. | `[doldurulacak: ör. kaporanın tamamı / toplamın %…'i kesilir]` | `[doldurulacak]` |
-| **Yurt dışı turlar** (Batum) | Tur hareketinden **5 gün (120 saat) öncesine kadar**: tamamı iade edilir. | `[doldurulacak]` | `[doldurulacak]` |
+| **Yurt dışı turlar** (tüm yurt dışı rotalar) | Tur hareketinden **5 gün (120 saat) öncesine kadar**: tamamı iade edilir. | `[doldurulacak]` | `[doldurulacak]` |
 
 - Süre, iptal talebinizin bize ulaştığı an ile turun hareket saati arasında hesaplanır.
 - Bu süreler geçtikten sonra da, koltuğunuz başka bir misafire satılabilirse `[doldurulacak: kesinti alınmaması / yalnız … kesilmesi]`. *(Öneri: müşteri lehine ve koltuk bazlı satışa uygun bir hüküm.)*

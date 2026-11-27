@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { flushSync } from "react-dom";
 import { Box, Grid2x2, RotateCcw } from "lucide-react";
 import { SeatMap } from "./SeatMap";
@@ -140,6 +146,34 @@ export function SeatStage(props: Parameters<typeof SeatMap>[0]) {
     setPhase(firstPhase(view));
   }, [firstPhase, view, stop]);
   useEffect(() => stop, [stop]);
+
+  // Eğilen gövde üstte boşluk bırakır. Gövde tam bu boşluk kadar yukarı çekilir:
+  // plan kendi kutusunu doldurur, üstündeki nota ya da düğmeye taşmaz. Boşluk
+  // gövdenin yüksekliğine bağlı olduğu için araç ve ekran genişliğine göre ölçülür.
+  useLayoutEffect(() => {
+    const map = stage.current?.querySelector<HTMLElement>(".seat-map");
+    if (!map || view !== "depth") return;
+    const fit = () => {
+      const body = map.querySelector<HTMLElement>(".vehicle-body");
+      if (!body) return;
+      const cs = getComputedStyle(map),
+        tilt =
+          ((parseFloat(cs.getPropertyValue("--tilt")) || 40) * Math.PI) / 180,
+        p = parseFloat(cs.perspective) || 1100,
+        h = body.offsetHeight,
+        gap = (h * (1 - Math.cos(tilt)) * p) / (p + h * Math.sin(tilt));
+      map.style.setProperty("--pull", -Math.round(gap) + "px");
+    };
+    fit();
+    if (typeof ResizeObserver === "undefined")
+      return () => map.style.removeProperty("--pull");
+    const ro = new ResizeObserver(fit);
+    ro.observe(map);
+    return () => {
+      ro.disconnect();
+      map.style.removeProperty("--pull");
+    };
+  }, [view, vehicle.id, vehicle.layout.length]);
 
   // Harita yarıdan fazla göründüğünde giriş başlar.
   useEffect(() => {

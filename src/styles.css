@@ -5569,6 +5569,10 @@ input[type="radio"] {
   gap: 10px;
   margin-top: 24px;
 }
+/* Bağlantısı hazır sosyal giriş yoksa boşluk bırakmasın */
+.social-signins:empty {
+  display: none;
+}
 .social-signin {
   display: flex;
   align-items: center;
@@ -6411,6 +6415,16 @@ input[type="radio"] {
   }
   body:has(.tour-mobile-booking) footer {
     padding-bottom: 95px;
+  }
+}
+/* Telefonda yüzen WhatsApp ve asistan düğmeleri sayfanın son satırlarını
+   örtmesin: sayfa sonu düğmelerin kapladığı yer kadar uzar. */
+@media (max-width: 700px) {
+  footer {
+    padding-bottom: 80px;
+  }
+  body:has(.tour-mobile-booking) footer {
+    padding-bottom: 165px;
   }
 }
 

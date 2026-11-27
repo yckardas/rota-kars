@@ -10,6 +10,7 @@ import {
   Mail,
   ExternalLink,
   MessageCircle,
+  Clock3,
   Facebook,
   UserRound,
   Megaphone,
@@ -380,6 +381,14 @@ export function Layout({
               <Mail size={16} />
               {b.email}
             </a>
+            {b.hours && (
+              <p className="footer-hours">
+                <Clock3 size={16} />
+                <span>
+                  {t("Çalışma saatleri")}: {b.hours}
+                </span>
+              </p>
+            )}
             <a href={b.mapsUrl} target="_blank" rel="noreferrer">
               {t("Yol tarifi alın")} <ExternalLink size={13} />
             </a>

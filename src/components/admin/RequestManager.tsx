@@ -64,6 +64,7 @@ const KIND: Record<string, string> = {
   vehicle: "Araç kiralama talebi",
   "tour-info": "Tur bilgi / fiyat talebi",
   "private-tour": "Özel tur talebi",
+  message: "İletişim mesajı",
 };
 const wa = (phone: string) => {
   const d = phone.replace(/\D/g, "");
@@ -206,11 +207,17 @@ export function RequestManager({
               <small>{new Date(r.created_at).toLocaleDateString("tr-TR")}</small>
             </div>
             <strong>{r.body.name}</strong>
-            <p>
-              {r.body.checkIn ? dateLabel(r.body.checkIn) : "Tarih belirtilmedi"}
-              {r.body.checkOut ? " — " + dateLabel(r.body.checkOut) : ""} · {r.body.guests} kişi
-              {r.body.children ? ` (${r.body.children} çocuk)` : ""}
-            </p>
+            {/* İletişim mesajında tarih ve kişi sayısı sorulmaz. */}
+            {r.kind !== "message" && (
+              <p>
+                {r.body.checkIn
+                  ? dateLabel(r.body.checkIn)
+                  : "Tarih belirtilmedi"}
+                {r.body.checkOut ? " — " + dateLabel(r.body.checkOut) : ""} ·{" "}
+                {r.body.guests} kişi
+                {r.body.children ? ` (${r.body.children} çocuk)` : ""}
+              </p>
+            )}
             {(r.body.tourId || r.body.rooms || r.body.hotelId || r.body.budget) && (
               <ul className="request-facts">
                 {r.body.tourId && <li>Tur: {tourName(r.body.tourId)}</li>}
