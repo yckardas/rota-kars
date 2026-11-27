@@ -14,7 +14,7 @@ Güncel URL ve doğrulama sonucu `work/live-demo/verified.json` dosyasındadır.
 
 `npm run demo`, eksikse `.env.demo` dosyasını rastgele bir yönetici parolasıyla oluşturur. Ana `.env` dosyasını veya geliştirici API anahtarlarını yüklemez. Veritabanı yerel Mongo'daki ayrı `rota-kars-demo` veritabanı (`MONGODB_DB`), yönetim parolası `.env.demo` içindeki `ADMIN_PASSWORD` alanıdır. Bu parola yerel geliştirme panelindekinden ayrıdır.
 
-Gerçek ödeme kapalıdır. Google/Apple/Facebook girişleri sağlayıcı bilgileri olmadığı için açılmaz. Yerel yanıt veren chatbot, kayıt/giriş, kupon, davet, ön rezervasyon ve yönetim ekranları çalışır. Google yorumları mevcut tarihli kayıttan gelir.
+Gerçek ödeme kapalıdır. Google/Facebook girişleri sağlayıcı bilgileri olmadığı için açılmaz. Yerel yanıt veren chatbot, kayıt/giriş, kupon, davet, ön rezervasyon ve yönetim ekranları çalışır. Google yorumları mevcut tarihli kayıttan gelir.
 
 ## Yeniden başlatma
 

@@ -427,7 +427,7 @@ test("yayında 3D sayfası bankanın https adresine form gönderebilir, diğer s
   const home = await fetch(origin + "/api/payment/status");
   assert.match(
     home.headers.get("content-security-policy"),
-    /form-action 'self' https:\/\/appleid\.apple\.com;/,
+    /form-action 'self';/,
   );
 });
 

@@ -32,7 +32,7 @@ Sitemiz **yalnız zorunlu çerez ve depolama** kullanır. Reklam, profilleme vey
 | Ad | Tür | Amaç | Süre |
 |---|---|---|---|
 | `rota_member` | Çerez, birinci taraf, HttpOnly | Üye oturumunu sürdürmek | 7 gün |
-| `rota_oauth` | Çerez, birinci taraf | Google / Facebook / Apple ile girişte güvenlik doğrulaması | 10 dakika |
+| `rota_oauth` | Çerez, birinci taraf | Google / Facebook ile girişte güvenlik doğrulaması | 10 dakika |
 | `rota_admin` | Çerez, birinci taraf, HttpOnly | Yalnız acente personelinin yönetim paneli oturumu | Varsayılan 8 saat |
 | `rota-membership-invite-v1` | localStorage | Üyelik davet penceresini bir kez gösterdikten sonra tekrar göstermemek | Siz silene kadar |
 | `rota-chat-abroad-consent` | localStorage | Sohbet asistanı için verdiğiniz yurt dışı aktarım onayını hatırlamak | Onayı geri alana kadar |

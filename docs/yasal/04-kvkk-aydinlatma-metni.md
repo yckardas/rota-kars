@@ -10,10 +10,10 @@ Mevcut metin (`src/pages/OtherPages.tsx` → `Information`) iyi bir temel: veri 
 |---|---|---|---|
 | 1 | Veri sorumlusu | "Rota Kars Turizm" | Tam ticaret unvanı, MERSİS ve KEP yazılmalı. "Rota Kars Turizm" işletme belgesindeki acenta unvanı, tüzel kişinin adı değil. |
 | 2 | Toplama yöntemi | Yok | Tebliğ "kişisel veri toplamanın yöntemi"ni zorunlu sayıyor. Eklendi (site formları, telefon/WhatsApp, ofis, araç). |
-| 3 | **Yurt dışına aktarım** | Yalnız Anthropic (ABD) yurt dışı olarak anılıyor | Railway (barındırma), Cloudflare (Turnstile), Google (harita, giriş, Firebase bildirimleri), Meta (Instagram gömme, Facebook girişi), Apple (giriş) ve e-posta sağlayıcısı büyük olasılıkla yurt dışında. 7499 sayılı Kanunla değişen KVKK md. 9 (1 Haziran 2024'ten beri) uyarınca **sürekli aktarımlar açık rızaya dayandırılamaz**; standart sözleşme imzalanıp 5 iş günü içinde Kurul'a bildirilmesi gibi uygun güvenceler gerekir. **Avukatla en öncelikli konu bu.** |
+| 3 | **Yurt dışına aktarım** | Yalnız Anthropic (ABD) yurt dışı olarak anılıyor | Railway (barındırma), Cloudflare (Turnstile), Google (harita, giriş, Firebase bildirimleri), Meta (Instagram gömme, Facebook girişi) ve e-posta sağlayıcısı büyük olasılıkla yurt dışında. 7499 sayılı Kanunla değişen KVKK md. 9 (1 Haziran 2024'ten beri) uyarınca **sürekli aktarımlar açık rızaya dayandırılamaz**; standart sözleşme imzalanıp 5 iş günü içinde Kurul'a bildirilmesi gibi uygun güvenceler gerekir. **Avukatla en öncelikli konu bu.** |
 | 4 | Çerez cümlesi | "Reklam veya izleme çerezi kullanılmaz" | Sitenin kendi çerezleri için doğru; ancak sayfaya gömülü **Google Haritalar** ve **Instagram** çerçeveleri ile **Cloudflare Turnstile** üçüncü taraf çerezi/cihaz verisi işleyebilir. Ayrıntı `06-cerez-politikasi.md`'de. |
 | 5 | Teknik veriler | Yok | IP adresi, onay kayıtları, oturum ve güvenlik kayıtları işleniyor (Turnstile, hız sınırı, denetim kaydı). Eklendi. |
-| 6 | Sosyal giriş | Yok | Google / Facebook / Apple ile girişte alınan ad, e-posta ve hesap kimliği eklendi. |
+| 6 | Sosyal giriş | Yok | Google / Facebook ile girişte alınan ad, e-posta ve hesap kimliği eklendi. |
 | 7 | Yolcu listesi bildirimi | "Turizm mevzuatından doğan kayıtlar" | **Yeni özellik (geliştiriliyor):** rezervasyonda her yolcunun uyruğu, T.C. kimlik / pasaport numarası ve cinsiyeti alınıyor ve U-ETDS'ye bildiriliyor. Kategori, amaç, alıcı (Ulaştırma ve Altyapı Bakanlığı) ve ayrı saklama süresi metne eklendi. |
 | 8 | Başvuru yolu | Yalnız e-posta | Veri Sorumlusuna Başvuru Usul ve Esasları Hakkında Tebliğ: yazılı başvuru, KEP, güvenli elektronik imza veya sistemde kayıtlı e-posta. Eklendi. |
 | 9 | Personel bildirimleri | Yok | Yeni rezervasyon bildirimleri müşteri adıyla ekip telefonlarına Firebase (Google) üzerinden iletiliyor. Aktarım listesine eklendi. |
@@ -43,7 +43,7 @@ Mevcut metin (`src/pages/OtherPages.tsx` → `Information`) iyi bir temel: veri 
 | İletişim | E-posta, telefon | Siz |
 | Müşteri işlem | Tur, tarih, koltuk, tutar, kapora, tahsilat ve iade kayıtları, online ödemede ödeme kuruluşunun ilettiği işlem sonucu ve referansı (kart numarası değil), rezervasyon notları, iptal talepleri, bilet ve biniş kayıtları | Siz, acente ve ödeme kuruluşu |
 | Talep | Konaklama, araç kiralama ve özel tur formlarına yazdıklarınız | Siz |
-| Üyelik | Hesap bilgileri, güvenli özetlenmiş parola, kupon ve davet kayıtları; sosyal girişte sağlayıcının ilettiği ad, e-posta ve hesap kimliği; "Yol arkadaşlarım" bölümüne kaydettiğiniz en çok 10 kişinin adı, uyruğu, cinsiyeti ve kimlik / pasaport numarası | Siz / Google, Facebook, Apple |
+| Üyelik | Hesap bilgileri, güvenli özetlenmiş parola, kupon ve davet kayıtları; sosyal girişte sağlayıcının ilettiği ad, e-posta ve hesap kimliği; "Yol arkadaşlarım" bölümüne kaydettiğiniz en çok 10 kişinin adı, uyruğu, cinsiyeti ve kimlik / pasaport numarası | Siz / Google, Facebook |
 | İşlem güvenliği | IP adresi, tarayıcı bilgisi, oturum kayıtları, bot doğrulama sonucu, onay kayıtlarının zamanı | Otomatik |
 | Pazarlama | Ticari elektronik ileti izniniz ve izin tarihi | Siz (isteğe bağlı) |
 
@@ -86,7 +86,6 @@ Verileriniz; sitemizdeki rezervasyon, üyelik, talep ve iletişim formları, tel
 | Cloudflare | Formlarda bot doğrulaması (Turnstile) | ABD / küresel |
 | Google | Harita gösterimi, Google ile giriş, ekip telefonlarına anlık bildirim (Firebase) | ABD |
 | Meta | Instagram gönderisi gösterimi, Facebook ile giriş | ABD |
-| Apple | Apple ile giriş | ABD |
 | E-posta sağlayıcısı | Rezervasyon, doğrulama ve bildirim e-postaları | `[doldurulacak: SMTP sağlayıcısı ve ülkesi]` |
 | Anthropic | Yalnız sohbet asistanında, sohbet penceresinde açık rıza vermeniz hâlinde, yerel asistanın yanıtlayamadığı soru metni (onay, siz geri alana kadar o tarayıcıda geçerli kalır) | ABD |
 

@@ -342,7 +342,7 @@ export function createApp(
     "frame-src https://www.google.com https://maps.google.com https://www.instagram.com https://challenges.cloudflare.com",
     "frame-ancestors 'self'",
     "base-uri 'self'",
-    "form-action 'self' https://appleid.apple.com",
+    "form-action 'self'",
     "object-src 'none'",
   ].join("; ");
   app.use((req, res, next) => {
@@ -388,13 +388,6 @@ export function createApp(
     express.urlencoded({ extended: false, limit: "16kb" }),
   );
   app.use(
-    "/api/auth/callback",
-    express.urlencoded({
-      extended: false,
-      limit: "32kb",
-    }),
-  );
-  app.use(
     express.json({
       limit: "32kb",
     }),
@@ -405,12 +398,10 @@ export function createApp(
       "X-Content-Type-Options": "nosniff",
       "Referrer-Policy": "strict-origin-when-cross-origin",
     });
-    // Apple girişi ve banka 3D dönüşü başka siteden gelen form gönderimidir; kendi
-    // doğrulamalarıyla (imzalı durum çerezi / bankayla sunucudan sunucuya onay) korunur.
+    // Banka 3D dönüşü başka siteden gelen form gönderimidir; bankayla sunucudan
+    // sunucuya onayla korunur.
     const crossSiteForm =
-      req.method === "POST" &&
-      (req.path === "/auth/callback/apple" ||
-        "/api" + req.path === VAKIFBANK_RETURN_PATH);
+      req.method === "POST" && "/api" + req.path === VAKIFBANK_RETURN_PATH;
     if (req.method !== "GET" && req.method !== "HEAD" && !crossSiteForm) {
       if (req.headers.origin && !sameSite(req))
         return res.status(403).json({
@@ -1429,7 +1420,7 @@ export function createApp(
       const html = await payments.threeDsPage(String(q.params.id));
       r.set({ "Cache-Control": "no-store", "X-Robots-Tag": "noindex" });
       if (production)
-        r.set("Content-Security-Policy", csp.replace("form-action 'self' https://appleid.apple.com", "form-action 'self' https:"));
+        r.set("Content-Security-Policy", csp.replace("form-action 'self'", "form-action 'self' https:"));
       if (!html) return r.redirect(303, "/rezervasyonum");
       r.type("html").send(html);
     }),

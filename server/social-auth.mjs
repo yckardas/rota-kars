@@ -5,7 +5,6 @@ import {
   createHmac,
   createPublicKey,
   verify,
-  sign,
 } from "node:crypto";
 import { AppError } from "./store.mjs";
 const hash = (s) => createHash("sha256").update(s).digest("base64url");
@@ -46,7 +45,6 @@ export function attachSocialAuth(
         [
           env.GOOGLE_AUTH_CLIENT_SECRET,
           env.FACEBOOK_APP_SECRET,
-          env.APPLE_PRIVATE_KEY,
         ].join("|"),
     )
     .digest();
@@ -82,15 +80,6 @@ export function attachSocialAuth(
       issuer: ["https://accounts.google.com", "accounts.google.com"],
       scope: "openid email profile",
     },
-    apple: {
-      id: env.APPLE_CLIENT_ID,
-      secret: env.APPLE_PRIVATE_KEY && env.APPLE_TEAM_ID && env.APPLE_KEY_ID,
-      auth: "https://appleid.apple.com/auth/authorize",
-      token: "https://appleid.apple.com/auth/token",
-      jwks: "https://appleid.apple.com/auth/keys",
-      issuer: ["https://appleid.apple.com"],
-      scope: "name email",
-    },
     facebook: {
       id: env.FACEBOOK_APP_ID,
       secret: env.FACEBOOK_APP_SECRET,
@@ -103,8 +92,7 @@ export function attachSocialAuth(
     Boolean(
       base &&
       configs[name]?.id &&
-      configs[name]?.secret &&
-      (name !== "apple" || base.startsWith("https://")),
+      configs[name]?.secret,
     );
   const jsonFetch = async (url, options = {}) => {
     const res = await fetchImpl(url, {
@@ -171,33 +159,6 @@ export function attachSocialAuth(
       name: claims.name || claims.email.split("@")[0],
     };
   }
-  function appleSecret() {
-    const now = Math.floor(Date.now() / 1000),
-      head = Buffer.from(
-        JSON.stringify({
-          alg: "ES256",
-          kid: env.APPLE_KEY_ID,
-        }),
-      ).toString("base64url"),
-      payload = Buffer.from(
-        JSON.stringify({
-          iss: env.APPLE_TEAM_ID,
-          iat: now,
-          exp: now + 300,
-          aud: "https://appleid.apple.com",
-          sub: env.APPLE_CLIENT_ID,
-        }),
-      ).toString("base64url"),
-      data = head + "." + payload;
-    return (
-      data +
-      "." +
-      sign("sha256", Buffer.from(data), {
-        key: env.APPLE_PRIVATE_KEY.replaceAll("\\n", "\n"),
-        dsaEncoding: "ieee-p1363",
-      }).toString("base64url")
-    );
-  }
   app.get("/api/auth/providers", (_q, r) =>
     r.json(
       Object.keys(configs).map((id) => ({
@@ -233,7 +194,7 @@ export function attachSocialAuth(
       r.cookie("rota_oauth", sealed, {
         httpOnly: true,
         secure: base.startsWith("https:"),
-        sameSite: name === "apple" ? "none" : "lax",
+        sameSite: "lax",
         maxAge: 600000,
         path: "/api/auth",
         encode: String,
@@ -250,19 +211,18 @@ export function attachSocialAuth(
         params.set("code_challenge", hash(verifier));
         params.set("code_challenge_method", "S256");
       }
-      if (name === "apple") params.set("response_mode", "form_post");
       r.redirect(configs[name].auth + "?" + params);
     }),
   );
   async function callback(q, r) {
     const name = q.params.provider,
-      data = q.method === "POST" ? q.body : q.query,
+      data = q.query,
       entry = openState(cookieValue(q, "rota_oauth"));
     r.clearCookie("rota_oauth", {
       path: "/api/auth",
       httpOnly: true,
       secure: base.startsWith("https:"),
-      sameSite: name === "apple" ? "none" : "lax",
+      sameSite: "lax",
     });
     try {
       if (
@@ -286,7 +246,7 @@ export function attachSocialAuth(
       const config = configs[name],
         params = new URLSearchParams({
           client_id: config.id,
-          client_secret: name === "apple" ? appleSecret() : config.secret,
+          client_secret: config.secret,
           code: data.code,
           redirect_uri: base + "/api/auth/callback/" + name,
           grant_type: "authorization_code",
@@ -350,5 +310,4 @@ export function attachSocialAuth(
     }
   }
   app.get("/api/auth/callback/:provider", route(callback));
-  app.post("/api/auth/callback/:provider", route(callback));
 }

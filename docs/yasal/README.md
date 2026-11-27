@@ -17,7 +17,7 @@
 
 ## Avukata götürülecek öncelikli sorular
 
-1. **Yurt dışına aktarım (KVKK md. 9, 1 Haziran 2024 değişikliği):** Railway, Cloudflare, Google (harita, giriş, Firebase), Meta, Apple, e-posta sağlayıcısı. Sürekli aktarımlar açık rızaya dayanamıyor; standart sözleşme ve Kurul'a bildirim gerekebilir. Sohbet asistanının (Anthropic) "arızi" sayılıp sayılmayacağı.
+1. **Yurt dışına aktarım (KVKK md. 9, 1 Haziran 2024 değişikliği):** Railway, Cloudflare, Google (harita, giriş, Firebase), Meta, e-posta sağlayıcısı. Sürekli aktarımlar açık rızaya dayanamıyor; standart sözleşme ve Kurul'a bildirim gerekebilir. Sohbet asistanının (Anthropic) "arızi" sayılıp sayılmayacağı.
 2. **Hangi mevzuat:** Günübirlik rehberli tur Mesafeli Sözleşmeler Yönetmeliği'ne mi, yoksa "yolcu taşıma" istisnasına mı girer? Konaklamalı Van turu paket tur; Paket Tur Sözleşmeleri Yönetmeliği'nin zorunlu içeriği sözleşmede eksiksiz mi?
 3. **Cayma hakkı istisnası** (md. 15/1-g) ifadesi doğru mu?
 4. **İptal kesinti oranları** ve gelmeme kuralı: makul ve "haksız şart" sayılmayacak düzey.

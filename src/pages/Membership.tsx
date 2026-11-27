@@ -22,7 +22,6 @@ import {
   Users,
   Ticket,
   RotateCcw,
-  Apple,
   Facebook,
 } from "lucide-react";
 import { api, post } from "../lib/api";
@@ -223,7 +222,6 @@ export function Membership() {
         <div className="social-signins">
           {[
             ["google", "Google", GoogleMark],
-            ["apple", "Apple", Apple],
             ["facebook", "Facebook", Facebook],
           ].map(([id, label, Icon]) => {
             const ready = providers.find((p) => p.id === id)?.enabled;
@@ -735,12 +733,7 @@ export function Account() {
                   ? "{provider} hesabını bağla"
                   : "{provider} · Bağlantı hazırlanıyor",
                 {
-                  provider:
-                    p.id === "google"
-                      ? "Google"
-                      : p.id === "apple"
-                        ? "Apple"
-                        : "Facebook",
+                  provider: p.id === "google" ? "Google" : "Facebook",
                 },
               )}
             </button>
