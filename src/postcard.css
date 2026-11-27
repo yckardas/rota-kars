@@ -1893,14 +1893,14 @@ html:has(.kp) {
   max-width: 100%;
   padding-inline: 10px;
 }
-.kp .seat-map.shape-car {
+.kp .seat-map[data-shape="car"] {
   width: 252px;
 }
-.kp .seat-map.shape-van {
+.kp .seat-map[data-shape="van"] {
   width: 270px;
 }
-.kp .seat-map.shape-bus,
-.kp .seat-map.shape-coach {
+.kp .seat-map[data-shape="bus"],
+.kp .seat-map[data-shape="coach"] {
   --seat-h: 42px;
   --seat-gap: 6px;
   width: 352px;
@@ -1917,17 +1917,17 @@ html:has(.kp) {
   box-shadow: var(--kp-shadow-sm);
   animation: kp-drive-in 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-.kp .shape-car .vehicle-body {
+.kp [data-shape="car"] .vehicle-body {
   border-radius: 48% 48% 36% 36% / 15% 15% 12% 12%;
   padding: 24px 22px 30px;
 }
-.kp .shape-van .vehicle-body {
+.kp [data-shape="van"] .vehicle-body {
   border-radius: 42px 42px 16px 16px / 34px 34px 16px 16px;
 }
-.kp .shape-bus .vehicle-body {
+.kp [data-shape="bus"] .vehicle-body {
   border-radius: 26px 26px 10px 10px;
 }
-.kp .shape-coach .vehicle-body {
+.kp [data-shape="coach"] .vehicle-body {
   border-radius: 22px 22px 10px 10px;
   padding: 12px 16px 12px;
 }
@@ -1952,11 +1952,11 @@ html:has(.kp) {
   right: -9px;
   border-radius: 0 4px 4px 0;
 }
-.kp .shape-coach .vehicle-mirror,
-.kp .shape-bus .vehicle-mirror {
+.kp [data-shape="coach"] .vehicle-mirror,
+.kp [data-shape="bus"] .vehicle-mirror {
   top: 30px;
 }
-.kp .shape-car .vehicle-mirror {
+.kp [data-shape="car"] .vehicle-mirror {
   top: 27%;
 }
 .kp .vehicle-wheel {
@@ -1979,16 +1979,16 @@ html:has(.kp) {
 .kp .vehicle-wheel.rear {
   bottom: 13%;
 }
-.kp .shape-car .vehicle-wheel {
+.kp [data-shape="car"] .vehicle-wheel {
   height: 26px;
 }
-.kp .shape-car .vehicle-wheel.front {
+.kp [data-shape="car"] .vehicle-wheel.front {
   top: 22%;
 }
-.kp .shape-car .vehicle-wheel.rear {
+.kp [data-shape="car"] .vehicle-wheel.rear {
   bottom: 16%;
 }
-.kp .shape-coach .vehicle-wheel.rear {
+.kp [data-shape="coach"] .vehicle-wheel.rear {
   bottom: 9%;
   box-shadow: 0 -40px 0 var(--kp-ink);
 }
