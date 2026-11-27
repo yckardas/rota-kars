@@ -591,7 +591,8 @@ const interestStatus: Record<InterestRecord["status"], string> = {
 // Ön kayıt / bekleme listesi kaydı: rezervasyon olmadığını ve nasıl ilerleyeceğini söyler.
 function InterestStatus({ record: x }: { record: InterestRecord }) {
   const { t } = useLang();
-  const prereg = x.kind === "prereg";
+  const prereg = x.kind === "prereg",
+    notify = x.kind === "notify";
   return (
     <article className="ticket-check interest-status" aria-live="polite">
       <span
@@ -600,12 +601,16 @@ function InterestStatus({ record: x }: { record: InterestRecord }) {
           (x.status === "cancelled" ? "is-void" : "is-pending")
         }
       >
-        {prereg ? t("Ücretsiz ön kayıt") : t("Bekleme listesi")}
+        {prereg ? t("Ücretsiz ön kayıt") : notify ? t("Haber listesi") : t("Bekleme listesi")}
       </span>
       <h2>{t(x.tourName)}</h2>
       <div className="ticket-reference">
         <span>
-          {prereg ? t("Ön kayıt numarası") : t("Bekleme listesi numarası")}
+          {prereg
+            ? t("Ön kayıt numarası")
+            : notify
+              ? t("Haber listesi numarası")
+              : t("Bekleme listesi numarası")}
         </span>
         <strong>{x.reference}</strong>
       </div>

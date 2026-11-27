@@ -276,6 +276,8 @@ export const site: Record<string, string> = {
   "Bekleme listesi": "Waiting list",
   "Ön kayıt numarası": "Pre-registration number",
   "Bekleme listesi numarası": "Waiting list number",
+  "Haber listesi": "Notify list",
+  "Haber listesi numarası": "Notify list number",
   Durum: "Status",
   Kişi: "Guests",
   "Tarih henüz belli değil": "Date not set yet",
