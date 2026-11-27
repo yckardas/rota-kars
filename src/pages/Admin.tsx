@@ -37,10 +37,11 @@ import {
   Search,
   Wallet,
   ChevronDown,
+  CarFront,
 } from "lucide-react";
 import { MonthReport } from "../components/admin/MonthReport";
 import { FinancePanel } from "../components/admin/FinancePanel";
-import { ContentManager } from "../components/admin/ContentManager";
+import { ContentManager, ServiceVehiclesManager } from "../components/admin/ContentManager";
 import { Overview } from "../components/admin/Overview";
 import { RequestManager } from "../components/admin/RequestManager";
 import { ArticleManager } from "../components/admin/ArticleManager";
@@ -88,6 +89,7 @@ const ALL_TABS = [
   ["reports", "Aylık rapor", BarChart3, "Satış"],
   ["campaigns", "Kampanyalar", Gift, "Satış"],
   ["content", "Tur ve site metinleri", FileText, "Turlar ve site"],
+  ["vehicles", "Hizmet araçları", CarFront, "Turlar ve site"],
   ["operations", "Araç düzeni ve transfer", Bus, "Turlar ve site"],
   ["articles", "Rehber yazıları", Newspaper, "Turlar ve site"],
   ["hotels", "Anlaşmalı oteller", BedDouble, "Turlar ve site"],
@@ -111,6 +113,7 @@ const RELATED: Record<string, [string, string][]> = {
     ["content", "Tur metni, fotoğrafı ve fiyatı → Tur ve site metinleri"],
   ],
   content: [
+    ["vehicles", "Hizmet sayfalarındaki araç fotoğrafları → Hizmet araçları"],
     ["departures", "Tarih, saat, rehber ve plaka → Sefer planı"],
     ["operations", "Araç düzeni ve transfer fiyatları → Araç düzeni ve transfer"],
   ],
@@ -555,6 +558,7 @@ function AdminPanel({
         {tab === "content" && (
           <ContentManager key={key("content")} catalog={catalog} isOwner={me.user.role === "owner"} onSaved={refreshCatalog} />
         )}
+        {tab === "vehicles" && <ServiceVehiclesManager key={key("vehicles")} catalog={catalog} onSaved={refreshCatalog} />}
         {tab === "integrations" && (
           <Integrations catalog={catalog} owner={me.user.role === "owner"} />
         )}

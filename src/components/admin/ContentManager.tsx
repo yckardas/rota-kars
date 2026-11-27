@@ -152,8 +152,7 @@ export function ContentManager({
   return (
     <>
       <p className="muted">
-        Sitedeki tur metinlerini, fotoğraflarını, hizmet sayfalarındaki araçları ve iletişim bilgilerini buradan
-        güncelleyin. Kaydedince site hemen güncellenir; "Varsayılana dön" ile
+        Sitedeki tur metinlerini, fotoğraflarını ve iletişim bilgilerini buradan güncelleyin. Kaydedince site hemen güncellenir; "Varsayılana dön" ile
         ilk hâline dönebilirsiniz. İngilizce sayfada (/en) görünen metinleri
         turun "İngilizce" sekmesinden girin; İngilizcesi girilmeyen alanda
         Türkçe değişmediyse eski çeviri, yoksa Türkçe görünür.
@@ -167,11 +166,6 @@ export function ContentManager({
               {t.custom ? (t.hidden ? " · taslak" : " · kopya") : ""}
             </option>
           ))}
-          {catalog.services.map((s) => (
-            <option key={s.id} value={"service:" + s.id}>
-              Hizmet araçları · {s.title}
-            </option>
-          ))}
           {isOwner && <option value="business">İletişim bilgileri</option>}
           {isOwner && <option value="announcement">Duyuru şeridi</option>}
         </select>
@@ -180,8 +174,7 @@ export function ContentManager({
         <BusinessEditor key="business" onSaved={onSaved} />
       ) : section === "announcement" ? (
         <AnnouncementEditor key="announcement" onSaved={onSaved} />
-      ) : section.startsWith("service:") ? (
-        <ServiceEditor key={section} id={section.slice("service:".length)} onSaved={onSaved} />
+
       ) : (
         <TourEditor
           key={section}
@@ -1128,6 +1121,30 @@ function AnnouncementEditor({ onSaved }: { onSaved: () => void }) {
         Kaydet
       </button>
     </form>
+  );
+}
+
+// Paneldeki "Hizmet araçları" sekmesi: önce hizmet seçilir, altında o hizmetin araçları.
+export function ServiceVehiclesManager({ catalog, onSaved }: { catalog: Catalog; onSaved: () => void }) {
+  const [id, setId] = useState(catalog.services[0]?.id || "");
+  return (
+    <>
+      <p className="muted">
+        Hizmet sayfalarındaki "Bu hizmetteki araçlarımız" bölümü. Hizmeti seçin; araç ekleyip kaldırabilir, adını ve
+        sırasını değiştirebilir, fotoğraf yükleyebilirsiniz. Kaydedince site hemen güncellenir.
+      </p>
+      <label className="field content-picker">
+        Hizmet
+        <select value={id} onChange={(e) => setId(e.target.value)}>
+          {catalog.services.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.title} · {s.vehicles?.length || 0} araç
+            </option>
+          ))}
+        </select>
+      </label>
+      {id && <ServiceEditor key={id} id={id} onSaved={onSaved} />}
+    </>
   );
 }
 
