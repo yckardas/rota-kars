@@ -62,6 +62,9 @@ const DEFAULT_BUSINESS = pick(business, BUSINESS_FIELDS);
 const DEFAULT_SERVICES = new Map(services.map((s) => [s.id, { vehicles: [], ...pick(s, SERVICE_FIELDS) }]));
 // Kod içindeki turlar; panelden kopyalanan turlar (custom_tours) bunlara eklenir.
 const BUILT_IN = new Set(tours.map((t) => t.id));
+// Yerleşik turun kod içindeki (panelden önceki) içeriği; kopya turda null.
+export const builtInDefaults = (id) =>
+  BUILT_IN.has(id) ? structuredClone(DEFAULT_TOURS.get(id)) : null;
 // Kopyaya kaynaktan geçen, panelde düzenlenmeyen alanlar.
 const BASE_FIELDS = ["inquiryOnly", "demandByDefault"];
 // Kopya turun adresi: /turlar/<id>.
@@ -79,16 +82,126 @@ const fresh = (translated, current, defaults) =>
       k in defaults && !isDeepStrictEqual(current[k], defaults[k]) ? structuredClone(current[k]) : v,
     ]),
   );
+// /en sürümü. Panelde her çevrilebilir tur alanının İngilizcesi ayrıca girilebilir
+// (site_content kaydında "en"); girildiği andaki Türkçe metin "en_base"de saklanır.
+// Bir alanın /en'de gösterilen metni sırasıyla:
+//   1. panelde girilen İngilizce,
+//   2. eski statik çeviri (catalog-en.mjs) — yalnız Türkçe metin çevirinin yazıldığı
+//      varsayılan metinle hâlâ aynıysa (kopya turlarda kaynak turun çevirisi),
+//   3. Türkçe metin.
+// Türkçe metin İngilizceden sonra değişirse İngilizce yine gösterilir; panel uyarır (enStale).
+export const EN_FIELDS = [
+  "name",
+  "subtitle",
+  "category",
+  "duration",
+  "location",
+  "season",
+  "departure",
+  "end",
+  "summary",
+  "included",
+  "excluded",
+  "itinerary",
+  "note",
+  "documents",
+  "cardLabel",
+];
+// Filtreler İngilizce kategoriyle eşleşir (src/lib/tourFilters.ts); kategori ya da
+// "Günübirlik" süresi için İngilizce girilmemişse bilinen karşılığı kullanılır.
+const COMMON_EN = {
+  category: {
+    Kültür: "Culture",
+    Doğa: "Nature",
+    Kış: "Winter",
+    "Yurt dışı": "Abroad",
+    Konaklamalı: "Overnight",
+  },
+  duration: { Günübirlik: "Day trip" },
+};
+export const isBlank = (v) =>
+  v === undefined ||
+  v === null ||
+  (typeof v === "string" ? !v.trim() : Array.isArray(v) && !v.length);
+// Panelde girilen İngilizce metinler: tur kimliği -> { en, base }.
+const enEdits = new Map();
+// Kopya turun çevirisi kökteki yerleşik turdan gelir (kopyanın kopyası da).
+function rootOf(tour) {
+  const seen = new Set();
+  let t = tour;
+  while (t && !BUILT_IN.has(t.id) && !seen.has(t.id)) {
+    seen.add(t.id);
+    t = tours.find((x) => x.id === t.sourceId);
+  }
+  return t && BUILT_IN.has(t.id) ? t.id : null;
+}
+// Panelde İngilizce girilmemiş alanın yedeği: Türkçe metin değişmemişse eski çeviri.
+function fallbackEn(tour, key) {
+  const root = rootOf(tour),
+    old = root ? en.tours[root]?.[key] : undefined;
+  if (
+    old !== undefined &&
+    isDeepStrictEqual(tour[key], DEFAULT_TOURS.get(root)?.[key])
+  )
+    return structuredClone(old);
+  const common =
+    COMMON_EN[key]?.[typeof tour[key] === "string" ? tour[key].trim() : ""];
+  return common;
+}
+// Turun /en metinleri; hiçbir alanı İngilizce değilse null (sayfa İngilizce dizine girmez).
+function tourEn(tour) {
+  const edit = enEdits.get(tour.id),
+    out = {};
+  let english = false;
+  for (const key of EN_FIELDS) {
+    const own = edit?.en?.[key],
+      value = !isBlank(own) ? own : fallbackEn(tour, key);
+    if (value !== undefined && !isBlank(tour[key])) english = true;
+    out[key] = structuredClone(value !== undefined ? value : tour[key]);
+  }
+  return english ? out : null;
+}
+// Panelde girilen İngilizcesi, girildiği andaki Türkçe metinden farklılaşan alanlar.
+const staleEn = (tour, edit) =>
+  EN_FIELDS.filter(
+    (k) =>
+      !isBlank(edit?.en?.[k]) && !isDeepStrictEqual(edit?.base?.[k], tour[k]),
+  );
+// Kayıttaki "en"/"en_base" alanlarını kaydedilen Türkçe metne göre yeniler: İngilizcesi
+// değişen (ya da "hâlâ doğru" diye onaylanan) alanın tabanı yeni Türkçe metin olur;
+// değişmeyenin tabanı korunur, böylece Türkçe sonradan değişirse uyarı kalır.
+function nextEn(tour, prev, input, confirm = []) {
+  const en = {},
+    base = {};
+  for (const key of EN_FIELDS) {
+    const value = input?.[key];
+    if (isBlank(value)) continue;
+    // Eski çeviriyle aynı metin ayrıca saklanmaz (panel onu hazır doldurur).
+    if (
+      isBlank(prev?.en?.[key]) &&
+      isDeepStrictEqual(value, fallbackEn(tour, key))
+    )
+      continue;
+    en[key] = structuredClone(value);
+    base[key] =
+      isDeepStrictEqual(value, prev?.en?.[key]) &&
+      !confirm.includes(key) &&
+      prev?.base &&
+      key in prev.base
+        ? structuredClone(prev.base[key])
+        : structuredClone(tour[key]);
+  }
+  return { en, base };
+}
 export function currentEn() {
   return {
     ...en,
     business: fresh(en.business, business, DEFAULT_BUSINESS),
     tours: Object.fromEntries(
-      Object.entries(en.tours).map(([id, x]) => {
-        const tour = tours.find((t) => t.id === id),
-          defaults = DEFAULT_TOURS.get(id);
-        return [id, tour && defaults ? fresh(x, tour, defaults) : x];
-      }),
+      tours
+        .filter((t) => !t.hidden)
+        .map((t) => [t.id, tourEn(t)])
+        .filter(([, x]) => x),
     ),
   };
 }
@@ -135,7 +248,11 @@ export async function createContent(db, { clock = Date.now } = {}) {
   async function apply() {
     await syncCustomTours();
     const docs = new Map((await db.find("site_content", {})).map((d) => [d.id, d]));
+    enEdits.clear();
     for (const tour of tours) {
+      const doc = docs.get("tour:" + tour.id);
+      if (doc?.en)
+        enEdits.set(tour.id, { en: doc.en, base: doc.en_base || {} });
       Object.assign(tour, structuredClone(DEFAULT_TOURS.get(tour.id)), docs.get("tour:" + tour.id)?.fields || {});
       // Kopyada yurt dışı/yurt içi kategoriden gelir (ücretsiz iptal süresi, sözleşme dili).
       if (tour.custom) tour.abroad = tour.category === "Yurt dışı";
@@ -173,7 +290,25 @@ export async function createContent(db, { clock = Date.now } = {}) {
     async tour(id) {
       const tour = tours.find((t) => t.id === id);
       if (!tour) throw new AppError(404, "Tur bulunamadı.");
-      return { ...(await info("tour:" + id, pick(tour, TOUR_FIELDS), DEFAULT_TOURS.get(id))), tour: meta(tour) };
+      const edit = enEdits.get(id);
+      return {
+        ...(await info(
+          "tour:" + id,
+          pick(tour, TOUR_FIELDS),
+          DEFAULT_TOURS.get(id),
+        )),
+        tour: meta(tour),
+        // İngilizce: panelde girilen, girilmeyen alanlarda kullanılan eski çeviri ve
+        // Türkçesi İngilizceden sonra değişen alanlar.
+        en: structuredClone(edit?.en || {}),
+        enFallback: Object.fromEntries(
+          EN_FIELDS.map((k) => [
+            k,
+            isBlank(edit?.en?.[k]) ? fallbackEn(tour, k) : undefined,
+          ]).filter(([, v]) => v !== undefined),
+        ),
+        enStale: staleEn(tour, edit),
+      };
     },
     // Turu yeni bir tur olarak kopyalar: içerik (paneldeki güncel hâliyle) ve araç/satış
     // ayarı kaynaktan gelir, seferler gelmez. Kopya taslak başlar; "Yayınla" ile sitede görünür.
@@ -193,6 +328,23 @@ export async function createContent(db, { clock = Date.now } = {}) {
           created_at: clock(),
           created_by: actor?.name || null,
         });
+        // Kaynağın İngilizcesi kopyaya geçer (ad hariç: kopyanın adı yenidir). Taban kaynağın
+        // Türkçesidir; kopyada Türkçe değişirse panel İngilizcenin eskidiğini gösterir.
+        const sourceEn = tourEn(source);
+        if (sourceEn) {
+          const keys = EN_FIELDS.filter(
+            (k) => k !== "name" && !isDeepStrictEqual(sourceEn[k], source[k]),
+          );
+          if (keys.length)
+            await db.upsert("site_content", "tour:" + id, {
+              id: "tour:" + id,
+              fields: {},
+              en: pick(sourceEn, keys),
+              en_base: pick(source, keys),
+              updated_at: clock(),
+              updated_by: actor?.name || null,
+            });
+        }
         if (ops) {
           const { _id, ...rest } = ops;
           await db.insert("tour_operations", id, { ...rest, tour_id: id });
@@ -218,11 +370,35 @@ export async function createContent(db, { clock = Date.now } = {}) {
       await apply();
       return { ok: true };
     },
+    // fields.en: alanların İngilizcesi (boş = eski çeviri ya da Türkçe); gönderilmezse
+    // kayıttaki İngilizce olduğu gibi kalır. fields.enConfirm: Türkçesi değişse de
+    // İngilizcesi hâlâ doğru olduğu onaylanan alanlar.
     async saveTour(id, fields, actor) {
       if (!DEFAULT_TOURS.has(id)) throw new AppError(404, "Tur bulunamadı.");
+      const prev = await db.one("site_content", { _id: "tour:" + id }),
+        picked = pick(fields, TOUR_FIELDS),
+        tour = tours.find((t) => t.id === id),
+        draft = {
+          ...structuredClone(DEFAULT_TOURS.get(id)),
+          ...picked,
+          id,
+          sourceId: tour?.sourceId,
+        },
+        english =
+          fields.en === undefined
+            ? { en: prev?.en || {}, base: prev?.en_base || {} }
+            : nextEn(
+                draft,
+                { en: prev?.en, base: prev?.en_base },
+                fields.en,
+                fields.enConfirm,
+              );
       await db.upsert("site_content", "tour:" + id, {
         id: "tour:" + id,
-        fields: pick(fields, TOUR_FIELDS),
+        fields: picked,
+        ...(Object.keys(english.en).length
+          ? { en: english.en, en_base: english.base }
+          : {}),
         updated_at: clock(),
         updated_by: actor?.name || null,
       });
@@ -241,7 +417,14 @@ export async function createContent(db, { clock = Date.now } = {}) {
             doc.fields[k],
           ]),
         );
-      if (Object.keys(kept).length) await db.update("site_content", { _id: "tour:" + id }, { fields: kept });
+      // İngilizce metinler de silinir (yerleşik turda eski çeviri geri gelir).
+      if (Object.keys(kept).length)
+        await db.update(
+          "site_content",
+          { _id: "tour:" + id },
+          { fields: kept },
+          { unset: { en: "", en_base: "" } },
+        );
       else await db.remove("site_content", { _id: "tour:" + id });
       await apply();
       return this.tour(id);

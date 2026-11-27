@@ -64,7 +64,9 @@ export function CategoryBadges({
             />
           </span>
           <span className="rk-cat-name">{t(c.filter)}</span>
-          <small>{t("{n} rota", { n: c.count })}</small>
+          <small>
+            {t(c.count === 1 ? "1 rota" : "{n} rota", { n: c.count })}
+          </small>
         </button>
       ))}
     </nav>

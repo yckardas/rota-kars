@@ -249,7 +249,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
                 <dt>{tx("Araç")}</dt>
                 <dd>
                   <Armchair size={15} />
-                  {currentVehicle.passengerSeats}+1 {currentVehicle.name}
+                  {currentVehicle.passengerSeats}+1 {tx(currentVehicle.name)}
                 </dd>
               </div>
               <div className="kp-fact-price">

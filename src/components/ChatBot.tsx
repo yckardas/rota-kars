@@ -13,6 +13,7 @@ import {
 import { api } from "../lib/api";
 import { whatsappLink } from "../lib/whatsapp";
 import { currency } from "../lib/types";
+import { useLang } from "../lib/i18n";
 type Action = {
   kind: "link" | "prompt";
   label: string;
@@ -129,6 +130,8 @@ function Rich({ text }: { text: string }) {
   );
 }
 export function ChatBot({ whatsapp }: { whatsapp: string }) {
+  // Sohbet Türkçedir; /en'de her sayfada görünen başlatıcı düğmeler çevrilir.
+  const { t } = useLang();
   const [open, setOpen] = useState(false),
     [messages, setMessages] = useState<Message[]>(readSession),
     [input, setInput] = useState(""),
@@ -533,21 +536,21 @@ export function ChatBot({ whatsapp }: { whatsapp: string }) {
           href={whatsappLink(whatsapp, waText)}
           target="_blank"
           rel="noreferrer"
-          aria-label="WhatsApp ile yazın"
+          aria-label={t("WhatsApp ile yazın")}
         >
           <WhatsAppIcon size={26} />
         </a>
         <button
           ref={launcher}
           className="chat-fab"
-          aria-label={open ? "Asistanı kapat" : "Asistanla sohbet et"}
+          aria-label={open ? t("Asistanı kapat") : t("Asistanla sohbet et")}
           aria-expanded={open}
           onClick={() => setOpen(!open)}
         >
           {open ? <X size={24} /> : <MessageCircle size={24} />}{" "}
           {!open && (
             <span className="chat-fab-label">
-              Yolculuğunuzu birlikte planlayalım
+              {t("Yolculuğunuzu birlikte planlayalım")}
             </span>
           )}
         </button>

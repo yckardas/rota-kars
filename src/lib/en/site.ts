@@ -21,6 +21,11 @@ export const site: Record<string, string> = {
   "Merhaba, rotakarsturizm.com sitesinden yazıyorum.":
     "Hello, I’m writing from the rotakarsturizm.com website.",
   "Birlikte planlayalım": "Let’s plan together",
+  // Sohbet asistanı başlatıcısı (her sayfada)
+  "Yolculuğunuzu birlikte planlayalım": "Let’s plan your trip together",
+  "WhatsApp ile yazın": "Message us on WhatsApp",
+  "Asistanla sohbet et": "Chat with our assistant",
+  "Asistanı kapat": "Close the assistant",
   "Menüyü kapat": "Close menu",
   "Menüyü aç": "Open menu",
   "Rotayı biz biliyoruz.": "We know the way.",
@@ -48,6 +53,17 @@ export const site: Record<string, string> = {
   "Vitrini durdur": "Pause the carousel",
   "Vitrini sürdür": "Resume the carousel",
   "Tur türleri": "Tour types",
+  // Araç tipleri (sefer ve koltuk planında; araç adı verilerden gelir)
+  "VIP minibüs": "VIP minibus",
+  "Binek araç · Egea sınıfı": "Car · Egea class",
+  "VIP minibüs · Vito sınıfı": "VIP minibus · Vito class",
+  "VIP minibüs · Sprinter / Crafter sınıfı":
+    "VIP minibus · Sprinter / Crafter class",
+  "Turizm midibüsü · Otokar Sultan sınıfı":
+    "Tour midibus · Otokar Sultan class",
+  "Turizm otobüsü · Travego sınıfı": "Tour coach · Travego class",
+  "{n} rota": "{n} routes",
+  "1 rota": "1 route",
   "TÜRSAB A Grubu {no}": "TÜRSAB Group A {no}",
   "{year}’dan beri Kars’ta": "In Kars since {year}",
   Duyuru: "Announcement",
@@ -388,6 +404,31 @@ export const site: Record<string, string> = {
     "Reviews from {n} guests who took this route.",
   "Bu rotayı gezen {n} misafirimizin yorumu; {m} yorumda {terms} geçiyor.":
     "Reviews from {n} guests who took this route; {m} of them mention {terms}.",
+  "Bu rotayı gezen 1 misafirimizin yorumu.":
+    "Review from 1 guest who took this route.",
+  "Yorumunda {terms} geçen 1 misafirimiz.":
+    "1 guest who mentioned {terms} in their review.",
+  // Sunucudan gelen sıralama açıklaması ve Google'ın göreli tarihleri
+  "Google Haritalar’dan {date} tarihinde alınan en alakalı yorumlar.":
+    "The most relevant reviews from Google Maps, as of {date}.",
+  "Google’ın alaka düzeyine göre seçtiği yorumlar. En fazla 5 yorum.":
+    "Reviews selected by Google for relevance. Up to 5 reviews.",
+  "Güncelleme tarihine göre en yeniden eskiye. Tüm puanlar dahil.":
+    "Newest to oldest by update date. All ratings included.",
+  "1 saniye önce": "a second ago",
+  "{n} saniye önce": "{n} seconds ago",
+  "1 dakika önce": "a minute ago",
+  "{n} dakika önce": "{n} minutes ago",
+  "1 saat önce": "an hour ago",
+  "{n} saat önce": "{n} hours ago",
+  "1 gün önce": "a day ago",
+  "{n} gün önce": "{n} days ago",
+  "1 hafta önce": "a week ago",
+  "{n} hafta önce": "{n} weeks ago",
+  "1 ay önce": "a month ago",
+  "{n} ay önce": "{n} months ago",
+  "1 yıl önce": "a year ago",
+  "{n} yıl önce": "{n} years ago",
   "Bu rotaya özel yorum henüz yok; acentemizin diğer turlarına gelen yorumlar gösteriliyor.":
     "No reviews for this route yet; showing reviews of our other tours.",
   "Google’da bu rotaya özel yorum henüz yok; acentemizin diğer turlarına gelen yorumlar gösteriliyor.":

@@ -151,6 +151,7 @@ export const en = {
       subtitle: "A new route across the border.",
       category: "Abroad",
       duration: "Day trip",
+      location: "Kars · Artvin · Batumi",
       end: "Night",
       season: "City route",
       summary:
@@ -302,6 +303,7 @@ export const en = {
       subtitle: "Two days in the capital of the Caucasus.",
       category: "Abroad",
       duration: "2 days · 1 night",
+      location: "Kars · Türkgözü · Tbilisi",
       departure: "05:00",
       end: "Day 2, evening",
       season: "Route abroad",
@@ -462,6 +464,7 @@ export const en = {
       subtitle: "Across the border in a day: the land of Noah.",
       category: "Abroad",
       duration: "Day trip",
+      location: "Kars · Iğdır · Nakhchivan",
       end: "Night",
       season: "Route abroad",
       summary:
@@ -703,6 +706,7 @@ export const en = {
       subtitle: "Three days from Nakhchivan to Baku, flights included.",
       category: "Abroad",
       duration: "3 days · 2 nights",
+      location: "Kars · Nakhchivan · Baku",
       departure: "Set by the agency",
       end: "Day 3",
       season: "Route abroad",

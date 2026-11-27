@@ -25,7 +25,12 @@ import { createGuestReviews } from "./guest-reviews.mjs";
 import { describeRequest, formMailPerDay, REQUEST_KINDS, statusLabel } from "./requests.mjs";
 import { applyStandardTransfer, priceTransfer } from "./transfer.mjs";
 import { childrenRecord } from "./trip-info.mjs";
-import { applyAniMinibus, applyCustomerCorrections, removeTestReservations } from "./corrections.mjs";
+import {
+  applyAniMinibus,
+  applyCustomerCorrections,
+  applyTourTranslations,
+  removeTestReservations,
+} from "./corrections.mjs";
 export class AppError extends Error {
   constructor(status, message) {
     super(message);
@@ -167,6 +172,12 @@ export async function openStore(
     if (minibus.applied) console.log("Ani-Çıldır seferleri minibüse geçti:", minibus.changed);
     const testRecords = await removeTestReservations(db, { clock });
     if (testRecords.applied) console.log("Deneme rezervasyonları silindi:", JSON.stringify(testRecords));
+    const english = await applyTourTranslations(db, { clock });
+    if (english.applied)
+      console.log(
+        "Turların İngilizce metinleri yazıldı:",
+        JSON.stringify(english),
+      );
   }
   await Promise.all([
     db.index("push_devices", { admin_id: 1 }),

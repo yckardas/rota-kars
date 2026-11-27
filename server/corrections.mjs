@@ -9,7 +9,10 @@
 // - Ani-Çıldır'ın 1 Aralık'tan önceki seferleri kaldırılır (kaydı olan sefer kapatılır).
 // - 18 misafir koltuklu VIP minibüs: 19+1 düzen, en arka sıra dörtlü (koltuklar 18'de biter).
 // - Buluşma: Kars merkezde ev, otel ve yakın noktalardan alıp bırakma.
+import { isDeepStrictEqual } from "node:util";
 import { tours } from "./catalog.mjs";
+import { builtInDefaults, isBlank } from "./content.mjs";
+import { TOUR_EN } from "./tour-en-2026-11.mjs";
 import {
   DEFAULT_PICKUP,
   OLD_DEFAULT_PICKUP,
@@ -238,4 +241,69 @@ export async function removeTestReservations(db, { clock, references = TEST_RESE
     updated_at: clock(),
   });
   return { applied: true, removed, skipped };
+}
+
+// 27 Kasım 2026: /en'de Türkçe görünen tur metinlerinin İngilizcesi (tour-en-2026-11.mjs)
+// paneldeki İngilizce alanlara bir kez yazılır. Güvenlik: bir alan yalnız İngilizcesi boşsa ve
+// kayıttaki Türkçe metin çevrilen Türkçe metinle birebir aynıysa yazılır; arada panelden
+// değiştirilen alan atlanır. Türkçe alanlara (fields) hiç dokunulmaz.
+export const TOUR_EN_RELEASE = "ingilizce_turlar_2026_11_27";
+export async function applyTourTranslations(
+  db,
+  { clock, translations = TOUR_EN },
+) {
+  if (await db.one("integration_settings", { _id: TOUR_EN_RELEASE }))
+    return { applied: false };
+  const written = [],
+    skipped = [];
+  for (const [tourId, fields] of Object.entries(translations)) {
+    const _id = "tour:" + tourId,
+      doc = await db.one("site_content", { _id }),
+      // Kayıtta olmayan alan turun varsayılanıdır: kopyada kopyalandığı andaki içerik.
+      defaults =
+        builtInDefaults(tourId) ||
+        (await db.one("custom_tours", { _id: tourId }))?.defaults;
+    if (!defaults) {
+      skipped.push({ tour: tourId, reason: "tur bulunamadı" });
+      continue;
+    }
+    const en = {},
+      base = {};
+    for (const [key, x] of Object.entries(fields)) {
+      const current =
+        doc?.fields && key in doc.fields ? doc.fields[key] : defaults[key];
+      if (!isBlank(doc?.en?.[key]))
+        skipped.push({ tour: tourId, field: key, reason: "İngilizce dolu" });
+      else if (!isDeepStrictEqual(current, x.tr))
+        skipped.push({ tour: tourId, field: key, reason: "Türkçe değişmiş" });
+      else {
+        en[key] = x.en;
+        base[key] = x.tr;
+        written.push(`${tourId}.${key}`);
+      }
+    }
+    if (!Object.keys(en).length) continue;
+    if (doc) {
+      const set = {};
+      for (const key of Object.keys(en)) {
+        set["en." + key] = en[key];
+        set["en_base." + key] = base[key];
+      }
+      await db.update("site_content", { _id }, set);
+    } else
+      await db.insert("site_content", _id, {
+        id: _id,
+        fields: {},
+        en,
+        en_base: base,
+        updated_at: clock(),
+        updated_by: null,
+      });
+  }
+  await db.upsert("integration_settings", TOUR_EN_RELEASE, {
+    id: TOUR_EN_RELEASE,
+    body: { appliedAt: clock(), written, skipped },
+    updated_at: clock(),
+  });
+  return { applied: true, written, skipped };
 }
