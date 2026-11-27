@@ -229,6 +229,38 @@ export const fleet = {
     "Buzdolaplı",
     "Portbagajlı",
   ],
+  // Hizmetler sayfasındaki filo bölümünde sırayla geçen fotoğraflar. Etiket,
+  // yukarıdaki çiplerle aynı yazılır; çipe dokununca o fotoğrafa geçilir.
+  slides: [
+    {
+      label: "46+1 Mercedes Travego",
+      photo: "/images/araclar/travego-a-1.webp",
+    },
+    {
+      label: "31+1 Otokar Sultan",
+      photo: "/images/araclar/otokar-sultan-1.webp",
+    },
+    {
+      label: "27+1 Midibüs",
+      photo: "/images/araclar/otokar-midibus-1.webp",
+    },
+    {
+      label: "19+1 Mercedes Sprinter",
+      photo: "/images/araclar/sprinter-vip-a-1.webp",
+    },
+    {
+      label: "19+1 Volkswagen Crafter",
+      photo: "/images/araclar/vw-crafter-a-1.webp",
+    },
+    {
+      label: "9+1 Mercedes Vito",
+      photo: "/images/araclar/vito-vip-a-1.webp",
+    },
+    {
+      label: "4+1 Fiat Egea",
+      photo: "/images/araclar/fiat-egea-1.webp",
+    },
+  ],
 };
 export const cancellationPolicy =
   "Ödeme yapılmamış ön rezervasyonları istediğiniz zaman ücretsiz iptal edebilirsiniz. Onaylanmış rezervasyonlarda yurt içi turlarda hareketten 3 gün, yurt dışı turlarda 5 gün öncesine kadar iptal ederseniz kapora dahil ödediğiniz tutarın tamamı iade edilir. Bu süreden sonraki iptallerde kapora iade edilmez, fazlası iade edilir; haber vermeden katılmamada ödenen tutar iade edilmez. Turu biz iptal edersek tutarın tamamını geri alırsınız ya da başka bir tarihe geçersiniz.";

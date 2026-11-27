@@ -52,6 +52,13 @@ export const site: Record<string, string> = {
   "Sonraki rota": "Next route",
   "Vitrini durdur": "Pause the carousel",
   "Vitrini sürdür": "Resume the carousel",
+  "Araç fotoğrafları": "Vehicle photos",
+  "slayt gösterisi": "slideshow",
+  "Önceki araç": "Previous vehicle",
+  "Sonraki araç": "Next vehicle",
+  "Slaytı durdur": "Pause the slideshow",
+  "Slaytı sürdür": "Resume the slideshow",
+  "27+1 Midibüs": "27+1 Midibus",
   "Tur türleri": "Tour types",
   // Araç tipleri (sefer ve koltuk planında; araç adı verilerden gelir)
   "VIP minibüs": "VIP minibus",
