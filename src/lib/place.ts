@@ -29,9 +29,19 @@ export const searchKey = (s: string) =>
     .toLocaleLowerCase("tr")
     .replace(/[çğıöşüâîû]/g, (c) => "cgiosuaiu"["çğıöşüâîû".indexOf(c)])
     .trim();
-// Satışta olan turlar önce, satışa kapalılar sonra; her grupta sıra korunur.
-export function openFirst<T extends Pick<Tour, "salesOpen">>(tours: T[]): T[] {
-  return [...tours.filter((t) => t.salesOpen), ...tours.filter((t) => !t.salesOpen)];
+// Vitrin sırası: tarihi satışta ya da ön kayıtta olan turlar önce, tarihi henüz olmayan
+// açık turlar sonra, satışa kapalılar en sonda; her grupta sıra korunur.
+export const hasDates = (t: Pick<Tour, "next" | "mode" | "demandDates">) =>
+  Boolean(t.next || t.mode === "demand" || t.demandDates?.length);
+export function openFirst<
+  T extends Pick<Tour, "salesOpen" | "next" | "mode" | "demandDates">,
+>(tours: T[]): T[] {
+  const open = tours.filter((t) => t.salesOpen);
+  return [
+    ...open.filter(hasDates),
+    ...open.filter((t) => !hasDates(t)),
+    ...tours.filter((t) => !t.salesOpen),
+  ];
 }
 // Ana sayfanın açılış kartındaki dört küçük görüntü: satışı açık turlardan dört ayrı yer.
 // Aralarında yurt dışı tur yoksa sonuncunun yerine ilk yurt dışı tur gelir.

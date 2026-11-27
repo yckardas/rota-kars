@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ArrowRight, Search, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, BellRing, Search, SlidersHorizontal } from "lucide-react";
 import { TourCard } from "../components/TourCard";
-import type { Catalog } from "../lib/types";
+import { InterestForm } from "../components/InterestForm";
+import type { Catalog, Tour } from "../lib/types";
 import { useLang } from "../lib/i18n";
 import { TOUR_FILTERS, matchesTourFilter } from "../lib/tourFilters";
 import { filterTone, toneStyle } from "../lib/tone";
@@ -16,11 +17,13 @@ export function Tours({ catalog }: { catalog: Catalog }) {
     [category, setCategory] = useState("Tümü"),
     [filtered, setFiltered] = useState(false),
     // Listede olmayan rota için bireysel / özel tur talebi.
-    [asking, setAsking] = useState(false);
+    [asking, setAsking] = useState(false),
+    // Satışa kapalı tur için "tarih açılınca haber ver".
+    [notify, setNotify] = useState<Tour | null>(null);
   const { t } = useLang();
   // Kategoriler /en altında katalogda İngilizce gelir.
-  // Satışta olan turlar üstte, satışa kapalılar altta.
-  const tours = openFirst(
+  // Satışta ve ön kayıtta olan turlar üstte; satışa kapalılar ayrı, sakin bir bölümde altta.
+  const matched = openFirst(
     catalog.tours.filter(
       (tour) =>
         (category === "Tümü" || matchesTourFilter(tour, category, t)) &&
@@ -29,6 +32,8 @@ export function Tours({ catalog }: { catalog: Catalog }) {
         ),
     ),
   );
+  const tours = matched.filter((tour) => tour.salesOpen),
+    closed = matched.filter((tour) => !tour.salesOpen);
   return (
     <>
       {/* Renkli başlık bandı: başlık ve tür rozetleri; rozet seçimi aşağıdaki filtreyle aynıdır. */}
@@ -78,10 +83,10 @@ export function Tours({ catalog }: { catalog: Catalog }) {
         </div>
         <p className="result-count">
           {t(
-            tours.length === 1
+            matched.length === 1
               ? "1 rota sizi bekliyor."
               : "{n} rota sizi bekliyor.",
-            { n: tours.length },
+            { n: matched.length },
           )}
         </p>
         <div
@@ -92,7 +97,35 @@ export function Tours({ catalog }: { catalog: Catalog }) {
             <TourCard key={tour.id} tour={tour} />
           ))}
         </div>
-        {!tours.length && (
+        {closed.length > 0 && (
+          <section
+            className="closed-tours"
+            aria-labelledby="closed-tours-title"
+          >
+            <h2 id="closed-tours-title">{t("Şu an satışa kapalı rotalar")}</h2>
+            <p>
+              {t(
+                "Yeni tarih açılınca size e-postayla haber verelim. Kayıt ücretsizdir, koltuk tutulmaz.",
+              )}
+            </p>
+            <div className="tour-grid is-quiet">
+              {closed.map((tour) => (
+                <div key={tour.id} className="closed-tour">
+                  <TourCard tour={tour} />
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-small"
+                    onClick={() => setNotify(tour)}
+                  >
+                    <BellRing size={15} aria-hidden="true" />{" "}
+                    {t("Tarih açılınca haber ver")}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+        {!matched.length && (
           <div className="empty-state">
             <h2>{t("Bu aramayla eşleşen bir rota yok.")}</h2>
             <p>{t("Başka bir şehir deneyin veya bütün rotalara göz atın.")}</p>
@@ -128,6 +161,14 @@ export function Tours({ catalog }: { catalog: Catalog }) {
           </button>
         </div>
       </section>
+      {notify && (
+        <InterestForm
+          kind="notify"
+          tourId={notify.id}
+          tourName={notify.name}
+          onClose={() => setNotify(null)}
+        />
+      )}
       {asking && (
         <RequestForm
           kind="private-tour"

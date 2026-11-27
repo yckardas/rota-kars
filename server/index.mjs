@@ -68,6 +68,8 @@ const jobs = setInterval(async () => {
     await store.interest.notifyOpenings();
     // Talep tarihi satılabilir olunca o tarihe ön kayıt bırakanlara haber.
     await store.interest.notifyDemandDates();
+    // Satışa kapalı tur açılınca "tarih açılınca haber ver" listesine haber.
+    await store.interest.notifyTourOpenings();
     await store.notifications.processBatch();
   } catch (e) {
     console.error(

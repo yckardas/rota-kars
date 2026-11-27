@@ -2114,6 +2114,33 @@
 .rk-admin .interest-dates .interest-progress {
   grid-column: 1 / -1;
 }
+/* Satışa kapalı turda "tarih açılınca haber ver" bekleyenler (tur bazında) */
+.rk-admin .interest-notify {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 22px;
+  padding: 0;
+  list-style: none;
+}
+.rk-admin .interest-notify li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2px 12px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--mortar);
+  border-radius: 4px;
+}
+.rk-admin .interest-notify span {
+  grid-column: 1;
+  font-size: 13px;
+  color: var(--muted, #5b6474);
+}
+.rk-admin .interest-notify .btn {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
 
 /* Finans paneli */
 .rk-admin .finance-toolbar {

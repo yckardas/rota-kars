@@ -1,5 +1,6 @@
 // Talep toplayan tarihler (tur detayı): her tarih için tahmini fiyat, ilerleme açıksa
-// "kaç kişi hazır" çubuğu ve o tarihe ön kayıt düğmesi. Uzun listede ilk dört tarih görünür.
+// "kaç kişi hazır" çubuğu, kaç kişi gerektiği, kararın en geç verileceği gün ve o tarihe
+// ön kayıt düğmesi. Uzun listede ilk dört tarih görünür.
 import { useState } from "react";
 import { CalendarDays } from "lucide-react";
 import { useLang } from "../lib/i18n";
@@ -49,6 +50,17 @@ export function DemandDates({
                 <progress max={threshold} value={Math.min(d.count, threshold)} />
               </div>
             )}
+            <p className="demand-date-rule">
+              {d.count !== undefined
+                ? d.decisionDate &&
+                  t("Karar en geç {date}", { date: dateLabel(d.decisionDate) })
+                : d.decisionDate
+                  ? t("En az {threshold} kişi gerekli · karar en geç {date}", {
+                      threshold,
+                      date: dateLabel(d.decisionDate),
+                    })
+                  : t("En az {threshold} kişi gerekli", { threshold })}
+            </p>
           </li>
         ))}
       </ul>

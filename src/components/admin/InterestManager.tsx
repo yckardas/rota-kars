@@ -1,6 +1,7 @@
 // Panel · Bekleme ve ön kayıt. Üstte tur bazında satış modu: online satış ya da talep
 // toplama (kesinleşme eşiği, ilerlemenin sitede görünmesi, "satışı aç ve haber ver").
-// Altta bekleme listesi (dolu sefer) ve ön kayıt kayıtları, durum ve iletişim düğmeleriyle.
+// Altta bekleme listesi (dolu sefer), ön kayıt ve "tarih açılınca haber ver" (satışa kapalı tur)
+// kayıtları, durum ve iletişim düğmeleriyle.
 import { useEffect, useState } from "react";
 import { BellRing, Check, LoaderCircle, Mail, MessageCircle, Phone } from "lucide-react";
 import { api, post } from "../../lib/api";
@@ -9,7 +10,7 @@ import { useFeedback } from "./feedback";
 
 type InterestRow = {
   id: string;
-  kind: "waitlist" | "prereg";
+  kind: "waitlist" | "prereg" | "notify";
   tour_id: string;
   departure_date: string | null;
   count: number;
@@ -27,9 +28,27 @@ type TourMode = {
   name: string;
   mode: "online" | "demand";
   demand: { threshold: number; showProgress: boolean };
+  salesOpen: boolean;
   preregCount: number;
+  // Satışa kapalı turda "tarih açılınca haber ver" bekleyen kişi sayısı.
+  notifyCount: number;
   // Talep toplayan ya da bekleyen ön kaydı olan tarihler (tarihin 1. aracının id'si).
-  dates: { id: string; date: string; start_time: string; count: number; demand: boolean; salesOpen: boolean }[];
+  // decisionDate: kesinleşme kararının en geç günü; geçtiyse (closedOnSite) sitede ön kayda kapalı.
+  dates: {
+    id: string;
+    date: string;
+    start_time: string;
+    count: number;
+    demand: boolean;
+    salesOpen: boolean;
+    decisionDate: string;
+    closedOnSite: boolean;
+  }[];
+};
+const KIND: Record<InterestRow["kind"], string> = {
+  waitlist: "Bekleme listesi",
+  prereg: "Ön kayıt",
+  notify: "Tarih açılınca haber",
 };
 const STATUS: Record<InterestRow["status"], string> = {
   waiting: "Bekliyor",
@@ -46,7 +65,9 @@ const wa = (phone: string) => {
 export function InterestManager({ onChange }: { onChange: () => void }) {
   const [items, setItems] = useState<InterestRow[] | null>(null),
     [tours, setTours] = useState<TourMode[]>([]),
-    [kind, setKind] = useState<"all" | "waitlist" | "prereg">("all"),
+    [kind, setKind] = useState<"all" | InterestRow["kind"]>("all"),
+    // Tur bazında süzme ("Tarih açılınca haber bekleyenler" listesinden).
+    [tourFilter, setTourFilter] = useState(""),
     [status, setStatus] = useState<"open" | "all">("open"),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
@@ -62,7 +83,10 @@ export function InterestManager({ onChange }: { onChange: () => void }) {
   }, []);
   const name = (id: string) => tours.find((t) => t.id === id)?.name || id;
   const visible = (items || []).filter(
-    (r) => (kind === "all" || r.kind === kind) && (status === "all" || ["waiting", "notified"].includes(r.status)),
+    (r) =>
+      (kind === "all" || r.kind === kind) &&
+      (!tourFilter || r.tour_id === tourFilter) &&
+      (status === "all" || ["waiting", "notified"].includes(r.status)),
   );
   async function run(id: string, fn: () => Promise<string>) {
     setBusy(id);
@@ -83,7 +107,8 @@ export function InterestManager({ onChange }: { onChange: () => void }) {
   // Talep toplayan tur ya da online turdaki talep tarihi (seferde satış modu) üstte görünür.
   const collecting = (t: TourMode) => t.mode === "demand" || t.dates.length > 0,
     demandTours = tours.filter(collecting),
-    onlineTours = tours.filter((t) => !collecting(t));
+    onlineTours = tours.filter((t) => !collecting(t)),
+    notifyTours = tours.filter((t) => t.notifyCount > 0);
   return (
     <>
       <div className="operations-intro">
@@ -91,7 +116,8 @@ export function InterestManager({ onChange }: { onChange: () => void }) {
         <p>
           Talep toplama modundaki turda koltuk satılmaz; müşteriler ücretsiz ön kayıt bırakır. Eşiğe ulaşınca sefer
           oluşturup "Satışı aç" deyin: ön kayıtlılara rezervasyon bağlantısı gider. Dolu seferde yer açılınca bekleme
-          listesindekilere sistem kendiliğinden haber verir.
+          listesindekilere sistem kendiliğinden haber verir. Satışa kapalı turda "Tarih açılınca haber ver" diyenlere,
+          tur satışa açılıp tarihi ya da ön kaydı olunca sistem e-posta gönderir.
         </p>
       </div>
       {error && (
@@ -157,6 +183,34 @@ export function InterestManager({ onChange }: { onChange: () => void }) {
       ) : (
         <p className="admin-empty">Talep toplama modunda tur yok. Bir turu aşağıdaki "Satış modu ayarları"ndan talep toplamaya alabilirsiniz.</p>
       )}
+      {notifyTours.length > 0 && (
+        <>
+          <h2 className="interest-heading">Tarih açılınca haber bekleyenler</h2>
+          <ul className="interest-notify">
+            {notifyTours.map((t) => (
+              <li key={t.id}>
+                <strong>{t.name}</strong>
+                <span>
+                  {t.notifyCount} kişi ·{" "}
+                  {t.salesOpen
+                    ? "tur satışta; tarih açılınca e-posta gider"
+                    : "satışa kapalı"}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-small btn-outline"
+                  onClick={() => {
+                    setKind("notify");
+                    setTourFilter(t.id);
+                  }}
+                >
+                  Kayıtları göster
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       <h2 className="interest-heading">Bekleme listesi ve ön kayıtlar</h2>
       <div className="status-filters" role="group" aria-label="Kayıt türü">
         {(
@@ -164,12 +218,23 @@ export function InterestManager({ onChange }: { onChange: () => void }) {
             ["all", "Tümü"],
             ["waitlist", "Bekleme listesi"],
             ["prereg", "Ön kayıt"],
+            ["notify", "Tarih açılınca haber"],
           ] as const
         ).map(([id, label]) => (
           <button key={id} type="button" className={"chip" + (kind === id ? " active" : "")} aria-pressed={kind === id} onClick={() => setKind(id)}>
             {label}
           </button>
         ))}
+        {tourFilter && (
+          <button
+            type="button"
+            className="chip active"
+            aria-pressed="true"
+            onClick={() => setTourFilter("")}
+          >
+            {name(tourFilter)} ×
+          </button>
+        )}
         <button type="button" className={"chip" + (status === "all" ? " active" : "")} aria-pressed={status === "all"} onClick={() => setStatus(status === "all" ? "open" : "all")}>
           Kapananları da göster
         </button>
@@ -181,7 +246,7 @@ export function InterestManager({ onChange }: { onChange: () => void }) {
           <article key={r.id} className={"request-card status-" + r.status}>
             <div className="section-heading">
               <h3>
-                {r.kind === "waitlist" ? "Bekleme listesi" : "Ön kayıt"} · {name(r.tour_id)}
+                {KIND[r.kind] || r.kind} · {name(r.tour_id)}
               </h3>
               <small>{new Date(r.created_at).toLocaleDateString("tr-TR")}</small>
             </div>
@@ -310,7 +375,8 @@ function ModeCard({
           <option value="demand">Talep toplama (ödeme kapalı, ücretsiz ön kayıt)</option>
         </select>
       </label>
-      {mode === "demand" && (
+      {/* Eşik ve ilerleme, online turdaki talep tarihleri için de geçerlidir. */}
+      {(mode === "demand" || t.dates.some((x) => x.demand)) && (
         <div className="interest-demand-fields">
           <label className="field">
             Kesinleşme eşiği (kişi)
@@ -320,6 +386,12 @@ function ModeCard({
             <input type="checkbox" checked={showProgress} onChange={(e) => setShowProgress(e.target.checked)} />
             <span>"Kaç kişi hazır" çubuğu sitede görünsün</span>
           </label>
+          <small className="muted">
+            Sitede eşik ve "karar en geç" günü görünür: tarih eksi turun iptal
+            bildirim süresi (Tur içerikleri). Süre girilmediyse günübirlikte 48
+            saat, 2–6 günlük turda 7 gün, daha uzun turda 20 gün sayılır; bu gün
+            geçen tarih sitede ön kayda kapanır.
+          </small>
         </div>
       )}
       {(t.mode === "demand" || t.preregCount > 0) && (
@@ -347,6 +419,10 @@ function ModeCard({
               <div className="interest-progress">
                 <span>
                   Ön kayıt: <b>{x.count}</b> / {t.demand.threshold} kişi
+                  {x.demand &&
+                    (x.closedOnSite
+                      ? ` · Karar günü geçti (${dateLabel(x.decisionDate)}); sitede ön kayda kapalı`
+                      : ` · Karar en geç ${dateLabel(x.decisionDate)}`)}
                 </span>
                 <progress max={100} value={Math.min(100, Math.round((x.count / Math.max(1, t.demand.threshold)) * 100))} />
               </div>
