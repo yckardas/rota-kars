@@ -3,6 +3,7 @@ import { ExternalLink, Quote, Star, MessageSquareText } from "lucide-react";
 import { api } from "../lib/api";
 import type { ReviewsResponse } from "../lib/types";
 import { useLang } from "../lib/i18n";
+import { VerifiedReviews } from "./VerifiedReviews";
 export function Reviews({ tourId }: { tourId?: string }) {
   const step = tourId ? 6 : 9;
   const [data, setData] = useState<ReviewsResponse | null>(null),
@@ -28,6 +29,7 @@ export function Reviews({ tourId }: { tourId?: string }) {
   }, [tourId]);
   const url =
     data?.mapsUrl || "https://www.google.com/maps?cid=1539703208462618989";
+  const verified = data?.verified || [];
   return (
     <section
       className={"reviews-section " + (tourId ? "tour-reviews" : "")}
@@ -39,7 +41,7 @@ export function Reviews({ tourId }: { tourId?: string }) {
             <h2>
               {!tourId
                 ? t("Müşterilerimizin gözünden Rota Kars")
-                : data?.scope === "agency"
+                : data?.scope === "agency" && !verified.length
                   ? t("Rota Kars ile yola çıkanların gözünden")
                   : t("Bu rotayı gezenlerin gözünden")}
             </h2>
@@ -108,6 +110,7 @@ export function Reviews({ tourId }: { tourId?: string }) {
             )}
           </div>
         )}
+        <VerifiedReviews items={verified} />
         {!data && !failed ? (
           <p className="quiet">{t("Yorumlar yükleniyor…")}</p>
         ) : data?.reviews.length ? (
@@ -115,14 +118,15 @@ export function Reviews({ tourId }: { tourId?: string }) {
             <p className="review-order">
               {data.sort}{" "}
               {data.scope === "tour"
-                ? t("Yorumunda {terms} geçen {n} misafirimiz.", {
-                    terms: termLabel(t, data.terms),
-                    n: data.reviews.length,
-                  })
+                ? tourScopeNote(t, data)
                 : data.scope === "agency"
-                  ? t(
-                      "Bu rotaya özel yorum henüz yok; acentemizin diğer turlarına gelen yorumlar gösteriliyor.",
-                    )
+                  ? verified.length
+                    ? t(
+                        "Google’da bu rotaya özel yorum henüz yok; acentemizin diğer turlarına gelen yorumlar gösteriliyor.",
+                      )
+                    : t(
+                        "Bu rotaya özel yorum henüz yok; acentemizin diğer turlarına gelen yorumlar gösteriliyor.",
+                      )
                   : ""}
             </p>
             <div className="review-list">
@@ -218,6 +222,27 @@ export function Reviews({ tourId }: { tourId?: string }) {
   );
 }
 type Term = { term: string; exact: boolean };
+// Tur sayfasındaki açıklama eşlemenin türüne göre yazılır: panelden elle bu tura eşlenen
+// yorumda tur adı geçmeyebilir, o yorumlar için "yorumunda geçen" denmez.
+function tourScopeNote(
+  t: (text: string, vars?: Record<string, string | number>) => string,
+  data: ReviewsResponse,
+) {
+  const n = data.reviews.length,
+    m = data.textMatched ?? n,
+    terms = termLabel(t, data.terms);
+  if (m >= n)
+    return t("Yorumunda {terms} geçen {n} misafirimiz.", { terms, n });
+  if (m === 0) return t("Bu rotayı gezen {n} misafirimizin yorumu.", { n });
+  return t(
+    "Bu rotayı gezen {n} misafirimizin yorumu; {m} yorumda {terms} geçiyor.",
+    {
+      n,
+      m,
+      terms,
+    },
+  );
+}
 const fold = (s: string) =>
   s
     .toLocaleLowerCase("tr-TR")

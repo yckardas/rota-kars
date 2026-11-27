@@ -81,8 +81,17 @@ export const tourTerms = (tourId) =>
 function scoped(items, tourId) {
   if (!tourId) return { scope: "all", reviews: items };
   const matched = items.filter((r) => r.tourIds.includes(tourId));
+  // Panelden elle eşlenen yorumda tur adı geçmeyebilir: açıklama, metninde gerçekten
+  // tur kelimesi geçen yorum sayısına göre yazılır (bkz. Reviews.tsx).
   return matched.length
-    ? { scope: "tour", terms: tourTerms(tourId), reviews: matched }
+    ? {
+        scope: "tour",
+        terms: tourTerms(tourId),
+        reviews: matched,
+        textMatched: matched.filter((r) =>
+          matchTourIds(r.text).includes(tourId),
+        ).length,
+      }
     : { scope: "agency", terms: tourTerms(tourId), reviews: items };
 }
 // Business Profile, Türkçe olmayan yorumlarda "(Translated by Google) ... (Original) ..."

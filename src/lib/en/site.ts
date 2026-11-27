@@ -384,8 +384,19 @@ export const site: Record<string, string> = {
   "Yorumlar yükleniyor…": "Loading reviews…",
   "Yorumunda {terms} geçen {n} misafirimiz.":
     "{n} guests who mentioned {terms} in their reviews.",
+  "Bu rotayı gezen {n} misafirimizin yorumu.":
+    "Reviews from {n} guests who took this route.",
+  "Bu rotayı gezen {n} misafirimizin yorumu; {m} yorumda {terms} geçiyor.":
+    "Reviews from {n} guests who took this route; {m} of them mention {terms}.",
   "Bu rotaya özel yorum henüz yok; acentemizin diğer turlarına gelen yorumlar gösteriliyor.":
     "No reviews for this route yet; showing reviews of our other tours.",
+  "Google’da bu rotaya özel yorum henüz yok; acentemizin diğer turlarına gelen yorumlar gösteriliyor.":
+    "No Google reviews for this route yet; showing reviews of our other tours.",
+  // Doğrulanmış katılımcı yorumları (site içi)
+  "Doğrulanmış katılımcı yorumları": "Reviews from verified guests",
+  "Bu turun bir seferine katıldığı rezervasyon kaydıyla doğrulanan misafirlerimizin, tur sonrasında sitemizden bıraktığı yorumlar.":
+    "Reviews left on our site after the tour by guests whose booking confirms they joined it.",
+  "Doğrulanmış katılımcı": "Verified guest",
   "Google Maps’te görüntüle": "View on Google Maps",
   "Daha fazla yorum göster ({n})": "Show more reviews ({n})",
   "Bu rotanın deneyimlerini keşfedin.":
@@ -402,6 +413,41 @@ export const site: Record<string, string> = {
   "Daha az göster": "Show less",
   "Devamını oku": "Read more",
   "{n} / 5 yıldız": "{n} out of 5 stars",
+  // Tur sonrası yorum sayfası (/yorum/:token)
+  "Bu bağlantı açılamadı.": "This link couldn’t be opened.",
+  "Turlara göz atın": "Browse tours",
+  "Teşekkür ederiz!": "Thank you!",
+  "Yorumunuz bize ulaştı. Acentemiz onayladıktan sonra tur sayfasında “Doğrulanmış katılımcı” etiketiyle yayımlanır.":
+    "We’ve received your review. Once our agency approves it, it appears on the tour page marked “Verified guest”.",
+  "Bu bağlantıyla yorum gönderildi.":
+    "A review has already been sent with this link.",
+  "Bu bağlantının süresi doldu.": "This link has expired.",
+  "Deneyiminizi yine de paylaşmak isterseniz Google işletme sayfamıza yorum yazabilirsiniz.":
+    "If you’d still like to share your experience, you can write a review on our Google business page.",
+  "Turunuz nasıl geçti, {name}?": "How was your tour, {name}?",
+  "Puanınız ve birkaç cümleniz, bu rotayı düşünen misafirlerimize yol gösterir.":
+    "Your rating and a few words help guests who are considering this route.",
+  Puanınız: "Your rating",
+  "Lütfen 1 ile 5 arasında bir puan seçin.":
+    "Please choose a rating from 1 to 5.",
+  "Kısa yorumunuz (isteğe bağlı)": "Your short review (optional)",
+  "Rehber, araç, program… Neyi beğendiniz?":
+    "Guide, vehicle, itinerary… What did you like?",
+  "Yorumumun ve puanımın, adım ve soyadımın baş harfiyle ({name}) sitede yayımlanmasına izin veriyorum.":
+    "I allow my review and rating to be published on the site with my first name and last initial ({name}).",
+  "Yorumu gönder": "Send review",
+  "Bu adrese bir daha yorum isteği göndermeyeceğiz.":
+    "We won’t send review requests to this address again.",
+  "Bu tür e-postaları almak istemiyor musunuz?": "Don’t want these emails?",
+  "Listeden çık": "Unsubscribe",
+  "Dilerseniz deneyiminizi Google’da da paylaşabilirsiniz.":
+    "If you like, you can also share your experience on Google.",
+  "Google’da yorum yazın": "Write a review on Google",
+  "Bu bağlantıyla yorum zaten gönderildi. Teşekkür ederiz.":
+    "A review has already been sent with this link. Thank you.",
+  "Bağlantı geçersiz.": "This link is invalid.",
+  "Yorumunuzun yayımlanmasına izin verdiğinizi işaretleyin.":
+    "Please tick the box to allow your review to be published.",
   // Instagram
   "Instagram yükleniyor…": "Loading Instagram…",
   "Oynatıcı yüklenemedi.": "The player couldn’t load.",

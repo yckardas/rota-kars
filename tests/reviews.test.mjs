@@ -175,4 +175,10 @@ test("tour page shows matching reviews, otherwise agency-wide ones", async () =>
   const manual = await s.get({ b: ["batum"] }, "batum");
   assert.equal(manual.scope, "tour");
   assert.deepEqual(manual.reviews.map((r) => r.id), ["b"]);
+  // Metinde tur adı geçen ve elle eşlenen yorumlar ayrı sayılır (açıklama buna göre yazılır).
+  assert.equal(ani.textMatched, 1);
+  assert.equal(manual.textMatched, 0);
+  const mixed = await s.get({ b: ["ani-cildir"] }, "ani-cildir");
+  assert.equal(mixed.reviews.length, 2);
+  assert.equal(mixed.textMatched, 1);
 });

@@ -27,6 +27,8 @@ export const CONSENT_TYPES = [
   "cancellation_terms",
   // Başkası adına bilgi girme beyanı (rezervasyondaki diğer yolcular, yol arkadaşları).
   "others_declaration",
+  // Tur sonrası yorumun ad ve soyadın baş harfiyle sitede yayımlanması.
+  "review_publish",
 ];
 const DAY = 86400000;
 const emailHash = (email) =>
@@ -100,10 +102,17 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx, pii
           (r) => String(r.body?.email || "").toLowerCase() === normalized,
         )
       : [];
+    const reservationIds = reservations.map((r) => r.id);
     return {
       normalized,
       byEmail,
       reservations,
+      // Tur sonrası site yorumları (guest-reviews.mjs) rezervasyona bağlıdır.
+      guestReviews: reservationIds.length
+        ? await db.find("guest_reviews", {
+            reservation_id: { $in: reservationIds },
+          })
+        : [],
       requests,
       // Bekleme listesi ve ön kayıtlar (interest.mjs).
       interest: byEmail ? await db.find("interest_list", { email: normalized }) : [],
@@ -156,6 +165,14 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx, pii
       createdAt: new Date(r.created_at).toISOString(),
     })),
     requests: data.requests.map((r) => ({ kind: r.kind, body: r.body, createdAt: new Date(r.created_at).toISOString() })),
+    tourReviews: (data.guestReviews || []).map((r) => ({
+      tour: r.tour_id,
+      shownName: r.name,
+      rating: r.rating,
+      text: r.text,
+      status: r.status,
+      createdAt: new Date(r.created_at).toISOString(),
+    })),
     waitlistAndPreRegistrations: (data.interest || []).map((r) => ({
       kind: r.kind,
       tour: r.tour_id,
@@ -205,6 +222,16 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx, pii
     }
     const requestIds = data.requests.map((r) => r.id);
     if (requestIds.length) await db.remove("requests", { _id: { $in: requestIds } });
+    // Yayımlanmış olsa da kişinin yorumları ve yorum bağlantıları silinir.
+    const reservationIds = data.reservations.map((r) => r.id);
+    if (reservationIds.length) {
+      await db.remove("guest_reviews", {
+        reservation_id: { $in: reservationIds },
+      });
+      await db.remove("guest_review_requests", {
+        reservation_id: { $in: reservationIds },
+      });
+    }
     if (data.byEmail) await db.remove("interest_list", { email: data.normalized });
     if (data.byEmail) await db.remove("notification_outbox", { recipient: data.normalized });
     return { anonymized, retainedForLegalObligation: retained, requestsDeleted: requestIds.length };
@@ -349,6 +376,14 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx, pii
       await db.remove("admin_sessions", { expires_at: { $lt: now } });
       await db.remove("account_tokens", { expires_at: { $lt: now - 30 * DAY } });
       await db.remove("oauth_used", { expires_at: { $lt: now } });
+      // Yorum bağlantıları süresinden 30 gün sonra, reddedilen yorumlar bir yıl sonra silinir.
+      await db.remove("guest_review_requests", {
+        expires_at: { $lt: now - 30 * DAY },
+      });
+      await db.remove("guest_reviews", {
+        status: "rejected",
+        created_at: { $lt: now - 365 * DAY },
+      });
       // Sahiplenilmeyen misafir çark hediyeleri (IP özeti dahil) süresinden 30 gün sonra.
       await db.remove("wheel_prizes", { member_id: null, expires_at: { $lt: now - 30 * DAY } });
       await db.remove("push_log", { created_at: { $lt: now - 30 * DAY } });

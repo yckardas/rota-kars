@@ -70,6 +70,8 @@ const jobs = setInterval(async () => {
     await store.interest.notifyDemandDates();
     // Satışa kapalı tur açılınca "tarih açılınca haber ver" listesine haber.
     await store.interest.notifyTourOpenings();
+    // Tur sonrası yorum isteği (rezervasyon başına bir kez; en çok 10 dakikada bir bakılır).
+    await store.guestReviews.sendRequests();
     await store.notifications.processBatch();
   } catch (e) {
     console.error(

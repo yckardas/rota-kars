@@ -41,8 +41,10 @@ export type MemberDashboard = {
     reference: string;
     total: number;
     status: string;
+    cancellationRequested?: boolean;
     date: string;
     tourId: string;
+    tourName?: string;
   }[];
 };
 type AuthState = {

@@ -9,6 +9,7 @@ import { promisify } from "node:util";
 import { AppError } from "./store.mjs";
 import { fromJson } from "./database.mjs";
 import { pickSector } from "./campaigns.mjs";
+import { tours } from "./catalog.mjs";
 // Misafirin çevirdiği hediye bu süre içinde üyelikle sahiplenilebilir.
 const WHEEL_PRIZE_DAYS = 7;
 // Aynı IP'den 24 saatte en çok bu kadar misafir çevirmesi.
@@ -208,9 +209,15 @@ export async function createMembers(db, { clock, tx, campaigns }) {
     async dashboard(memberId) {
       const row = await db.one("members", { _id: memberId });
       if (!row) throw new AppError(401, "Üye girişi gerekli.");
+      // Üye girişiyle alınan rezervasyonlar her zaman listelenir. Aynı e-postayla
+      // misafir olarak alınmış geçmiş rezervasyonlar yalnız e-posta doğrulanmışsa
+      // eklenir: başkasının adresiyle açılan (doğrulanmamış) üyelik o kayıtları görmez.
+      // Sosyal girişte e-posta yalnız sağlayıcı doğruladıysa doğrulanmış sayılır.
       const reservations = await db.find(
         "reservations",
-        { member_id: memberId },
+        row.email_verified
+          ? { $or: [{ member_id: memberId }, { email: row.email }] }
+          : { member_id: memberId },
         { sort: { created_at: -1 }, limit: 50 },
       );
       const departures = new Map(
@@ -237,14 +244,22 @@ export async function createMembers(db, { clock, tx, campaigns }) {
             rewarded_at: { $ne: null },
           }),
         },
-        reservations: reservations.map((r) => ({
-          reference: r.reference,
-          total: r.total,
-          status: r.status,
-          created_at: r.created_at,
-          date: departures.get(r.departure_id)?.date,
-          tourId: departures.get(r.departure_id)?.tour_id,
-        })),
+        reservations: reservations.map((r) => {
+          const tourId = departures.get(r.departure_id)?.tour_id;
+          return {
+            reference: r.reference,
+            total: r.total,
+            status: r.status,
+            // İptal talebi acentede bekliyor (durum henüz "iptal" değil).
+            cancellationRequested: Boolean(
+              r.cancellation_requested_at && r.status !== "cancelled",
+            ),
+            created_at: r.created_at,
+            date: departures.get(r.departure_id)?.date,
+            tourId,
+            tourName: tours.find((t) => t.id === tourId)?.name || "",
+          };
+        }),
       };
     },
     spin(memberId) {

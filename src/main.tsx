@@ -46,6 +46,9 @@ import { Services } from "./pages/Services";
 const Guide = lazy(() => import("./pages/Guide").then((m) => ({ default: m.Guide })));
 const ArticlePage = lazy(() => import("./pages/Guide").then((m) => ({ default: m.ArticlePage })));
 const Discover = lazy(() => import("./pages/Discover").then((m) => ({ default: m.Discover })));
+const GuestReview = lazy(() =>
+  import("./pages/GuestReview").then((m) => ({ default: m.GuestReview })),
+);
 const Admin = lazy(() =>
   import("./pages/Admin").then((m) => ({ default: m.Admin })),
 );
@@ -207,6 +210,7 @@ function App() {
             element={<AccountSecurity mode="forgot" />}
           />
           <Route path="bilet/:token" element={<TicketVerification />} />
+          <Route path="yorum/:token" element={<GuestReview />} />
           <Route path="odeme" element={<OpenPayment catalog={shown!} />} />
           <Route path="odeme/deneme/:id" element={<TestPayment />} />
           <Route path="odeme/bakiye/:token" element={<BalancePayment />} />
@@ -215,7 +219,7 @@ function App() {
             element={<CardPayment catalog={shown!} />}
           />
           <Route path="odeme/sonuc/:id" element={<PaymentResult catalog={shown!} />} />
-          <Route path="hesabim" element={<Account />} />
+          <Route path="hesabim" element={<Account catalog={shown!} />} />
           <Route path="turlar" element={<Tours catalog={shown!} />} />
           <Route
             path="turlar/:id"

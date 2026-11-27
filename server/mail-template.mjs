@@ -24,7 +24,13 @@ const paragraphs = (text) =>
     )
     .join("");
 const actionLabel = (url) =>
-  /\/bilet\//.test(url) ? "Biletinizi açın" : /\/odeme\//.test(url) ? "Ödemeyi yapın" : "Bağlantıyı açın";
+  /\/bilet\//.test(url)
+    ? "Biletinizi açın"
+    : /\/odeme\//.test(url)
+      ? "Ödemeyi yapın"
+      : /\/yorum\//.test(url)
+        ? "Yorumunuzu yazın / Write your review"
+        : "Bağlantıyı açın";
 
 // Bilet kartı satırı: etiket küçük gri, değer lacivert; uzun metin taşmadan kırılır.
 const cell = (label, value) =>

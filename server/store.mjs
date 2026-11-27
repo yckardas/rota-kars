@@ -21,6 +21,7 @@ import { createContent } from "./content.mjs";
 import { createArticles } from "./articles.mjs";
 import { articleSeed } from "./articles-seed.mjs";
 import { createInterest } from "./interest.mjs";
+import { createGuestReviews } from "./guest-reviews.mjs";
 import { describeRequest, formMailPerDay, REQUEST_KINDS, statusLabel } from "./requests.mjs";
 import { applyStandardTransfer, priceTransfer } from "./transfer.mjs";
 import { childrenRecord } from "./trip-info.mjs";
@@ -235,6 +236,7 @@ export async function openStore(
     operations,
   });
   const interest = await createInterest(db, { clock, tx, departures, operations, notifications, env });
+  const guestReviews = await createGuestReviews(db, { clock, tx, notifications, privacy, env });
   const uetds = createUetds(db, {
     env,
     fetchImpl: uetdsFetch,
@@ -251,6 +253,7 @@ export async function openStore(
     companions,
     uetds,
     interest,
+    guestReviews,
     campaigns,
     instagramSettings,
     adminAuth,
@@ -602,6 +605,23 @@ export async function openStore(
           404,
           "Bu referans ve e-posta ile bir ön rezervasyon bulunamadı.",
         );
+      return r;
+    },
+    // Üye oturumuyla sorgulama: e-posta yeniden sorulmaz. Rezervasyon üye girişiyle
+    // alınmışsa ya da üyenin doğrulanmış e-postasıyla eşleşiyorsa açılır; aksi halde
+    // (başkasının rezervasyonu, doğrulanmamış e-posta) "bulunamadı" denir.
+    async lookupForMember(reference, memberId) {
+      await cleanup();
+      const member = await db.one("members", { _id: memberId });
+      const r = member
+        ? await workflow.get(reference, { fresh: false }).catch(() => null)
+        : null;
+      const owns =
+        r &&
+        (r.member_id === memberId ||
+          (Boolean(member.email_verified) && r.email === member.email));
+      if (!owns)
+        throw new AppError(404, "Bu rezervasyon hesabınızda bulunamadı.");
       return r;
     },
     cancel(reference, email) {
