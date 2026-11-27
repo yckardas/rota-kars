@@ -173,6 +173,27 @@ export function Lookup({ catalog }: { catalog: Catalog }) {
         email: current.email || member.email,
       }));
   }, [member]);
+  // Üyelik sayfasından gelen üye için bilet e-posta sorulmadan açılır: sahipliği
+  // sunucu üye oturumundan doğrular. Olmazsa sorgulama formu olduğu gibi kalır.
+  const memberRef = member ? (params.get("ref") || "").slice(0, 30) : "";
+  useEffect(() => {
+    if (!memberRef) return;
+    let alive = true;
+    setBusy(true);
+    post<Reservation>("/member/reservations/lookup", { reference: memberRef })
+      .then((r) => {
+        if (!alive) return;
+        setResult(r);
+        setCredentials({ reference: r.reference, email: r.email });
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (alive) setBusy(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [memberRef]);
   async function lookup(e: FormEvent) {
     e.preventDefault();
     setBusy(true);

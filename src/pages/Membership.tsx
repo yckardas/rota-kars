@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { api, post } from "../lib/api";
 import { safeNextPath } from "../lib/phone";
-import { currency, dateLabel } from "../lib/types";
+import { currency, dateLabel, type Catalog } from "../lib/types";
 import { useMember, type MemberDashboard, type Coupon } from "../lib/member";
 function GoogleMark() {
   return (
@@ -376,7 +376,28 @@ export function Membership() {
     </section>
   );
 }
-export function Account() {
+// Üye listesindeki durum: iptal talebi acentede beklerken durum henüz "iptal" değildir.
+type ReservationRow = MemberDashboard["reservations"][number];
+function reservationStatus(r: ReservationRow) {
+  if (r.cancellationRequested) return "İptal talebi";
+  return (
+    {
+      pending_agency: "Ön rezervasyon",
+      confirmed: "Onaylı",
+      completed: "Tamamlandı",
+      cancelled: "İptal",
+      expired: "Süresi doldu",
+      no_show: "Katılım olmadı",
+    }[r.status] || r.status
+  );
+}
+function reservationTone(r: ReservationRow) {
+  if (r.cancellationRequested) return "warn";
+  if (["confirmed", "completed"].includes(r.status)) return "ok";
+  if (r.status === "pending_agency") return "pending";
+  return "void";
+}
+export function Account({ catalog }: { catalog?: Catalog }) {
   const { member, loading, logout } = useMember(),
     navigate = useLocalNavigate(),
     { lang, t, path, locale } = useLang(),
@@ -733,14 +754,33 @@ export function Account() {
         </div>
       </section>
       <section className="member-reservations">
-        <h2>{t("Ön rezervasyonlarım")}</h2>
+        <h2>{t("Rezervasyonlarım")}</h2>
+        {!data.member.emailVerified && (
+          <p className="muted">
+            {t(
+              "E-posta adresinizi doğruladığınızda bu adresle üye olmadan yaptığınız rezervasyonlar da burada görünür.",
+            )}
+          </p>
+        )}
         {data.reservations.length ? (
           data.reservations.map((r) => (
             <article key={r.reference}>
               <div>
-                <strong>{r.reference}</strong>
-                <span>{dateLabel(r.date)}</span>
+                <strong>
+                  {catalog?.tours.find((x) => x.id === r.tourId)?.name ||
+                    r.tourName ||
+                    r.reference}
+                </strong>
+                <span>
+                  {r.date ? dateLabel(r.date) + " · " : ""}
+                  {r.reference}
+                </span>
               </div>
+              <span
+                className={"member-reservation-status is-" + reservationTone(r)}
+              >
+                {t(reservationStatus(r))}
+              </span>
               <span>{currency(r.total)}</span>
               <Link
                 className="text-link"

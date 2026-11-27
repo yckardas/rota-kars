@@ -1340,6 +1340,24 @@ export function createApp(
       );
     }),
   );
+  // Üyelik sayfasındaki "Sorgula": üye oturumu sahipliği kanıtlar, e-posta sorulmaz.
+  app.post(
+    "/api/member/reservations/lookup",
+    requireMember,
+    route(async (q, r) => {
+      const input = z.object({ reference: referenceInput }).parse(q.body);
+      r.json(
+        await receipt(
+          await store.lookupForMember(input.reference, q.member.id),
+          q,
+          env,
+          {
+            customer: true,
+          },
+        ),
+      );
+    }),
+  );
   app.post(
     "/api/reservations/cancel",
     route(async (q, r) => {
@@ -1757,8 +1775,57 @@ export function createApp(
       const tourId = q.query.tour
         ? tourIdSchema.parse(q.query.tour)
         : null;
-      r.json(await reviewsService.get(await store.assignments(), tourId));
+      const data = await reviewsService.get(await store.assignments(), tourId);
+      // Tur sayfasında acentenin onayladığı katılımcı yorumları ayrıca döner.
+      r.json(
+        tourId
+          ? { ...data, verified: await store.guestReviews.forTour(tourId) }
+          : data,
+      );
     }),
+  );
+  // Tur sonrası yorum bağlantısı (/yorum/:token): belirteç tek kullanımlık ve kişiye özel.
+  const reviewToken = z.string().regex(/^[a-f0-9]{64}$/, "Bağlantı geçersiz.");
+  app.get(
+    "/api/guest-reviews/:token",
+    route(async (q, r) => {
+      r.set("Cache-Control", "no-store");
+      r.json(
+        await store.guestReviews.request(reviewToken.parse(q.params.token)),
+      );
+    }),
+  );
+  app.post(
+    "/api/guest-reviews/:token",
+    route(async (q, r) => {
+      const input = z
+        .object({
+          rating: z.number().int().min(1, "Puan seçin.").max(5),
+          text: z
+            .string()
+            .trim()
+            .max(1000, "Yorum en fazla 1000 karakter olabilir.")
+            .default(""),
+          consent: z.literal(true, {
+            error: "Yorumunuzun yayımlanmasına izin verdiğinizi işaretleyin.",
+          }),
+        })
+        .parse(q.body);
+      r.status(201).json(
+        await store.guestReviews.submit(
+          reviewToken.parse(q.params.token),
+          input,
+        ),
+      );
+    }),
+  );
+  app.post(
+    "/api/guest-reviews/:token/opt-out",
+    route(async (q, r) =>
+      r.json(
+        await store.guestReviews.optOut(reviewToken.parse(q.params.token)),
+      ),
+    ),
   );
   app.get("/api/hotels", async (_q, r) => r.json(await store.hotels()));
   // Rehber yazıları (yalnız yayındakiler). ?kategori= ve ?tur= ile süzülür.
@@ -2488,6 +2555,36 @@ export function createApp(
         ...(await reviewsService.get(await store.assignments())),
         assignments: await store.assignments(),
       }),
+    ),
+  );
+  // Katılımcı yorumları: onay bekleyenler önce. Onaylanan tur sayfasında görünür.
+  app.get(
+    "/api/admin/guest-reviews",
+    requireAdmin,
+    route(async (_q, r) => r.json(await store.guestReviews.adminList())),
+  );
+  app.post(
+    "/api/admin/guest-reviews/:id",
+    requireAdmin,
+    route(async (q, r) => {
+      const input = z
+        .object({ status: z.enum(["approved", "rejected", "pending"]) })
+        .parse(q.body);
+      r.json(
+        await store.guestReviews.moderate(
+          z.string().uuid().parse(q.params.id),
+          input.status,
+        ),
+      );
+    }),
+  );
+  app.delete(
+    "/api/admin/guest-reviews/:id",
+    requireAdmin,
+    route(async (q, r) =>
+      r.json(
+        await store.guestReviews.remove(z.string().uuid().parse(q.params.id)),
+      ),
     ),
   );
   app.post(

@@ -96,7 +96,14 @@ export const member: Record<string, string> = {
     "Link a social account with the same email address to make signing in easier next time.",
   "{provider} hesabını bağla": "Link {provider} account",
   "{provider} · Bağlantı hazırlanıyor": "{provider} · Connection in progress",
-  "Ön rezervasyonlarım": "My pre-bookings",
+  Rezervasyonlarım: "My bookings",
+  "E-posta adresinizi doğruladığınızda bu adresle üye olmadan yaptığınız rezervasyonlar da burada görünür.":
+    "Once you verify your email address, bookings you made with it as a guest will also appear here.",
+  // Rezervasyon listesindeki durum etiketleri ("Ön rezervasyon" booking.ts'te)
+  Onaylı: "Confirmed",
+  "İptal talebi": "Cancellation requested",
+  İptal: "Cancelled",
+  Tamamlandı: "Completed",
   "İlk yolculuğunuz henüz burada değil.": "Your first trip isn’t here yet.",
   "Rotaları keşfedin.": "Explore the routes.",
 

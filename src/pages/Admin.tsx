@@ -46,6 +46,7 @@ import { RequestManager } from "../components/admin/RequestManager";
 import { ArticleManager } from "../components/admin/ArticleManager";
 import { InterestManager } from "../components/admin/InterestManager";
 import { HotelManager } from "../components/admin/HotelManager";
+import { GuestReviews } from "../components/admin/GuestReviews";
 import { CommandPalette } from "../components/admin/CommandPalette";
 import { FeedbackProvider, useFeedback } from "../components/admin/feedback";
 import "../admin.css";
@@ -92,7 +93,7 @@ const ALL_TABS = [
   ["hotels", "Anlaşmalı oteller", BedDouble, "Turlar ve site"],
   // Seyrek kullanılanlar: menüde kapalı gelir.
   ["notifications", "Bildirim kuyruğu", Mail, "Yönetim"],
-  ["reviews", "Google yorumları", Star, "Yönetim"],
+  ["reviews", "Yorumlar", Star, "Yönetim"],
   ["instagram", "Instagram", Instagram, "Yönetim"],
   ["integrations", "Bağlantılar", Plug, "Yönetim"],
   ["users", "Kullanıcılar", Users, "Yönetim"],
@@ -539,7 +540,13 @@ function AdminPanel({
         {tab === "hotels" && <HotelManager key={key("hotels")} />}
         {tab === "articles" && <ArticleManager key={key("articles")} catalog={catalog} />}
         {tab === "interest" && <InterestManager key={key("interest")} onChange={refreshCatalog} />}
-        {tab === "reviews" && <ReviewAssignments key={key("reviews")} catalog={catalog} />}
+        {tab === "reviews" && (
+          <>
+            <GuestReviews key={key("guest-reviews")} />
+            <h2 className="interest-heading">Google yorumları</h2>
+            <ReviewAssignments key={key("reviews")} catalog={catalog} />
+          </>
+        )}
         {tab === "operations" && <TourOperations key={key("ops")} onChange={refreshCatalog} />}
         {tab === "instagram" && <InstagramManager key={key("ig")} catalog={catalog} />}
         {tab === "content" && (

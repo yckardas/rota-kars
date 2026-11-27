@@ -311,6 +311,17 @@ export type ReviewsResponse = {
   fetchedAt?: string;
   scope?: "all" | "tour" | "agency";
   terms?: { term: string; exact: boolean }[];
+  // Tur kapsamında metninde tur kelimesi geçen yorum sayısı (gerisi panelden eşlenmiş).
+  textMatched?: number;
+  // Tur sayfasında acentenin onayladığı katılımcı yorumları.
+  verified?: VerifiedReview[];
+};
+export type VerifiedReview = {
+  id: string;
+  name: string;
+  rating: number;
+  text: string;
+  date: string;
 };
 export const currency = (value: number) =>
   new Intl.NumberFormat(localeOf(), {
