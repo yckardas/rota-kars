@@ -144,7 +144,13 @@ export type Catalog = {
     // Hizmet sayfasındaki araç kartları; ilk fotoğraf kapak (panelden düzenlenir).
     vehicles?: { name: string; photos: string[] }[];
   }[];
-  fleet: { note: string; tourism: string[]; vip: string[]; perks: string[] };
+  fleet: {
+    note: string;
+    tourism: string[];
+    vip: string[];
+    perks: string[];
+    slides?: { label: string; photo: string }[];
+  };
   cancellationPolicy: string;
   tours: Tour[];
   stories: Story[];

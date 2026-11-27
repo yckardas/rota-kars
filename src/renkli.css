@@ -3331,3 +3331,172 @@ html:has(.kp .site-header) {
     transform: none;
   }
 }
+
+/* ---------- Filo: araç fotoğrafları slaytı ----------
+   Fotoğraflar üst üste durur, etkin olan yumuşakça belirir ve hafifçe yaklaşır.
+   Altta koyu geçişin üstünde araç adı (koltuk sayısı turuncu) ve gezinme. */
+.kp .fleet-slider {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: var(--kp-ink);
+  isolation: isolate;
+}
+.kp .fleet-slider img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  object-fit: cover;
+  opacity: 0;
+  transform: scale(1.06);
+  transition:
+    opacity 0.9s ease,
+    transform 5.5s ease-out;
+}
+.kp .fleet-slider img[data-active] {
+  opacity: 1;
+  transform: scale(1);
+}
+.kp .fleet-slider::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 46%;
+  background: linear-gradient(to top, rgba(14, 18, 28, 0.78), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+.kp .fleet-slide-caption {
+  position: absolute;
+  left: 22px;
+  bottom: 20px;
+  z-index: 2;
+  margin: 0;
+  max-width: calc(100% - 44px);
+  color: #fff;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+}
+.kp .fleet-slide-caption strong {
+  display: inline-block;
+  margin-right: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--rk-flame);
+  font-size: 14px;
+  font-weight: 700;
+  text-shadow: none;
+  vertical-align: 2px;
+}
+.kp .fleet-slide-controls {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(14, 18, 28, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.kp .fleet-slide-controls > button {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.kp .fleet-slide-controls > button:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+.kp .fleet-slide-dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 4px;
+}
+.kp .fleet-slide-dots button {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition:
+    width 0.3s var(--rk-ease),
+    background 0.2s ease;
+}
+.kp .fleet-slide-dots button[aria-current] {
+  width: 20px;
+  background: #fff;
+}
+.kp .fleet-slider button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+/* Çipler: fotoğrafı olan araç düğmedir; gösterilen araç turuncu dolgulu. */
+.kp .chips button {
+  padding: 5px 11px;
+  border: 1px solid var(--kp-rule);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--kp-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+.kp .chips button:hover {
+  border-color: var(--rk-flame);
+  color: var(--rk-flame);
+}
+.kp .chips button.is-showing {
+  background: var(--rk-flame);
+  border-color: var(--rk-flame);
+  color: #fff;
+}
+.kp .chips button:focus-visible {
+  outline: 2px solid var(--rk-flame);
+  outline-offset: 2px;
+}
+@media (max-width: 560px) {
+  .kp .fleet-slide-caption {
+    left: 16px;
+    bottom: 14px;
+    font-size: 16px;
+  }
+  .kp .fleet-slide-controls {
+    right: 10px;
+    top: 10px;
+  }
+  .kp .fleet-slide-controls > button {
+    width: 40px;
+    height: 40px;
+  }
+  .kp .fleet-slide-dots {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kp .fleet-slider img {
+    transform: none;
+    transition: opacity 0.3s ease;
+  }
+}
