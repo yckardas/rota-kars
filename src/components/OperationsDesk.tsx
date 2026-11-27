@@ -14,6 +14,7 @@ import {
   Phone,
   MessageCircle,
   UserX,
+  UserMinus,
   Trash2,
   Send,
 } from "lucide-react";
@@ -44,6 +45,7 @@ import { PassengerList } from "./admin/MobileApp";
 import { NewReservation } from "./admin/NewReservation";
 import { CardRefunds } from "./admin/CardRefunds";
 import { CancelDialog } from "./admin/CancelDialog";
+import { RemovePassengersDialog } from "./admin/RemovePassengersDialog";
 import { PaymentLink } from "./admin/PaymentLink";
 import { DepartureCalendar } from "./admin/DepartureCalendar";
 import { isNativeApp } from "../lib/native";
@@ -788,6 +790,7 @@ const AUDIT_LABELS: Record<string, string> = {
   cancelled: "İptal edildi",
   moved: "Tarih/koltuk değiştirildi",
   passengers_updated: "Yolcu adları güncellendi",
+  passengers_removed: "Yolcu çıkarıldı",
   completed: "Tur tamamlandı",
   checked_in: "Bilet okutuldu (bindi)",
   no_show: "Gelmedi olarak işaretlendi",
@@ -1131,6 +1134,7 @@ function BookingControls({
     ),
     [refundKind, setRefundKind] = useState<"card" | "manual">(hasCard ? "card" : "manual"),
     [cancelOpen, setCancelOpen] = useState(false),
+    [removeOpen, setRemoveOpen] = useState(false),
     [departures, setDepartures] = useState<Departure[]>([]),
     [target, setTarget] = useState(""),
     [selected, setSelected] = useState<number[]>([]),
@@ -1284,6 +1288,9 @@ function BookingControls({
                 {currency(r.transfer.amount)}
               </p>
             )}
+            {Boolean(r.cancellation_fee) && (
+              <p className="row-note">Yolcu çıkarma kesintisi (toplama dahil): {currency(r.cancellation_fee || 0)}</p>
+            )}
             {Boolean(r.cancellation_requested_at) && r.status !== "cancelled" && (
               <p className="error">Müşteri iptal talep etti ({stamp(r.cancellation_requested_at)}).</p>
             )}
@@ -1359,6 +1366,11 @@ function BookingControls({
               <UserX size={15} /> Gelmedi
             </button>
           )}
+          {activeBooking && r.seats.length > 1 && (
+            <button className="btn btn-outline btn-small" disabled={busy} onClick={() => setRemoveOpen(true)}>
+              <UserMinus size={15} /> Yolcu çıkar
+            </button>
+          )}
           {["pending_agency", "confirmed"].includes(r.status) && (
             <button className="btn btn-outline btn-small danger-text" disabled={busy} onClick={() => setCancelOpen(true)}>
               İptal et
@@ -1405,6 +1417,8 @@ function BookingControls({
                     <span>
                       {AUDIT_LABELS[a.event] || a.event}
                       {typeof a.details?.amount === "number" && " · " + currency(a.details.amount)}
+                      {Array.isArray(a.details?.names) && " · " + a.details.names.join(", ")}
+                      {typeof a.details?.fee === "number" && a.details.fee > 0 && ` · kesinti ${currency(a.details.fee)}`}
                       {low && ` · kapora altı (tahsilat ${currency(low.paid)}, kapora ${currency(low.deposit)})`}
                     </span>
                   </li>
@@ -1534,6 +1548,7 @@ function BookingControls({
           </div>
         ) : null}
         {cancelOpen && <CancelDialog booking={r} onClose={() => setCancelOpen(false)} onDone={reload} />}
+        {removeOpen && <RemovePassengersDialog booking={r} onClose={() => setRemoveOpen(false)} onDone={reload} />}
       </section>
     </Modal>
   );

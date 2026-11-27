@@ -1147,15 +1147,22 @@
 .rk-admin .refund-kind {
   margin-top: 4px;
 }
-/* İptal penceresi */
-.rk-admin .cancel-dialog {
+/* İptal ve yolcu çıkarma pencereleri (.modal .admin-editor'ın sıfırladığı boşluk geri gelir) */
+.rk-admin .modal .cancel-dialog {
   padding: 18px 22px 22px;
 }
 .rk-admin .cancel-dialog .choice-row {
   display: grid;
+  grid-template-columns: 1fr;
   gap: 6px;
   border: 0;
   padding: 0;
+  margin: 0;
+}
+.rk-admin .cancel-dialog .choice-row + * {
+  margin-top: 14px;
+}
+.rk-admin .cancel-dialog .choice-row .checkbox-label {
   margin: 0;
 }
 .rk-admin .cancel-dialog .choice-row legend {

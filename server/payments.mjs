@@ -637,6 +637,24 @@ export function createPayments(
         },
       };
     },
+    // Yolcu çıkarma penceresi: yeni bedel, kesinti, iade önerisi ve karta iadenin bugün
+    // yapılıp yapılamayacağı (iptal penceresiyle aynı biçimde).
+    async removalQuote(reference, seats) {
+      const q = await workflow.removalQuote(reference, seats),
+        cp = await cardPaymentsOf(await workflow.get(reference)),
+        cardPaid = cp.payments.reduce((n, p) => n + p.amount - p.refunded, 0),
+        problem = (amount) => (cardPaid && amount ? cardRefundProblem(cp, Math.min(amount, cardPaid)) : "");
+      return {
+        ...q,
+        card: {
+          paid: cardPaid,
+          enabled: Boolean(gateway),
+          blocked: cp.blocked,
+          customer: problem(q.customer.refund),
+          agency: problem(q.agency.refund),
+        },
+      };
+    },
     // Bugün yapılamayacak karta iadeyi bankaya hiçbir şey göndermeden reddeder
     // (iptalden önce denetlenir).
     async checkCardRefund(reference, amount) {
