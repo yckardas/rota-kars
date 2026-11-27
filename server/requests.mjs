@@ -18,6 +18,8 @@ export const REQUEST_KINDS = {
   // Tur sayfasındaki "Bu tur için bilgi alın": hangi tur için arandığı başlıkta görünür.
   "tour-info": "Tur bilgi / fiyat talebi",
   vehicle: "Araç kiralama talebi",
+  // İletişim sayfasındaki "Bize yazın": tarih ve kişi sayısı yok, yalnız mesaj.
+  message: "İletişim mesajı",
 };
 // Durum anahtarları tüm türlerde aynıdır; konaklamada acente otelle görüşüp döner,
 // bu yüzden adları o akışa göre okunur.
@@ -48,7 +50,8 @@ export function describeRequest(body, { tourName = "", hotelName = "", forCustom
     tourName && `Tur: ${tourName}`,
     !forCustomer && `Ad: ${body.name} · ${body.phone} · ${body.email}`,
     body.checkOut ? `Tarih: ${body.checkIn} → ${body.checkOut}` : body.checkIn && `Tarih: ${body.checkIn}`,
-    `Kişi: ${body.guests}${body.children ? ` (${body.children} çocuk dahil)` : ""}`,
+    body.guests &&
+      `Kişi: ${body.guests}${body.children ? ` (${body.children} çocuk dahil)` : ""}`,
     body.rooms && `Oda: ${body.rooms}${body.roomType ? ` × ${ROOM_TYPES[body.roomType]}` : ""}`,
     !body.rooms && body.roomType && `Oda tercihi: ${ROOM_TYPES[body.roomType]}`,
     body.budget && `Bütçe: ${BUDGETS[body.budget]}`,

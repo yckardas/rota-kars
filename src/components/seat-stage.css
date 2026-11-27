@@ -3,10 +3,16 @@
    Sırtlık yolcunun arkasında, yani kameraya bakan taraftadır. */
 .seat-map[data-depth] {
   --tilt: 40deg;
-  /* Eğilen planın üstte bıraktığı boşluğu sıra başına geri al */
+  /* Eğilen planın üstte bıraktığı boşluğu sıra başına geri al (yedek değer;
+     SeatStage gövdeyi ölçüp --pull'u tam boşluk kadar yazar) */
   --lift: 17px;
+  --pull: calc(var(--rows, 6) * -1 * var(--lift));
+  /* Gövdenin eksi boşluğu planın dışına sızmasın: sızarsa plan kutusu yukarı
+     kayar ve üstteki notu, düğmeyi, tarih kutusunu görünmez biçimde örter. */
+  display: flow-root;
   perspective: 1100px;
-  perspective-origin: 50% 0%;
+  /* Bakış noktası gövdenin geri çekilmiş üst kenarında kalır */
+  perspective-origin: 50% var(--pull);
 }
 /* Uzun araçta (otobüs) plan çok derine kaçmasın */
 .seat-map[data-depth][data-long] {
@@ -17,7 +23,7 @@
   transform: rotateX(var(--tilt));
   transform-origin: 50% 100%;
   transform-style: preserve-3d;
-  margin-top: calc(var(--rows, 6) * -1 * var(--lift));
+  margin-top: var(--pull);
   /* Düz plandaki "araç süzülür" girişi transform'u ezer; sahnenin kendi girişi var */
   animation: none;
   transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);

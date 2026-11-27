@@ -1537,6 +1537,15 @@ html:has(.kp) {
 .kp .footer-main .footer-contact > a {
   color: #fff;
 }
+/* Çalışma saatleri: bağlantı değil, bağlantılarla aynı satır düzeninde */
+.kp .footer-contact > .footer-hours {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  margin: 0 0 13px;
+  font-size: 14px;
+  color: #fff;
+}
 .kp .footer-legal {
   border-top: 1px solid rgba(255, 255, 255, 0.14);
 }

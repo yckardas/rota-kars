@@ -9,7 +9,7 @@ import {
   MapPin,
   Armchair,
   Check,
-  Plus,
+  Minus,
   ChevronRight,
   ArrowRight,
   Info,
@@ -69,10 +69,11 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
   const routeLine = useReveal<HTMLDivElement>(),
     stampRow = useReveal<HTMLDivElement>();
   const strip = useRef<HTMLDivElement>(null),
+    card = useRef<HTMLDivElement>(null),
     stripVisible = useClearOfLaunchers(strip);
-  // Telefonda da: "Tarih ve koltuk seç" görünürken WhatsApp ve asistan düğmeleri
-  // onun üstüne binmesin (ana sayfada düğmeler yerinde kalır).
-  useClearOfLaunchers(strip, "actionVisible");
+  // Telefonda da: tur kartı (güzergâh, süre, fiyat ve "Tarih ve koltuk seç")
+  // görünürken WhatsApp ve asistan düğmeleri kartın üstüne binmesin.
+  useClearOfLaunchers(card, "actionVisible");
   useEffect(() => {
     setActiveImage(0);
     if (t && !t.inquiryOnly)
@@ -155,7 +156,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
         aria-labelledby="tour-title"
         style={tone}
       >
-        <div className="kp-card">
+        <div className="kp-card" ref={card}>
           <div
             className={
               "kp-views" + (photos.length > 1 ? "" : " kp-views-single")
@@ -356,10 +357,16 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
               ))}
             </div>
             <div>
-              <h3>{tx("Ekstra hizmetler")}</h3>
+              {/* Bu kalemler satılmaz: müşteri dahil ya da sitede eklenebilir sanmasın. */}
+              <h3>{tx("Fiyata dahil değil")}</h3>
+              <small className="inclusions-note">
+                {tx(
+                  "Tur bedeline eklenmez, sitede satın alınmaz. Ücretini tur sırasında yerinde kendiniz ödersiniz.",
+                )}
+              </small>
               {t.excluded.map((s) => (
                 <p key={s}>
-                  <Plus size={16} />
+                  <Minus size={16} />
                   {s}
                 </p>
               ))}
@@ -439,7 +446,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
               </summary>
               <p>
                 {tx(
-                  "Seçtiğiniz seferin hareket ve buluşma bilgileri rezervasyon belgenizde görünür. E-posta hizmeti etkin olduğunda güncellemeler ve hareket hatırlatması kayıtlı adresinize iletilir.",
+                  "Hareket ve buluşma bilgileri rezervasyon belgenizde yazar; güncel hâline Rezervasyonum sayfasından her zaman bakabilirsiniz. Yolculuktan önceki 24 saat içinde e-postanıza bir hatırlatma göndeririz. Saat, buluşma noktası veya rehber değişirse sizi kayıtlı telefonunuzdan ya da e-posta adresinizden bilgilendiririz.",
                 )}
               </p>
             </details>
@@ -680,6 +687,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
           tourId={t.id}
           tourName={t.name}
           initialCheckIn={first?.date}
+          hours={catalog.business.hours}
           onClose={() => setStay(null)}
         />
       )}

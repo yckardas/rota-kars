@@ -13,6 +13,8 @@ import {
   Check,
   Search,
   LoaderCircle,
+  Clock3,
+  MessageSquareText,
 } from "lucide-react";
 import { RequestForm } from "../components/RequestForm";
 import { ReservationTicket } from "../components/ReservationTicket";
@@ -20,7 +22,7 @@ import { PayDeposit } from "./Payment";
 import { api, post } from "../lib/api";
 import { telHref } from "../lib/phone";
 import type { Catalog, Hotel, Reservation } from "../lib/types";
-export function Hotels() {
+export function Hotels({ catalog }: { catalog: Catalog }) {
   const [hotels, setHotels] = useState<Hotel[]>([]),
     [request, setRequest] = useState(false),
     [hotelId, setHotelId] = useState<string>(),
@@ -124,6 +126,7 @@ export function Hotels() {
         <RequestForm
           hotels={hotels}
           hotelId={hotelId}
+          hours={catalog.business.hours}
           onClose={() => setRequest(false)}
         />
       )}
@@ -363,69 +366,103 @@ export function About({ catalog }: { catalog: Catalog }) {
 export function Contact({ catalog }: { catalog: Catalog }) {
   const b = catalog.business;
   const { t } = useLang();
+  const [writing, setWriting] = useState(false);
   return (
-    <div className="container contact-page section">
-      <div>
-        <h1>
-          {t("Yolculuğu")}
-          <br />
-          {t("birlikte konuşalım.")}
-        </h1>
-        <p>
-          {t("Tur, ulaşım ve konaklama planlarınız için")}
-          <br />
-          {t("Kars’taki ekibimizle iletişime geçin.")}
-        </p>
-        <a href={telHref(b.mobile)} className="btn">
-          <Phone size={17} />
-          {b.mobile}
-        </a>
-      </div>
-      <div className="contact-details">
-        <a href={b.mapsUrl} target="_blank" rel="noreferrer">
-          <MapPin />
-          <div>
-            <span>{t("Ofisimiz")}</span>
-            <strong>{b.address}</strong>
-            <small>
-              {t("Google Haritalar’da yol tarifi")} <ExternalLink size={12} />
-            </small>
+    <>
+      <div className="container contact-page section">
+        <div>
+          <h1>
+            {t("Yolculuğu")}
+            <br />
+            {t("birlikte konuşalım.")}
+          </h1>
+          <p>
+            {t("Tur, ulaşım ve konaklama planlarınız için")}
+            <br />
+            {t("Kars’taki ekibimizle iletişime geçin.")}
+          </p>
+          <div className="contact-actions">
+            <a href={telHref(b.mobile)} className="btn">
+              <Phone size={17} />
+              {b.mobile}
+            </a>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => setWriting(true)}
+            >
+              <MessageSquareText size={17} />
+              {t("Bize yazın")}
+            </button>
           </div>
-        </a>
-        <a href={telHref(b.phone)}>
-          <Phone />
-          <div>
-            <span>{t("Sabit hat")}</span>
-            <strong>{b.phone}</strong>
-          </div>
-        </a>
-        <a href={"mailto:" + b.email}>
-          <Mail />
-          <div>
-            <span>{t("E-posta")}</span>
-            <strong>{b.email}</strong>
-          </div>
-        </a>
-        <a href={b.instagram} target="_blank" rel="noreferrer">
-          <Instagram />
-          <div>
-            <span>Instagram</span>
-            <strong>@rotakarstur</strong>
-          </div>
-        </a>
-      </div>
-      <section className="legal-imprint" id="kunye" aria-labelledby="kunye-title">
-        <h2 id="kunye-title">{t("Yasal bilgiler")}</h2>
-        <dl>
-          {legalRows(b, t).map(([k, v]) => (
-            <div key={k}>
-              <dt>{k}</dt>
-              <dd>{v}</dd>
+        </div>
+        <div className="contact-details">
+          {b.hours && (
+            <div className="contact-hours">
+              <Clock3 />
+              <div>
+                <span>{t("Çalışma saatleri")}</span>
+                <strong>{b.hours}</strong>
+              </div>
             </div>
-          ))}
-        </dl>
-      </section>
-    </div>
+          )}
+          <a href={b.mapsUrl} target="_blank" rel="noreferrer">
+            <MapPin />
+            <div>
+              <span>{t("Ofisimiz")}</span>
+              <strong>{b.address}</strong>
+              <small>
+                {t("Google Haritalar’da yol tarifi")} <ExternalLink size={12} />
+              </small>
+            </div>
+          </a>
+          <a href={telHref(b.phone)}>
+            <Phone />
+            <div>
+              <span>{t("Sabit hat")}</span>
+              <strong>{b.phone}</strong>
+            </div>
+          </a>
+          <a href={"mailto:" + b.email}>
+            <Mail />
+            <div>
+              <span>{t("E-posta")}</span>
+              <strong>{b.email}</strong>
+            </div>
+          </a>
+          <a href={b.instagram} target="_blank" rel="noreferrer">
+            <Instagram />
+            <div>
+              <span>Instagram</span>
+              <strong>@rotakarstur</strong>
+            </div>
+          </a>
+        </div>
+        <section
+          className="legal-imprint"
+          id="kunye"
+          aria-labelledby="kunye-title"
+        >
+          <h2 id="kunye-title">{t("Yasal bilgiler")}</h2>
+          <dl>
+            {legalRows(b, t).map(([k, v]) => (
+              <div key={k}>
+                <dt>{k}</dt>
+                <dd>{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      </div>
+      {/* Sayfanın dışında: .contact-page p biçimi formun metinlerine sızmasın. */}
+      {writing && (
+        <RequestForm
+          kind="message"
+          hours={b.hours}
+          onClose={() => setWriting(false)}
+        />
+      )}
+    </>
   );
 }
 // Rezervasyona kaydedilen, müşterinin onayladığı belgeler (bağlayıcı metin Türkçe).
@@ -934,7 +971,7 @@ export function Information({ catalog }: { catalog: Catalog }) {
                 <td>Ödediğiniz tutar iade edilmez.</td>
               </tr>
               <tr>
-                <td>Yurt dışı turlar (Batum)</td>
+                <td>Yurt dışı turlar (tüm yurt dışı rotalar)</td>
                 <td>
                   Hareketten 5 gün (120 saat) öncesine kadar: tamamı iade
                   edilir.

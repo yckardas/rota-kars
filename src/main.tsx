@@ -226,7 +226,7 @@ function App() {
             element={<Booking catalog={shown!} />}
           />
           <Route path="rezervasyonum" element={<Lookup catalog={shown!} />} />
-          <Route path="konaklama" element={<Hotels />} />
+          <Route path="konaklama" element={<Hotels catalog={shown!} />} />
           <Route path="kesfet/:slug" element={<Discover catalog={shown!} />} />
           <Route path="rehber" element={<Guide />} />
           <Route path="rehber/:slug" element={<ArticlePage catalog={shown!} />} />

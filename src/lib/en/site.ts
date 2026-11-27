@@ -191,7 +191,9 @@ export const site: Record<string, string> = {
   "Bu yolculukta sizi neler bekliyor?": "What awaits you on this trip?",
   "Günün akışı": "The day’s plan",
   "Fiyata dahil": "Included in the price",
-  "Ekstra hizmetler": "Extras",
+  "Fiyata dahil değil": "Not included in the price",
+  "Tur bedeline eklenmez, sitede satın alınmaz. Ücretini tur sırasında yerinde kendiniz ödersiniz.":
+    "Not added to the tour price and not sold on this site. You pay for these yourself, on the spot, during the tour.",
   "Buluşalım, yola çıkalım.": "Let’s meet and set off.",
   "Kars merkezde ev, otel ve yakın noktalardan alıp bırakma":
     "Pick-up and drop-off from homes, hotels and nearby points in central Kars",
@@ -206,8 +208,8 @@ export const site: Record<string, string> = {
     "Every traveler who needs a seat gets their own. Let the agency know before booking if you need a child discount or a child seat; age-based terms will be confirmed. The per-person price shown does not include an automatic child discount.",
   "Buluşma saati veya rehber değişirse nasıl öğrenirim?":
     "How will I know if the meeting time or guide changes?",
-  "Seçtiğiniz seferin hareket ve buluşma bilgileri rezervasyon belgenizde görünür. E-posta hizmeti etkin olduğunda güncellemeler ve hareket hatırlatması kayıtlı adresinize iletilir.":
-    "Departure and meeting details for your chosen trip appear on your booking document. When email is enabled, updates and a departure reminder are sent to your registered address.",
+  "Hareket ve buluşma bilgileri rezervasyon belgenizde yazar; güncel hâline Rezervasyonum sayfasından her zaman bakabilirsiniz. Yolculuktan önceki 24 saat içinde e-postanıza bir hatırlatma göndeririz. Saat, buluşma noktası veya rehber değişirse sizi kayıtlı telefonunuzdan ya da e-posta adresinizden bilgilendiririz.":
+    "Departure and meeting details are on your booking document, and you can always see the latest version on the My booking page. We email you a reminder within the 24 hours before the trip. If the time, meeting point or guide changes, we will let you know by phone or at your registered email address.",
   "Rezervasyon nasıl kesinleşir?": "How is a booking confirmed?",
   "Rehber koltuğunu seçebilir miyim?": "Can I choose the guide’s seat?",
   "{seats}+1 aracın şoför yanındaki ön koltuğu rehbere ayrılmıştır. Şoför ve rehber dışında {guests} misafir için koltuk seçilebilir.":
@@ -272,6 +274,8 @@ export const site: Record<string, string> = {
   Ofisimiz: "Our office",
   "Google Haritalar’da yol tarifi": "Directions on Google Maps",
   "Sabit hat": "Landline",
+  "Çalışma saatleri": "Working hours",
+  "Bize yazın": "Write to us",
   "E-posta": "Email",
   // Bilet doğrulama
   "Tur tarihi {date}, {time}": "Tour date {date}, {time}",
@@ -500,6 +504,26 @@ export const site: Record<string, string> = {
     "This is not a confirmed booking. We will check availability and prices with our partner hotels and get back to you shortly; we have also emailed you a summary.",
   "Bu bir kesin rezervasyon değildir. Müsaitlik ve fiyat, acente onayından sonra netleşir.":
     "This is not a confirmed booking. Availability and price are confirmed by the agency.",
+  "Bu bir kesin rezervasyon değildir. Anlaşmalı otellerimizle görüşüp müsaitlik ve fiyatı size iletiyoruz; e-postanıza da bir özet gönderdik.":
+    "This is not a confirmed booking. We check availability and prices with our partner hotels and send them to you; we have also emailed you a summary.",
+  "Çalışma saatlerimiz: {hours}.": "Our working hours: {hours}.",
+  "Bu saatlerde gelen taleplere aynı gün, daha geç gelenlere ertesi gün dönüyoruz.":
+    "We reply the same day to requests received during these hours, and the next day to later ones.",
+  "Çıkış tarihi giriş tarihinden sonra olmalıdır.":
+    "Check-out must be after check-in.",
+  // İletişim sayfasındaki "Bize yazın" formu
+  "Sorunuzu kısaca yazın.": "Tell us briefly what you need.",
+  "Tur, transfer, konaklama ya da rezervasyonunuzla ilgili her şeyi sorabilirsiniz; ekibimiz size dönsün.":
+    "Ask us anything about tours, transfers, stays or your booking; our team will get back to you.",
+  Mesajınız: "Your message",
+  "Sorunuzu ya da isteğinizi yazın…": "Write your question or request…",
+  "Mesajımı gönder": "Send my message",
+  "Mesajınız bize ulaştı.": "Your message has reached us.",
+  "Size telefonla ya da e-postayla dönüyoruz.":
+    "We will get back to you by phone or email.",
+  "Mesajınızı yazın.": "Please write your message.",
+  "Bir tarih seçin.": "Please choose a date.",
+  "Kişi sayısını yazın.": "Please enter the number of people.",
   "Tamam":
     "OK",
   "Kars’ta kendinize bir yer ayırın.":

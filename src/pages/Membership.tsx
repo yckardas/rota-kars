@@ -219,22 +219,20 @@ export function Membership() {
               )
             : t("Kuponlarınız ve yolculuklarınız sizi bekliyor.")}
         </p>
+        {/* Yalnız bağlantısı hazır sosyal girişler görünür: "Yakında" yazan pasif
+            düğmeler yarım kalmış iş izlenimi veriyordu. Hiçbiri yoksa kutu boş kalır. */}
         <div className="social-signins">
           {[
             ["google", "Google", GoogleMark],
             ["facebook", "Facebook", Facebook],
           ].map(([id, label, Icon]) => {
-            const ready = providers.find((p) => p.id === id)?.enabled;
+            if (!providers.find((p) => p.id === id)?.enabled) return null;
             const Mark = Icon as typeof GoogleMark;
             return (
               <button
                 type="button"
                 key={id as string}
                 className="social-signin"
-                disabled={!ready}
-                title={
-                  ready ? undefined : t("Firma hesabı bağlantısı hazırlanıyor")
-                }
                 onClick={() =>
                   window.location.assign(
                     "/api/auth/start/" +
@@ -251,21 +249,15 @@ export function Membership() {
               >
                 <Mark />
                 {t("{provider} ile devam et", { provider: label as string })}
-                {!ready && <small>{t("Yakında")}</small>}
               </button>
             );
           })}
         </div>
-        {providers.some((p) => !p.enabled) && (
-          <small className="social-setup-note">
-            {t(
-              "Sosyal girişler hesap bağlantısı tamamlandığında açılacak. Şimdi e-postanızla üye olabilirsiniz.",
-            )}
-          </small>
+        {providers.some((p) => p.enabled) && (
+          <div className="auth-divider">
+            <span>{t("veya e-postayla")}</span>
+          </div>
         )}
-        <div className="auth-divider">
-          <span>{t("veya e-postayla")}</span>
-        </div>
         {mode === "login" && (
           <Link className="text-link" to="/uyelik/parolami-unuttum">
             {t("Parolamı unuttum")}

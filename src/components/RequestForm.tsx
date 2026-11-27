@@ -1,6 +1,7 @@
 // Talep formu: konaklama, tur bilgisi/fiyatı, size özel tur ve araç kiralama. Konaklamada (otel sayfası ya
 // da tur sayfasındaki "Konaklama da ayarlayalım") tarih, kişi, oda tercihi ve iletişim
-// alınır; talep panele düşer, acente anlaşmalı otelle görüşüp müşteriye döner.
+// alınır; talep panele düşer, acente anlaşmalı otelle görüşüp müşteriye döner. İletişim
+// sayfasındaki "Bize yazın" (message) yalnız iletişim bilgisi ve mesaj alır.
 import { useState, type FormEvent } from "react";
 import { Check, CalendarDays, ShieldCheck, LoaderCircle } from "lucide-react";
 import { Modal } from "./Modal";
@@ -16,6 +17,13 @@ const ROOM_TYPES: [string, string][] = [
   ["triple", "Üç kişilik"],
   ["family", "Aile odası"],
 ];
+// "2026-12-01" → "2026-12-02": çıkış en erken girişin ertesi günü olabilir.
+const nextDay = (ymd: string) => {
+  const d = new Date(ymd + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+};
+const CHECKOUT_ERROR = "Çıkış tarihi giriş tarihinden sonra olmalıdır.";
 const BUDGETS: [string, string][] = [
   ["economy", "Ekonomik"],
   ["standard", "Orta"],
@@ -31,9 +39,10 @@ export function RequestForm({
   initialCheckIn,
   initialGuests = 2,
   initialNotes = "",
+  hours,
   onClose,
 }: {
-  kind?: "hotel" | "tour-info" | "private-tour" | "vehicle";
+  kind?: "hotel" | "tour-info" | "private-tour" | "vehicle" | "message";
   hotels?: Hotel[];
   hotelId?: string;
   // Tur sayfasından gelen talep (konaklama, tur bilgisi) hangi tura bağlı.
@@ -42,24 +51,42 @@ export function RequestForm({
   initialCheckIn?: string;
   initialGuests?: number;
   initialNotes?: string;
+  // Sistemde kayıtlı çalışma saatleri; başarı ekranında yanıt süresi buna dayanır.
+  hours?: string;
   onClose: () => void;
 }) {
   const { t } = useLang();
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [result, setResult] = useState(""),
+    // Konaklamada tarih hatası formun altında değil, çıkış tarihinin yanında görünür.
+    [checkIn, setCheckIn] = useState(initialCheckIn || ""),
+    [checkOut, setCheckOut] = useState(""),
+    [dateError, setDateError] = useState(""),
     human = useTurnstile("request");
   const hotel = kind === "hotel",
+    message = kind === "message",
     info = kind === "tour-info" && Boolean(tourName);
   const title = hotel
     ? t("Konaklama talebi")
-    : kind === "vehicle"
-      ? t("Araç kiralama talebi")
-      : info
-        ? t("{tour} için bilgi ve fiyat", { tour: tourName! })
-        : t("Size özel tur talebi");
+    : message
+      ? t("Bize yazın")
+      : kind === "vehicle"
+        ? t("Araç kiralama talebi")
+        : info
+          ? t("{tour} için bilgi ve fiyat", { tour: tourName! })
+          : t("Size özel tur talebi");
+  const checkDates = (from: string, to: string) =>
+    setDateError(hotel && from && to && to <= from ? CHECKOUT_ERROR : "");
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (hotel && checkIn && checkOut && checkOut <= checkIn) {
+      setDateError(CHECKOUT_ERROR);
+      e.currentTarget
+        .querySelector<HTMLInputElement>('input[name="checkOut"]')
+        ?.focus();
+      return;
+    }
     const f = new FormData(e.currentTarget);
     const num = (k: string) => (f.get(k) ? Number(f.get(k)) : undefined);
     setBusy(true);
@@ -70,8 +97,9 @@ export function RequestForm({
         name: f.get("name"),
         email: f.get("email"),
         phone: f.get("phone"),
-        checkIn: f.get("checkIn"),
-        guests: Number(f.get("guests")),
+        ...(message
+          ? {}
+          : { checkIn: f.get("checkIn"), guests: Number(f.get("guests")) }),
         notes: f.get("notes"),
         ...(hotel
           ? {
@@ -89,7 +117,9 @@ export function RequestForm({
       });
       setResult(r.reference);
     } catch (e) {
-      setError((e as Error).message);
+      const msg = (e as Error).message;
+      if (msg === CHECKOUT_ERROR) setDateError(msg);
+      else setError(msg);
       human.reset();
     } finally {
       setBusy(false);
@@ -102,16 +132,34 @@ export function RequestForm({
           <div className="success-icon">
             <Check />
           </div>
-          <h2>{t("Talebiniz kaydedildi.")}</h2>
+          <h2>
+            {message ? t("Mesajınız bize ulaştı.") : t("Talebiniz kaydedildi.")}
+          </h2>
           <p>{t("Referans numaranız")}</p>
           <strong className="reference">{result}</strong>
           <p>
-            {hotel
-              ? t(
-                  "Bu bir kesin rezervasyon değildir. Anlaşmalı otellerimizle görüşüp müsaitlik ve fiyatla size en kısa sürede dönüyoruz; e-postanıza da bir özet gönderdik.",
-                )
-              : t("Bu bir kesin rezervasyon değildir. Müsaitlik ve fiyat, acente onayından sonra netleşir.")}
+            {message
+              ? t("Size telefonla ya da e-postayla dönüyoruz.")
+              : hotel
+                ? hours
+                  ? t(
+                      "Bu bir kesin rezervasyon değildir. Anlaşmalı otellerimizle görüşüp müsaitlik ve fiyatı size iletiyoruz; e-postanıza da bir özet gönderdik.",
+                    )
+                  : t(
+                      "Bu bir kesin rezervasyon değildir. Anlaşmalı otellerimizle görüşüp müsaitlik ve fiyatla size en kısa sürede dönüyoruz; e-postanıza da bir özet gönderdik.",
+                    )
+                : t(
+                    "Bu bir kesin rezervasyon değildir. Müsaitlik ve fiyat, acente onayından sonra netleşir.",
+                  )}
           </p>
+          {hours && (
+            <p className="muted">
+              {t("Çalışma saatlerimiz: {hours}.", { hours })}{" "}
+              {t(
+                "Bu saatlerde gelen taleplere aynı gün, daha geç gelenlere ertesi gün dönüyoruz.",
+              )}
+            </p>
+          )}
           <button className="btn" onClick={onClose}>
             {t("Tamam")}
           </button>
@@ -121,9 +169,11 @@ export function RequestForm({
           <h2>
             {hotel
               ? t("Kars’ta kendinize bir yer ayırın.")
-              : info
-                ? t("Fiyat ve müsaitliği size iletelim.")
-                : t("Birlikte güzel bir rota çizelim.")}
+              : message
+                ? t("Sorunuzu kısaca yazın.")
+                : info
+                  ? t("Fiyat ve müsaitliği size iletelim.")
+                  : t("Birlikte güzel bir rota çizelim.")}
           </h2>
           <p className="muted">
             {hotel && tourName
@@ -133,12 +183,18 @@ export function RequestForm({
                 )
               : hotel
                 ? t("Tarihlerinizi paylaşın, anlaşmalı otellerimiz için konaklama seçeneklerinizi birlikte planlayalım.")
-                : info
+                : message
                   ? t(
-                      "{tour} için düşündüğünüz tarihi ve kişi sayısını yazın; fiyat, program ve boş koltuk bilgisiyle size dönelim.",
-                      { tour: tourName! },
+                      "Tur, transfer, konaklama ya da rezervasyonunuzla ilgili her şeyi sorabilirsiniz; ekibimiz size dönsün.",
                     )
-                  : t("Tarihinizi ve grubunuzu paylaşın. Size uygun programı birlikte netleştirelim.")}
+                  : info
+                    ? t(
+                        "{tour} için düşündüğünüz tarihi ve kişi sayısını yazın; fiyat, program ve boş koltuk bilgisiyle size dönelim.",
+                        { tour: tourName! },
+                      )
+                    : t(
+                        "Tarihinizi ve grubunuzu paylaşın. Size uygun programı birlikte netleştirelim.",
+                      )}
           </p>
           {hotels.length > 0 && (
             <label className="field">
@@ -167,28 +223,76 @@ export function RequestForm({
             {t("E-posta adresiniz")}
             <input type="email" name="email" autoComplete="email" required maxLength={254} />
           </label>
-          <div className="form-grid">
-            <label className="field">
-              {hotel ? t("Giriş tarihi") : t("Planlanan tarih")}
-              <input name="checkIn" type="date" min={today()} defaultValue={initialCheckIn} required />
-            </label>
-            {hotel ? (
+          {!message && (
+            <div className="form-grid">
               <label className="field">
-                {t("Çıkış tarihi")}
-                <input name="checkOut" type="date" min={today()} required />
+                {hotel ? t("Giriş tarihi") : t("Planlanan tarih")}
+                <input
+                  name="checkIn"
+                  type="date"
+                  min={today()}
+                  value={checkIn}
+                  onChange={(e) => {
+                    setCheckIn(e.target.value);
+                    checkDates(e.target.value, checkOut);
+                  }}
+                  required
+                />
               </label>
-            ) : null}
-            <label className="field">
-              {t("Kişi sayısı")}
-              <input name="guests" type="number" min={1} max={50} defaultValue={initialGuests} required />
-            </label>
-            {hotel && (
+              {hotel ? (
+                <label className="field">
+                  {t("Çıkış tarihi")}
+                  <input
+                    name="checkOut"
+                    type="date"
+                    min={checkIn ? nextDay(checkIn) : today()}
+                    value={checkOut}
+                    onChange={(e) => {
+                      setCheckOut(e.target.value);
+                      checkDates(checkIn, e.target.value);
+                    }}
+                    aria-invalid={dateError ? true : undefined}
+                    aria-describedby={
+                      dateError ? "request-checkout-error" : undefined
+                    }
+                    required
+                  />
+                  {dateError && (
+                    <small
+                      className="field-error"
+                      id="request-checkout-error"
+                      role="alert"
+                    >
+                      {t(dateError)}
+                    </small>
+                  )}
+                </label>
+              ) : null}
               <label className="field">
-                {t("Bunlardan çocuk (isteğe bağlı)")}
-                <input name="children" type="number" min={0} max={20} defaultValue={0} />
+                {t("Kişi sayısı")}
+                <input
+                  name="guests"
+                  type="number"
+                  min={1}
+                  max={50}
+                  defaultValue={initialGuests}
+                  required
+                />
               </label>
-            )}
-          </div>
+              {hotel && (
+                <label className="field">
+                  {t("Bunlardan çocuk (isteğe bağlı)")}
+                  <input
+                    name="children"
+                    type="number"
+                    min={0}
+                    max={20}
+                    defaultValue={0}
+                  />
+                </label>
+              )}
+            </div>
+          )}
           {hotel && (
             <div className="form-grid request-rooms">
               <label className="field">
@@ -219,18 +323,24 @@ export function RequestForm({
             </div>
           )}
           <label className="field">
-            {t("Eklemek istedikleriniz")}
+            {message ? t("Mesajınız") : t("Eklemek istedikleriniz")}
             <textarea
               name="notes"
               defaultValue={initialNotes}
-              rows={3}
+              rows={message ? 5 : 3}
               maxLength={2000}
+              minLength={message ? 2 : undefined}
+              required={message}
               placeholder={
                 hotel
                   ? t("Konum, kahvaltı, erken giriş gibi tercihleriniz…")
-                  : info
-                    ? t("Merak ettikleriniz: fiyat, kalkış noktası, çocuk indirimi…")
-                    : t("Oda, ulaşım veya tur tercihiniz…")
+                  : message
+                    ? t("Sorunuzu ya da isteğinizi yazın…")
+                    : info
+                      ? t(
+                          "Merak ettikleriniz: fiyat, kalkış noktası, çocuk indirimi…",
+                        )
+                      : t("Oda, ulaşım veya tur tercihiniz…")
               }
             />
           </label>
@@ -245,9 +355,14 @@ export function RequestForm({
               )}
             </span>
           </label>
-          <div className="inline-note">
-            <CalendarDays size={17} /> {t("Kesin rezervasyon ve ödeme, müsaitlik teyidinden sonra yapılır.")}
-          </div>
+          {!message && (
+            <div className="inline-note">
+              <CalendarDays size={17} />{" "}
+              {t(
+                "Kesin rezervasyon ve ödeme, müsaitlik teyidinden sonra yapılır.",
+              )}
+            </div>
+          )}
           {human.widget}
           {error && (
             <p className="error" role="alert">
@@ -259,13 +374,17 @@ export function RequestForm({
               <>
                 <LoaderCircle className="spin" size={17} /> {t("Kaydediliyor")}
               </>
+            ) : message ? (
+              t("Mesajımı gönder")
             ) : (
               t("Talebimi gönder")
             )}
           </button>
-          <small className="form-foot">
-            <ShieldCheck size={14} /> {t("Bu aşamada ödeme alınmaz.")}
-          </small>
+          {!message && (
+            <small className="form-foot">
+              <ShieldCheck size={14} /> {t("Bu aşamada ödeme alınmaz.")}
+            </small>
+          )}
         </form>
       )}
     </Modal>

@@ -140,3 +140,49 @@ test("tour info request carries the tour name and requires a tour", async (t) =>
   const { tourId, ...noTour } = ask;
   assert.equal((await call("/requests", noTour)).status, 400);
 });
+
+test("contact page message needs only contact details and a message", async (t) => {
+  const { store, call } = await fixture(t);
+  const msg = {
+    kind: "message",
+    name: "Mesaj Misafir",
+    email: "mesaj@example.com",
+    phone: "05551112233",
+    notes: "Aralık sonu için 5 kişilik grup sorusu.",
+    consent: true,
+  };
+  const r = await call("/requests", msg);
+  assert.equal(r.status, 201, JSON.stringify(r.json));
+  const [row] = (await store.dashboard()).requests;
+  assert.equal(row.kind, "message");
+  assert.equal(row.body.checkIn, undefined);
+  const outbox = await store.db.find("notification_outbox", {});
+  const agency = outbox.find((m) => m.recipient === "ekip@rotakars.test");
+  assert.match(agency.subject, /İletişim mesajı: TL-/);
+  assert.match(agency.body, /Not: Aralık sonu için 5 kişilik grup sorusu\./);
+  assert.doesNotMatch(agency.body, /Kişi:|Tarih:/);
+  const customer = outbox.find((m) => m.recipient === "mesaj@example.com");
+  assert.match(customer.body, /Mesajınızı aldık/);
+  assert.doesNotMatch(customer.body, /kesin rezervasyon/);
+  // Boş mesaj kabul edilmez.
+  const empty = await call("/requests", { ...msg, notes: " " });
+  assert.equal(empty.status, 400);
+  assert.equal(empty.json.message, "Mesajınızı yazın.");
+});
+
+test("other request kinds still require a date and a guest count", async (t) => {
+  const { call } = await fixture(t);
+  const { checkIn, ...noDate } = stay;
+  const a = await call("/requests", noDate);
+  assert.equal(a.status, 400);
+  assert.equal(a.json.message, "Bir tarih seçin.");
+  const { guests, ...noGuests } = stay;
+  const b = await call("/requests", noGuests);
+  assert.equal(b.status, 400);
+  assert.equal(b.json.message, "Kişi sayısını yazın.");
+  const back = await call("/requests", { ...stay, checkOut: stay.checkIn });
+  assert.equal(
+    back.json.message,
+    "Çıkış tarihi giriş tarihinden sonra olmalıdır.",
+  );
+});

@@ -2138,6 +2138,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
           initialDateId={demandPick?.id}
           departureLabel={departure ? `${dateLabel(departure.date)} · ${departure.start_time}` : undefined}
           initialCount={count}
+          available={interest === "waitlist" ? departure?.available : undefined}
           onClose={() => setInterest(null)}
         />
       )}
