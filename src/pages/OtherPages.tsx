@@ -549,7 +549,7 @@ export function Information({ catalog }: { catalog: Catalog }) {
           </li>
           <li>
             <strong>Üyelik:</strong> hesap bilgileri, güvenli özetlenmiş parola,
-            kupon ve davet kayıtları; Google, Facebook veya Apple ile girişte
+            kupon ve davet kayıtları; Google veya Facebook ile girişte
             sağlayıcının ilettiği ad, e-posta ve hesap kimliği; “Yol
             arkadaşlarım” bölümüne kaydettiğiniz en çok 10 kişinin adı, uyruğu,
             cinsiyeti ve kimlik / pasaport numarası.
@@ -707,11 +707,6 @@ export function Information({ catalog }: { catalog: Catalog }) {
                 <td>ABD</td>
               </tr>
               <tr>
-                <td>Apple</td>
-                <td>Apple ile giriş</td>
-                <td>ABD</td>
-              </tr>
-              <tr>
                 <td>E-posta sağlayıcısı</td>
                 <td>Rezervasyon, doğrulama ve bildirim e-postaları</td>
                 <td>Sağlayıcıya göre</td>
@@ -835,7 +830,7 @@ export function Information({ catalog }: { catalog: Catalog }) {
               <tr>
                 <td>rota_oauth</td>
                 <td>Çerez, birinci taraf</td>
-                <td>Google, Facebook veya Apple ile girişte güvenlik doğrulaması</td>
+                <td>Google veya Facebook ile girişte güvenlik doğrulaması</td>
                 <td>10 dakika</td>
               </tr>
               <tr>

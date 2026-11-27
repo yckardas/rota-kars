@@ -52,7 +52,7 @@ Railway MongoDB (replica set) kurulumu, dağıtım hazırlığı, hesap güvenli
 - Parola korumalı yerel yönetim paneli.
 - Dört hizmet için tıklanabilir detay ve teklif talebi sayfaları.
 - E-posta/parola ile üyelik, e-posta doğrulama/parola yenileme altyapısı, profil, hesap başına tek şans çarkı, yönetilebilir %5/%10/%15 kuponlar, davet sonrası iki hesaba %10 ödül ve rezervasyonda tek kuponla sunucuda fiyat hesabı.
-- Google, Apple ve Facebook sosyal giriş/hesap bağlama kodu; firma OAuth bilgileri yokken butonlar hazırlık durumundadır.
+- Google ve Facebook sosyal giriş/hesap bağlama kodu; firma OAuth bilgileri yokken butonlar hazırlık durumundadır.
 - Gerçek destinasyon fotoğrafları ve `/gorsel-kaynaklari` altında yazar/lisans atıfları.
 
 ## Henüz bağlanmayan servisler
@@ -63,7 +63,7 @@ Railway MongoDB (replica set) kurulumu, dağıtım hazırlığı, hesap güvenli
 
 **Anlaşmalı oteller:** Otel adları ve ortaklık teyitleri henüz verilmedi. Liste boş bırakıldı. Konaklama talebi çalışır; gerçek oteller panelden eklenebilir. Konaklama fotoğrafı temsilidir.
 
-**Sosyal girişler:** Google/Apple/Meta uygulama anahtarları tanımlı değildir. E-postayla üyelik çalışır; e-posta doğrulama ve parola sıfırlama gönderimi bağlı değildir. Kurulum ve kampanya kuralları: [MEMBERSHIP-AND-OPERATIONS.md](docs/MEMBERSHIP-AND-OPERATIONS.md).
+**Sosyal girişler:** Google/Meta uygulama anahtarları tanımlı değildir. E-postayla üyelik çalışır; e-posta doğrulama ve parola sıfırlama gönderimi bağlı değildir. Kurulum ve kampanya kuralları: [MEMBERSHIP-AND-OPERATIONS.md](docs/MEMBERSHIP-AND-OPERATIONS.md).
 
 **Bildirimler:** Kuyruklu e-posta altyapısı rezervasyon/onay/hareket hatırlatması/buluşma güncellemesi ve tur sonrası yorum isteği üretir. SMTP tanımlı değilken mesajlar bekler, gönderilmiş sayılmaz. SMS sağlayıcısı bağlı değildir.
 

@@ -166,27 +166,17 @@ function jwt(claims) {
     sign("RSA-SHA256", Buffer.from(data), rsa.privateKey).toString("base64url")
   );
 }
-for (const provider of ["google", "apple", "facebook"])
+for (const provider of ["google", "facebook"])
   test(
     provider +
       " callback verifies provider identity and binds state to browser",
     async (t) => {
       let nonce,
         wrongAudience = false;
-      const pem = generateKeyPairSync("ec", {
-        namedCurve: "P-256",
-      }).privateKey.export({
-        type: "pkcs8",
-        format: "pem",
-      });
       const env = {
         PUBLIC_BASE_URL: "https://rota.example",
         GOOGLE_AUTH_CLIENT_ID: "client",
         GOOGLE_AUTH_CLIENT_SECRET: "secret",
-        APPLE_CLIENT_ID: "client",
-        APPLE_PRIVATE_KEY: pem,
-        APPLE_TEAM_ID: "team",
-        APPLE_KEY_ID: "key",
         FACEBOOK_APP_ID: "client",
         FACEBOOK_APP_SECRET: "secret",
       };
@@ -227,10 +217,7 @@ for (const provider of ["google", "apple", "facebook"])
                 }
               : {
                   id_token: jwt({
-                    iss:
-                      provider === "apple"
-                        ? "https://appleid.apple.com"
-                        : "https://accounts.google.com",
+                    iss: "https://accounts.google.com",
                     aud: wrongAudience ? "attacker-client" : "client",
                     sub: provider + "-subject",
                     nonce,
@@ -264,30 +251,10 @@ for (const provider of ["google", "apple", "facebook"])
           state: entry.state,
           code: "fixture-code",
         });
-        return fetch(
-          base +
-            "/api/auth/callback/" +
-            provider +
-            (provider === "apple" ? "" : "?" + body),
-          {
-            redirect: "manual",
-            method: provider === "apple" ? "POST" : "GET",
-            headers: {
-              Cookie: binding,
-              ...(provider === "apple"
-                ? {
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    Origin: "https://appleid.apple.com",
-                  }
-                : {}),
-            },
-            ...(provider === "apple"
-              ? {
-                  body,
-                }
-              : {}),
-          },
-        );
+        return fetch(base + "/api/auth/callback/" + provider + "?" + body, {
+          redirect: "manual",
+          headers: { Cookie: binding },
+        });
       }
       const entry = await begin(),
         result = await finish(entry);
@@ -304,7 +271,7 @@ for (const provider of ["google", "apple", "facebook"])
           .includes("error="),
       );
       // İmzalı çerez: yük değiştirilirse veya başka akışın state'i verilirse reddedilir.
-      // (Yalnız Google akışında; Apple'da giriş hız sınırı 10 isteği aşar.)
+      // (Yalnız Google akışında; Facebook'ta giriş hız sınırı 10 isteği aşar.)
       if (provider === "google") {
         const tampered = await begin();
         const [body, mac] = tampered.binding

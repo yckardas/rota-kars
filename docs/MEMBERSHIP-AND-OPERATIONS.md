@@ -46,22 +46,6 @@ GOOGLE_AUTH_CLIENT_SECRET=
 
 Yetkili dönüş adresi yerelde `http://127.0.0.1:5174/api/auth/callback/google`, yayında `https://ALAN_ADI/api/auth/callback/google` olmalı. İzin ekranı test modundaysa deneme hesaplarını ekleyin. Google yanıtında PKCE, tarayıcıya bağlı state, nonce, JWKS imzası, issuer/audience ve süre doğrulanır.
 
-## Apple ile giriş
-
-[Apple web kurulum rehberi](https://developer.apple.com/help/account/capabilities/configure-sign-in-with-apple-for-the-web) üzerinden uygun bir App ID'ye bağlı Services ID, domain/return URL ve Sign in with Apple özel anahtarı gerekir:
-
-```dotenv
-PUBLIC_BASE_URL=https://ALAN_ADI
-APPLE_CLIENT_ID=
-APPLE_TEAM_ID=
-APPLE_KEY_ID=
-APPLE_PRIVATE_KEY=
-```
-
-Return URL: `https://ALAN_ADI/api/auth/callback/apple`. Özel anahtar PEM biçiminde, `.env` içinde tırnaklı ve satır sonları `\n` olacak şekilde saklanır. Private key tarayıcıya gönderilmez. Kısa ömürlü client secret sunucuda imzalanır; Apple token imzası/nonce doğrulanır. `form_post` callback tarayıcıya bağlı, tek kullanımlık state ile korunur.
-
-[Apple dokümanına göre](https://developer.apple.com/documentation/signinwithapple/configuring-your-webpage-for-sign-in-with-apple) localhost veya IP adresi dönüş adresi olamaz. Bu nedenle Apple, yerel HTTP origin ile etkinleştirilmez; gerçek HTTPS alan adında sağlayıcı hesabıyla test edilmelidir.
-
 ## Facebook ile giriş
 
 [Meta Login kurulumunda](https://developers.facebook.com/docs/facebook-login/guides/advanced/manual-flow/) uygulamanın Web sitesi ve Facebook Login ayarlarını, izin ekranını ve **Valid OAuth Redirect URIs** alanını tamamlayın:
@@ -78,4 +62,4 @@ Dönüş: `https://ALAN_ADI/api/auth/callback/facebook`. Uygulama `email public_
 
 Bir sağlayıcı aynı e-postayı döndürse bile mevcut e-posta/parola üyeliğine otomatik bağlanmaz. Kullanıcı önce mevcut hesabına giriş yapar; **Hesabım → Giriş seçeneklerim** üzerinden aynı e-postalı sosyal hesabını bağlar. Başka üyeye ait sağlayıcı kimliği yeniden atanmaz.
 
-Sosyal girişlerin kriptografik akışı imzalı test tokenlarıyla doğrulanmıştır; gerçek Google/Apple/Meta uygulama bilgileri bu projede tanımlı değildir. Butonlar bu nedenle bağlantı bekliyor durumundadır. Anahtarlar tanımlanıp sunucu yeniden başlatılınca ilgili seçenek açılır; bu, sağlayıcının canlı uygulama onayı yerine geçmez.
+Sosyal girişlerin kriptografik akışı imzalı test tokenlarıyla doğrulanmıştır; gerçek Google/Meta uygulama bilgileri bu projede tanımlı değildir. Butonlar bu nedenle bağlantı bekliyor durumundadır. Anahtarlar tanımlanıp sunucu yeniden başlatılınca ilgili seçenek açılır; bu, sağlayıcının canlı uygulama onayı yerine geçmez.
