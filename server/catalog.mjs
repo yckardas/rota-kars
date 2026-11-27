@@ -215,14 +215,20 @@ export const services = [
 ];
 export const fleet = {
   note: "Araçlarımız şoförlü olarak kiralanır. Kaptanlarımız bölgeye hâkim, işinde profesyoneldir.",
-  tourism: ["31+1 Otokar Sultan", "46+1 Mercedes Travego"],
+  tourism: ["27+1 Midibüs", "31+1 Otokar Sultan", "46+1 Mercedes Travego"],
   vip: [
     "4+1 Fiat Egea",
     "9+1 Mercedes Vito",
     "19+1 Mercedes Sprinter",
     "19+1 Volkswagen Crafter",
   ],
-  perks: ["D2 ve B2 belgeli", "Lüks ve klimalı", "Mikrofonlu", "Buzdolaplı"],
+  perks: [
+    "D2 ve B2 belgeli",
+    "Lüks ve klimalı",
+    "Mikrofonlu",
+    "Buzdolaplı",
+    "Portbagajlı",
+  ],
 };
 export const cancellationPolicy =
   "Ödeme yapılmamış ön rezervasyonları istediğiniz zaman ücretsiz iptal edebilirsiniz. Onaylanmış rezervasyonlarda yurt içi turlarda hareketten 3 gün, yurt dışı turlarda 5 gün öncesine kadar iptal ederseniz kapora dahil ödediğiniz tutarın tamamı iade edilir. Bu süreden sonraki iptallerde kapora iade edilmez, fazlası iade edilir; haber vermeden katılmamada ödenen tutar iade edilmez. Turu biz iptal edersek tutarın tamamını geri alırsınız ya da başka bir tarihe geçersiniz.";

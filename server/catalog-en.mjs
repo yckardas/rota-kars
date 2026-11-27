@@ -46,11 +46,13 @@ export const en = {
   },
   fleet: {
     note: "Our vehicles are rented with a driver. Our drivers know the region well and are true professionals.",
+    tourism: ["27+1 Midibus", "31+1 Otokar Sultan", "46+1 Mercedes Travego"],
     perks: [
       "D2 and B2 licensed",
       "Luxury and air-conditioned",
       "Microphone on board",
       "Refrigerator on board",
+      "Roof rack",
     ],
   },
   cancellationPolicy:
