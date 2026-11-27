@@ -58,6 +58,11 @@ export const services = [
     image: "/images/rota-bus.webp",
     imageAlt: "Rota Kars Tur logolu turizm otobüsü",
     text: "Yerli ve yabancı misafirlerimizin transferlerinde zamanlama, konfor ve emniyeti ön planda tutan uzman bir kadro.",
+    gallery: [
+      { src: "/images/araclar/travego-06cpb673.webp", alt: "Mercedes-Benz Travego turizm otobüsü" },
+      { src: "/images/araclar/travego-61s610.webp", alt: "Mercedes-Benz Travego turizm otobüsü" },
+      { src: "/images/araclar/otokar-sultan.webp", alt: "Otokar Sultan midibüs, Kars Garı önünde" },
+    ],
   },
   {
     id: "vip-transfer",
@@ -65,6 +70,11 @@ export const services = [
     image: "/images/rota-bus.webp",
     imageAlt: "Rota Kars Tur logolu turizm otobüsü",
     text: "Özel üretilmiş, prestijli ve konforlu VIP araç filomuzla dilediğiniz destinasyona eğitimli personelle ulaşım.",
+    gallery: [
+      { src: "/images/araclar/mercedes-sprinter.webp", alt: "Mercedes-Benz Sprinter VIP minibüs" },
+      { src: "/images/araclar/fiat-egea.webp", alt: "Fiat Egea Cross binek araç" },
+      { src: "/images/araclar/renault-fluence.webp", alt: "Renault Fluence binek araç" },
+    ],
   },
   {
     id: "kongre-toplanti",
@@ -72,6 +82,10 @@ export const services = [
     image: "/images/rota-bus.webp",
     imageAlt: "Rota Kars Tur logolu turizm otobüsü",
     text: "Fuar, seminer ve toplantı katılımcılarınızın transferleri için dakik ve güvenilir çözüm ortağı.",
+    gallery: [
+      { src: "/images/araclar/otokar-midibus.webp", alt: "Otokar midibüs" },
+      { src: "/images/araclar/isuzu-midibus.webp", alt: "Isuzu midibüs" },
+    ],
   },
   {
     id: "express-tur",
@@ -79,6 +93,10 @@ export const services = [
     image: "/images/tours/ani.webp",
     imageAlt: "Ani’de katedral ve bozkır",
     text: "Gezi, eğitim, kültür, sanat ve eğlence etkinlikleri için size özel planlanan ulaşım.",
+    gallery: [
+      { src: "/images/araclar/vw-crafter-36ea491.webp", alt: "Volkswagen Crafter minibüs" },
+      { src: "/images/araclar/vw-crafter-36ea484.webp", alt: "Volkswagen Crafter minibüs" },
+    ],
   },
 ];
 export const fleet = {

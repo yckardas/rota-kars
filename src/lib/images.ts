@@ -1,6 +1,6 @@
 // Fotoğraflar /images altında WebP olarak iki boyda tutulur: tam boy (≤1400 px)
 // ve "-800" ekli kart boyu. Tarayıcı ekran genişliğine göre uygun olanı seçer.
-const RESPONSIVE = /^\/images\/((?:tours|rehber)\/[\w-]+|ani|rota-bus|stay)\.webp$/;
+const RESPONSIVE = /^\/images\/((?:tours|rehber|araclar)\/[\w-]+|ani|rota-bus|stay)\.webp$/;
 
 export const isIllustrativePhoto = (src: string) => src.endsWith("-temsili.webp");
 

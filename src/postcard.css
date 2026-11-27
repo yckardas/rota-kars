@@ -3552,6 +3552,76 @@ html:has(.kp) {
   font-size: 16px;
   color: var(--kp-ink-2);
 }
+/* Hizmetteki araçlar: firmanın gönderdiği dikey kolajlar, kartpostal gibi beyaz
+   çerçeveli; tıklanınca tam ekran görüntüleyicide açılır. */
+.kp .service-fleet {
+  padding-top: 44px;
+}
+.kp .service-fleet h2 {
+  font-size: clamp(28px, 2.8vw, 36px);
+  margin: 0 0 24px;
+}
+.kp .service-fleet-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+.kp .service-fleet figure {
+  margin: 0;
+  padding: 10px 10px 0;
+  background: var(--kp-card);
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow-sm);
+}
+.kp .service-fleet button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.kp .service-fleet img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+.kp .service-fleet button:hover img {
+  transform: scale(1.02);
+}
+.kp .service-fleet button:focus-visible {
+  outline: 2px solid var(--kp-red);
+  outline-offset: 3px;
+}
+.kp .service-fleet figcaption {
+  padding: 12px 4px 14px;
+  font-size: 15px;
+  font-weight: 500;
+}
+@media (max-width: 1100px) {
+  .kp .service-fleet-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .kp .service-fleet {
+    padding-top: 30px;
+  }
+  .kp .service-fleet-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kp .service-fleet img {
+    transition: none;
+  }
+}
 .kp .legal-toc a {
   font-size: 14px;
 }
