@@ -128,6 +128,53 @@ test("announcement strip: owner only, safe links, shown only when on", async (t)
   await call("/admin/content/announcement", { body: { enabled: false, text: "", textEn: "", link: "" }, cookie: owner });
 });
 
+test("service vehicles: operations edit from the panel, validated, reset and survive a restart", async (t) => {
+  const { store, call, ops } = await fixture(t);
+  const list = (await call("/admin/content/services", { cookie: ops })).json;
+  assert.ok(list.some((s) => s.id === "vip-transfer"));
+  const before = (await call("/admin/content/services/vip-transfer", { cookie: ops })).json;
+  assert.equal(before.edited, false);
+  assert.equal(before.title, "VIP transfer");
+  assert.ok(before.current.vehicles.length > 0);
+  // Saved defaults are accepted unchanged for every service.
+  for (const { id } of list) {
+    const { defaults } = (await call(`/admin/content/services/${id}`, { cookie: ops })).json;
+    assert.equal((await call(`/admin/content/services/${id}`, { body: defaults, cookie: ops })).status, 200, id);
+    await store.content.resetService(id);
+  }
+  const upload = "/media/0b6f5a1e-2c3d-4e5f-8a9b-0c1d2e3f4a5b.jpg";
+  const next = {
+    vehicles: [{ name: "Mercedes-Benz Sprinter", photos: [upload, before.current.vehicles[0].photos[0]] }, ...before.current.vehicles],
+  };
+  const saved = await call("/admin/content/services/vip-transfer", { body: next, cookie: ops });
+  assert.equal(saved.status, 200);
+  assert.equal(saved.json.edited, true);
+  assert.equal(saved.json.updatedBy, "Operasyon");
+  const vip = () => call("/catalog").then((r) => r.json.services.find((s) => s.id === "vip-transfer"));
+  assert.deepEqual((await vip()).vehicles[0], next.vehicles[0]);
+  // Rejected: no photo, foreign URL, unknown service, too many vehicles.
+  const bad = async (body, id = "vip-transfer") => call(`/admin/content/services/${id}`, { body, cookie: ops });
+  const noPhoto = await bad({ vehicles: [{ name: "Boş araç", photos: [] }] });
+  assert.equal(noPhoto.status, 400);
+  assert.match(JSON.stringify(noPhoto.json), /1\. araç: en az bir fotoğraf/);
+  assert.equal((await bad({ vehicles: [{ name: "Dış", photos: ["https://evil.example/x.jpg"] }] })).status, 400);
+  assert.equal((await bad({ vehicles: [{ name: "X", photos: [upload] }] })).status, 400, "ad en az 2 karakter");
+  assert.equal((await bad({ vehicles: Array(9).fill({ name: "Araç", photos: [upload] }) })).status, 400);
+  assert.equal((await bad(next, "yok-boyle-hizmet")).status, 404);
+  // Restart: catalog falls back to defaults, the saved edit is applied again on boot.
+  const { services } = await import("../server/catalog.mjs");
+  services.find((s) => s.id === "vip-transfer").vehicles = [];
+  await store.content.apply();
+  assert.equal((await vip()).vehicles[0].name, "Mercedes-Benz Sprinter");
+  // An empty list hides the section; reset brings the built-in vehicles back.
+  assert.equal((await bad({ vehicles: [] })).status, 200);
+  assert.deepEqual((await vip()).vehicles, []);
+  const reset = await call("/admin/content/services/vip-transfer/reset", { body: {}, cookie: ops });
+  assert.equal(reset.status, 200);
+  assert.equal(reset.json.edited, false);
+  assert.deepEqual((await vip()).vehicles, before.defaults.vehicles);
+});
+
 test("monthly CSV opens in Excel (BOM, semicolons) and neutralises formulas", async (t) => {
   const { store, owner, root } = await fixture(t);
   const d = await store.departures.save({

@@ -129,8 +129,8 @@ export type Catalog = {
     image: string;
     imageAlt?: string;
     text: string;
-    // Hizmette kullanılan araçların fotoğrafları (dikey kolaj, /images/araclar).
-    gallery?: { src: string; alt: string }[];
+    // Hizmet sayfasındaki araç kartları; ilk fotoğraf kapak (panelden düzenlenir).
+    vehicles?: { name: string; photos: string[] }[];
   }[];
   fleet: { note: string; tourism: string[]; vip: string[]; perks: string[] };
   cancellationPolicy: string;

@@ -32,6 +32,10 @@ type BusinessFields = Record<
   string
 >;
 type AnnouncementFields = { enabled: boolean; text: string; textEn: string; link: string };
+type ServiceVehicle = { name: string; photos: string[] };
+type ServiceFields = { vehicles: ServiceVehicle[] };
+const MAX_VEHICLES = 8,
+  MAX_VEHICLE_PHOTOS = 10;
 type Info<T> = { current: T; defaults: T; edited: boolean; updatedAt: number | null; updatedBy: string | null };
 // Paneldeki tur listesi satırı; custom: panelden kopyalanmış, hidden: taslak (sitede yok).
 type TourMeta = { id: string; name: string; custom: boolean; hidden: boolean; sourceId: string | null };
@@ -78,7 +82,8 @@ export function ContentManager({
   return (
     <>
       <p className="muted">
-        Sitedeki tur metinlerini, fotoğraflarını ve iletişim bilgilerini buradan güncelleyin. Kaydedince site hemen
+        Sitedeki tur metinlerini, fotoğraflarını, hizmet sayfalarındaki araçları ve iletişim bilgilerini buradan
+        güncelleyin. Kaydedince site hemen
         güncellenir; "Varsayılana dön" ile ilk hâline dönebilirsiniz. İngilizce sayfada (/en) değiştirdiğiniz alanlar,
         eski çeviri yerine burada yazdığınız metinle görünür.
       </p>
@@ -91,6 +96,11 @@ export function ContentManager({
               {t.custom ? (t.hidden ? " · taslak" : " · kopya") : ""}
             </option>
           ))}
+          {catalog.services.map((s) => (
+            <option key={s.id} value={"service:" + s.id}>
+              Hizmet araçları · {s.title}
+            </option>
+          ))}
           {isOwner && <option value="business">İletişim bilgileri</option>}
           {isOwner && <option value="announcement">Duyuru şeridi</option>}
         </select>
@@ -99,6 +109,8 @@ export function ContentManager({
         <BusinessEditor key="business" onSaved={onSaved} />
       ) : section === "announcement" ? (
         <AnnouncementEditor key="announcement" onSaved={onSaved} />
+      ) : section.startsWith("service:") ? (
+        <ServiceEditor key={section} id={section.slice("service:".length)} onSaved={onSaved} />
       ) : (
         <TourEditor
           key={section}
@@ -712,6 +724,193 @@ function AnnouncementEditor({ onSaved }: { onSaved: () => void }) {
         {busy ? <LoaderCircle className="spin" size={16} /> : <Check size={16} />}
         Kaydet
       </button>
+    </form>
+  );
+}
+
+// Hizmet sayfasındaki "Bu hizmetteki araçlarımız" kartları: araç adı ve fotoğrafları.
+// Her aracın ilk fotoğrafı kartta kapak olur; ziyaretçi tıklayınca hepsi açılır.
+function ServiceEditor({ id, onSaved }: { id: string; onSaved: () => void }) {
+  const [info, setInfo] = useState<(Info<ServiceFields> & { title: string }) | null>(null),
+    [f, setF] = useState<ServiceFields | null>(null),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(""),
+    [notice, setNotice] = useState("");
+  const load = (d: Info<ServiceFields> & { title: string }) => {
+    setInfo(d);
+    setF(structuredClone(d.current));
+  };
+  useEffect(() => {
+    api<Info<ServiceFields> & { title: string }>("/admin/content/services/" + id)
+      .then(load)
+      .catch((e) => setError(e.message));
+  }, [id]);
+  if (!f || !info)
+    return error ? (
+      <p className="error" role="alert">
+        {error}
+      </p>
+    ) : (
+      <p className="muted">
+        <LoaderCircle className="spin" size={16} /> Yükleniyor…
+      </p>
+    );
+  // Güncel form üzerine yazılır: yükleme sürerken yapılan değişiklikler silinmez.
+  const setVehicle = (i: number, patch: (v: ServiceVehicle) => ServiceVehicle) =>
+    setF((cur) => (cur ? { vehicles: cur.vehicles.map((v, j) => (j === i ? patch(v) : v)) } : cur));
+  const moveVehicle = (i: number, d: number) =>
+    setF((cur) => {
+      if (!cur) return cur;
+      const next = [...cur.vehicles];
+      [next[i], next[i + d]] = [next[i + d], next[i]];
+      return { vehicles: next };
+    });
+  async function save(reset = false) {
+    if (reset && !window.confirm("Bu hizmetin araçları ilk hâline dönsün mü?")) return;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const data = reset
+        ? await post<Info<ServiceFields> & { title: string }>(`/admin/content/services/${id}/reset`, {})
+        : await post<Info<ServiceFields> & { title: string }>("/admin/content/services/" + id, {
+            vehicles: f!.vehicles.map((v) => ({ ...v, name: v.name.trim() })),
+          });
+      load(data);
+      onSaved();
+      setNotice(reset ? "Varsayılan araçlar geri yüklendi." : "Kaydedildi, hizmet sayfası güncellendi.");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <form
+      className="admin-editor content-editor"
+      onSubmit={(e) => {
+        e.preventDefault();
+        save();
+      }}
+    >
+      <div className="content-head">
+        <h2>{info.title} · araçlar</h2>
+        <Saved info={info} />
+      </div>
+      <p className="muted">
+        Hizmet sayfasındaki "Bu hizmetteki araçlarımız" bölümü. Her aracın ilk fotoğrafı kartta kapak olarak görünür;
+        ziyaretçi karta tıklayınca aracın bütün fotoğrafları açılır. Hiç araç kalmazsa bölüm sayfada gösterilmez.
+      </p>
+      {f.vehicles.map((v, i) => (
+        <fieldset className="content-images service-vehicle" key={i}>
+          <legend>{i + 1}. araç</legend>
+          <label className="field">
+            Araç adı
+            <input
+              value={v.name}
+              maxLength={60}
+              required
+              placeholder="Ör. Mercedes-Benz Vito VIP"
+              onChange={(e) => setVehicle(i, (cur) => ({ ...cur, name: e.target.value }))}
+            />
+          </label>
+          <div className="content-gallery">
+            {v.photos.map((src, j) => (
+              <figure key={src + j}>
+                <img src={src} alt={`${v.name || "Araç"}, fotoğraf ${j + 1}`} loading="lazy" />
+                {j === 0 && <span className="service-vehicle-cover">Kapak</span>}
+                <div>
+                  {j > 0 && (
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      aria-label="Kapak yap"
+                      title="Kapak yap"
+                      onClick={() => setVehicle(i, (cur) => ({ ...cur, photos: [src, ...cur.photos.filter((_, k) => k !== j)] }))}
+                    >
+                      <Check size={15} />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    aria-label="Fotoğrafı çıkar"
+                    title="Fotoğrafı çıkar"
+                    onClick={() => setVehicle(i, (cur) => ({ ...cur, photos: cur.photos.filter((_, k) => k !== j) }))}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </figure>
+            ))}
+          </div>
+          {v.photos.length === 0 && <p className="form-hint">Kaydetmeden önce en az bir fotoğraf ekleyin.</p>}
+          <div className="service-vehicle-tools">
+            {v.photos.length < MAX_VEHICLE_PHOTOS && (
+              <MediaUploadButton
+                accept="image/jpeg,image/png,image/webp"
+                label="Fotoğraf ekle"
+                onUploaded={(m) => setVehicle(i, (cur) => ({ ...cur, photos: [...cur.photos, m.url] }))}
+              />
+            )}
+            <span className="itinerary-tools">
+              <button type="button" className="icon-btn" aria-label="Aracı yukarı taşı" disabled={i === 0} onClick={() => moveVehicle(i, -1)}>
+                <ArrowUp size={15} />
+              </button>
+              <button
+                type="button"
+                className="icon-btn"
+                aria-label="Aracı aşağı taşı"
+                disabled={i === f.vehicles.length - 1}
+                onClick={() => moveVehicle(i, 1)}
+              >
+                <ArrowDown size={15} />
+              </button>
+              <button
+                type="button"
+                className="icon-btn"
+                aria-label="Aracı kaldır"
+                onClick={() => {
+                  if (window.confirm(`"${v.name || i + 1 + ". araç"}" bu hizmetten kaldırılsın mı?`))
+                    setF((cur) => (cur ? { vehicles: cur.vehicles.filter((_, k) => k !== i) } : cur));
+                }}
+              >
+                <Trash2 size={15} />
+              </button>
+            </span>
+          </div>
+        </fieldset>
+      ))}
+      {f.vehicles.length < MAX_VEHICLES && (
+        <button
+          type="button"
+          className="text-link"
+          onClick={() => setF((cur) => (cur ? { vehicles: [...cur.vehicles, { name: "", photos: [] }] } : cur))}
+        >
+          <Plus size={15} /> Araç ekle
+        </button>
+      )}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      {notice && (
+        <p className="notice-success" role="status">
+          <Check size={16} /> {notice}
+        </p>
+      )}
+      <div className="flow-actions">
+        {info.edited && (
+          <button type="button" className="text-link" onClick={() => save(true)} disabled={busy}>
+            <RotateCcw size={15} /> Varsayılana dön
+          </button>
+        )}
+        <button className="btn" disabled={busy}>
+          {busy ? <LoaderCircle className="spin" size={16} /> : <Check size={16} />}
+          Kaydet
+        </button>
+      </div>
     </form>
   );
 }

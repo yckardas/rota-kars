@@ -7,6 +7,7 @@ import {
   Bus,
   Clock3,
   ChevronRight,
+  Images,
 } from "lucide-react";
 import type { Catalog } from "../lib/types";
 import { responsive } from "../lib/images";
@@ -127,9 +128,10 @@ const details: Record<
 export function Services({ catalog }: { catalog: Catalog }) {
   const { id } = useParams(),
     [request, setRequest] = useState(false),
-    [photo, setPhoto] = useState<number | null>(null),
+    [vehicle, setVehicle] = useState<number | null>(null),
     service = catalog.services.find((s) => s.id === id),
-    info = id ? details[id] : null;
+    info = id ? details[id] : null,
+    vehicles = (service?.vehicles || []).filter((v) => v.photos.length > 0);
   if (!service || !info)
     return (
       <>
@@ -230,33 +232,40 @@ export function Services({ catalog }: { catalog: Catalog }) {
           </div>
         </div>
       </section>
-      {!!service.gallery?.length && (
+      {vehicles.length > 0 && (
         <section
           className="container service-fleet"
           aria-labelledby="service-fleet-title"
         >
           <h2 id="service-fleet-title">Bu hizmetteki araçlarımız.</h2>
+          {/* Her araç bir kart: kapakta ilk fotoğraf, tıklanınca aracın tüm
+              fotoğrafları tam ekran açılır. */}
           <div className="service-fleet-grid">
-            {service.gallery.map((g, i) => (
-              <figure key={g.src}>
+            {vehicles.map((v, i) => (
+              <figure key={v.photos[0] + i}>
                 <button
                   type="button"
-                  onClick={() => setPhoto(i)}
-                  aria-label={g.alt + " fotoğrafını büyüt"}
+                  onClick={() => setVehicle(i)}
+                  aria-label={`${v.name}: ${v.photos.length} fotoğrafı aç`}
                 >
                   <img
                     {...responsive(
-                      g.src,
+                      v.photos[0],
                       "(max-width: 760px) 100vw, (max-width: 1100px) 50vw, 33vw",
                     )}
-                    alt={g.alt}
+                    alt={v.name}
                     width="800"
-                    height="1067"
+                    height="600"
                     loading="lazy"
                     decoding="async"
                   />
+                  {v.photos.length > 1 && (
+                    <span className="service-fleet-count" aria-hidden="true">
+                      <Images size={14} /> {v.photos.length}
+                    </span>
+                  )}
                 </button>
-                <figcaption>{g.alt}</figcaption>
+                <figcaption>{v.name}</figcaption>
               </figure>
             ))}
           </div>
@@ -304,12 +313,12 @@ export function Services({ catalog }: { catalog: Catalog }) {
           <ArrowRight size={17} />
         </button>
       </section>
-      {photo !== null && service.gallery && (
+      {vehicle !== null && vehicles[vehicle] && (
         <Lightbox
-          images={service.gallery.map((g) => g.src)}
-          start={photo}
-          alt={service.title + " araçları"}
-          onClose={() => setPhoto(null)}
+          images={vehicles[vehicle].photos}
+          start={0}
+          alt={vehicles[vehicle].name}
+          onClose={() => setVehicle(null)}
         />
       )}
       {request && (

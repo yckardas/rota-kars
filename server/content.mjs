@@ -1,10 +1,10 @@
-// Panelden düzenlenen site içerikleri: tur metinleri/fotoğrafları, iletişim bilgileri ve
-// sitenin en üstündeki duyuru şeridi.
+// Panelden düzenlenen site içerikleri: tur metinleri/fotoğrafları, hizmet sayfalarındaki
+// araçlar, iletişim bilgileri ve sitenin en üstündeki duyuru şeridi.
 // Varsayılanlar catalog.mjs'de kalır; düzenlemeler "site_content" koleksiyonunda tutulur
 // ve açılışta/kayıtta katalogdaki nesnelerin üstüne yazılır. Böylece site, SEO etiketleri,
 // sohbet botu ve bildirimler aynı güncel metni kullanır. (Tek sunucu örneği varsayılır.)
 import { isDeepStrictEqual } from "node:util";
-import { tours, business } from "./catalog.mjs";
+import { tours, business, services } from "./catalog.mjs";
 import { en } from "./catalog-en.mjs";
 import { AppError } from "./store.mjs";
 
@@ -50,6 +50,8 @@ export const BUSINESS_FIELDS = [
 // Sitenin en üstündeki duyuru şeridi (kampanya, yeni rota, bayram programı...).
 // Kapalıyken ya da metin boşken sitede görünmez.
 export const ANNOUNCEMENT_FIELDS = ["enabled", "text", "textEn", "link"];
+// Hizmet sayfasındaki araç kartları: [{ name, photos: [yol, ...] }], ilk fotoğraf kapak.
+export const SERVICE_FIELDS = ["vehicles"];
 const DEFAULT_ANNOUNCEMENT = { enabled: false, text: "", textEn: "", link: "" };
 export const announcement = structuredClone(DEFAULT_ANNOUNCEMENT);
 const pick = (obj, keys) => Object.fromEntries(keys.filter((k) => obj[k] !== undefined).map((k) => [k, structuredClone(obj[k])]));
@@ -57,6 +59,7 @@ const DEFAULT_TOURS = new Map(
   tours.map((t) => [t.id, { minParticipants: 0, minNoticeHours: 0, documents: [], cardLabel: "", ...pick(t, TOUR_FIELDS) }]),
 );
 const DEFAULT_BUSINESS = pick(business, BUSINESS_FIELDS);
+const DEFAULT_SERVICES = new Map(services.map((s) => [s.id, { vehicles: [], ...pick(s, SERVICE_FIELDS) }]));
 // Kod içindeki turlar; panelden kopyalanan turlar (custom_tours) bunlara eklenir.
 const BUILT_IN = new Set(tours.map((t) => t.id));
 // Kopyaya kaynaktan geçen, panelde düzenlenmeyen alanlar.
@@ -137,6 +140,8 @@ export async function createContent(db, { clock = Date.now } = {}) {
       // Kopyada yurt dışı/yurt içi kategoriden gelir (ücretsiz iptal süresi, sözleşme dili).
       if (tour.custom) tour.abroad = tour.category === "Yurt dışı";
     }
+    for (const service of services)
+      Object.assign(service, structuredClone(DEFAULT_SERVICES.get(service.id)), docs.get("service:" + service.id)?.fields || {});
     Object.assign(business, structuredClone(DEFAULT_BUSINESS), docs.get("business")?.fields || {});
     Object.assign(announcement, structuredClone(DEFAULT_ANNOUNCEMENT), docs.get("announcement")?.fields || {});
   }
@@ -240,6 +245,31 @@ export async function createContent(db, { clock = Date.now } = {}) {
       else await db.remove("site_content", { _id: "tour:" + id });
       await apply();
       return this.tour(id);
+    },
+    listServices() {
+      return services.map((s) => ({ id: s.id, title: s.title }));
+    },
+    async service(id) {
+      const service = services.find((s) => s.id === id);
+      if (!service) throw new AppError(404, "Hizmet bulunamadı.");
+      return { ...(await info("service:" + id, pick(service, SERVICE_FIELDS), DEFAULT_SERVICES.get(id))), title: service.title };
+    },
+    async saveService(id, fields, actor) {
+      if (!DEFAULT_SERVICES.has(id)) throw new AppError(404, "Hizmet bulunamadı.");
+      await db.upsert("site_content", "service:" + id, {
+        id: "service:" + id,
+        fields: pick(fields, SERVICE_FIELDS),
+        updated_at: clock(),
+        updated_by: actor?.name || null,
+      });
+      await apply();
+      return this.service(id);
+    },
+    async resetService(id) {
+      if (!DEFAULT_SERVICES.has(id)) throw new AppError(404, "Hizmet bulunamadı.");
+      await db.remove("site_content", { _id: "service:" + id });
+      await apply();
+      return this.service(id);
     },
     async business() {
       return info("business", pick(business, BUSINESS_FIELDS), DEFAULT_BUSINESS);
