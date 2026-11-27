@@ -239,6 +239,8 @@ export type Reservation = {
   discount_amount?: number;
   transfer?: PricedTransfer | null;
   transfer_amount?: number;
+  // Yolcu çıkarmada kesilen kapora payı; toplama dahildir.
+  cancellation_fee?: number;
   reference: string;
   departure_id: string;
   email: string;

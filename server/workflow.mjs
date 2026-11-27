@@ -1,11 +1,11 @@
-import { transferLine } from "./transfer.mjs";
+import { normalizeTransfer, tierFor, transferLine } from "./transfer.mjs";
 import { randomBytes, randomUUID } from "node:crypto";
 import { AppError } from "./store.mjs";
 import { fromJson } from "./database.mjs";
-import { depositFor } from "./payments.mjs";
+import { DEPOSIT_PERCENT, depositFor } from "./payments.mjs";
 import { localDate } from "./departures.mjs";
 import { tours, business } from "./catalog.mjs";
-import { LEGAL_VERSION, contractText, legalDataFromReservation, preInfoText } from "./legal.mjs";
+import { LEGAL_VERSION, cancellationQuote, contractText, legalDataFromReservation, preInfoText } from "./legal.mjs";
 import { countryName } from "./passenger-id.mjs";
 import { buildFinance, tourRows } from "./finance.mjs";
 const longExpiry = (now) => now + 365 * 86400000;
@@ -13,7 +13,7 @@ const MANUAL_METHODS = ["cash", "bank_transfer", "pos"];
 const tl = (kurus) => (kurus / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 });
 export async function createWorkflow(
   db,
-  { clock, tx, departures, members, notifications, env, cleanup, pii },
+  { clock, tx, departures, members, notifications, env, cleanup, pii, operations },
 ) {
   await Promise.all([
     db.index(
@@ -86,13 +86,20 @@ export async function createWorkflow(
   // Telefonla alınan kayıtlarda e-posta olmayabilir: o zaman müşteriye e-posta gitmez.
   // ticket: true → mail kısa bilet kartı olarak gider (onay/ön rezervasyon);
   // documents: [{ title, filename, text }] PDF eki olur, gövdeye yazılmaz.
-  const notify = async (r, event, text, dedupeKey = event + ":" + r.reference, { ticket = false, documents = null } = {}) =>
+  // extra: konu satırına girmeyen ayrıntı; gövdede başlığın altına yazılır.
+  const notify = async (
+    r,
+    event,
+    text,
+    dedupeKey = event + ":" + r.reference,
+    { ticket = false, documents = null, extra = "" } = {},
+  ) =>
     r.email &&
     notifications.enqueue({
       email: r.email,
       subject: "Rota Kars · " + text,
       body:
-        `Merhaba ${r.name},\n${r.reference} · ${tourName(r)}\nTarih: ${r.date} · Saat: ${r.start_time}\nBuluşma: ${r.pickup}\n${text}\nKoltuklar: ${r.seats.join(", ")}.` +
+        `Merhaba ${r.name},\n${r.reference} · ${tourName(r)}\nTarih: ${r.date} · Saat: ${r.start_time}\nBuluşma: ${r.pickup}\n${text}\n${extra ? extra + "\n" : ""}Koltuklar: ${r.seats.join(", ")}.` +
         (r.transfer ? `\n${transferLine(r.transfer)}.` : "") +
         (documents?.length ? `\nEkler: ${documents.map((d) => d.title).join(", ")} (PDF).` : ""),
       actionUrl: (env.PUBLIC_BASE_URL || "") + "/bilet/" + r.ticket_token,
@@ -148,6 +155,71 @@ export async function createWorkflow(
       kind,
       dedupeKey: kind + ":" + r.reference,
     });
+  // Yolcu çıkarma (kısmi iptal) hesabı. Kişi başı bedel kayıttaki sözleşme fiyatıdır (tur
+  // fiyatı sonradan değişmiş olsa da). Yüzde kuponu kalan yolculara yeniden uygulanır, TL
+  // kuponu kalan bedeli aşmayacak şekilde korunur. Transfer grup fiyatıdır: kişi kademesi
+  // değişirse turun güncel tablosundan yeniden fiyatlanır ama eski tutarı aşmaz; fiyat
+  // yoksa aynen kalır. Müşteri isteğinde kesintisiz iptal süresi geçtiyse çıkan yolcuların
+  // payının kaporası (tam iptaldeki gibi en çok net tahsilat kadar) kesinti olarak toplamda
+  // kalır; acente kararıyla (waive) kesinti yapılmaz.
+  const removalPlan = async (r, seats, { waive = false } = {}) => {
+    if (!["pending_agency", "confirmed"].includes(r.status))
+      throw new AppError(409, "Bu kayıttan yolcu çıkarılamaz.");
+    const removed = [...new Set(seats)];
+    if (!removed.length || removed.length !== seats.length || removed.some((n) => !r.seats.includes(n)))
+      throw new AppError(400, "Çıkarılacak yolcuları rezervasyondaki koltuklardan seçin.");
+    if (removed.length >= r.seats.length)
+      throw new AppError(400, "Bütün yolcular çıkarılamaz; rezervasyonun tamamı için İptal'i kullanın.");
+    const keep = r.seats.map((_, i) => i).filter((i) => !removed.includes(r.seats[i])),
+      count = r.seats.length,
+      oldTransfer = r.transfer_amount || 0,
+      kept = r.discount_amount || 0,
+      oldFee = r.cancellation_fee || 0,
+      oldSubtotal = r.subtotal ?? r.total - oldTransfer + kept - oldFee,
+      subtotal = Math.round((oldSubtotal * keep.length) / count),
+      discount = r.discount_percent
+        ? Math.min(kept, Math.round((subtotal * r.discount_percent) / 100))
+        : Math.min(kept, subtotal);
+    let transfer = r.transfer || null;
+    const tier = transfer && tierFor(keep.length);
+    if (tier && tier.id !== transfer.tier) {
+      const config = normalizeTransfer((await operations?.get(r.tourId))?.transfer),
+        table = transfer.direction === "both" ? "roundTrip" : "oneWay",
+        price = config.enabled ? config[table]?.[transfer.destination || "kars"]?.[transfer.point]?.[tier.id] : null;
+      if (price)
+        transfer = { ...transfer, tier: tier.id, tierLabel: tier.label, amount: Math.min(price, transfer.amount) };
+    }
+    const base = subtotal - discount + (transfer?.amount || 0),
+      share = r.total - oldFee - base,
+      q = cancellationQuote({
+        tour: tours.find((t) => t.id === r.tourId),
+        date: r.date,
+        startTime: r.start_time,
+        total: share,
+        netPaid: r.net_paid,
+        now: clock(),
+        depositPercent: DEPOSIT_PERCENT,
+      }),
+      fee = waive ? 0 : q.customer.retained,
+      total = base + oldFee + fee;
+    return {
+      seats: removed,
+      names: removed.map((n) => r.passengers[r.seats.indexOf(n)]),
+      keep,
+      subtotal,
+      discount,
+      transfer,
+      share,
+      late: q.late,
+      freeUntil: q.freeUntil,
+      fee,
+      total,
+      // Turda ödenecek kayıt kapora istemez; tam ödeme tam, kapora %30 kalır.
+      deposit: r.payment_mode === "on_tour" ? 0 : r.deposit === r.total ? total : depositFor(total),
+      // Yeni bedeli aşan tahsilat iade edilebilir.
+      refund: Math.max(0, r.net_paid - total),
+    };
+  };
   const api = {
     async get(reference, { fresh = true } = {}) {
       if (fresh) await cleanup();
@@ -505,17 +577,19 @@ export async function createWorkflow(
         // değişmiş olsa da aynen kalır. Başka sefere taşımada bedel yeni seferin fiyatıyla
         // hesaplanır; yüzde kuponu yeniden uygulanır, TL kuponu tutarıyla korunur.
         // Transfer bedeli taşımada aynen kalır (kupon yalnız tur bedeline uygulanır).
+        // Yolcu çıkarmadan kalan iptal kesintisi (cancellation_fee) taşımada da toplamda kalır.
         const sameDeparture = r.departure_id === departureId,
           transfer = r.transfer_amount || 0,
           kept = r.discount_amount || 0,
-          subtotal = sameDeparture ? (r.subtotal ?? r.total - transfer + kept) : d.price * seats.length,
+          fee = r.cancellation_fee || 0,
+          subtotal = sameDeparture ? (r.subtotal ?? r.total - transfer + kept - fee) : d.price * seats.length,
           discount = sameDeparture
             ? kept
             : r.discount_percent
               ? Math.round((subtotal * r.discount_percent) / 100)
               : Math.min(kept, subtotal),
           tourTotal = subtotal - discount,
-          total = sameDeparture ? r.total : tourTotal + transfer;
+          total = sameDeparture ? r.total : tourTotal + transfer + fee;
         if (r.net_paid > total)
           throw new AppError(
             409,
@@ -619,6 +693,85 @@ export async function createWorkflow(
         );
         await audit(r, "passengers_updated", {});
         return api.get(reference);
+      });
+    },
+    // Yolcu çıkarma (kısmi iptal) önizlemesi: panel penceresi ve işlemin kendisi aynı
+    // hesabı kullanır. Müşteri isteği (kurallara göre) ve acente kararı (kesintisiz) ayrı döner.
+    async removalQuote(reference, seats) {
+      const r = await api.get(reference),
+        customer = await removalPlan(r, seats),
+        agency = await removalPlan(r, seats, { waive: true });
+      return {
+        reference: r.reference,
+        seats: customer.seats,
+        names: customer.names,
+        netPaid: r.net_paid,
+        totalBefore: r.total,
+        share: customer.share,
+        late: customer.late,
+        freeUntil: customer.freeUntil,
+        transferBefore: r.transfer?.amount || 0,
+        transfer: customer.transfer
+          ? { amount: customer.transfer.amount, tierLabel: customer.transfer.tierLabel }
+          : null,
+        customer: { fee: customer.fee, total: customer.total, refund: customer.refund },
+        agency: { fee: agency.fee, total: agency.total, refund: agency.refund },
+      };
+    },
+    // Seçilen koltuklardaki yolcular rezervasyondan çıkar: koltukları boşalır (bekleme
+    // listesine sıradaki taramada haber gider), bedel kalan yolculara göre yeniden yazılır,
+    // müşteriye e-posta gider. İade burada yapılmaz (app.mjs'de, iptaldeki gibi).
+    async removePassengers(reference, seats, { waive = false, refundNote = "" } = {}) {
+      return tx(async () => {
+        await cleanup();
+        const r = await api.get(reference),
+          plan = await removalPlan(r, seats, { waive }),
+          details = plan.keep.map((i) => r.passenger_details?.[i] ?? null);
+        await db.update(
+          "reservations",
+          { _id: r.id },
+          {
+            seats: plan.keep.map((i) => r.seats[i]),
+            passengers: plan.keep.map((i) => r.passengers[i]),
+            passenger_details: pii ? pii.sealDetails(details) : details,
+            subtotal: plan.subtotal,
+            discount_amount: plan.discount,
+            transfer: plan.transfer,
+            transfer_amount: plan.transfer?.amount || 0,
+            total: plan.total,
+            deposit: plan.deposit,
+            cancellation_fee: (r.cancellation_fee || 0) + plan.fee,
+          },
+        );
+        await db.remove("seat_locks", {
+          _id: { $in: plan.seats.map((n) => `${r.departure_id}:${n}`) },
+          owner: r.reference,
+        });
+        await audit(r, "passengers_removed", {
+          seats: plan.seats,
+          names: plan.names,
+          totalBefore: r.total,
+          totalAfter: plan.total,
+          fee: plan.fee,
+          waived: Boolean(waive),
+        });
+        const updated = await api.get(reference);
+        await notify(
+          updated,
+          "passengers_removed",
+          "Rezervasyonunuz güncellendi.",
+          "passengers_removed:" + r.reference + ":" + randomUUID(),
+          {
+            extra:
+              `Rezervasyondan çıkarılan yolcu: ${plan.names.join(", ")} (koltuk ${plan.seats.join(", ")}).\n` +
+              `Güncel tur bedeli: ${tl(plan.total)} TL (önceki ${tl(r.total)} TL).` +
+              (plan.fee
+                ? `\nKesintisiz iptal süresi geçtiği için çıkarılan yolcuların kapora payı ${tl(plan.fee)} TL iade edilmez.`
+                : "") +
+              (refundNote ? "\n" + refundNote : ""),
+          },
+        );
+        return updated;
       });
     },
     async complete(reference) {

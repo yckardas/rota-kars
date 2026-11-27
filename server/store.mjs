@@ -231,6 +231,7 @@ export async function openStore(
     notifications,
     env,
     pii,
+    operations,
   });
   const interest = await createInterest(db, { clock, tx, departures, operations, notifications, env });
   const uetds = createUetds(db, {

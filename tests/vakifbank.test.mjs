@@ -19,7 +19,7 @@ const NOT_ENROLLED = "4000000000000101";
 const SIM_ENV = { PAYMENT_PROVIDER: "vakifbank", VAKIFBANK_ENV: "simulator" };
 
 async function fixture(t, env = SIM_ENV, options = {}) {
-  const { clock, ...appOptions } = options;
+  const { clock, passengers = ["Ayşe Yılmaz"], ...appOptions } = options;
   const store = await openStore(":memory:", { env, ...(clock ? { clock } : {}) });
   const server = createApp(store, { env, ...appOptions }).listen(0, "127.0.0.1");
   await once(server, "listening");
@@ -45,13 +45,16 @@ async function fixture(t, env = SIM_ENV, options = {}) {
       body: new URLSearchParams(fields),
     });
   const d = (await store.listDepartures("ani-cildir"))[0];
-  const h = await store.hold(d.id, [2]);
+  const h = await store.hold(
+    d.id,
+    passengers.map((_, i) => 2 + i),
+  );
   const r = await store.reserve({
     holdToken: h.token,
     name: "Ayşe Yılmaz",
     email: "ayse@example.com",
     phone: "05551112233",
-    passengers: ["Ayşe Yılmaz"],
+    passengers,
     paymentMode: "deposit",
   });
   const start = async (lang) => {
@@ -584,11 +587,12 @@ const bankXml = (code, detail) =>
   );
 // Kartla kapora ödenmiş rezervasyon + sahip ve operasyon yöneticisi oturumları.
 // bank: iptal/iade isteklerini (Cancel/Refund) yakalayıp yanıtı değiştirmeye yarar.
-async function paidByCard(t, { bank } = {}) {
+async function paidByCard(t, { bank, passengers } = {}) {
   let now = Date.now();
   const sent = [];
   const f = await fixture(t, ADMIN_ENV, {
     clock: () => now,
+    ...(passengers ? { passengers } : {}),
     bankFetch: async (url, init) => {
       const xml = prmstr(init);
       if (/<TransactionType>(Cancel|Refund)</.test(xml)) {
@@ -977,4 +981,47 @@ test("POS tahsilatı ve POS / havale iadesiyle iptal kaydedilir; rapor POS ve on
   const rep = await p.store.workflow.monthReport(month);
   assert.equal(rep.cash.pos, 0);
   assert.equal(rep.cash.card, p.r.deposit);
+});
+
+test("yolcu çıkarma: önizleme, iade sınırı ve bugün yapılamayan karta iade işlemden önce reddedilir", async (t) => {
+  const p = await paidByCard(t, { passengers: ["Ayşe Yılmaz", "Ali Yılmaz", "Can Yılmaz", "Ece Yılmaz"] });
+  const ref = p.r.reference,
+    remove = (body, cookie = p.owner) => p.call(`/admin/reservations/${ref}/remove-passengers`, { body, cookie });
+  // Kalan bakiye ofiste POS ile alındı: kayıt tamamen ödendi.
+  const pos = await p.call(`/admin/reservations/${ref}/payments`, {
+    body: { amount: p.r.total - p.r.deposit, method: "pos", recordedExternally: true },
+    cookie: p.ops,
+  });
+  assert.equal(pos.status, 200, JSON.stringify(pos.json));
+  const q = await p.call(`/admin/reservations/${ref}/removal-quote?seats=3`, { cookie: p.ops });
+  assert.equal(q.status, 200, JSON.stringify(q.json));
+  const unit = p.r.total / 4;
+  assert.deepEqual(q.json.names, ["Ali Yılmaz"]);
+  assert.equal(q.json.agency.total, p.r.total - unit);
+  assert.equal(q.json.agency.refund, unit);
+  assert.equal(q.json.card.paid, p.r.deposit);
+  // Bugün alınan kart ödemesinin bir kısmı iade edilemez: pencere bunu önceden söyler.
+  assert.match(q.json.card.agency, /yalnız tamamıyla iptal/);
+  assert.equal(q.json.canRefundCard, false);
+  assert.equal((await p.call(`/admin/reservations/${ref}/removal-quote?seats=2,3,4,5`, { cookie: p.ops })).status, 400);
+
+  // Karta kısmi iade bugün yapılamaz: yolcu da çıkarılmaz, bankaya bir şey gitmez.
+  const card = await remove({ seats: [3], waive: true, refund: { amount: unit, method: "card" } });
+  assert.equal(card.status, 409);
+  assert.equal(p.sent.length, 0);
+  assert.equal((await p.store.workflow.get(ref)).seats.length, 4);
+  // Operasyon rolü karta iade yapamaz; iade edilebilir tutarı aşan iade reddedilir.
+  assert.equal((await remove({ seats: [3], waive: true, refund: { amount: unit, method: "card" } }, p.ops)).status, 403);
+  assert.equal((await remove({ seats: [3], waive: true, refund: { amount: unit + 1, method: "pos" } }, p.ops)).status, 409);
+  assert.equal((await p.store.workflow.get(ref)).seats.length, 4);
+
+  const ok = await remove({ seats: [3], waive: true, refund: { amount: unit, method: "pos", note: "POS iade" } }, p.ops);
+  assert.equal(ok.status, 200, JSON.stringify(ok.json));
+  assert.equal(ok.json.refund.status, "succeeded");
+  assert.deepEqual(ok.json.reservation.seats, [2, 4, 5]);
+  assert.equal(ok.json.reservation.total, p.r.total - unit);
+  assert.equal(await p.netPaid(), p.r.total - unit);
+  const mail = (await p.store.db.find("notification_outbox")).find((m) => m.kind === "passengers_removed");
+  assert.match(mail.body, /Ali Yılmaz/);
+  assert.match(mail.body, /iadeniz acente tarafından yapıldı/);
 });

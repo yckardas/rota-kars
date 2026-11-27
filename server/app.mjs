@@ -1512,69 +1512,113 @@ export function createApp(
       }),
     ),
   );
-  // İptal, isteğe bağlı olarak iadeyle birlikte. Karta iade bankaya gider (yalnız
-  // sahip); havale / nakit / POS iadesi dışarıda yapılmış işlemin kaydıdır. Karta
-  // iade bugün yapılamayacaksa iptal yapılmadan reddedilir.
+  // İptal ve yolcu çıkarmayla birlikte yapılan iade. Karta iade bankaya gider (yalnız
+  // sahip); havale / nakit / POS iadesi dışarıda yapılmış işlemin kaydıdır.
+  const refundInput = z
+    .object({
+      amount: z.number().int().min(1).max(100000000),
+      method: z.enum(["card", "cash", "bank_transfer", "pos"]),
+      note: z.string().trim().max(200).optional(),
+      externalReference: z.string().trim().max(200).optional(),
+      requestId: z.string().uuid().optional(),
+    })
+    .optional();
+  // İşlemden önce: tutar sınırı, rol ve karta iadenin bugün yapılabilirliği.
+  const checkRefund = async (q, reference, refund, max) => {
+    if (!refund) return;
+    if (refund.amount > max) throw new AppError(409, "İade tutarı iade edilebilir tutarı aşamaz.");
+    if (refund.method === "card") {
+      ownerOnly(q);
+      await payments.checkCardRefund(reference, refund.amount);
+    }
+  };
+  const refundNote = (refund) => {
+    if (!refund) return "";
+    const text = (refund.amount / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 }) + " TL";
+    return refund.method === "card"
+      ? `${text} ödediğiniz karta iade ediliyor; hesabınıza yansıma süresi bankanıza bağlıdır.`
+      : `${text} iadeniz acente tarafından yapıldı.`;
+  };
+  const settleRefund = async (q, reference, refund) => {
+    if (!refund) return null;
+    if (refund.method === "card")
+      try {
+        return await payments.refundToCard(reference, {
+          amount: refund.amount,
+          admin: q.admin,
+          clientIp: clientIp(q),
+        });
+      } catch (e) {
+        return { status: "failed", amount: 0, message: e.message };
+      }
+    await store.workflow.payment(reference, {
+      amount: refund.amount,
+      method: refund.method,
+      externalReference: refund.requestId ? "PANEL-" + refund.requestId : undefined,
+      note: refund.note ?? refund.externalReference ?? "",
+      kind: "refund",
+      by: q.admin,
+    });
+    return { status: "succeeded", amount: refund.amount, message: "İade kaydedildi." };
+  };
+  // İptal, isteğe bağlı olarak iadeyle birlikte. Karta iade bugün yapılamayacaksa iptal
+  // yapılmadan reddedilir.
   app.post(
     "/api/admin/reservations/:reference/cancel",
     requireAdmin,
     route(async (q, r) => {
-      const input = z
-        .object({
-          refund: z
-            .object({
-              amount: z.number().int().min(1).max(100000000),
-              method: z.enum(["card", "cash", "bank_transfer", "pos"]),
-              note: z.string().trim().max(200).optional(),
-              externalReference: z.string().trim().max(200).optional(),
-              requestId: z.string().uuid().optional(),
-            })
-            .optional(),
-        })
-        .parse(q.body || {});
+      const { refund } = z.object({ refund: refundInput }).parse(q.body || {});
       const reference = q.params.reference,
-        refund = input.refund,
         before = await store.workflow.get(reference);
-      if (refund) {
-        if (refund.amount > before.net_paid)
-          throw new AppError(409, "İade tutarı net tahsilatı aşamaz.");
-        if (refund.method === "card") {
-          ownerOnly(q);
-          await payments.checkCardRefund(reference, refund.amount);
-        }
-      }
-      const amountText = refund ? (refund.amount / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 }) + " TL" : "";
-      const cancelled = await store.workflow.cancel(reference, {
-        refundNote: refund
-          ? refund.method === "card"
-            ? `${amountText} ödediğiniz karta iade ediliyor; hesabınıza yansıma süresi bankanıza bağlıdır.`
-            : `${amountText} iadeniz acente tarafından yapıldı.`
-          : "",
-      });
-      let refundResult = null;
-      if (refund?.method === "card")
-        try {
-          refundResult = await payments.refundToCard(reference, {
-            amount: refund.amount,
-            admin: q.admin,
-            clientIp: clientIp(q),
-          });
-        } catch (e) {
-          refundResult = { status: "failed", amount: 0, message: e.message };
-        }
-      else if (refund) {
-        await store.workflow.payment(reference, {
-          amount: refund.amount,
-          method: refund.method,
-          externalReference: refund.requestId ? "PANEL-" + refund.requestId : undefined,
-          note: refund.note ?? refund.externalReference ?? "",
-          kind: "refund",
-          by: q.admin,
-        });
-        refundResult = { status: "succeeded", amount: refund.amount, message: "İade kaydedildi." };
-      }
+      await checkRefund(q, reference, refund, before.net_paid);
+      const cancelled = await store.workflow.cancel(reference, { refundNote: refundNote(refund) });
+      const refundResult = await settleRefund(q, reference, refund);
       r.json({
         reservation: await receipt(refund ? await store.workflow.get(reference) : cancelled, q, env),
+        refund: refundResult,
+      });
+    }),
+  );
+  // Yolcu çıkarma (kısmi iptal) penceresi: seçilen koltuklara göre yeni bedel ve iade önerisi.
+  const seatList = z
+    .array(z.number().int().min(1).max(60))
+    .min(1)
+    .max(53);
+  app.get(
+    "/api/admin/reservations/:reference/removal-quote",
+    requireAdmin,
+    route(async (q, r) => {
+      const seats = seatList.parse(
+        String(q.query.seats || "")
+          .split(",")
+          .filter(Boolean)
+          .map(Number),
+      );
+      r.json({
+        ...(await payments.removalQuote(q.params.reference, seats)),
+        canRefundCard: q.admin.role === "owner",
+      });
+    }),
+  );
+  // Yolcu çıkarma, isteğe bağlı iadeyle birlikte. waive: acente kararı, kesinti yapılmaz.
+  // İade en çok yeni bedeli aşan tahsilat kadardır.
+  app.post(
+    "/api/admin/reservations/:reference/remove-passengers",
+    requireAdmin,
+    route(async (q, r) => {
+      const input = z
+        .object({ seats: seatList, waive: z.boolean().default(false), refund: refundInput })
+        .parse(q.body || {});
+      const reference = q.params.reference,
+        quote = await store.workflow.removalQuote(reference, input.seats);
+      await checkRefund(q, reference, input.refund, quote[input.waive ? "agency" : "customer"].refund);
+      const updated = await store.workflow.removePassengers(reference, input.seats, {
+        waive: input.waive,
+        refundNote: refundNote(input.refund),
+      });
+      const refundResult = await settleRefund(q, reference, input.refund);
+      r.json({
+        reservation: await receipt(input.refund ? await store.workflow.get(reference) : updated, q, env),
         refund: refundResult,
       });
     }),
