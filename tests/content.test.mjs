@@ -343,3 +343,180 @@ test("card ribbon text: optional per tour, panel edit reaches the catalog, 24 ch
   assert.equal((await call("/admin/content/tours/buyuk-azerbaycan", { body: { ...info.current, cardLabel: "x".repeat(25) }, cookie: ops })).status, 400);
   await store.content.resetTour("buyuk-azerbaycan");
 });
+
+test("English fields from the panel: shown on /en, stale warning after a Turkish edit, reset clears them", async (t) => {
+  const { call, ops, root } = await fixture(t);
+  const enTour = async () =>
+    (await (await fetch(root + "/api/catalog")).json()).translations.en.tours[
+      "ani-cildir"
+    ];
+  const enTitle = async () =>
+    (
+      await (
+        await fetch(root + "/en/turlar/ani-cildir", {
+          headers: { Accept: "text/html" },
+        })
+      ).text()
+    ).match(/<title>([^<]*)/)[1];
+  const before = (
+      await call("/admin/content/tours/ani-cildir", { cookie: ops })
+    ).json,
+    original = await enTour();
+  assert.deepEqual(before.en, {}, "henüz İngilizce girilmedi");
+  assert.equal(
+    before.enFallback.subtitle,
+    original.subtitle,
+    "panel eski çeviriyi gösterir",
+  );
+  assert.deepEqual(before.enStale, []);
+  // Türkçe ad ve dahil listesi değişir, İngilizcesi de girilir.
+  const tr = {
+    ...before.current,
+    name: "Ani ve Çıldır Kış Rotası",
+    included: ["Rehber", "Sıcak çay"],
+  };
+  const en = {
+    name: "Ani and Çıldır Winter Route",
+    included: ["Guide", "Hot tea"],
+  };
+  const saved = await call("/admin/content/tours/ani-cildir", {
+    body: { ...tr, en },
+    cookie: ops,
+  });
+  assert.equal(saved.status, 200, JSON.stringify(saved.json));
+  assert.deepEqual(saved.json.en, en);
+  assert.deepEqual(saved.json.enStale, []);
+  let x = await enTour();
+  assert.equal(x.name, en.name, "İngilizce alan dolu: o gösterilir");
+  assert.deepEqual(x.included, en.included);
+  assert.equal(
+    x.subtitle,
+    original.subtitle,
+    "boş alanda Türkçesi değişmediyse eski çeviri",
+  );
+  assert.match(await enTitle(), /^Ani and Çıldır Winter Route: /);
+  // Yalnız Türkçe değişir: İngilizce yine gösterilir, panel uyarır.
+  const tr2 = {
+    ...tr,
+    name: "Ani, Çıldır ve Kars Kış Rotası",
+    summary: "Yepyeni bir Türkçe özet metni.",
+  };
+  const edited = (
+    await call("/admin/content/tours/ani-cildir", {
+      body: { ...tr2, en },
+      cookie: ops,
+    })
+  ).json;
+  assert.deepEqual(edited.enStale, ["name"]);
+  x = await enTour();
+  assert.equal(x.name, en.name);
+  assert.equal(
+    x.summary,
+    tr2.summary,
+    "İngilizcesi ve geçerli eski çevirisi olmayan alan Türkçe",
+  );
+  // Aynı İngilizce yeniden kaydedilince uyarı kalır; "hâlâ doğru" onayıyla kalkar.
+  assert.deepEqual(
+    (
+      await call("/admin/content/tours/ani-cildir", {
+        body: { ...tr2, en },
+        cookie: ops,
+      })
+    ).json.enStale,
+    ["name"],
+  );
+  const confirmed = (
+    await call("/admin/content/tours/ani-cildir", {
+      body: { ...tr2, en, enConfirm: ["name"] },
+      cookie: ops,
+    })
+  ).json;
+  assert.deepEqual(confirmed.enStale, []);
+  // İngilizcesi değiştirilince de uyarı kalkar.
+  const tr3 = { ...tr2, name: "Ani Kış Rotası" };
+  assert.deepEqual(
+    (
+      await call("/admin/content/tours/ani-cildir", {
+        body: { ...tr3, en },
+        cookie: ops,
+      })
+    ).json.enStale,
+    ["name"],
+  );
+  const updated = (
+    await call("/admin/content/tours/ani-cildir", {
+      body: { ...tr3, en: { ...en, name: "Ani Winter Route" } },
+      cookie: ops,
+    })
+  ).json;
+  assert.deepEqual(updated.enStale, []);
+  // "en" göndermeyen (eski) panel kaydı İngilizceyi silmez.
+  assert.equal(
+    (await call("/admin/content/tours/ani-cildir", { body: tr3, cookie: ops }))
+      .json.en.name,
+    "Ani Winter Route",
+  );
+  // Boşaltılan alan siler; eski çeviriyle aynı metin ayrıca saklanmaz.
+  const cleared = (
+    await call("/admin/content/tours/ani-cildir", {
+      body: { ...tr3, en: { name: "", subtitle: original.subtitle } },
+      cookie: ops,
+    })
+  ).json;
+  assert.deepEqual(cleared.en, {});
+  assert.equal(
+    (await enTour()).name,
+    tr3.name,
+    "İngilizce boş, Türkçe değişti: Türkçe görünür",
+  );
+  // Doğrulama: alan adıyla, "İngilizce" önekiyle.
+  const bad = await call("/admin/content/tours/ani-cildir", {
+    body: { ...tr3, en: { name: "a".repeat(81) } },
+    cookie: ops,
+  });
+  assert.equal(bad.status, 400);
+  assert.equal(
+    bad.json.message,
+    "İngilizce tur adı en fazla 80 karakter olabilir.",
+  );
+  assert.equal(bad.json.details[0].field, "en.name");
+  const badStep = await call("/admin/content/tours/ani-cildir", {
+    body: {
+      ...tr3,
+      en: { itinerary: [{ time: "08:00", title: "", text: "x" }] },
+    },
+    cookie: ops,
+  });
+  assert.equal(
+    badStep.json.message,
+    "İngilizce program, 1. adım başlığı boş bırakılamaz.",
+  );
+  // Varsayılana dön İngilizceyi de siler; eski çeviri geri gelir.
+  await call("/admin/content/tours/ani-cildir", {
+    body: { ...tr3, en },
+    cookie: ops,
+  });
+  const reset = (
+    await call("/admin/content/tours/ani-cildir/reset", {
+      body: {},
+      cookie: ops,
+    })
+  ).json;
+  assert.deepEqual(reset.en, {});
+  assert.equal((await enTour()).name, original.name);
+});
+
+test("English category and day-trip duration fall back to the filter words", async (t) => {
+  const { call, ops, root } = await fixture(t);
+  const before = (
+    await call("/admin/content/tours/ani-cildir", { cookie: ops })
+  ).json;
+  await call("/admin/content/tours/ani-cildir", {
+    body: { ...before.current, category: "Doğa", duration: "Günübirlik" },
+    cookie: ops,
+  });
+  const x = (await (await fetch(root + "/api/catalog")).json()).translations.en
+    .tours["ani-cildir"];
+  assert.equal(x.category, "Nature");
+  assert.equal(x.duration, "Day trip");
+});

@@ -44,7 +44,7 @@ import {
   freeCancelDays,
   REFUND_DAYS,
 } from "./legal.mjs";
-import { announcement, currentEn, TOUR_SLUG } from "./content.mjs";
+import { announcement, currentEn, EN_FIELDS, TOUR_SLUG } from "./content.mjs";
 import { attachSocialAuth, cookieValue } from "./social-auth.mjs";
 import { createTurnstile } from "./turnstile.mjs";
 import { fcmHint, webPushEndpointOk } from "./push.mjs";
@@ -263,13 +263,25 @@ const TOUR_LABELS = {
   excluded: "Fiyata dahil değil",
   itinerary: "Program",
   note: "Not",
+  documents: "Gerekli belgeler",
   minParticipants: "Asgari katılımcı sayısı",
   minNoticeHours: "İptal bildirim süresi",
   cardLabel: "Kart şeridi yazısı",
 };
 const STEP_LABELS = { time: "saati", title: "başlığı", text: "açıklaması" };
-const LIST_ITEMS = { gallery: "fotoğraf", included: "madde", excluded: "madde", itinerary: "adım" };
+const LIST_ITEMS = {
+  gallery: "fotoğraf",
+  included: "madde",
+  excluded: "madde",
+  itinerary: "adım",
+  documents: "madde",
+};
 const tourIssueMessage = (issue) => {
+  // İngilizce alanlar (en.name, en.itinerary.0.title...) aynı etiketle, "İngilizce" önekiyle.
+  if (issue.path[0] === "en" && issue.path.length > 1) {
+    const inner = tourIssueMessage({ ...issue, path: issue.path.slice(1) });
+    return "İngilizce " + inner[0].toLocaleLowerCase("tr-TR") + inner.slice(1);
+  }
   const [field, index, part] = issue.path;
   if (issue.code === "custom" || !TOUR_LABELS[field]) return issue.message;
   let label = TOUR_LABELS[field];
@@ -2249,6 +2261,30 @@ export function createApp(
       /^\/(images\/[\w-]+(?:\/[\w-]+)*\.(?:webp|jpe?g|png)|media\/[0-9a-f-]{36}\.(?:jpg|png|webp|avif))$/,
       "Geçersiz görsel yolu.",
     );
+  // Alanların İngilizcesi (/en); boş alan eski çeviriyle ya da Türkçe gösterilir.
+  const tourEnContent = z
+    .object({
+      name: line(80),
+      subtitle: line(140),
+      category: line(30),
+      duration: line(40),
+      location: line(80),
+      season: line(40),
+      departure: line(20),
+      end: line(40),
+      summary: line(1500),
+      included: z.array(line(160).min(1)).max(20),
+      excluded: z.array(line(160).min(1)).max(20),
+      itinerary: z
+        .array(
+          z.object({ time: line(40), title: line(80).min(1), text: line(600) }),
+        )
+        .max(15),
+      note: line(600),
+      documents: z.array(line(300).min(1)).max(12),
+      cardLabel: line(24),
+    })
+    .partial();
   const tourContent = z.object({
     name: line(80).min(3),
     subtitle: line(140),
@@ -2272,6 +2308,8 @@ export function createApp(
     minParticipants: z.number().int().min(0).max(60).default(0),
     minNoticeHours: z.number().int().min(0).max(720).default(0),
     cardLabel: line(24).default(""),
+    en: tourEnContent.optional(),
+    enConfirm: z.array(z.enum(EN_FIELDS)).max(EN_FIELDS.length).optional(),
   }).refine((t) => !t.minParticipants || t.minNoticeHours >= 1, {
     message: "Asgari katılımcı sayısı girildiyse iptal bildirim süresi de girilmeli.",
     path: ["minNoticeHours"],

@@ -2024,6 +2024,49 @@
   background: var(--surface);
 }
 
+/* Site içerikleri: Türkçe / İngilizce sekmesi ve eskiyen İngilizce uyarısı */
+.rk-admin .content-lang {
+  display: flex;
+  flex-wrap: wrap;
+}
+.rk-admin .content-en {
+  display: grid;
+  gap: 14px;
+}
+.rk-admin .content-en-warning,
+.rk-admin .content-en-note.is-warn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  color: var(--ochre);
+}
+.rk-admin .content-en-warning {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--ochre);
+  border-left-width: 4px;
+  border-radius: 6px;
+  background: var(--ochre-wash);
+}
+.rk-admin .content-en-note {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.rk-admin .content-en-note .checkbox-label {
+  font-size: 13px;
+  color: var(--ink);
+}
+.rk-admin .content-en .field small,
+.rk-admin .content-en-source {
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+.rk-admin .content-en-source {
+  grid-column: 1 / -1;
+}
+
 /* Site içerikleri: tur kopyalama ve kopya turun yayın durumu */
 .rk-admin .tour-copy-box,
 .rk-admin .tour-copy-status {

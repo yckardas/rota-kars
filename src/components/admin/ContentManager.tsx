@@ -1,5 +1,17 @@
 import { useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, Check, Copy, Eye, EyeOff, LoaderCircle, Plus, RotateCcw, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  Check,
+  Copy,
+  Eye,
+  EyeOff,
+  LoaderCircle,
+  Plus,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import { api, post } from "../../lib/api";
 import type { Catalog } from "../../lib/types";
 import { MediaUploadButton } from "../MediaUpload";
@@ -39,7 +51,65 @@ const MAX_VEHICLES = 8,
 type Info<T> = { current: T; defaults: T; edited: boolean; updatedAt: number | null; updatedBy: string | null };
 // Paneldeki tur listesi satırı; custom: panelden kopyalanmış, hidden: taslak (sitede yok).
 type TourMeta = { id: string; name: string; custom: boolean; hidden: boolean; sourceId: string | null };
-type TourInfo = Info<TourFields> & { tour?: TourMeta };
+// İngilizce (/en): en = panelde girilen, enFallback = girilmeyen alanda kullanılan eski
+// çeviri, enStale = Türkçesi İngilizceden sonra değişen alanlar (bkz. server/content.mjs).
+type EnKey = (typeof EN_KEYS)[number];
+type EnFields = Partial<Pick<TourFields, EnKey>>;
+type TourInfo = Info<TourFields> & {
+  tour?: TourMeta;
+  en?: EnFields;
+  enFallback?: EnFields;
+  enStale?: EnKey[];
+};
+const EN_KEYS = [
+  "name",
+  "subtitle",
+  "category",
+  "duration",
+  "location",
+  "season",
+  "departure",
+  "end",
+  "summary",
+  "included",
+  "excluded",
+  "itinerary",
+  "note",
+  "documents",
+  "cardLabel",
+] as const;
+const EN_LABELS: Record<EnKey, string> = {
+  name: "Tur adı",
+  subtitle: "Alt başlık",
+  category: "Kategori",
+  duration: "Süre",
+  location: "Güzergâh",
+  season: "Sezon",
+  departure: "Hareket saati",
+  end: "Dönüş saati",
+  summary: "Özet",
+  included: "Fiyata dahil",
+  excluded: "Fiyata dahil değil",
+  itinerary: "Program",
+  note: "Not",
+  documents: "Gerekli belgeler",
+  cardLabel: "Kart şeridi yazısı",
+};
+const LIST_KEYS = ["included", "excluded", "documents"] as const;
+// İngilizce formun düz hâli: liste alanları satır satır metin, program adım adım.
+type EnDraft = Record<Exclude<EnKey, "itinerary">, string> & {
+  itinerary: Itinerary[];
+};
+const toDraft = (x: EnFields): EnDraft => {
+  const d = {} as EnDraft;
+  for (const k of EN_KEYS) {
+    if (k === "itinerary") d.itinerary = structuredClone(x.itinerary || []);
+    else if ((LIST_KEYS as readonly string[]).includes(k))
+      d[k] = ((x[k] as string[] | undefined) || []).join("\n");
+    else d[k] = (x[k] as string | undefined) || "";
+  }
+  return d;
+};
 // Tur adından adres önerisi: "Günübirlik Tiflis" → "gunubirlik-tiflis".
 const slugify = (s: string) =>
   s
@@ -83,9 +153,10 @@ export function ContentManager({
     <>
       <p className="muted">
         Sitedeki tur metinlerini, fotoğraflarını, hizmet sayfalarındaki araçları ve iletişim bilgilerini buradan
-        güncelleyin. Kaydedince site hemen
-        güncellenir; "Varsayılana dön" ile ilk hâline dönebilirsiniz. İngilizce sayfada (/en) değiştirdiğiniz alanlar,
-        eski çeviri yerine burada yazdığınız metinle görünür.
+        güncelleyin. Kaydedince site hemen güncellenir; "Varsayılana dön" ile
+        ilk hâline dönebilirsiniz. İngilizce sayfada (/en) görünen metinleri
+        turun "İngilizce" sekmesinden girin; İngilizcesi girilmeyen alanda
+        Türkçe değişmediyse eski çeviri, yoksa Türkçe görünür.
       </p>
       <label className="field content-picker">
         Düzenlenecek içerik
@@ -161,6 +232,12 @@ function TourEditor({
     [included, setIncluded] = useState(""),
     [excluded, setExcluded] = useState(""),
     [documents, setDocuments] = useState(""),
+    [lang, setLang] = useState<"tr" | "en">("tr"),
+    [enDraft, setEnDraft] = useState<EnDraft | null>(null),
+    // Yalnız elle değiştirilen ya da kayıtta İngilizcesi olan alanlar gönderilir; eski çeviriyle
+    // dolu gelen alan gönderilmez, Türkçesi değişirse sunucu onu kendiliğinden bırakır.
+    [enTouched, setEnTouched] = useState<Set<EnKey>>(new Set()),
+    [enConfirm, setEnConfirm] = useState<Set<EnKey>>(new Set()),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
@@ -170,13 +247,20 @@ function TourEditor({
     setIncluded(data.current.included.join("\n"));
     setExcluded(data.current.excluded.join("\n"));
     setDocuments((data.current.documents || []).join("\n"));
+    const own = data.en || {},
+      merged: EnFields = { ...(data.enFallback || {}) };
+    for (const k of EN_KEYS)
+      if (own[k] !== undefined) Object.assign(merged, { [k]: own[k] });
+    setEnDraft(toDraft(merged));
+    setEnTouched(new Set());
+    setEnConfirm(new Set());
   };
   useEffect(() => {
     api<TourInfo>("/admin/content/tours/" + id)
       .then(load)
       .catch((e) => setError(e.message));
   }, [id]);
-  if (!f || !info)
+  if (!f || !info || !enDraft)
     return error ? (
       <p className="error" role="alert">
         {error}
@@ -198,8 +282,37 @@ function TourEditor({
     [next[i], next[i + d]] = [next[i + d], next[i]];
     set("itinerary", next);
   };
+  const setEn = <K extends keyof EnDraft>(k: K, v: EnDraft[K]) => {
+    setEnDraft((cur) => (cur ? { ...cur, [k]: v } : cur));
+    setEnTouched((cur) => new Set(cur).add(k as EnKey));
+  };
+  // Gönderilecek İngilizce: kayıttaki ya da elle değiştirilen alanlar; boş alan silinir.
+  const enPayload = () => {
+    const out: Record<string, unknown> = {};
+    for (const k of EN_KEYS) {
+      if (!enTouched.has(k) && info.en?.[k] === undefined) continue;
+      if (k === "itinerary") {
+        const steps = enDraft.itinerary.map((s) => ({
+          time: s.time.trim(),
+          title: s.title.trim(),
+          text: s.text.trim(),
+        }));
+        out[k] = steps.some((s) => s.time || s.title || s.text) ? steps : [];
+      } else if ((LIST_KEYS as readonly string[]).includes(k))
+        out[k] = lines(enDraft[k]);
+      else out[k] = enDraft[k].trim();
+    }
+    return out;
+  };
+  const stale = info.enStale || [];
   async function save(reset = false) {
-    if (reset && !window.confirm("Bu turun metin ve fotoğrafları ilk hâline dönsün mü? Fiyat ve asgari katılımcı değişmez.")) return;
+    if (
+      reset &&
+      !window.confirm(
+        "Bu turun metin (İngilizce dahil) ve fotoğrafları ilk hâline dönsün mü? Fiyat ve asgari katılımcı değişmez.",
+      )
+    )
+      return;
     setBusy(true);
     setError("");
     setNotice("");
@@ -211,10 +324,18 @@ function TourEditor({
             included: lines(included),
             excluded: lines(excluded),
             documents: lines(documents),
+            en: enPayload(),
+            enConfirm: [...enConfirm],
           });
       load(data);
       onSaved();
-      setNotice(reset ? "Varsayılan içerik geri yüklendi." : "Kaydedildi, site güncellendi.");
+      setNotice(
+        reset
+          ? "Varsayılan içerik geri yüklendi."
+          : data.enStale?.length
+            ? `Kaydedildi, site güncellendi. ${data.enStale.length} alanın Türkçesi İngilizcesinden sonra değişti; İngilizce sekmesine bakın.`
+            : "Kaydedildi, site güncellendi.",
+      );
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -375,165 +496,215 @@ function TourEditor({
           </button>
         )}
       </div>
-      <div className="form-grid">
-        {text("name", "Tur adı", 80)}
-        {text("subtitle", "Alt başlık", 140)}
-        {text("category", "Kategori", 30)}
-        {text("duration", "Süre", 40)}
-        {text("location", "Güzergâh", 80)}
-        <label className="field">
-          Kart şeridi yazısı (isteğe bağlı)
-          <input
-            value={f.cardLabel || ""}
-            maxLength={24}
-            placeholder="Boşsa güzergâhtaki yer adı yazar"
-            onChange={(e) => set("cardLabel", e.target.value)}
-          />
-          <small className="muted">Tur kartındaki fotoğrafın altındaki renkli şeritte görünür. Ör. "Bakü'de Yılbaşı".</small>
-        </label>
-        {text("season", "Sezon", 40)}
-        {text("departure", "Hareket saati", 20)}
-        {text("end", "Dönüş saati", 40)}
-        <label className="field">
-          "Başlayan fiyat" (TL)
-          <input
-            type="number"
-            min={0}
-            step="1"
-            value={f.price / 100}
-            onChange={(e) => set("price", Math.round(Number(e.target.value) * 100))}
-          />
-        </label>
+      {/* Dil sekmesi: İngilizce sayfada (/en) görünen metinler ayrı girilir. */}
+      <div
+        className="status-filters content-lang"
+        role="tablist"
+        aria-label="İçerik dili"
+      >
+        {(
+          [
+            ["tr", "Türkçe"],
+            ["en", "İngilizce (/en)"],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={lang === id}
+            className={"chip" + (lang === id ? " active" : "")}
+            onClick={() => setLang(id)}
+          >
+            {label}
+            {id === "en" && stale.length > 0 && ` · ${stale.length} uyarı`}
+          </button>
+        ))}
       </div>
-      <fieldset className="form-grid">
-        <legend>Asgari katılımcı (sözleşmede yazılır)</legend>
-        <label className="field">
-          Asgari katılımcı sayısı
-          <input
-            type="number"
-            min={0}
-            max={60}
-            step="1"
-            value={f.minParticipants || ""}
-            placeholder="Yok"
-            onChange={(e) => set("minParticipants", Math.max(0, Math.round(Number(e.target.value) || 0)))}
-          />
-        </label>
-        <label className="field">
-          Ulaşılamazsa en geç kaç saat önce iptal bildirilir
-          <input
-            type="number"
-            min={0}
-            max={720}
-            step="1"
-            value={f.minNoticeHours || ""}
-            placeholder="ör. 48"
-            onChange={(e) => set("minNoticeHours", Math.max(0, Math.round(Number(e.target.value) || 0)))}
-          />
-        </label>
-        <p className="muted">
-          Doldurulursa ön bilgilendirme formunda ve sözleşmede bu tur için yazılır. Boş bırakılırsa sayı ve süre
-          verilmeden genel ifade kalır; konaklamalı paket turlarda yönetmelik sayı ve sürenin yazılmasını ister.
+      {stale.length > 0 && lang === "tr" && (
+        <p className="content-en-warning" role="status">
+          <AlertTriangle size={16} /> {stale.length} alanın Türkçe metni
+          İngilizceden sonra değişti:{" "}
+          {stale.map((k) => EN_LABELS[k]).join(", ")}. İngilizce sekmesinden
+          güncelleyin.
         </p>
-      </fieldset>
-      <label className="field">
-        Özet
-        <textarea rows={4} maxLength={1500} value={f.summary} onChange={(e) => set("summary", e.target.value)} />
-      </label>
-      <fieldset className="content-images">
-        <legend>Fotoğraflar</legend>
-        <div className="content-cover">
-          <img src={f.image} alt="Kapak fotoğrafı" />
-          <span>
-            <strong>Kapak fotoğrafı</strong>
-            <MediaUploadButton accept="image/jpeg,image/png,image/webp" label="Yeni kapak yükle" onUploaded={(m) => set("image", m.url)} />
-          </span>
+      )}
+      {lang === "en" ? (
+        <TourEnglish
+          f={f}
+          included={lines(included)}
+          excluded={lines(excluded)}
+          documents={lines(documents)}
+          info={info}
+          draft={enDraft}
+          touched={enTouched}
+          setEn={setEn}
+          confirm={enConfirm}
+          setConfirm={setEnConfirm}
+        />
+      ) : (
+        <>
+        <div className="form-grid">
+          {text("name", "Tur adı", 80)}
+          {text("subtitle", "Alt başlık", 140)}
+          {text("category", "Kategori", 30)}
+          {text("duration", "Süre", 40)}
+          {text("location", "Güzergâh", 80)}
+          <label className="field">
+            Kart şeridi yazısı (isteğe bağlı)
+            <input
+              value={f.cardLabel || ""}
+              maxLength={24}
+              placeholder="Boşsa güzergâhtaki yer adı yazar"
+              onChange={(e) => set("cardLabel", e.target.value)}
+            />
+            <small className="muted">Tur kartındaki fotoğrafın altındaki renkli şeritte görünür. Ör. "Bakü'de Yılbaşı".</small>
+          </label>
+          {text("season", "Sezon", 40)}
+          {text("departure", "Hareket saati", 20)}
+          {text("end", "Dönüş saati", 40)}
+          <label className="field">
+            "Başlayan fiyat" (TL)
+            <input
+              type="number"
+              min={0}
+              step="1"
+              value={f.price / 100}
+              onChange={(e) => set("price", Math.round(Number(e.target.value) * 100))}
+            />
+          </label>
         </div>
-        <div className="content-gallery">
-          {f.gallery.map((src, i) => (
-            <figure key={src + i}>
-              <img src={src} alt={`Galeri ${i + 1}`} loading="lazy" />
-              <div>
-                <button type="button" className="icon-btn" aria-label="Kapak yap" title="Kapak yap" onClick={() => set("image", src)}>
-                  <Check size={15} />
+        <fieldset className="form-grid">
+          <legend>Asgari katılımcı (sözleşmede yazılır)</legend>
+          <label className="field">
+            Asgari katılımcı sayısı
+            <input
+              type="number"
+              min={0}
+              max={60}
+              step="1"
+              value={f.minParticipants || ""}
+              placeholder="Yok"
+              onChange={(e) => set("minParticipants", Math.max(0, Math.round(Number(e.target.value) || 0)))}
+            />
+          </label>
+          <label className="field">
+            Ulaşılamazsa en geç kaç saat önce iptal bildirilir
+            <input
+              type="number"
+              min={0}
+              max={720}
+              step="1"
+              value={f.minNoticeHours || ""}
+              placeholder="ör. 48"
+              onChange={(e) => set("minNoticeHours", Math.max(0, Math.round(Number(e.target.value) || 0)))}
+            />
+          </label>
+          <p className="muted">
+            Doldurulursa ön bilgilendirme formunda ve sözleşmede bu tur için yazılır. Boş bırakılırsa sayı ve süre
+            verilmeden genel ifade kalır; konaklamalı paket turlarda yönetmelik sayı ve sürenin yazılmasını ister.
+          </p>
+        </fieldset>
+        <label className="field">
+          Özet
+          <textarea rows={4} maxLength={1500} value={f.summary} onChange={(e) => set("summary", e.target.value)} />
+        </label>
+        <fieldset className="content-images">
+          <legend>Fotoğraflar</legend>
+          <div className="content-cover">
+            <img src={f.image} alt="Kapak fotoğrafı" />
+            <span>
+              <strong>Kapak fotoğrafı</strong>
+              <MediaUploadButton accept="image/jpeg,image/png,image/webp" label="Yeni kapak yükle" onUploaded={(m) => set("image", m.url)} />
+            </span>
+          </div>
+          <div className="content-gallery">
+            {f.gallery.map((src, i) => (
+              <figure key={src + i}>
+                <img src={src} alt={`Galeri ${i + 1}`} loading="lazy" />
+                <div>
+                  <button type="button" className="icon-btn" aria-label="Kapak yap" title="Kapak yap" onClick={() => set("image", src)}>
+                    <Check size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    aria-label="Galeriden çıkar"
+                    title="Galeriden çıkar"
+                    onClick={() => set("gallery", f.gallery.filter((_, j) => j !== i))}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </figure>
+            ))}
+          </div>
+          {f.gallery.length < 12 && (
+            <MediaUploadButton
+              accept="image/jpeg,image/png,image/webp"
+              label="Galeriye fotoğraf ekle"
+              onUploaded={(m) => setF((cur) => (cur ? { ...cur, gallery: [...cur.gallery, m.url] } : cur))}
+            />
+          )}
+        </fieldset>
+        <div className="form-grid">
+          <label className="field">
+            Fiyata dahil (her satıra bir madde)
+            <textarea rows={5} value={included} onChange={(e) => setIncluded(e.target.value)} />
+          </label>
+          <label className="field">
+            Fiyata dahil değil (her satıra bir madde)
+            <textarea rows={5} value={excluded} onChange={(e) => setExcluded(e.target.value)} />
+          </label>
+        </div>
+        <fieldset className="content-itinerary">
+          <legend>Program</legend>
+          {f.itinerary.map((s, i) => (
+            <div className="itinerary-row" key={i}>
+              <input aria-label="Saat" placeholder="Saat" value={s.time} maxLength={40} onChange={(e) => setStep(i, { time: e.target.value })} />
+              <input aria-label="Başlık" placeholder="Başlık" value={s.title} maxLength={80} onChange={(e) => setStep(i, { title: e.target.value })} required />
+              <textarea aria-label="Açıklama" placeholder="Açıklama" rows={2} value={s.text} maxLength={600} onChange={(e) => setStep(i, { text: e.target.value })} />
+              <div className="itinerary-tools">
+                <button type="button" className="icon-btn" aria-label="Yukarı taşı" disabled={i === 0} onClick={() => move(i, -1)}>
+                  <ArrowUp size={15} />
                 </button>
-                <button
-                  type="button"
-                  className="icon-btn"
-                  aria-label="Galeriden çıkar"
-                  title="Galeriden çıkar"
-                  onClick={() => set("gallery", f.gallery.filter((_, j) => j !== i))}
-                >
+                <button type="button" className="icon-btn" aria-label="Aşağı taşı" disabled={i === f.itinerary.length - 1} onClick={() => move(i, 1)}>
+                  <ArrowDown size={15} />
+                </button>
+                <button type="button" className="icon-btn" aria-label="Adımı sil" onClick={() => set("itinerary", f.itinerary.filter((_, j) => j !== i))}>
                   <Trash2 size={15} />
                 </button>
               </div>
-            </figure>
-          ))}
-        </div>
-        {f.gallery.length < 12 && (
-          <MediaUploadButton
-            accept="image/jpeg,image/png,image/webp"
-            label="Galeriye fotoğraf ekle"
-            onUploaded={(m) => setF((cur) => (cur ? { ...cur, gallery: [...cur.gallery, m.url] } : cur))}
-          />
-        )}
-      </fieldset>
-      <div className="form-grid">
-        <label className="field">
-          Fiyata dahil (her satıra bir madde)
-          <textarea rows={5} value={included} onChange={(e) => setIncluded(e.target.value)} />
-        </label>
-        <label className="field">
-          Fiyata dahil değil (her satıra bir madde)
-          <textarea rows={5} value={excluded} onChange={(e) => setExcluded(e.target.value)} />
-        </label>
-      </div>
-      <fieldset className="content-itinerary">
-        <legend>Program</legend>
-        {f.itinerary.map((s, i) => (
-          <div className="itinerary-row" key={i}>
-            <input aria-label="Saat" placeholder="Saat" value={s.time} maxLength={40} onChange={(e) => setStep(i, { time: e.target.value })} />
-            <input aria-label="Başlık" placeholder="Başlık" value={s.title} maxLength={80} onChange={(e) => setStep(i, { title: e.target.value })} required />
-            <textarea aria-label="Açıklama" placeholder="Açıklama" rows={2} value={s.text} maxLength={600} onChange={(e) => setStep(i, { text: e.target.value })} />
-            <div className="itinerary-tools">
-              <button type="button" className="icon-btn" aria-label="Yukarı taşı" disabled={i === 0} onClick={() => move(i, -1)}>
-                <ArrowUp size={15} />
-              </button>
-              <button type="button" className="icon-btn" aria-label="Aşağı taşı" disabled={i === f.itinerary.length - 1} onClick={() => move(i, 1)}>
-                <ArrowDown size={15} />
-              </button>
-              <button type="button" className="icon-btn" aria-label="Adımı sil" onClick={() => set("itinerary", f.itinerary.filter((_, j) => j !== i))}>
-                <Trash2 size={15} />
-              </button>
             </div>
-          </div>
-        ))}
-        {f.itinerary.length < 15 && (
-          <button type="button" className="text-link" onClick={() => set("itinerary", [...f.itinerary, { time: "", title: "", text: "" }])}>
-            <Plus size={15} /> Adım ekle
-          </button>
-        )}
-      </fieldset>
-      {/* Yurt dışı turlarında en çok sorulan bilgi: tur sayfasının üstünde renkli kutuda,
-          rezervasyonda yolcu bilgileri adımında gösterilir. */}
-      <fieldset className="content-documents">
-        <legend>Gerekli belgeler ve önemli notlar</legend>
-        <p className="form-hint">
-          Kimlik, pasaport, vize, muvafakatname, sınır harcı gibi yolcunun mutlaka bilmesi gerekenler. Her satıra bir
-          madde yazın (en fazla 12). Tur sayfasının üstünde dikkat çeken kutuda ve rezervasyon sırasında görünür; boş
-          bırakılırsa kutu çıkmaz.
-        </p>
-        <textarea
-          rows={5}
-          value={documents}
-          onChange={(e) => setDocuments(e.target.value)}
-          placeholder={"Ör. Pasaport veya yeni tip (çipli) T.C. kimlik kartı\n18 yaş altı için muvafakatname"}
-        />
-      </fieldset>
-      <label className="field">
-        Not (sayfanın altında)
-        <textarea rows={2} maxLength={600} value={f.note} onChange={(e) => set("note", e.target.value)} />
-      </label>
+          ))}
+          {f.itinerary.length < 15 && (
+            <button type="button" className="text-link" onClick={() => set("itinerary", [...f.itinerary, { time: "", title: "", text: "" }])}>
+              <Plus size={15} /> Adım ekle
+            </button>
+          )}
+        </fieldset>
+        {/* Yurt dışı turlarında en çok sorulan bilgi: tur sayfasının üstünde renkli kutuda,
+            rezervasyonda yolcu bilgileri adımında gösterilir. */}
+        <fieldset className="content-documents">
+          <legend>Gerekli belgeler ve önemli notlar</legend>
+          <p className="form-hint">
+            Kimlik, pasaport, vize, muvafakatname, sınır harcı gibi yolcunun mutlaka bilmesi gerekenler. Her satıra bir
+            madde yazın (en fazla 12). Tur sayfasının üstünde dikkat çeken kutuda ve rezervasyon sırasında görünür; boş
+            bırakılırsa kutu çıkmaz.
+          </p>
+          <textarea
+            rows={5}
+            value={documents}
+            onChange={(e) => setDocuments(e.target.value)}
+            placeholder={"Ör. Pasaport veya yeni tip (çipli) T.C. kimlik kartı\n18 yaş altı için muvafakatname"}
+          />
+        </fieldset>
+        <label className="field">
+          Not (sayfanın altında)
+          <textarea rows={2} maxLength={600} value={f.note} onChange={(e) => set("note", e.target.value)} />
+        </label>
+        </>
+      )}
       {error && (
         <p className="error" role="alert">
           {error}
@@ -556,6 +727,229 @@ function TourEditor({
         </button>
       </div>
     </form>
+  );
+}
+
+// İngilizce sekmesi: her çevrilebilir alanın İngilizcesi, yanında güncel Türkçe metin.
+// Boş alan /en'de eski çeviriyle (Türkçesi değişmediyse) ya da Türkçe görünür.
+function TourEnglish({
+  f,
+  included,
+  excluded,
+  documents,
+  info,
+  draft,
+  touched,
+  setEn,
+  confirm,
+  setConfirm,
+}: {
+  f: TourFields;
+  included: string[];
+  excluded: string[];
+  documents: string[];
+  info: TourInfo;
+  draft: EnDraft;
+  touched: Set<EnKey>;
+  setEn: <K extends keyof EnDraft>(k: K, v: EnDraft[K]) => void;
+  confirm: Set<EnKey>;
+  setConfirm: (next: Set<EnKey>) => void;
+}) {
+  const tr = (k: EnKey): unknown =>
+    k === "included"
+      ? included
+      : k === "excluded"
+        ? excluded
+        : k === "documents"
+          ? documents
+          : f[k];
+  const same = (a: unknown, b: unknown) =>
+    JSON.stringify(a ?? "") === JSON.stringify(b ?? "");
+  // Alanın altındaki durum satırı: eskiyen İngilizce, eski çeviri ya da boş alan.
+  const status = (k: EnKey) => {
+    const own = info.en?.[k] !== undefined,
+      fallback = info.enFallback?.[k] !== undefined,
+      trChanged = !same(
+        tr(k),
+        info.current[k] ??
+          ((LIST_KEYS as readonly string[]).includes(k) ? [] : ""),
+      );
+    if (touched.has(k)) return null;
+    if (own && info.enStale?.includes(k))
+      return (
+        <span className="content-en-note is-warn">
+          <AlertTriangle size={14} /> Türkçe metin İngilizceden sonra değişti.
+          İngilizceyi güncelleyin
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={confirm.has(k)}
+              onChange={(e) => {
+                const next = new Set(confirm);
+                if (e.target.checked) next.add(k);
+                else next.delete(k);
+                setConfirm(next);
+              }}
+            />
+            İngilizce hâlâ doğru
+          </label>
+        </span>
+      );
+    if ((own || fallback) && trChanged)
+      return (
+        <span className="content-en-note is-warn">
+          <AlertTriangle size={14} /> Türkçeyi değiştirdiniz; İngilizcesini de
+          güncelleyin.
+        </span>
+      );
+    if (fallback)
+      return (
+        <span className="content-en-note">
+          Eski çeviri kullanılıyor; değiştirebilirsiniz.
+        </span>
+      );
+    if (!own && !draft[k].length)
+      return (
+        <span className="content-en-note">
+          Boş: İngilizce sayfada Türkçesi görünür.
+        </span>
+      );
+    return null;
+  };
+  const trText = (k: EnKey) => {
+    const v = tr(k);
+    return Array.isArray(v) ? (v as string[]).join(" · ") : String(v || "");
+  };
+  const input = (
+    k: Exclude<EnKey, "itinerary" | (typeof LIST_KEYS)[number]>,
+    max: number,
+    long = false,
+  ) => (
+    <label className="field">
+      {EN_LABELS[k]} (İngilizce)
+      {long ? (
+        <textarea
+          rows={k === "summary" ? 4 : 2}
+          maxLength={max}
+          value={draft[k]}
+          onChange={(e) => setEn(k, e.target.value)}
+        />
+      ) : (
+        <input
+          value={draft[k]}
+          maxLength={max}
+          onChange={(e) => setEn(k, e.target.value)}
+        />
+      )}
+      <small className="muted">Türkçe: {trText(k) || "—"}</small>
+      {status(k)}
+    </label>
+  );
+  const list = (k: (typeof LIST_KEYS)[number]) => (
+    <label className="field">
+      {EN_LABELS[k]} (İngilizce, her satıra bir madde)
+      <textarea
+        rows={5}
+        value={draft[k]}
+        onChange={(e) => setEn(k, e.target.value)}
+      />
+      <small className="muted">Türkçe: {trText(k) || "—"}</small>
+      {status(k)}
+    </label>
+  );
+  const rows = Math.max(f.itinerary.length, draft.itinerary.length),
+    steps = Array.from(
+      { length: rows },
+      (_, i) => draft.itinerary[i] || { time: "", title: "", text: "" },
+    ),
+    setStep = (i: number, patch: Partial<Itinerary>) =>
+      setEn(
+        "itinerary",
+        steps.map((s, j) => (j === i ? { ...s, ...patch } : s)),
+      );
+  return (
+    <div className="content-en">
+      <p className="form-hint">
+        İngilizce sayfada (/en) bu metinler görünür. Boş bıraktığınız alanda,
+        Türkçesi değişmediyse eski çeviri, yoksa Türkçe metin gösterilir. Fiyat,
+        tarih ve fotoğraflar Türkçe sekmesindekiyle aynıdır. Filtrelerin
+        çalışması için kategori Culture, Nature, Winter, Abroad ya da Overnight;
+        günübirlik süre Day trip olmalı.
+      </p>
+      <div className="form-grid">
+        {input("name", 80)}
+        {input("subtitle", 140)}
+        {input("category", 30)}
+        {input("duration", 40)}
+        {input("location", 80)}
+        {input("cardLabel", 24)}
+        {input("season", 40)}
+        {input("departure", 20)}
+        {input("end", 40)}
+      </div>
+      {input("summary", 1500, true)}
+      <div className="form-grid">
+        {list("included")}
+        {list("excluded")}
+      </div>
+      <fieldset className="content-itinerary">
+        <legend>Program (İngilizce)</legend>
+        {status("itinerary")}
+        {steps.map((s, i) => {
+          const source = f.itinerary[i];
+          return (
+            <div className="itinerary-row" key={i}>
+              <small className="muted content-en-source">
+                {source
+                  ? `Türkçe ${i + 1}. adım: ${[source.time, source.title].filter(Boolean).join(" · ")} — ${source.text}`
+                  : "Türkçede bu adım yok."}
+              </small>
+              <input
+                aria-label={`${i + 1}. adım saati (İngilizce)`}
+                placeholder="Time"
+                value={s.time}
+                maxLength={40}
+                onChange={(e) => setStep(i, { time: e.target.value })}
+              />
+              <input
+                aria-label={`${i + 1}. adım başlığı (İngilizce)`}
+                placeholder="Title"
+                value={s.title}
+                maxLength={80}
+                onChange={(e) => setStep(i, { title: e.target.value })}
+              />
+              <textarea
+                aria-label={`${i + 1}. adım açıklaması (İngilizce)`}
+                placeholder="Description"
+                rows={2}
+                value={s.text}
+                maxLength={600}
+                onChange={(e) => setStep(i, { text: e.target.value })}
+              />
+              {!source && (
+                <div className="itinerary-tools">
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    aria-label="Adımı sil"
+                    onClick={() =>
+                      setEn(
+                        "itinerary",
+                        steps.filter((_, j) => j !== i),
+                      )
+                    }
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </fieldset>
+      {list("documents")}
+      {input("note", 600, true)}
+    </div>
   );
 }
 
