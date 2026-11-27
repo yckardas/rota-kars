@@ -39,7 +39,7 @@ import {
   type Vehicle,
 } from "../lib/types";
 import { useMember, type Coupon, type MemberDashboard } from "../lib/member";
-import { SeatMap } from "../components/SeatMap";
+import { SeatStage } from "../components/SeatStage";
 import { telHref } from "../lib/phone";
 import { ReservationTicket } from "../components/ReservationTicket";
 import { PayDeposit } from "./Payment";
@@ -1029,7 +1029,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
               )}
               {!demandPick && (
               <div className="seat-selection">
-                <SeatMap
+                <SeatStage
                   vehicle={vehicle}
                   seats={seats}
                   selected={selected}

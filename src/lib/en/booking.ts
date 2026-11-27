@@ -141,6 +141,12 @@ export const booking: Record<string, string> = {
 
   // Koltuk planı
   "Ön taraf": "Front",
+  "Düz görünüm": "Flat view",
+  "3D görünüm": "3D view",
+  Atla: "Skip",
+  "Baştan oynat": "Replay",
+  "Aracın dışı": "Vehicle exterior",
+  "Aracın içi": "Vehicle interior",
   Şoför: "Driver",
   "Rehber koltuğu, seçilemez": "Guide seat, not available",
   Ayrılmış: "Reserved",
