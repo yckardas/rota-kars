@@ -12,6 +12,7 @@ import type { Catalog } from "../lib/types";
 import { responsive } from "../lib/images";
 import { RequestForm } from "../components/RequestForm";
 import { FleetSection } from "../components/FleetSection";
+import { Lightbox } from "../components/Lightbox";
 const details: Record<
   string,
   {
@@ -126,6 +127,7 @@ const details: Record<
 export function Services({ catalog }: { catalog: Catalog }) {
   const { id } = useParams(),
     [request, setRequest] = useState(false),
+    [photo, setPhoto] = useState<number | null>(null),
     service = catalog.services.find((s) => s.id === id),
     info = id ? details[id] : null;
   if (!service || !info)
@@ -228,6 +230,38 @@ export function Services({ catalog }: { catalog: Catalog }) {
           </div>
         </div>
       </section>
+      {!!service.gallery?.length && (
+        <section
+          className="container service-fleet"
+          aria-labelledby="service-fleet-title"
+        >
+          <h2 id="service-fleet-title">Bu hizmetteki araçlarımız.</h2>
+          <div className="service-fleet-grid">
+            {service.gallery.map((g, i) => (
+              <figure key={g.src}>
+                <button
+                  type="button"
+                  onClick={() => setPhoto(i)}
+                  aria-label={g.alt + " fotoğrafını büyüt"}
+                >
+                  <img
+                    {...responsive(
+                      g.src,
+                      "(max-width: 760px) 100vw, (max-width: 1100px) 50vw, 33vw",
+                    )}
+                    alt={g.alt}
+                    width="800"
+                    height="1067"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </button>
+                <figcaption>{g.alt}</figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+      )}
       <section className="container service-detail-body">
         <div>
           <h2>Yolculuğunuzun detayları.</h2>
@@ -270,6 +304,14 @@ export function Services({ catalog }: { catalog: Catalog }) {
           <ArrowRight size={17} />
         </button>
       </section>
+      {photo !== null && service.gallery && (
+        <Lightbox
+          images={service.gallery.map((g) => g.src)}
+          start={photo}
+          alt={service.title + " araçları"}
+          onClose={() => setPhoto(null)}
+        />
+      )}
       {request && (
         <RequestForm
           kind={info.kind}
