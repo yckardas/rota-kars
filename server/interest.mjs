@@ -1,14 +1,18 @@
-// İlgi listesi: iki tür kayıt, ikisinde de koltuk tutulmaz ve ödeme alınmaz.
+// İlgi listesi: üç tür kayıt, hiçbirinde koltuk tutulmaz ve ödeme alınmaz.
 //  - "waitlist": dolu sefer için "yer açılınca haber ver". Yer açılınca (iptal, süresi
 //    dolan ön rezervasyon, araç büyütme) o seferi bekleyen herkese aynı anda e-posta
 //    gider; ilk rezervasyon yapan alır.
 //  - "prereg": talep toplama modundaki tur için ücretsiz ön kayıt (ör. Tiflis). Ön kayıt
 //    eşiğe ulaşınca acente panelden satışı açar; ön kayıtlılara rezervasyon bağlantısı gider.
+//  - "notify": satışa kapalı tur için "tarih açılınca haber ver" (tarihsiz). Tur satışa açılıp
+//    satılabilir tarihi ya da ön kaydı olunca bekleyenlere tek seferlik e-posta gider.
 import { randomBytes, randomUUID } from "node:crypto";
 import { tours } from "./catalog.mjs";
 import { AppError } from "./store.mjs";
-import { localDate } from "./departures.mjs";
+import { localDate, salesClosesAt } from "./departures.mjs";
 import { formMailPerDay } from "./requests.mjs";
+import { minNoticeHoursOf } from "./legal.mjs";
+import { currentEn } from "./content.mjs";
 
 export const INTEREST_STATUS = {
   waiting: "Bekliyor",
@@ -17,6 +21,22 @@ export const INTEREST_STATUS = {
   cancelled: "Vazgeçti",
 };
 const tourName = (id) => tours.find((t) => t.id === id)?.name || id;
+const tourNameEn = (id) => currentEn().tours[id]?.name || tourName(id);
+// Talep tarihinde kesinleşme kararının en geç verileceği an: hareket saati eksi turun asgari
+// katılımcı bildirim süresi. Bu an geçince tarih sitede ön kayda kapanır, panelde görünür kalır.
+const longDate = (ymd, locale = "tr-TR") =>
+  new Date(ymd + "T12:00:00Z").toLocaleDateString(locale, {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+export const decisionAt = (tourId, d) =>
+  salesClosesAt(
+    d.date,
+    d.start_time,
+    minNoticeHoursOf(tours.find((t) => t.id === tourId)) * 60,
+  );
 
 export async function createInterest(db, { clock, tx, departures, operations, notifications, env = {} }) {
   await Promise.all([
@@ -29,6 +49,8 @@ export async function createInterest(db, { clock, tx, departures, operations, no
   // Rezervasyon sayfası ?date= ile o günün seferini seçili açar.
   const bookingUrl = (tourId, date) => base() + "/rezervasyon/" + tourId + (date ? "?date=" + date : "");
   const cancelUrl = (row) => base() + "/api/interest/" + row.token + "/cancel";
+  const tourUrl = (tourId, lang) =>
+    base() + (lang === "en" ? "/en" : "") + "/turlar/" + tourId;
 
   // Tarihin satışı açık, kalkmamış araçları (ek araç varsa hepsi).
   const openVehicles = async (d) =>
@@ -51,12 +73,21 @@ export async function createInterest(db, { clock, tx, departures, operations, no
           if ((await openVehicles(departure)).some((d) => d.available >= input.count))
             throw new AppError(409, "Bu seferde yer var; hemen rezervasyon yapabilirsiniz.");
           departure = { ...departure, id: departure.group_id };
+        } else if (input.kind === "notify") {
+          // Tarih açılınca haber: yalnız satışa kapalı turda (tarihsiz kayıt).
+          if (ops.salesOpen)
+            throw new AppError(
+              409,
+              "Bu tur satışta; tarih seçip rezervasyon ya da ön kayıt yapabilirsiniz.",
+            );
         } else if (input.departureId) {
           // Tarihli ön kayıt: talep toplayan tarihe bağlanır (tarihin 1. aracının id'si).
           departure = await departures.get(input.departureId, { allowClosed: true });
           if (departure.tour_id !== input.tourId) throw new AppError(400, "Sefer bu tura ait değil.");
           if (!departure.demand || !departure.active || departure.departed)
             throw new AppError(409, "Bu tarih için ön kayıt alınmıyor.");
+          if (clock() >= decisionAt(input.tourId, departure))
+            throw new AppError(409, "Bu tarih için ön kayıt süresi doldu.");
           departure = { ...departure, id: departure.group_id };
         } else if (ops.mode !== "demand")
           throw new AppError(409, "Bu tur için ön kayıt değil, doğrudan rezervasyon alınıyor.");
@@ -90,6 +121,8 @@ export async function createInterest(db, { clock, tx, departures, operations, no
             departure_id: departure?.id || null,
             departure_date: departure?.date || null,
             email,
+            // E-postalar (haber listesi) kaydın bırakıldığı dilde gider.
+            lang: input.lang === "en" ? "en" : "tr",
             ...fields,
             status: "waiting",
             token: randomBytes(18).toString("hex"),
@@ -99,8 +132,11 @@ export async function createInterest(db, { clock, tx, departures, operations, no
           await db.insert("interest_list", id, row);
         }
         const reference = "BK-" + row.id.slice(0, 8).toUpperCase();
+        const en = input.kind === "notify" && input.lang === "en";
         const what =
-          input.kind === "waitlist"
+          input.kind === "notify"
+            ? `${tourName(input.tourId)} için tarih açılınca haber listesine`
+            : input.kind === "waitlist"
             ? `${tourName(input.tourId)} · ${departure.date} ${departure.start_time} seferi için bekleme listesine`
             : departure
               ? `${tourName(input.tourId)} · ${departure.date} ${departure.start_time} için ön kayda`
@@ -116,23 +152,38 @@ export async function createInterest(db, { clock, tx, departures, operations, no
           if (recentToSameEmail <= formMailPerDay(env))
             await notifications.enqueue({
             email,
-            subject:
-              input.kind === "waitlist"
-                ? `Rota Kars · Bekleme listesindesiniz (${reference})`
-                : `Rota Kars · Ön kaydınız alındı (${reference})`,
-            body:
-              `Merhaba,\n${what} ${input.count} kişi olarak eklendiniz. Referans: ${reference}\n\n` +
-              (input.kind === "waitlist"
-                ? "Bu seferde yer açılınca size hemen e-posta göndereceğiz. Yer, ilk rezervasyonu tamamlayana ayrılır; koltuk tutulmaz ve ödeme alınmaz."
-                : "Bu ücretsiz bir ön kayıttır; ödeme alınmaz. Yeterli talep oluşunca tur kesinleşir, tarihleri ve rezervasyon bağlantısını size e-postayla göndeririz.") +
-              `\n\nArtık ilgilenmiyorsanız listeden çıkmak için: ${cancelUrl(row)}`,
+            subject: en
+              ? `Rota Kars · You're on the list for ${tourNameEn(input.tourId)} (${reference})`
+              : input.kind === "notify"
+                ? `Rota Kars · Haber listesindesiniz (${reference})`
+                : input.kind === "waitlist"
+                  ? `Rota Kars · Bekleme listesindesiniz (${reference})`
+                  : `Rota Kars · Ön kaydınız alındı (${reference})`,
+            body: en
+              ? `Hello,\nYou've been added to the list for ${tourNameEn(input.tourId)} as ${input.count} ${input.count === 1 ? "person" : "people"}. Reference: ${reference}\n\n` +
+                "We'll email you as soon as new dates open or pre-registration starts for this tour. It's free; no seat is held and no payment is taken." +
+                `\n\nIf you're no longer interested, leave the list here: ${cancelUrl(row)}`
+              : `Merhaba,\n${what} ${input.count} kişi olarak eklendiniz. Referans: ${reference}\n\n` +
+                (input.kind === "notify"
+                  ? "Bu tura yeni tarih açıldığında ya da ön kayıt başladığında size e-posta göndereceğiz. Kayıt ücretsizdir; koltuk tutulmaz ve ödeme alınmaz."
+                  : input.kind === "waitlist"
+                    ? "Bu seferde yer açılınca size hemen e-posta göndereceğiz. Yer, ilk rezervasyonu tamamlayana ayrılır; koltuk tutulmaz ve ödeme alınmaz."
+                    : "Bu ücretsiz bir ön kayıttır; ödeme alınmaz. Yeterli talep oluşunca tur kesinleşir, tarihleri ve rezervasyon bağlantısını size e-postayla göndeririz." +
+                      (departure
+                        ? ` Bu tarih ${ops.demand.threshold} kişiye ulaşınca kesinleşir; kararı en geç ${longDate(localDate(decisionAt(input.tourId, departure)))} tarihinde bildiririz.`
+                        : "")) +
+                `\n\nArtık ilgilenmiyorsanız listeden çıkmak için: ${cancelUrl(row)}`,
             kind: "interest_" + input.kind,
             dedupeKey: "interest:" + row.id,
           });
           await notifications.notifyAgency({
-            subject: `${input.kind === "waitlist" ? "Bekleme listesi" : "Ön kayıt"}: ${tourName(input.tourId)} · ${input.count} kişi`,
+            subject: `${input.kind === "notify" ? "Haber listesi" : input.kind === "waitlist" ? "Bekleme listesi" : "Ön kayıt"}: ${tourName(input.tourId)} · ${input.count} kişi`,
             body: [
-              input.kind === "waitlist" ? "Dolu sefer için bekleme listesi" : "Talep toplama · ön kayıt",
+              input.kind === "notify"
+                ? "Satışa kapalı tur · tarih açılınca haber ver"
+                : input.kind === "waitlist"
+                  ? "Dolu sefer için bekleme listesi"
+                  : "Talep toplama · ön kayıt",
               `${reference} · ${tourName(input.tourId)}${departure ? ` · ${departure.date} ${departure.start_time}` : ""}`,
               `Kişi: ${input.count}${input.preferredDate ? ` · Tercih: ${input.preferredDate}` : ""}`,
               `Müşteri: ${input.name} · ${input.phone} · ${email}`,
@@ -161,10 +212,16 @@ export async function createInterest(db, { clock, tx, departures, operations, no
       return rows.reduce((n, r) => n + (Number(r.count) || 0), 0);
     },
     // Sitede gösterilecek talep tarihleri: tarih başına tek satır (1. aracın id'si), aktif,
-    // satış kesimi geçmemiş, rezervasyonu olmayan tarihler.
+    // karar tarihi geçmemiş, rezervasyonu olmayan tarihler. decisionDate: kesinleşme kararının
+    // en geç verileceği gün (müşteriye "karar en geç …" diye gösterilir).
     async demandDates(tourId, { withCount = false, rows } = {}) {
       const listed = (rows || (await departures.list({ tourId }))).filter(
-        (d) => d.demand && d.active && !d.departed && d.date >= localDate(clock()),
+        (d) =>
+          d.demand &&
+          d.active &&
+          !d.departed &&
+          d.date >= localDate(clock()) &&
+          clock() < decisionAt(tourId, d),
       );
       if (!listed.length) return [];
       const groups = new Map();
@@ -187,6 +244,7 @@ export async function createInterest(db, { clock, tx, departures, operations, no
           date: d.date,
           start_time: d.start_time,
           price: d.price,
+          decisionDate: localDate(decisionAt(tourId, d)),
           ...(withCount ? { count: counts.get(gid) || 0 } : {}),
         });
       }
@@ -201,9 +259,29 @@ export async function createInterest(db, { clock, tx, departures, operations, no
       for (const [gid, d] of groups) {
         const count = await api.demandCount(tourId, gid);
         if (!d.demand && !count) continue;
-        out.push({ id: gid, date: d.date, start_time: d.start_time, count, demand: d.demand, salesOpen: d.salesOpen });
+        // Karar tarihi geçen talep tarihi sitede ön kayda kapanır; panelde işaretli kalır.
+        const decision = decisionAt(tourId, d);
+        out.push({
+          id: gid,
+          date: d.date,
+          start_time: d.start_time,
+          count,
+          demand: d.demand,
+          salesOpen: d.salesOpen,
+          decisionDate: localDate(decision),
+          closedOnSite: d.demand && clock() >= decision,
+        });
       }
       return out.sort((a, b) => (a.date + a.start_time).localeCompare(b.date + b.start_time));
+    },
+    // Panel: satışa kapalı turda "tarih açılınca haber ver" bekleyen kişi sayısı.
+    async notifyCount(tourId) {
+      const rows = await db.find("interest_list", {
+        tour_id: tourId,
+        kind: "notify",
+        status: "waiting",
+      });
+      return rows.reduce((n, r) => n + (Number(r.count) || 0), 0);
     },
     async list({ tourId } = {}) {
       return db.find("interest_list", tourId ? { tour_id: tourId } : {}, { sort: { created_at: -1 }, limit: 500 });
@@ -312,6 +390,87 @@ export async function createInterest(db, { clock, tx, departures, operations, no
               `Merhaba ${row.name},\nÖn kayıt bıraktığınız ${tourName(d.tour_id)} · ${d.date} ${d.start_time} için yeterli talep oluştu ve rezervasyon açıldı.\n` +
               `Ön kaydınız: ${row.count} kişi. Koltuklar ilk rezervasyon yapana ayrılır.`,
             actionUrl: bookingUrl(d.tour_id, d.date),
+            kind: "interest_open",
+            dedupeKey: "interest-open:" + row.id,
+          });
+          await db.update(
+            "interest_list",
+            { _id: row.id },
+            { status: "notified", notified_at: clock() },
+          );
+          notified++;
+        }
+      }
+      return { notified };
+    },
+    // Arka plan işi: satışa kapalı turu "tarih açılınca haber ver" diye bekleyenlere, tur
+    // satışa açılıp satılabilir tarihi ya da ön kaydı (talep tarihi / talep toplama) olunca
+    // tek seferlik e-posta. "Rezervasyon açıldı" bildirimiyle aynı tür ve tekilleştirme anahtarı.
+    async notifyTourOpenings({ tourId } = {}) {
+      const waiting = await db.find("interest_list", {
+        kind: "notify",
+        status: "waiting",
+        ...(tourId ? { tour_id: tourId } : {}),
+      });
+      let notified = 0;
+      const byTour = new Map();
+      for (const row of waiting)
+        byTour.set(row.tour_id, [...(byTour.get(row.tour_id) || []), row]);
+      for (const [id, rows] of byTour) {
+        let ops;
+        try {
+          ops = await operations.get(id);
+        } catch {
+          continue;
+        }
+        if (!ops.salesOpen || tours.find((t) => t.id === id)?.hidden) continue;
+        const listed = await departures.list({ tourId: id }),
+          sellable = listed.filter(
+            (d) => d.salesOpen && d.date >= localDate(clock()),
+          ),
+          dated = sellable.length
+            ? []
+            : await api.demandDates(id, { rows: listed });
+        if (!sellable.length && !dated.length && ops.mode !== "demand")
+          continue;
+        const dates = (sellable.length ? sellable : dated)
+          .filter(
+            (d, i, all) =>
+              all.findIndex(
+                (x) => x.date === d.date && x.start_time === d.start_time,
+              ) === i,
+          )
+          .slice(0, 6);
+        for (const row of rows) {
+          const en = row.lang === "en",
+            name = en ? tourNameEn(id) : tourName(id),
+            list = dates
+              .map(
+                (d) =>
+                  `${longDate(d.date, en ? "en-GB" : "tr-TR")} ${d.start_time}`,
+              )
+              .join(", ");
+          await notifications.enqueue({
+            email: row.email,
+            subject: sellable.length
+              ? en
+                ? `Rota Kars · ${name} is open for booking`
+                : `Rota Kars · ${name} rezervasyona açıldı`
+              : en
+                ? `Rota Kars · Pre-registration is open for ${name}`
+                : `Rota Kars · ${name} için ön kayıt açıldı`,
+            body: en
+              ? `Hello ${row.name},\nYou asked us to let you know when ${name} opens. ` +
+                (sellable.length
+                  ? `Booking is now open.\nDates: ${list}\nSeats go to whoever books first.`
+                  : `Pre-registration has started${list ? ` (planned dates: ${list})` : ""}. The tour goes ahead once there is enough demand; pre-registration is free.`)
+              : `Merhaba ${row.name},\nTarih açılınca haber vermemizi istediğiniz ${name} açıldı. ` +
+                (sellable.length
+                  ? `Rezervasyon başladı.\nTarihler: ${list}\nKoltuklar ilk rezervasyon yapana ayrılır.`
+                  : `Ön kayıt başladı${list ? ` (planlanan tarihler: ${list})` : ""}. Yeterli talep oluşunca tur kesinleşir; ön kayıt ücretsizdir.`),
+            actionUrl: sellable.length
+              ? base() + (en ? "/en" : "") + "/rezervasyon/" + id
+              : tourUrl(id, row.lang),
             kind: "interest_open",
             dedupeKey: "interest-open:" + row.id,
           });

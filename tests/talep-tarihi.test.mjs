@@ -9,7 +9,9 @@ import { openStore } from "../server/store.mjs";
 const AGENT = { id: "ops-1", role: "operations", name: "Operasyon" };
 const DATE = "2026-10-24";
 async function fixture(t) {
-  let now = Date.parse("2026-10-17T06:00:00Z");
+  // Talep tarihi, karar tarihine (hareket − asgari katılımcı bildirim süresi; Güneydoğu
+  // 4 günlük olduğundan 7 gün) kadar ön kayda açıktır; saat buna göre iki hafta öncedir.
+  let now = Date.parse("2026-10-10T06:00:00Z");
   const env = { AGENCY_EMAIL: "ekip@rotakars.test", PUBLIC_BASE_URL: "https://rotakarsturizm.com" };
   const store = await openStore(":memory:", { clock: () => now, env, seed: false });
   const app = createApp(store, {
@@ -242,7 +244,7 @@ test("the catalog lists demand dates without leaking internals; an opened date s
   const tour = async () => (await call("/catalog")).json.tours.find((x) => x.id === "guneydogu");
   const d1 = await departure("guneydogu", { price: 250000, guideName: "Ali", guidePhone: "05550000000" });
   const d2 = await departure("guneydogu", { price: 250000, date: "2026-10-31", active: false });
-  await departure("guneydogu", { price: 250000, date: "2026-10-17", startTime: "10:00" }); // satış kesimi geçti
+  await departure("guneydogu", { price: 250000, date: "2026-10-10", startTime: "10:00" }); // satış kesimi geçti
   let g = await tour();
   assert.deepEqual(
     g.demandDates.map((x) => [x.id, x.date, x.start_time, x.price]),

@@ -1,6 +1,7 @@
-// Ücretsiz ön kayıt (talep toplama modundaki tur) ve "yer açılınca haber ver"
-// (dolu sefer). Koltuk tutulmaz, ödeme alınmaz; kayıt panele düşer, müşteriye
-// e-postayla onay ve listeden çıkma bağlantısı gider.
+// Ücretsiz ön kayıt (talep toplama modundaki tur), "yer açılınca haber ver"
+// (dolu sefer) ve "tarih açılınca haber ver" (satışa kapalı tur). Koltuk tutulmaz,
+// ödeme alınmaz; kayıt panele düşer, müşteriye e-postayla onay ve listeden çıkma
+// bağlantısı gider.
 import { useState, type FormEvent } from "react";
 import { BellRing, Check, LoaderCircle, ShieldCheck } from "lucide-react";
 import { Modal } from "./Modal";
@@ -18,9 +19,11 @@ export function InterestForm({
   initialCount = 1,
   dates = [],
   initialDateId,
+  threshold,
+  count,
   onClose,
 }: {
-  kind: "prereg" | "waitlist";
+  kind: "prereg" | "waitlist" | "notify";
   tourId: string;
   tourName: string;
   departureId?: string;
@@ -30,19 +33,25 @@ export function InterestForm({
   // bağlanır. Tarih yoksa (talep turu) serbest "Tercih ettiğiniz dönem" kutusu görünür.
   dates?: DemandDate[];
   initialDateId?: string;
+  // Ön kayıt: kesinleşme eşiği ve (ilerleme açıksa) tarihsiz kayıtlı kişi sayısı.
+  threshold?: number;
+  count?: number;
   onClose: () => void;
 }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [result, setResult] = useState(""),
     human = useTurnstile("request");
-  const waitlist = kind === "waitlist";
-  const pickDate = !waitlist && dates.length > 0;
+  const waitlist = kind === "waitlist",
+    notify = kind === "notify";
+  const pickDate = kind === "prereg" && dates.length > 0;
   const [dateId, setDateId] = useState(
     initialDateId && dates.some((d) => d.id === initialDateId) ? initialDateId : dates[0]?.id || "",
   );
-  const picked = dates.find((d) => d.id === dateId);
+  const picked = dates.find((d) => d.id === dateId),
+    // Kaç kişi hazır: seçili tarihin ya da (tarihsiz ön kayıtta) turun sayacı; ilerleme kapalıysa yok.
+    ready = picked ? picked.count : pickDate ? undefined : count;
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -51,6 +60,7 @@ export function InterestForm({
     try {
       const r = await post<{ reference: string }>("/interest", {
         kind,
+        lang,
         tourId,
         ...(departureId ? { departureId } : pickDate && dateId ? { departureId: dateId } : {}),
         ...(f.get("preferredDate") ? { preferredDate: f.get("preferredDate") } : {}),
@@ -71,17 +81,36 @@ export function InterestForm({
     }
   }
   return (
-    <Modal title={waitlist ? t("Yer açılınca haber ver") : t("Ücretsiz ön kayıt")} onClose={onClose}>
+    <Modal
+      title={
+        notify
+          ? t("Tarih açılınca haber ver")
+          : waitlist
+            ? t("Yer açılınca haber ver")
+            : t("Ücretsiz ön kayıt")
+      }
+      onClose={onClose}
+    >
       {result ? (
         <div className="request-success">
           <div className="success-icon">
             <Check />
           </div>
-          <h2>{waitlist ? t("Bekleme listesindesiniz.") : t("Ön kaydınız alındı.")}</h2>
+          <h2>
+            {notify
+              ? t("Listeye eklendiniz.")
+              : waitlist
+                ? t("Bekleme listesindesiniz.")
+                : t("Ön kaydınız alındı.")}
+          </h2>
           <p>{t("Referans numaranız")}</p>
           <strong className="reference">{result}</strong>
           <p>
-            {waitlist
+            {notify
+              ? t(
+                  "Bu tura yeni tarih açılınca ya da ön kayıt başlayınca size e-posta göndereceğiz.",
+                )
+              : waitlist
               ? t("Bu seferde yer açılınca size hemen e-posta göndereceğiz. Yer, ilk rezervasyonu tamamlayana ayrılır.")
               : t("Yeterli talep oluşunca tur kesinleşir; tarihleri ve rezervasyon bağlantısını e-postanıza göndeririz.")}
           </p>
@@ -91,9 +120,22 @@ export function InterestForm({
         </div>
       ) : (
         <form className="request-form interest-form" onSubmit={submit}>
-          <h2>{waitlist ? t("Bu seferde yer kalmadı.") : t("Bu tur yeterli talep olursa yapılacak.")}</h2>
+          <h2>
+            {notify
+              ? t("Bu tur şu an satışa kapalı.")
+              : waitlist
+                ? t("Bu seferde yer kalmadı.")
+                : t("Bu tur yeterli talep olursa yapılacak.")}
+          </h2>
           <p className="muted">
-            {waitlist
+            {notify
+              ? t(
+                  "{tour} için yeni tarih açılınca ya da ön kayıt başlayınca size e-postayla haber verelim. Kayıt ücretsizdir.",
+                  {
+                    tour: tourName,
+                  },
+                )
+              : waitlist
               ? t("{tour} · {departure} için bekleme listesine katılın; yer açılınca sizi ilk haberdar edenlerden olalım.", {
                   tour: tourName,
                   departure: departureLabel || "",
@@ -107,6 +149,38 @@ export function InterestForm({
                     tour: tourName,
                   })}
           </p>
+          {/* Tur ne zaman kesinleşir: kaç kişi gerekli, kaç kişi hazır, karar en geç ne zaman. */}
+          {kind === "prereg" && threshold !== undefined && (
+            <div className="interest-goal">
+              <p>
+                {picked?.decisionDate
+                  ? t(
+                      "Bu tarih {threshold} kişiye ulaşınca kesinleşir; kararı en geç {date} e-postayla bildiririz.",
+                      {
+                        threshold,
+                        date: dateLabel(picked.decisionDate),
+                      },
+                    )
+                  : t("Tur {threshold} kişiye ulaşınca kesinleşir.", {
+                      threshold,
+                    })}
+              </p>
+              {ready !== undefined && (
+                <div className="demand-progress">
+                  <span>
+                    {t("{count} / {threshold} kişi hazır", {
+                      count: Math.min(ready, threshold),
+                      threshold,
+                    })}
+                  </span>
+                  <progress
+                    max={threshold}
+                    value={Math.min(ready, threshold)}
+                  />
+                </div>
+              )}
+            </div>
+          )}
           <div className="form-grid">
             <label className="field">
               {t("Adınız soyadınız")}
@@ -169,7 +243,7 @@ export function InterestForm({
           )}
           <button className="btn block" disabled={busy || !human.ready}>
             {busy ? <LoaderCircle className="spin" size={17} /> : null}
-            {waitlist ? t("Haber ver") : t("Ön kaydımı bırak")}
+            {waitlist || notify ? t("Haber ver") : t("Ön kaydımı bırak")}
           </button>
           <small className="form-foot">
             <ShieldCheck size={14} /> {t("Bu aşamada ödeme alınmaz.")}

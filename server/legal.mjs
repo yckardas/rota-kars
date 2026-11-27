@@ -44,6 +44,18 @@ export function minParticipantRule(tour) {
   return `Asgari katılımcı sayısı: ${n} kişi. Bu sayıya ulaşılamazsa acente turu en geç hareketten ${notice} önce bildirerek iptal edebilir; bu durumda ödediğiniz tutarın tamamı kesintisiz iade edilir ya da dilerseniz başka bir tarihe geçersiniz.`;
 }
 
+// Asgari katılımcıya ulaşılamazsa turun en geç kaç saat önce bildirileceği: panelde girilen
+// "İptal bildirim süresi"; girilmemişse paket tur mevzuatındaki asgari süreler (6 günden uzun
+// turda 20 gün, 2–6 günlük turda 7 gün, daha kısa turda 48 saat). Talep tarihinde "karar en
+// geç" tarihi buna göre hesaplanır (bkz. interest.mjs).
+export function minNoticeHoursOf(tour) {
+  const h = Number(tour?.minNoticeHours) || 0;
+  if (h) return h;
+  const days =
+    Number(String(tour?.duration || "").match(/(\d+)\s*gün/i)?.[1]) || 1;
+  return days > 6 ? 480 : days >= 2 ? 168 : 48;
+}
+
 // İptalde iade hesabı (iptal ve iade koşullarıyla aynı kural): süre, iptal talebinin
 // acenteye ulaştığı an ile hareket saati arasında hesaplanır. Süre içinde ödenen
 // tutarın tamamı, süre geçtiyse kapora (toplam bedelin %30'u) düşülerek iade edilir.

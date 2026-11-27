@@ -900,7 +900,10 @@ export function createApp(
             name: t.name,
             mode: t.mode,
             demand: t.demand,
+            salesOpen: t.salesOpen,
             preregCount: await store.interest.demandCount(t.id),
+            // Satışa kapalı turda "tarih açılınca haber ver" bekleyen kişi.
+            notifyCount: await store.interest.notifyCount(t.id),
             dates: await store.interest.adminDates(t.id),
           })),
         ),
@@ -1668,13 +1671,15 @@ export function createApp(
     "/api/articles/:slug",
     route(async (q, r) => r.json(await store.articles.getPublic(z.string().max(100).parse(q.params.slug)))),
   );
-  // Bekleme listesi (dolu sefer) ve talep toplama modundaki tura ücretsiz ön kayıt.
+  // Bekleme listesi (dolu sefer), talep toplama modundaki tura ücretsiz ön kayıt ve satışa
+  // kapalı tur için "tarih açılınca haber ver".
   app.post(
     "/api/interest",
     route(async (q, r) => {
       const input = z
         .object({
-          kind: z.enum(["waitlist", "prereg"]),
+          kind: z.enum(["waitlist", "prereg", "notify"]),
+          lang: z.enum(["tr", "en"]).optional(),
           tourId: tourIdSchema,
           departureId: z.string().min(1).max(100).optional(),
           preferredDate: z.string().trim().max(60).optional(),
@@ -1700,7 +1705,7 @@ export function createApp(
       r.type("html").send(
         `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Listeden çıkarıldınız · Rota Kars</title></head>` +
           `<body style="font-family:Arial,sans-serif;background:#e9eef1;color:#1a2846;padding:40px 16px"><main style="max-width:520px;margin:auto;background:#fff;border-radius:5px;padding:28px">` +
-          `<h1 style="font-size:22px;margin:0 0 12px">Listeden çıkarıldınız.</h1><p>${safe} için bekleme / ön kayıt listesinden çıktınız. Size bu konuda e-posta göndermeyeceğiz.</p>` +
+          `<h1 style="font-size:22px;margin:0 0 12px">Listeden çıkarıldınız.</h1><p>${safe} için bekleme, ön kayıt ve haber listesinden çıktınız. Size bu konuda e-posta göndermeyeceğiz.</p>` +
           `<p><a href="/turlar" style="color:#c2342b">Turlara göz atın</a></p></main></body></html>`,
       );
     }),

@@ -14,8 +14,11 @@ export function TourCard({ tour }: { tour: Tour }) {
     openTour = useOpenTour(),
     photo = useRef<HTMLImageElement>(null),
     ribbon = useRef<HTMLSpanElement>(null);
-  // Talep turunda satışa açılmış bir tarih varsa kart satış görünümüne geçer.
-  const demandOnly = tour.mode === "demand" && !tour.next,
+  // Talep turunda satışa açılmış bir tarih varsa kart satış görünümüne geçer. Yalnız talep
+  // tarihi olan online tur da (satılabilir tarihi yokken) "Ön kayıt açık · tarih" gösterir.
+  const demandOnly =
+      !tour.next &&
+      (tour.mode === "demand" || Boolean(tour.demandDates?.length)),
     shortDate = (date: string) =>
       new Date(date + "T12:00:00").toLocaleDateString(localeOf(), { day: "numeric", month: "short" });
   return (
@@ -68,7 +71,7 @@ export function TourCard({ tour }: { tour: Tour }) {
           <p>
             {tour.duration} · {t("Kars çıkışlı")}
             {tour.inquiryOnly
-              ? " · " + t("tarih için arayın")
+              ? " · " + t("tarih açılınca haber verelim")
               : demandOnly
                 ? " · " + t("yeterli talep olursa")
                 : ""}

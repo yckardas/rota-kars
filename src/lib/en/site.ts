@@ -159,12 +159,16 @@ export const site: Record<string, string> = {
   "Tur ara": "Search tours",
   "1 rota sizi bekliyor.": "1 route awaits you.",
   "{n} rota sizi bekliyor.": "{n} routes await you.",
+  "Şu an satışa kapalı rotalar": "Routes not on sale right now",
+  "Yeni tarih açılınca size e-postayla haber verelim. Kayıt ücretsizdir, koltuk tutulmaz.":
+    "We’ll email you when new dates open. Signing up is free and no seat is held.",
   "Bu aramayla eşleşen bir rota yok.": "No routes match this search.",
   "Başka bir şehir deneyin veya bütün rotalara göz atın.":
     "Try another city or browse all routes.",
   "Bütün rotaları göster": "Show all routes",
   "Kars çıkışlı": "Departs from Kars",
   "tarih için arayın": "call for dates",
+  "tarih açılınca haber verelim": "we’ll tell you when dates open",
   "kişi başı": "per person",
   // Tur detayı
   "Bu rota bulunamadı.": "We couldn’t find this route.",
@@ -176,9 +180,14 @@ export const site: Record<string, string> = {
   Araç: "Vehicle",
   "Kişi başı": "Per person",
   "Bu tur için bilgi alın": "Ask about this tour",
+  "Tarih açılınca haber ver": "Tell me when dates open",
   "Tarih ve koltuk seç": "Choose date and seat",
   "İlk hareket: {date} · {time}": "Next departure: {date} · {time}",
   "Uygun tarih için bize ulaşın.": "Contact us for available dates.",
+  "Planlanan tarih: {date} · yeterli talep olursa kesinleşir.":
+    "Planned date: {date} · goes ahead once there is enough demand.",
+  "Şu an satışa kapalı · tarih açılınca haber verelim.":
+    "Not on sale right now · we’ll tell you when dates open.",
   "Bu yolculukta sizi neler bekliyor?": "What awaits you on this trip?",
   "Günün akışı": "The day’s plan",
   "Fiyata dahil": "Included in the price",
@@ -187,6 +196,7 @@ export const site: Record<string, string> = {
   "Kars merkezde ev, otel ve yakın noktalardan alıp bırakma":
     "Pick-up and drop-off from homes, hotels and nearby points in central Kars",
   "Tarihinizi acenteyle planlayın.": "Plan your date with our agency.",
+  "{date} · {time} · ön kayıt": "{date} · {time} · pre-registration",
   "Rehber: {name}": "Guide: {name}",
   "Tur bölgesini haritada aç": "Open the tour area on the map",
   "Yola çıkmadan önce": "Before you go",
@@ -209,6 +219,10 @@ export const site: Record<string, string> = {
   "Size uyan günü seçin.": "Pick the day that suits you.",
   "Yolculuğunuzun yerini şimdiden belirleyin.":
     "Claim your seat for the journey now.",
+  "Bu tur şu an satışa kapalı. Yeni tarih açılınca size e-postayla haber verelim.":
+    "This tour is not on sale right now. We’ll email you when new dates open.",
+  "Haber listesi ücretsizdir, koltuk tutulmaz":
+    "The list is free; no seat is held",
   "İlk hareket: {date}": "Next departure: {date}",
   "{n} yolcu koltuğu": "{n} passenger seats",
   "Demo sürümünde fiyat ve sefer tarihleri örnektir. Online ödeme henüz aktif değildir.":
@@ -570,6 +584,15 @@ export const site: Record<string, string> = {
     "Free pre-registration",
   "Bekleme listesindesiniz.":
     "You’re on the waiting list.",
+  "Listeye eklendiniz.":
+    "You’re on the list.",
+  "Bu tura yeni tarih açılınca ya da ön kayıt başlayınca size e-posta göndereceğiz.":
+    "We’ll email you when new dates open or pre-registration starts for this tour.",
+  "Bu tur şu an satışa kapalı.": "This tour is not on sale right now.",
+  "{tour} için yeni tarih açılınca ya da ön kayıt başlayınca size e-postayla haber verelim. Kayıt ücretsizdir.":
+    "We’ll email you when new dates open or pre-registration starts for {tour}. Signing up is free.",
+  "Bu tur satışta; tarih seçip rezervasyon ya da ön kayıt yapabilirsiniz.":
+    "This tour is on sale; pick a date to book or pre-register.",
   "Ön kaydınız alındı.":
     "Your pre-registration is in.",
   "Bu seferde yer açılınca size hemen e-posta göndereceğiz. Yer, ilk rezervasyonu tamamlayana ayrılır.":
@@ -610,6 +633,16 @@ export const site: Record<string, string> = {
     "This tour goes ahead once there is enough demand. Pre-register for free; once it’s confirmed we’ll let you know and open bookings.",
   "{count} / {threshold} kişi hazır":
     "{count} / {threshold} people in",
+  "Tur {threshold} kişiye ulaşınca kesinleşir.":
+    "The tour goes ahead once {threshold} people have signed up.",
+  "Bu tarih {threshold} kişiye ulaşınca kesinleşir; kararı en geç {date} e-postayla bildiririz.":
+    "This date goes ahead once {threshold} people have signed up; we’ll email our decision by {date} at the latest.",
+  "En az {threshold} kişi gerekli": "At least {threshold} people needed",
+  "En az {threshold} kişi gerekli · karar en geç {date}":
+    "At least {threshold} people needed · decision by {date}",
+  "Karar en geç {date}": "Decision by {date}",
+  "Bu tarih için ön kayıt süresi doldu.":
+    "Pre-registration for this date has closed.",
   "tahmini kişi başı":
     "estimated per person",
   "Ön kayıt ücretsizdir, ödeme alınmaz":

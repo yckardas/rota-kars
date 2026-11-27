@@ -5743,6 +5743,74 @@ html:has(.kp) {
   margin-bottom: 0;
   font-size: 12px;
 }
+/* Kesinleşme kuralı: kaç kişi gerekli, karar en geç ne zaman */
+.kp .demand-dates .demand-date-rule {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 12px;
+  color: var(--kp-ink-2);
+}
+.kp .demand-note .demand-goal,
+.kp .interest-goal p {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--kp-ink);
+}
+.kp .interest-goal {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--kp-red, #c2342b) 6%, var(--kp-card));
+}
+.kp .interest-goal p:last-child,
+.kp .interest-goal .demand-progress {
+  margin-bottom: 0;
+}
+/* Satışa kapalı turlar: listenin sonunda ayrı ve daha sakin */
+.kp .closed-tours {
+  margin-top: 64px;
+  padding-top: 30px;
+  border-top: 1px solid var(--kp-hair);
+}
+.kp .closed-tours h2 {
+  margin: 0 0 6px;
+  font-size: 24px;
+}
+.kp .closed-tours > p {
+  margin: 0 0 26px;
+  color: var(--kp-ink-2);
+}
+.kp .tour-grid.is-quiet {
+  gap: 30px 24px;
+}
+.kp .closed-tour {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-width: 0;
+}
+.kp .tour-grid.is-quiet .tour-card {
+  box-shadow: none;
+  border: 1px solid var(--kp-hair);
+}
+.kp .tour-grid.is-quiet .tour-card-image {
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+.kp .tour-grid.is-quiet .tour-card-image > img {
+  filter: saturate(0.55);
+}
+.kp .tour-grid.is-quiet .tour-card-ribbon {
+  font-size: 22px;
+}
+.kp .tour-grid.is-quiet .tour-card-info > strong {
+  font-size: 20px;
+}
+.kp .closed-tour > .btn {
+  justify-content: center;
+  gap: 8px;
+}
 .kp .demand-dates-more {
   margin-top: 8px;
   padding: 0;

@@ -1,6 +1,14 @@
 import { localeOf } from "./i18n";
 import type { PricedTransfer, TransferConfig } from "./transfer";
-export type DemandDate = { id: string; date: string; start_time: string; price: number; count?: number };
+// decisionDate: kesinleşme kararının en geç verileceği gün (hareket − asgari katılımcı bildirim süresi).
+export type DemandDate = {
+  id: string;
+  date: string;
+  start_time: string;
+  price: number;
+  count?: number;
+  decisionDate?: string;
+};
 export type Tour = {
   // Kart fotoğrafındaki şerit yazısı (panelden); boşsa güzergâhtaki yer adı.
   cardLabel?: string;
