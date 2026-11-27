@@ -111,6 +111,30 @@ export const services = [
         ],
       },
       {
+        name: "Citroën VIP",
+        photos: [
+          "/images/araclar/citroen-vip-1.webp",
+          "/images/araclar/citroen-vip-2.webp",
+          "/images/araclar/citroen-vip-3.webp",
+        ],
+      },
+      {
+        name: "Mercedes-Benz Sprinter VIP",
+        photos: [
+          "/images/araclar/sprinter-vip-a-1.webp",
+          "/images/araclar/sprinter-vip-a-2.webp",
+          "/images/araclar/sprinter-vip-a-3.webp",
+        ],
+      },
+      {
+        name: "Mercedes-Benz Sprinter VIP",
+        photos: [
+          "/images/araclar/sprinter-vip-b-1.webp",
+          "/images/araclar/sprinter-vip-b-2.webp",
+          "/images/araclar/sprinter-vip-b-3.webp",
+        ],
+      },
+      {
         name: "Fiat Egea Cross",
         photos: [
           "/images/araclar/fiat-egea-1.webp",
@@ -175,6 +199,15 @@ export const services = [
           "/images/araclar/vw-crafter-b-2.webp",
           "/images/araclar/vw-crafter-b-3.webp",
           "/images/araclar/vw-crafter-b-4.webp",
+        ],
+      },
+      {
+        name: "Volkswagen Crafter",
+        photos: [
+          "/images/araclar/vw-crafter-c-1.webp",
+          "/images/araclar/vw-crafter-c-2.webp",
+          "/images/araclar/vw-crafter-c-3.webp",
+          "/images/araclar/vw-crafter-c-4.webp",
         ],
       },
     ],
