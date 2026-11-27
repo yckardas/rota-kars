@@ -903,8 +903,21 @@ export function BalancePayment() {
   const { token } = useParams(),
     [error, setError] = useState("");
   useEffect(() => {
-    post<{ redirectUrl: string }>("/payments/start-ticket", { token, lang })
-      .then((s) => window.location.replace(localPath(lang, s.redirectUrl)))
+    post<{ redirectUrl?: string; lookup?: string }>("/payments/start-ticket", {
+      token,
+      lang,
+    })
+      .then((s) =>
+        window.location.replace(
+          s.redirectUrl
+            ? localPath(lang, s.redirectUrl)
+            : // Eski bağlantı (bilet belirteciyle): e-posta doğrulanınca ödeme açılır.
+              localPath(
+                lang,
+                "/rezervasyonum?ref=" + encodeURIComponent(s.lookup || ""),
+              ),
+        ),
+      )
       .catch((e) => setError((e as Error).message));
   }, [token]);
   return (

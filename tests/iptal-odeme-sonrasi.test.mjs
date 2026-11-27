@@ -119,11 +119,13 @@ test("iptal talebi bekleyen rezervasyonda kalan tutar ödenemez; talep geri alı
     blocked.json.message,
     /İptal talebiniz acente değerlendirmesini bekliyor/,
   );
-  // Acentenin ödeme bağlantısı da (bilet belirteciyle) açılmaz; panel bağlantı üretmez.
-  assert.equal(
-    (await call("/payments/start-ticket", { token: paid.ticket_token })).status,
-    409,
-  );
+  // Bilet belirteci ödeme açmaz (yalnız Rezervasyonum'a yönlendirir); panel bağlantı üretmez.
+  const viaTicket = await call("/payments/start-ticket", {
+    token: paid.ticket_token,
+  });
+  assert.equal(viaTicket.status, 200);
+  assert.equal(viaTicket.json.redirectUrl, undefined);
+  assert.equal(viaTicket.json.lookup, r.reference);
   const link = await call(
     `/admin/reservations/${r.reference}/payment-link`,
     {},

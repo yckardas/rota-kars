@@ -1776,7 +1776,7 @@ export function createApp(
         throw new AppError(409, "Müşterinin iptal talebi bekliyor; ödeme bağlantısı gönderilemez. Talep geri alınırsa ödeme yeniden açılır.");
       if (!amount) throw new AppError(409, "Bu rezervasyonda kartla ödenecek tutar yok.");
       // PUBLIC_BASE_URL yoksa (yerel) adres isteğin geldiği siteden tamamlanır.
-      const link = payments.paymentLink(res),
+      const link = await payments.paymentLink(res),
         url = link.startsWith("/") ? siteBase(q, env) + link : link;
       r.json({
         url,

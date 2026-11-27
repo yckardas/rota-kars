@@ -13,8 +13,9 @@ export const siteBase = (q, env) => configuredBase(env, q);
 // notu, iç referans) ve kaydı açan yöneticinin kimliği çıkarılır. Toplamlar kalır.
 export async function receipt(reservation, q, env, { customer = false } = {}) {
   const ticketUrl = siteBase(q, env) + "/bilet/" + reservation.ticket_token;
+  // pay_token: acentenin ödeme bağlantısının belirteci; yalnız panelde kullanılır.
   // eslint-disable-next-line no-unused-vars
-  const { ledger, created_by, ...safe } = reservation;
+  const { ledger, created_by, pay_token, ...safe } = reservation;
   return {
     ...(customer ? safe : reservation),
     // Müşteriye dönen belgede kimlik numaraları maskelenir.
