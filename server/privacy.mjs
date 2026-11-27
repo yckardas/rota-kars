@@ -74,6 +74,13 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx, pii
         phone: "",
         passengers: (Array.isArray(r.passengers) ? r.passengers : []).map(() => ANON),
         passenger_details: [],
+        // Online transferde otel / adres ve not da kişisel veri sayılır.
+        ...(r.transfer_booking
+          ? {
+              transfer_booking: { ...r.transfer_booking, address: ANON },
+              notes: "",
+            }
+          : {}),
         member_id: null,
         // Onaylanan belge metinleri ad, e-posta ve telefon içerir; onay zamanı ve
         // sürümü (legal_version, pre_info_accepted_at, contract_at) kalır.
@@ -203,7 +210,9 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx, pii
     const dates = await departureDates(data.reservations);
     const paid = await ledgerTotals(data.reservations.map((r) => r.id));
     const upcoming = data.reservations.filter(
-      (r) => ["pending_agency", "confirmed"].includes(r.status) && (dates.get(r.departure_id) || "") >= today,
+      (r) =>
+        ["pending_agency", "confirmed"].includes(r.status) &&
+        (dates.get(r.departure_id) || r.service_date || "") >= today,
     );
     if (upcoming.length)
       throw new AppError(

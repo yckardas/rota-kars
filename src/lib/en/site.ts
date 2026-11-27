@@ -316,6 +316,94 @@ export const site: Record<string, string> = {
   "Rezervasyon yap": "Book now",
   "Bu numara bir rezervasyon değildir. Kaydınızın durumunu Rezervasyonum sayfasında bu numara ve e-posta adresinizle görebilirsiniz.":
     "This number is not a booking. You can check your registration on the My booking page with this number and your email address.",
+  // Online transfer (VIP transfer sayfası, transfer belgesi, ödeme)
+  "Transferinizi şimdi ayırın.": "Book your transfer now.",
+  "Güzergâhı seçin, fiyatı hemen görün, kartla ödeyin; rezervasyonunuz ödemeyle birlikte onaylansın.":
+    "Choose your route, see the price instantly and pay by card; your booking is confirmed with the payment.",
+  "Tarih, saat ve uçuş": "Date, time and flight",
+  "Tarih ve saat": "Date and time",
+  "Yolcular ve adres": "Passengers and address",
+  "Geliş · {point} → konaklama yeriniz":
+    "Arrival · {point} → your accommodation",
+  "Dönüş · konaklama yeriniz → {point}":
+    "Departure · your accommodation → {point}",
+  "İniş saati": "Landing time",
+  "Varış saati": "Arrival time",
+  "Alınış saati": "Pickup time",
+  "Uçuş numarası": "Flight number",
+  "Otobüs / tren seferi (isteğe bağlı)": "Bus / train service (optional)",
+  "Örn. TK2734": "e.g. TK2734",
+  "Örn. Doğu Ekspresi": "e.g. Doğu Ekspresi",
+  "Alınış saati otelden çıkış saatinizdir; uçuşunuzdan en az 2 saat önceye planlamanızı öneririz.":
+    "Pickup time is when you leave your hotel; we recommend at least 2 hours before your flight.",
+  "Online transfer alınış saatinden en az {n} saat önce ayrılabilir. Daha yakın bir saat için bizi arayın.":
+    "Online transfers can be booked at least {n} hours before pickup. For a sooner time, please call us.",
+  "Geçmiş bir tarih veya saat seçilemez.":
+    "A past date or time can’t be selected.",
+  "Dönüş transferi gelişten sonra olmalı.":
+    "The departure transfer must be after the arrival.",
+  Bagaj: "Luggage",
+  "Bagaj yok": "No luggage",
+  "{count} bagaj": "{count} bags",
+  "1 bagaj": "1 bag",
+  "Otel adı veya adres (Kars merkez)":
+    "Hotel name or address (Kars city centre)",
+  "Otel adı veya adres (Sarıkamış)": "Hotel name or address (Sarıkamış)",
+  "Örn. otel adı, mahalle ve cadde": "e.g. hotel name, district and street",
+  "15 kişiden kalabalık gruplar ve Kars dışındaki adresler için bizi arayın; transferi birlikte planlayalım.":
+    "For groups larger than 15 and addresses outside Kars, call us and we’ll plan the transfer together.",
+  "Not (isteğe bağlı)": "Note (optional)",
+  "Örn. çocuk koltuğu, ek bilgi": "e.g. child seat, other details",
+  "Devam et: sözleşmeler ve ödeme": "Continue: contracts and payment",
+  "Onay ve ödeme": "Confirm and pay",
+  "Alınış saatine {n} saatten az kaldı. Ödeme yaptıktan sonra iptal ederseniz bedelin %30'u iade edilmez.":
+    "Less than {n} hours remain before pickup. If you cancel after paying, 30% of the price is not refunded.",
+  "Kartla öde · {amount}": "Pay by card · {amount}",
+  "Transfer özeti": "Transfer summary",
+  Geliş: "Arrival",
+  Dönüş: "Departure",
+  Adres: "Address",
+  "{tier} grubunun toplamı · KDV dahil":
+    "Total for a group of {tier} · VAT included",
+  "15 kişiden kalabalık gruplar için bizi arayın.":
+    "For groups larger than 15, please call us.",
+  "Tam ödeme, kartla (3D Secure). Ödeme alınınca rezervasyonunuz anında onaylanır.":
+    "Full payment by card (3D Secure). Your booking is confirmed as soon as the payment goes through.",
+  "Alınış saatinden {n} saat öncesine kadar ücretsiz iptal.":
+    "Free cancellation up to {n} hours before pickup.",
+  "Kaydınız alındı, ödeme başlatılamadı.":
+    "Your booking is saved, but the payment couldn’t start.",
+  "{reference} numaralı transfer kaydınız ödeme bekliyor. Rezervasyonum sayfasından kartla ödeyebilirsiniz; ödeme alınınca rezervasyonunuz onaylanır.":
+    "Your transfer booking {reference} is awaiting payment. You can pay by card on the My booking page; your booking is confirmed once the payment goes through.",
+  "Kars merkez": "Kars city centre",
+  Sarıkamış: "Sarıkamış",
+  "VIP transfer": "VIP transfer",
+  "Transfer bedeli": "Transfer price",
+  "Transfer bedelini şimdi ödeyin.": "Pay for your transfer now.",
+  "Transfer tarihi {date}, {time}": "Transfer date {date}, {time}",
+  "Kodu okutan güncel onay durumunu görür. Şoförümüz alınışta bu kodu okutabilir.":
+    "Scanning the code shows the current confirmation status. Our driver may scan it at pickup.",
+  İrtibat: "Contact",
+  Not: "Note",
+  Alınış: "Pickup",
+  "Transferiniz onaylandı. Uçuş veya sefer saatiniz ya da adresiniz değişirse bizi en kısa sürede arayın.":
+    "Your transfer is confirmed. If your flight or service time or your address changes, please call us as soon as possible.",
+  "Ödeme tamamlanınca transferiniz onaylanır. Ödemesi tamamlanmayan kayıt en geç 24 saat sonra düşer. Referansınızı ve e-posta adresinizi saklayın.":
+    "Your transfer is confirmed once the payment is complete. Unpaid bookings lapse after 24 hours at the latest. Keep your reference and email address.",
+  "Transfer Hizmet Sözleşmesi": "Transfer Service Agreement",
+  "Transfer Hizmet Sözleşmesi'ni (Mesafeli Satış Sözleşmesi)":
+    "Transfer Service Agreement (distance sales contract)",
+  "Online transfer satışı şu anda kapalı. Transfer için bizi arayın veya WhatsApp'tan yazın.":
+    "Online transfer booking is currently closed. Please call us or message us on WhatsApp for a transfer.",
+  "Geliş uçuş numaranızı yazın.": "Enter your arrival flight number.",
+  "Dönüş uçuş numaranızı yazın.": "Enter your departure flight number.",
+  "Geliş tarihini ve saatini seçin.": "Choose the arrival date and time.",
+  "Dönüş tarihini ve saatini seçin.": "Choose the departure date and time.",
+  "Online transfer en fazla bir yıl sonrası için ayrılabilir.":
+    "Online transfers can be booked up to one year ahead.",
+  "Otel adını veya adresi yazın.": "Enter the hotel name or address.",
+  "Bu e-posta ile ödemesi tamamlanmamış transfer kayıtları var. Önce onları tamamlayın veya iptal edin.":
+    "There are unpaid transfer bookings with this email. Please complete or cancel them first.",
   // Hakkımızda
   "Bu coğrafyanın": "We are part",
   "bir parçasıyız.": "of this land.",

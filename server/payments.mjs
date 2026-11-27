@@ -10,7 +10,6 @@ import {
   vakifbankConfig,
 } from "./vakifbank.mjs";
 import { simulatorFetch } from "./bank-simulator.mjs";
-import { tours } from "./catalog.mjs";
 import { localDate } from "./departures.mjs";
 import {
   LEGAL_VERSION,
@@ -19,6 +18,7 @@ import {
   contractText,
   legalDataFromReservation,
   preInfoText,
+  serviceFor,
 } from "./legal.mjs";
 // Online kapora / tam ödeme. PAYMENT_PROVIDER ile seçilir:
 // - "disabled" (varsayılan): online ödeme kapalı, ön rezervasyon acenteye düşer.
@@ -506,7 +506,7 @@ export function createPayments(
       const s = await getSession(id),
         r = await workflow.get(s.reference),
         open = s.status === "pending" && s.expires_at >= clock(),
-        tour = tours.find((t) => t.id === r.tourId);
+        tour = serviceFor(r);
       // Ödeme ekranında onaylanacak metinler bu rezervasyonun verisiyle yazılır;
       // kişisel veri içerdiklerinden yalnız ödeme oturumu açıkken verilir.
       const legal = tour
@@ -532,8 +532,10 @@ export function createPayments(
           date: r.date,
           startTime: r.start_time,
           pickup: r.pickup || "",
-          count: r.seats.length,
+          count: r.pax || r.seats.length,
           seats: r.seats,
+          // Turdan bağımsız transfer: tam ödeme, koltuk yok.
+          kind: r.kind === "transfer" ? "transfer" : "tour",
           paymentMode: r.payment_mode,
           total: r.total,
           deposit: r.deposit,
@@ -636,7 +638,7 @@ export function createPayments(
     // bugün yapılıp yapılamayacağı.
     async cancelQuote(reference) {
       const r = await workflow.get(reference),
-        tour = tours.find((t) => t.id === r.tourId),
+        tour = serviceFor(r),
         q = cancellationQuote({
           tour,
           date: r.date,

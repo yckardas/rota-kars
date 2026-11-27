@@ -3,9 +3,16 @@
 // kaydına yazılır ve müşteriye e-postayla gider. Kaynak taslaklar: docs/yasal/.
 // Metin değişirse LEGAL_VERSION yükseltilir; kayıtta hangi sürümün onaylandığı kalır.
 import { transferLine } from "./transfer.mjs";
-import { business } from "./catalog.mjs";
+import { business, tours } from "./catalog.mjs";
+import {
+  TRANSFER_FREE_CANCEL_HOURS,
+  legLine,
+  transferTitle,
+} from "./transfer-booking.mjs";
 
 export const LEGAL_VERSION = "2026-11-16";
+// Turdan bağımsız transfer metinlerinin sürümü (tur metinlerinden ayrı izlenir).
+export const TRANSFER_LEGAL_VERSION = "2026-11-27";
 export const DEFAULT_DEPOSIT_PERCENT = 30;
 // İptal kesinleştikten sonra iadenin en geç yapılacağı süre (gün).
 export const REFUND_DAYS = 14;
@@ -22,12 +29,27 @@ const trDate = (ymd) => {
 const stamp = (ms) =>
   new Date(ms).toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" });
 
+// Rezervasyonun hizmeti: katalogdaki tur ya da turdan bağımsız transfer. Transferde
+// "tur" yerine bu nesne kullanılır; metin üreticileri kind: "transfer"e göre ayrılır.
+export const isTransferService = (tour) => tour?.kind === "transfer";
+export const serviceFor = (r) =>
+  r?.kind === "transfer"
+    ? { id: "transfer", kind: "transfer", name: transferTitle(r.transfer_booking) }
+    : tours.find((t) => t.id === r?.tourId);
 // Yurt dışı turlarda kesintisiz iptal süresi 5, yurt içinde 3 gündür.
 export const isAbroad = (tour) => Boolean(tour?.abroad);
 export const isOvernight = (tour) => /gece/i.test(String(tour?.duration || ""));
-export const freeCancelDays = (tour) => (isAbroad(tour) ? 5 : 3);
-// Hareketten bu kadar saat öncesine kadar yapılan iptal kesintisizdir.
-export const freeCancelHours = (tour) => freeCancelDays(tour) * 24;
+export const freeCancelDays = (tour) =>
+  isTransferService(tour)
+    ? TRANSFER_FREE_CANCEL_HOURS / 24
+    : isAbroad(tour)
+      ? 5
+      : 3;
+// Hareketten (transferde alınış saatinden) bu kadar saat öncesine kadar yapılan iptal kesintisizdir.
+export const freeCancelHours = (tour) =>
+  isTransferService(tour)
+    ? TRANSFER_FREE_CANCEL_HOURS
+    : freeCancelDays(tour) * 24;
 // Rezervasyon anı kesintisiz iptal süresinin içine düşüyorsa (son dakika) true.
 export function isLateBooking(tour, date, startTime, now = Date.now()) {
   const start = Date.parse(`${date}T${startTime || "00:00"}:00+03:00`);
@@ -104,6 +126,8 @@ export function cancellationRules(
   tour,
   { depositPercent = DEFAULT_DEPOSIT_PERCENT } = {},
 ) {
+  if (isTransferService(tour))
+    return transferCancellationRules({ depositPercent });
   const days = freeCancelDays(tour),
     scope = isAbroad(tour) ? "yurt dışı" : "yurt içi";
   return [
@@ -127,6 +151,7 @@ const section = (title, lines) =>
 //   passengers:[{name, seat, nationality}], unitPrice, count, discount, total, deposit,
 //   paymentMode, onlinePayment, reference, createdAt, depositPercent }
 export function preInfoText(data, b = business) {
+  if (isTransferService(data.tour)) return transferPreInfoText(data, b);
   const { tour } = data,
     pct = data.depositPercent || DEFAULT_DEPOSIT_PERCENT,
     full = data.paymentMode === "full",
@@ -235,6 +260,7 @@ export function preInfoText(data, b = business) {
 
 // Onay anında kurulan sözleşme. data: preInfoText ile aynı alanlar + confirmedAt, via.
 export function contractText(data, b = business) {
+  if (isTransferService(data.tour)) return transferContractText(data, b);
   const { tour } = data,
     pct = data.depositPercent || DEFAULT_DEPOSIT_PERCENT;
   const parts = [
@@ -343,5 +369,134 @@ export function legalDataFromReservation(
     createdAt: r.created_at,
     depositPercent,
     preInfoAcceptedAt: r.pre_info_accepted_at || null,
+    // Turdan bağımsız transferde güzergâh, bacaklar, adres, kişi ve bagaj.
+    transferBooking: r.transfer_booking || null,
+    pax: r.pax || 0,
   };
+}
+
+// ---- Turdan bağımsız transfer (VIP transfer sayfasından online) ----
+// Kaynak: tur metinleri (docs/yasal/01–03 ve yukarıdaki tur maddeleri) transfer hizmetine
+// uyarlandı; yeni ticari koşul olarak yalnız 24 saatlik kesintisiz iptal süresi ve süre
+// sonrası %30 kesinti (turdaki kapora oranı) eklendi. Avukat ve acente onayı bekler.
+export function transferCancellationRules({ depositPercent = DEFAULT_DEPOSIT_PERCENT } = {}) {
+  const hours = TRANSFER_FREE_CANCEL_HOURS;
+  return [
+    "Ödemesi tamamlanmamış transfer ön rezervasyonunu istediğiniz zaman ücretsiz iptal edebilirsiniz. Ödemesi tamamlanmayan ön rezervasyon en geç 24 saat sonra (alınış saati daha yakınsa alınış saatinde) kendiliğinden düşer.",
+    `Onaylanmış transferi alınış saatinden ${hours} saat öncesine kadar iptal ederseniz ödediğiniz tutarın tamamı iade edilir.`,
+    `Bu süreden sonra yapılan iptallerde transfer bedelinin %${depositPercent}'u iade edilmez; kalanı iade edilir.`,
+    "Haber vermeden alınış noktasında bulunmazsanız (gelmeme) ödediğiniz tutar iade edilmez.",
+    "Uçuşunuzun ya da seferinizin saati değişirse veya iptal edilirse bizi en kısa sürede arayın; transferi yeni saate göre birlikte planlarız.",
+    "Gidiş-dönüş transferde süre ilk transferin alınış saatine göre hesaplanır. Yalnız bir yönü iptal etmek veya değiştirmek için acenteyle iletişime geçin.",
+    "Süre, iptal talebinizin bize ulaştığı an ile alınış saati arasında hesaplanır. İptal talebi Rezervasyonum sayfasından, e-postayla veya telefonla iletilebilir.",
+    "Transferi biz yapamazsak (araç arızası, hava, yol koşulları veya resmî karar) ödediğiniz tutarın tamamını kesintisiz geri alırsınız ya da dilerseniz başka bir saate geçersiniz.",
+    "İadeler, iptal kesinleştikten sonra en geç 14 gün içinde ödemenin yapıldığı yönteme uygun olarak yapılır: kartla ödendiyse aynı karta. Karta iadenin hesaba yansıma süresi bankanıza bağlıdır. Kesintisiz iade hâllerinde hiçbir kesinti yapılmaz.",
+  ];
+}
+const transferServiceLines = (data) => {
+  const tb = data.transferBooking || {},
+    legs = tb.legs || [];
+  return [
+    `Hizmet: şoförlü özel transfer (turdan bağımsız) · ${transferTitle(tb).replace(/^VIP transfer · /, "")}`,
+    `Yön: ${data.transfer?.directionLabel || ""}`,
+    ...legs.map((l) => legLine(tb, l)),
+    `Kişi: ${data.pax} · bagaj: ${tb.bags ?? 0}`,
+    "Araç: kişi ve bagaj sayısına uygun, şoförlü, D2/B2 belgeli araç",
+    "Alınış ve bırakış bilgileri (uçuş veya sefer saati, adres) değişirse en kısa sürede acenteye bildirin.",
+  ];
+};
+const transferLate = (data) => {
+  const first = data.transferBooking?.legs?.[0];
+  return first ? isLateBooking({ kind: "transfer" }, first.date, first.time, data.createdAt || Date.now()) : false;
+};
+export function transferPreInfoText(data, b = business) {
+  const pct = data.depositPercent || DEFAULT_DEPOSIT_PERCENT;
+  const parts = [
+    `ÖN BİLGİLENDİRME FORMU · TRANSFER HİZMETİ · sürüm ${TRANSFER_LEGAL_VERSION}`,
+    data.reference
+      ? `Ön rezervasyon no: ${data.reference} · Oluşturulma: ${stamp(data.createdAt || Date.now())}`
+      : "",
+    section("1. Hizmeti sunan (acente)", legalEntity(b)),
+    section("2. Müşteri", [
+      `Ad soyad: ${data.customer.name}`,
+      `E-posta: ${data.customer.email}`,
+      `Telefon: ${data.customer.phone}`,
+    ]),
+    section("3. Transfer", transferServiceLines(data)),
+    section("4. Fiyat ve ödeme", [
+      data.transfer ? `Transfer bedeli (grup başına, ${data.transfer.tierLabel}): ${tl(data.total)}` : "",
+      `Toplam (KDV dahil): ${tl(data.total)}`,
+      `Ödeme tercihi: tam ödeme (${tl(data.total)})`,
+      "Online ödeme: kart bilgileriniz sitemizdeki güvenli ödeme formunda girilir, şifreli bağlantıyla Vakıfbank sanal POS'una iletilir ve 3D Secure ile kartınızı veren bankada doğrulanır. Kart bilgileri veritabanımıza yazılmaz ve saklanmaz. Ödeme başarıyla tamamlandığında rezervasyonunuz otomatik onaylanır.",
+      "Fiyatlar Türk lirasıdır. Sözleşme kurulduktan sonra toplam bedel artırılmaz. Fatura, ödeme kaydedildikten sonra rezervasyon sahibi adına düzenlenir.",
+      "Acente telefonla, e-postayla veya mesajla kart bilgisi, parola ya da doğrulama kodu istemez.",
+    ]),
+    section("5. Sözleşmenin kurulması", [
+      "Siteden gönderdiğiniz kayıt, ödeme tamamlanana kadar bir ön rezervasyon talebidir.",
+      "Online ödeme başarıyla tamamlandığı anda rezervasyonunuz otomatik onaylanır ve sözleşme bu anda kurulur.",
+      "Onay e-postası Transfer Hizmet Sözleşmesi'nin ve bu formun bir kopyasını içerir.",
+      "Ödeme tamamlanmazsa ön rezervasyon en geç 24 saat sonra (alınış saati daha yakınsa alınış saatinde) kendiliğinden düşer; size bir yükümlülük doğmaz.",
+    ]),
+    section("6. Cayma hakkı", [
+      "Belirli bir tarih ve saatte yapılması gereken taşıma hizmetlerinde Mesafeli Sözleşmeler Yönetmeliği md. 15/1-(g) uyarınca 14 günlük cayma hakkı bulunmaz.",
+      "Bunun yerine aşağıdaki iptal ve iade koşulları geçerlidir.",
+    ]),
+    section("7. İptal ve iade koşulları", [
+      ...transferCancellationRules({ depositPercent: pct }),
+      transferLate(data)
+        ? `Son dakika rezervasyonu: alınış saatine ${TRANSFER_FREE_CANCEL_HOURS} saatten az kaldı. Ödeme yaptıktan sonra iptal ederseniz bedelin %${pct}'u iade edilmez.`
+        : "",
+    ]),
+    section("8. Şikâyet ve uyuşmazlık", [
+      `Şikâyetlerinizi önce acenteye iletebilirsiniz: ${b.email} · ${b.phone}.`,
+      "Ticaret Bakanlığı'nca her yıl belirlenen parasal sınırlar içinde tüketici hakem heyetlerine, bu sınırları aşan uyuşmazlıklarda tüketici mahkemelerine başvurabilirsiniz. Başvuru e-Devlet'teki TÜBİS üzerinden de yapılabilir. Kanunda öngörülen hâllerde dava açmadan önce arabulucuya başvurulması zorunludur.",
+    ]),
+    section("9. Kişisel veriler", [
+      "Kişisel verileriniz rotakarsturizm.com/bilgilendirme#kvkk adresindeki Aydınlatma Metni'ne uygun olarak işlenir.",
+    ]),
+  ];
+  return parts.filter(Boolean).join("\n\n");
+}
+export function transferContractText(data, b = business) {
+  const pct = data.depositPercent || DEFAULT_DEPOSIT_PERCENT;
+  const parts = [
+    `TRANSFER HİZMET SÖZLEŞMESİ · sürüm ${TRANSFER_LEGAL_VERSION}`,
+    data.draft
+      ? `Sözleşme no: ${data.reference} · Kuruluş: ödemeniz bankaca onaylandığı anda`
+      : `Sözleşme no: ${data.reference} · Kuruluş: ${stamp(data.confirmedAt || Date.now())} (${data.via === "online" ? "online ödeme ile otomatik onay" : "acente onayı"})`,
+    section("Madde 1. Taraflar", [
+      ...legalEntity(b).map((l, i) => (i === 0 ? l + ' ("Acente")' : l)),
+      `Müşteri: ${data.customer.name} · ${data.customer.email} · ${data.customer.phone} ("Müşteri")`,
+      "Müşteri, kendisi dışındaki yolcular adına da işlem yapıyorsa bu kişilerin bilgisi ve onayıyla hareket ettiğini ve onları bu sözleşme hakkında bilgilendireceğini kabul eder.",
+    ]),
+    section("Madde 2. Konu", [
+      "Bu sözleşmenin konusu, Müşteri'nin rotakarsturizm.com üzerinden ön rezervasyonunu yaptığı aşağıdaki şoförlü transfer hizmetinin aşağıdaki fiyat ve koşullarla sunulmasıdır. Müşteri'nin sözleşmeden önce onayladığı Ön Bilgilendirme Formu bu sözleşmenin ekidir.",
+    ]),
+    section("Madde 3. Transfer bilgileri", transferServiceLines(data)),
+    section("Madde 4. Fiyat ve ödeme", [
+      `Toplam bedel ${tl(data.total)} (KDV dahil, grup başına${data.transfer ? ", " + data.transfer.tierLabel : ""}).`,
+      "Bedelin tamamı sitedeki güvenli ödeme formunda kartla (Vakıfbank sanal POS, 3D Secure) ödenir. Kart bilgileri Acente'nin veritabanına yazılmaz ve saklanmaz.",
+      "Sözleşme kurulduktan sonra toplam bedel artırılmaz.",
+    ]),
+    section("Madde 5. Tarafların yükümlülükleri", [
+      "Acente, transferi sözleşmeye ve mevzuata uygun, belgeli araçla ve sürücüyle; Madde 3'teki tarih, saat ve adreslere göre yürütür. Bir değişiklik zorunlu olursa Müşteri'yi gecikmeksizin bilgilendirir.",
+      "Müşteri, alınış noktasında belirtilen saatte hazır bulunur; uçuş veya sefer saatinde ya da adreste değişiklik olursa Acente'ye gecikmeden bildirir; sürücünün güvenlik talimatlarına ve araç kurallarına uyar.",
+    ]),
+    section("Madde 6. İptal ve iade", transferCancellationRules({ depositPercent: pct })),
+    section("Madde 7. Acente'nin transferi yapamaması", [
+      "Araç arızası, hava, yol koşulları veya resmî makam kararı gibi Acente'nin kontrolü dışındaki sebeplerle transfer yapılamazsa Acente Müşteri'yi derhâl bilgilendirir.",
+      "Bu hâllerde Müşteri dilerse başka bir saate aktarılır, dilerse ödediği tutarın tamamı Madde 6'daki sürede kesintisiz iade edilir.",
+    ]),
+    section("Madde 8. Kişisel veriler", [
+      "Kişisel veriler Acente'nin Aydınlatma Metni'ne (rotakarsturizm.com/bilgilendirme#kvkk) uygun işlenir.",
+    ]),
+    section("Madde 9. Bildirimler ve uyuşmazlık", [
+      "Madde 1'deki e-posta ve telefonlar geçerli bildirim adresidir; Acente'ye resmî bildirimler KEP adresine de yapılabilir.",
+      "Uyuşmazlıklarda Ticaret Bakanlığı'nca ilan edilen parasal sınırlar içinde tüketici hakem heyetleri, bu sınırları aşan hâllerde tüketici mahkemeleri yetkilidir. Kanunda öngörülen hâllerde dava açılmadan önce arabulucuya başvurulması zorunludur.",
+    ]),
+    data.preInfoAcceptedAt
+      ? `Müşteri Ön Bilgilendirme Formu'nu ${stamp(data.preInfoAcceptedAt)} tarihinde elektronik ortamda onaylamıştır. Sözleşmenin bir örneği Müşteri'ye e-postayla gönderilmiş, bir örneği Acente kayıtlarında saklanmaktadır.`
+      : "Sözleşmenin bir örneği Müşteri'ye e-postayla gönderilmiş, bir örneği Acente kayıtlarında saklanmaktadır.",
+  ];
+  return parts.filter(Boolean).join("\n\n");
 }

@@ -74,12 +74,22 @@ function ticketCard(t, { qr }) {
 ${confirmed ? "" : `<div style="display:inline-block;margin:0 0 10px;padding:3px 9px;border-radius:3px;background:#fff4d6;color:#7a5a00;font:600 12px Arial,Helvetica,sans-serif">Onay bekliyor</div>`}
 <div style="font:700 17px Arial,Helvetica,sans-serif;color:#1a2846;letter-spacing:.02em;line-height:1.35;word-break:break-word;overflow-wrap:anywhere">${escape(String(t.tour || "").toLocaleUpperCase("tr-TR"))}</div>
 <div style="font:15px Arial,Helvetica,sans-serif;color:#c2342b;margin:4px 0 6px">${escape(longDate(t.date, t.time))}</div>
-${row(cell("Buluşma", escape(t.pickup)))}
-${t.transfer ? row(cell("Transfer", escape(t.transfer))) : ""}
+${row(cell(t.kind === "transfer" ? "Alınış" : "Buluşma", escape(t.pickup)))}
+${t.transfer ? row(cell("Transfer", escape(t.transfer).replace(/\n/g, "<br>"))) : ""}
 ${t.pickupAddress ? row(cell("Alınış yeri", escape(t.pickupAddress))) : ""}
 ${t.children ? row(cell("Çocuk", escape(t.children.charAt(0).toLocaleUpperCase("tr-TR") + t.children.slice(1)))) : ""}
 ${t.note ? row(cell("Notunuz", escape(t.note).replace(/\n/g, "<br>"))) : ""}
-${row(cell((t.seats || []).length > 1 ? "Koltuklar" : "Koltuk", escape((t.seats || []).join(", "))), cell("Rezervasyon", escape(t.reference)))}
+${
+  t.kind === "transfer"
+    ? row(cell("Rezervasyon", escape(t.reference)))
+    : row(
+        cell(
+          (t.seats || []).length > 1 ? "Koltuklar" : "Koltuk",
+          escape((t.seats || []).join(", ")),
+        ),
+        cell("Rezervasyon", escape(t.reference)),
+      )
+}
 ${amounts.length ? row(...amounts) : ""}
 ${
   qr
@@ -146,8 +156,12 @@ async function renderTicketMail({ recipient, subject, url, ticket: t, documents 
     t.headline,
     `Merhaba ${t.name},`,
     `${t.reference} · ${t.tour}`,
-    `${longDate(t.date, t.time)} · Koltuk: ${(t.seats || []).join(", ")}`,
-    t.pickup ? `Buluşma: ${t.pickup}` : "",
+    t.kind === "transfer"
+      ? longDate(t.date, t.time)
+      : `${longDate(t.date, t.time)} · Koltuk: ${(t.seats || []).join(", ")}`,
+    t.pickup
+      ? `${t.kind === "transfer" ? "Alınış" : "Buluşma"}: ${t.pickup}`
+      : "",
     t.transfer || "",
     t.pickupAddress ? `Alınış yeri: ${t.pickupAddress}` : "",
     t.children ? `Çocuk: ${t.children}` : "",
@@ -155,6 +169,8 @@ async function renderTicketMail({ recipient, subject, url, ticket: t, documents 
     amountText,
     url || "",
     names.length ? `Ekler: ${names.join(", ")} (PDF)` : "",
+    // İki dilli transfer e-postası: Türkçenin altında İngilizce özet.
+    t.english?.length ? "\n— English —\n" + t.english.join("\n") : "",
   ]
     .filter(Boolean)
     .join("\n");
@@ -162,7 +178,12 @@ async function renderTicketMail({ recipient, subject, url, ticket: t, documents 
 <p style="margin:0 0 14px;font-size:15px;color:#1a2846">Merhaba ${escape(t.name)},</p>
 ${ticketCard(t, { qr })}
 ${safeUrl ? button(safeUrl) : ""}
-${names.length ? `<p style="margin:0 0 14px;font-size:13px;color:#47536e">Ekler: ${names.map((n) => escape(n) + " (PDF)").join(" · ")}</p>` : ""}`;
+${names.length ? `<p style="margin:0 0 14px;font-size:13px;color:#47536e">Ekler: ${names.map((n) => escape(n) + " (PDF)").join(" · ")}</p>` : ""}
+${
+  t.english?.length
+    ? `<div lang="en" style="margin:18px 0 6px;padding-top:14px;border-top:1px solid #dde5eb"><p style="margin:0 0 6px;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#47536e">English</p>${paragraphs(t.english.join("\n"))}</div>`
+    : ""
+}`;
   return {
     to: recipient,
     subject,

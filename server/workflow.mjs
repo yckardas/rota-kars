@@ -5,7 +5,16 @@ import { fromJson } from "./database.mjs";
 import { DEPOSIT_PERCENT, depositFor } from "./payments.mjs";
 import { localDate } from "./departures.mjs";
 import { tours, business } from "./catalog.mjs";
-import { LEGAL_VERSION, cancellationQuote, contractText, legalDataFromReservation, preInfoText } from "./legal.mjs";
+import {
+  LEGAL_VERSION,
+  TRANSFER_LEGAL_VERSION,
+  cancellationQuote,
+  contractText,
+  legalDataFromReservation,
+  preInfoText,
+  serviceFor,
+} from "./legal.mjs";
+import { pickupOf, transferDetailLines, transferEnglish, transferTitle } from "./transfer-booking.mjs";
 import { countryName } from "./passenger-id.mjs";
 import { buildFinance, tourRows } from "./finance.mjs";
 import { childrenDetail, tripInfoLines } from "./trip-info.mjs";
@@ -25,12 +34,26 @@ export async function createWorkflow(
     db.index("payment_ledger", { reservation_id: 1, created_at: 1 }),
     db.index("reservation_audit", { reservation_id: 1, created_at: 1 }),
   ]);
+  // Turdan bağımsız transferde sefer yoktur: tarih, saat ve alınış yeri kaydın kendisinden.
+  const transferInfo = (r) => ({
+    vehicle: null,
+    date: r.service_date,
+    tourId: "transfer",
+    tourName: transferTitle(r.transfer_booking),
+    start_time: r.service_time,
+    pickup: pickupOf(r.transfer_booking),
+    guide_name: null,
+    guide_phone: null,
+  });
   const parse = async (r) => {
     if (!r) throw new AppError(404, "Rezervasyon bulunamadı.");
-    const d = await departures.get(r.departure_id, {
-        allowClosed: true,
-        allowPast: true,
-      }),
+    const d =
+        r.kind === "transfer"
+          ? null
+          : await departures.get(r.departure_id, {
+              allowClosed: true,
+              allowPast: true,
+            }),
       ledger = await db.find(
         "payment_ledger",
         { reservation_id: r.id },
@@ -54,13 +77,17 @@ export async function createWorkflow(
       pickup_address: pii ? pii.open(r.pickup_address) : r.pickup_address || "",
       customer_note: pii ? pii.open(r.customer_note) : r.customer_note || "",
       children: r.children || null,
-      vehicle: fromJson(r.vehicle_json, null) || d.vehicle,
-      date: d.date,
-      tourId: d.tour_id,
-      start_time: d.start_time,
-      pickup: d.pickup,
-      guide_name: d.guide_name,
-      guide_phone: d.guide_phone,
+      ...(d
+        ? {
+            vehicle: fromJson(r.vehicle_json, null) || d.vehicle,
+            date: d.date,
+            tourId: d.tour_id,
+            start_time: d.start_time,
+            pickup: d.pickup,
+            guide_name: d.guide_name,
+            guide_phone: d.guide_phone,
+          }
+        : transferInfo(r)),
       paid_total: paid,
       refunded_total: refunded,
       net_paid: net,
@@ -104,11 +131,14 @@ export async function createWorkflow(
       email: r.email,
       subject: "Rota Kars · " + text,
       body:
-        `Merhaba ${r.name},\n${r.reference} · ${tourName(r)}\nTarih: ${r.date} · Saat: ${r.start_time}\nBuluşma: ${r.pickup}\n${text}\n${extra ? extra + "\n" : ""}Koltuklar: ${r.seats.join(", ")}.` +
-        (r.transfer ? `\n${transferLine(r.transfer)}.` : "") +
-        tripInfoLines(r, { customer: true })
-          .map((line) => "\n" + line)
-          .join("") +
+        (r.kind === "transfer"
+          ? `Merhaba ${r.name},\n${r.reference} · ${tourName(r)}\n${transferDetailLines(r).join("\n")}\n${text}\n${extra ? extra + "\n" : ""}` +
+            `\n— English —\n${transferEnglish(r, TRANSFER_EN[event] || "").filter(Boolean).join("\n")}`
+          : `Merhaba ${r.name},\n${r.reference} · ${tourName(r)}\nTarih: ${r.date} · Saat: ${r.start_time}\nBuluşma: ${r.pickup}\n${text}\n${extra ? extra + "\n" : ""}Koltuklar: ${r.seats.join(", ")}.` +
+            (r.transfer ? `\n${transferLine(r.transfer)}.` : "") +
+            tripInfoLines(r, { customer: true })
+              .map((line) => "\n" + line)
+              .join("")) +
         (documents?.length ? `\nEkler: ${documents.map((d) => d.title).join(", ")} (PDF).` : ""),
       actionUrl: (env.PUBLIC_BASE_URL || "") + "/bilet/" + r.ticket_token,
       kind: event,
@@ -123,7 +153,7 @@ export async function createWorkflow(
             pickup: r.pickup,
             seats: r.seats,
             reference: r.reference,
-            transfer: r.transfer ? transferLine(r.transfer) : null,
+            transfer: r.kind === "transfer" ? transferDetailLines(r).join("\n") : r.transfer ? transferLine(r.transfer) : null,
             pickupAddress: r.pickup_address || null,
             children: childrenDetail(r.children) || null,
             note: r.customer_note || null,
@@ -131,17 +161,32 @@ export async function createWorkflow(
             paid: r.net_paid || 0,
             balance: r.balance_due ?? r.total,
             status: r.status === "confirmed" ? "confirmed" : "pending",
+            // Transfer: koltuk yok, "Buluşma" yerine "Alınış"; altında İngilizce özet.
+            ...(r.kind === "transfer"
+              ? { kind: "transfer", english: transferEnglish(r, TRANSFER_EN[event] || "").filter(Boolean) }
+              : {}),
           }
         : null,
       documents: documents?.length ? documents : null,
     });
-  const legalDoc = (kind, r, text) =>
-    text && {
-      title: kind === "contract" ? "Tur Hizmet Sözleşmesi" : "Ön Bilgilendirme Formu",
-      filename: `${kind === "contract" ? "Tur-Hizmet-Sozlesmesi" : "On-Bilgilendirme-Formu"}-${r.reference}.pdf`,
-      text,
-    };
-  const tourName = (r) => tours.find((t) => t.id === r.tourId)?.name || r.tourId;
+  const legalDoc = (kind, r, text) => {
+    const transfer = r.kind === "transfer";
+    return (
+      text && {
+        title: kind === "contract" ? (transfer ? "Transfer Hizmet Sözleşmesi" : "Tur Hizmet Sözleşmesi") : "Ön Bilgilendirme Formu",
+        filename: `${kind === "contract" ? (transfer ? "Transfer-Hizmet-Sozlesmesi" : "Tur-Hizmet-Sozlesmesi") : "On-Bilgilendirme-Formu"}-${r.reference}.pdf`,
+        text,
+      }
+    );
+  };
+  const tourName = (r) => r.tourName || tours.find((t) => t.id === r.tourId)?.name || r.tourId;
+  // Transfer e-postalarının İngilizce başlığı (Türkçe metnin altında).
+  const TRANSFER_EN = {
+    reservation_created: "Your transfer pre-booking has been received.",
+    reservation_confirmed: "Payment received, your transfer is confirmed.",
+    reservation_cancelled: "Your transfer booking has been cancelled.",
+    departure_reminder: "Your transfer is coming up. Please check the pickup details.",
+  };
   const waLink = (phone) => {
     const digits = String(phone || "").replace(/\D/g, "");
     const intl = digits.startsWith("90") ? digits : digits.replace(/^0/, "90");
@@ -153,10 +198,13 @@ export async function createWorkflow(
       body: [
         `${title}`,
         `${r.reference} · ${tourName(r)}`,
-        `Tarih: ${r.date} ${r.start_time} · Koltuk: ${r.seats.join(", ")}`,
+        ...(r.kind === "transfer"
+          ? [...transferDetailLines(r), `Adres: ${r.transfer_booking?.address || ""}`]
+          : [`Tarih: ${r.date} ${r.start_time} · Koltuk: ${r.seats.join(", ")}`]),
         `Müşteri: ${r.name} · ${r.phone} · ${r.email}`,
         `Tutar: ${(r.total / 100).toFixed(2)} TL · Durum: ${r.status}`,
-        r.transfer && `${transferLine(r.transfer)} · ${(r.transfer.amount / 100).toFixed(2)} TL`,
+        r.transfer && r.kind !== "transfer" && `${transferLine(r.transfer)} · ${(r.transfer.amount / 100).toFixed(2)} TL`,
+        r.notes && `Not: ${r.notes}`,
         waLink(r.phone) && `WhatsApp: ${waLink(r.phone)}`,
         ...tripInfoLines(r),
       ]
@@ -175,6 +223,8 @@ export async function createWorkflow(
   // payının kaporası (tam iptaldeki gibi en çok net tahsilat kadar) kesinti olarak toplamda
   // kalır; acente kararıyla (waive) kesinti yapılmaz.
   const removalPlan = async (r, seats, { waive = false } = {}) => {
+    if (r.kind === "transfer")
+      throw new AppError(409, "Transfer rezervasyonunda yolcu çıkarılamaz; kişi sayısı değişecekse iptal edip yeniden oluşturun.");
     if (!["pending_agency", "confirmed"].includes(r.status))
       throw new AppError(409, "Bu kayıttan yolcu çıkarılamaz.");
     const removed = [...new Set(seats)];
@@ -244,15 +294,26 @@ export async function createWorkflow(
     async list({ date, from, to, all = false, status, q, flag } = {}) {
       await cleanup();
       const dateFilter = date ? { date } : from || to ? { date: { ...(from ? { $gte: from } : {}), ...(to ? { $lte: to } : {}) } } : null;
+      // Transfer kayıtlarının sefer yerine kendi tarihi (service_date) vardır.
       const filter = dateFilter
         ? {
-            departure_id: {
-              $in: (
-                await db.find("departures", dateFilter, { projection: { id: 1 } })
-              ).map((d) => d.id),
-            },
+            $and: [
+              {
+                $or: [
+                  {
+                    departure_id: {
+                      $in: (
+                        await db.find("departures", dateFilter, { projection: { id: 1 } })
+                      ).map((d) => d.id),
+                    },
+                  },
+                  { kind: "transfer", service_date: dateFilter.date },
+                ],
+              },
+            ],
           }
         : {};
+      if (flag === "transfer") filter.kind = "transfer";
       if (status) filter.status = status;
       // Hızlı filtreler: iptal talebi bekleyenler ve bakiyesi kalan aktif kayıtlar.
       if (flag === "cancel_request")
@@ -293,13 +354,13 @@ export async function createWorkflow(
       let r = await api.get(reference);
       let extra = "";
       if (legal) {
-        const tour = tours.find((t) => t.id === r.tourId);
+        const tour = serviceFor(r);
         extra = preInfoText(legalDataFromReservation(r, tour, legal));
         await db.update(
           "reservations",
           { _id: r.id },
           {
-            legal_version: LEGAL_VERSION,
+            legal_version: r.kind === "transfer" ? TRANSFER_LEGAL_VERSION : LEGAL_VERSION,
             pre_info_accepted_at: r.created_at,
             pre_info_text: extra,
             // Rezervasyon adımında ayrı ayrı işaretlenen onay kutuları.
@@ -322,7 +383,8 @@ export async function createWorkflow(
         { ticket: true, documents: [legalDoc("pre_info", r, extra)].filter(Boolean) },
       );
       // Acentenin kendi eklediği kayıt için ekibe "yeni rezervasyon" bildirimi gitmez.
-      if (!byAgency) await agencyAlert(r, "reservation_created", "Yeni ön rezervasyon");
+      // Online transferde ekip, ödeme tamamlanınca (onayda) haberdar edilir.
+      if (!byAgency && r.kind !== "transfer") await agencyAlert(r, "reservation_created", "Yeni ön rezervasyon");
       return r;
     },
     // via: "online" (kartla ödeme sonrası otomatik) | "agency" (panelden onay).
@@ -361,7 +423,7 @@ export async function createWorkflow(
         await audit(r, "confirmed", short ? { via, belowDeposit: { paid: r.net_paid, deposit: r.deposit } } : { via });
         let updated = await api.get(reference);
         // Sözleşme onay anında kurulur; metni kayda yazılır ve onay e-postasıyla gider.
-        const tour = tours.find((t) => t.id === updated.tourId);
+        const tour = serviceFor(updated);
         const contract = tour
           ? contractText({
               ...legalDataFromReservation(updated, tour, { depositPercent, onlinePayment: via === "online" }),
@@ -373,7 +435,14 @@ export async function createWorkflow(
           await db.update(
             "reservations",
             { _id: r.id },
-            { contract_text: contract, contract_version: LEGAL_VERSION, contract_at: updated.confirmed_at },
+            {
+              contract_text: contract,
+              contract_version:
+                updated.kind === "transfer"
+                  ? TRANSFER_LEGAL_VERSION
+                  : LEGAL_VERSION,
+              contract_at: updated.confirmed_at,
+            },
           );
           updated = await api.get(reference, { fresh: false });
         }
@@ -387,6 +456,13 @@ export async function createWorkflow(
           undefined,
           { ticket: true, documents },
         );
+        // Online transfer: ekip ödeme tamamlanınca haberdar edilir (araç ve şoför planı için).
+        if (updated.kind === "transfer")
+          await agencyAlert(
+            updated,
+            "transfer_confirmed",
+            "Yeni transfer (ödendi)",
+          );
         return updated;
       });
     },
@@ -571,6 +647,11 @@ export async function createWorkflow(
       return tx(async () => {
         await cleanup();
         const r = await api.get(reference);
+        if (r.kind === "transfer")
+          throw new AppError(
+            409,
+            "Transfer rezervasyonu sefere taşınamaz; tarih veya saat değişikliği için müşteriyle görüşüp iptal edin ve yeniden oluşturun.",
+          );
         if (!["pending_agency", "confirmed"].includes(r.status))
           throw new AppError(409, "Bu kayıt başka sefere taşınamaz.");
         const d = await departures.get(departureId);
@@ -683,6 +764,11 @@ export async function createWorkflow(
         await cleanup();
         const r = await api.get(reference, { fresh: false });
         if (r.payment_mode === mode) return r;
+        if (r.kind === "transfer")
+          throw new AppError(
+            409,
+            "Online transfer tam ödemelidir; kapora seçilemez.",
+          );
         if (r.status !== "pending_agency" || r.net_paid > 0 || !["deposit", "full"].includes(r.payment_mode))
           throw new AppError(409, "Bu rezervasyonun ödeme planı artık değiştirilemez.");
         await db.update(
@@ -691,7 +777,7 @@ export async function createWorkflow(
           { payment_mode: mode, deposit: mode === "full" ? r.total : depositFor(r.total) },
         );
         let updated = await api.get(reference, { fresh: false });
-        const tour = tours.find((t) => t.id === updated.tourId);
+        const tour = serviceFor(updated);
         if (updated.pre_info_text && tour) {
           await db.update(
             "reservations",
@@ -713,6 +799,11 @@ export async function createWorkflow(
       return tx(async () => {
         await cleanup();
         const r = await api.get(reference);
+        if (r.kind === "transfer")
+          throw new AppError(
+            409,
+            "Transfer rezervasyonunda yolcu listesi tutulmaz.",
+          );
         if (names.length !== r.seats.length || (details && details.length !== r.seats.length))
           throw new AppError(400, "Yolcu ve koltuk sayıları eşleşmeli.");
         if (!["pending_agency", "confirmed"].includes(r.status))
@@ -877,7 +968,12 @@ export async function createWorkflow(
       const r = await api.get(row.reference);
       return {
         reference: r.reference,
-        tourName: tours.find((t) => t.id === r.tourId)?.name,
+        tourName: tourName(r),
+        kind: r.kind === "transfer" ? "transfer" : "tour",
+        // Transferde bacaklar (geliş / dönüş), kişi ve bagaj.
+        ...(r.kind === "transfer"
+          ? { transferLines: transferDetailLines(r), pax: r.pax }
+          : {}),
         date: r.date,
         startTime: r.start_time,
         pickup: r.pickup,
@@ -907,7 +1003,12 @@ export async function createWorkflow(
           };
         }),
         notes: r.notes || "",
-        transfer: r.transfer ? transferLine(r.transfer) : "",
+        transfer:
+          r.kind === "transfer"
+            ? transferDetailLines(r).join(" · ")
+            : r.transfer
+              ? transferLine(r.transfer)
+              : "",
         guideName: r.guide_name || null,
         total: r.total,
         paid: r.net_paid,
@@ -948,6 +1049,29 @@ export async function createWorkflow(
       const days = [];
       for (let t = now - 86400000; t <= now + hours * 3600000 + 86400000; t += 86400000)
         days.push(localDate(t));
+      // Online transfer: her bacak (geliş / dönüş) için ayrı hatırlatma.
+      const transfers = await db.find(
+        "reservations",
+        {
+          kind: "transfer",
+          status: "confirmed",
+          "transfer_booking.legs": { $elemMatch: { date: { $in: days } } },
+        },
+        { projection: { reference: 1 } },
+      );
+      for (const { reference } of transfers) {
+        const r = await api.get(reference, { fresh: false });
+        for (const l of r.transfer_booking?.legs || []) {
+          const start = Date.parse(`${l.date}T${l.time}:00+03:00`);
+          if (start > now && start <= now + hours * 3600000)
+            await notify(
+              r,
+              "departure_reminder",
+              "Transferiniz yaklaşıyor. Alınış bilgilerinizi kontrol edin.",
+              `departure_reminder:${r.reference}:${l.type}:${l.date}`,
+            );
+        }
+      }
       const departureIds = (
         await db.find("departures", { date: { $in: days } }, { projection: { id: 1 } })
       ).map((d) => d.id);
@@ -1038,10 +1162,10 @@ export async function createWorkflow(
             reference: r.reference,
             date: r.date,
             time: r.start_time,
-            tourName: tours.find((t) => t.id === r.tourId)?.name || r.tourId,
+            tourName: tourName(r),
             name: r.name,
             phone: r.phone,
-            seats: r.seats.length,
+            seats: r.seats.length || r.pax || 0,
             status: r.status,
             source: r.source || "web",
             total: r.total,

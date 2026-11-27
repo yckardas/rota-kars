@@ -113,3 +113,45 @@ export const emptyTransfer = (): TransferConfig => {
     ) as TransferTable;
   return { enabled: false, oneWay: blank(), roundTrip: blank() };
 };
+// ---- Turdan bağımsız online transfer (VIP transfer sayfası; server/transfer-booking.mjs) ----
+export type TransferLeg = {
+  type: "arrival" | "departure";
+  date: string;
+  time: string;
+  // Uçuş numarası ya da otobüs / tren sefer bilgisi.
+  flight: string;
+};
+export type TransferBooking = {
+  point: TransferPointId;
+  destination: TransferDestinationId;
+  direction: TransferDirection;
+  address: string;
+  bags: number;
+  legs: TransferLeg[];
+};
+// /api/transfers/config: satış açık mı, en az kaç saat önceden, fiyat tablosu.
+export type TransferService = TransferConfig & {
+  minLeadHours: number;
+  freeCancelHours: number;
+  maxPax: number;
+  maxAdvanceDays: number;
+};
+export const DESTINATION_SHORT: Record<TransferDestinationId, string> = {
+  kars: "Kars merkez",
+  sarikamis: "Sarıkamış",
+};
+// "Kars Harakani Havalimanı → Kars merkez" (çeviri işleviyle).
+export const transferRoute = (
+  b: Pick<TransferBooking, "point" | "destination" | "direction">,
+  t: (s: string) => string = (s) => s,
+) => {
+  const point = t(
+      TRANSFER_POINTS.find((p) => p.id === b.point)?.label || b.point,
+    ),
+    place = t(DESTINATION_SHORT[b.destination] || b.destination);
+  return b.direction === "arrival"
+    ? `${point} → ${place}`
+    : b.direction === "departure"
+      ? `${place} → ${point}`
+      : `${point} ⇄ ${place}`;
+};

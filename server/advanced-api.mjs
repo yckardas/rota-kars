@@ -290,7 +290,7 @@ export function attachAdvancedApi(
           to: ymd.optional(),
           status: z.enum(["pending_agency", "confirmed", "cancelled", "expired", "completed", "no_show"]).optional(),
           q: z.string().max(80).optional(),
-          flag: z.enum(["cancel_request", "balance"]).optional(),
+          flag: z.enum(["cancel_request", "balance", "transfer"]).optional(),
         })
         .refine((x) => !x.from || !x.to || x.from <= x.to, { message: "Başlangıç tarihi bitişten sonra olamaz." })
         .parse(q.query);

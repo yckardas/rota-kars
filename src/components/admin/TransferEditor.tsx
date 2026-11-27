@@ -1,7 +1,7 @@
 // Panel · Tur ve araç planı: turun transfer fiyat tablosu. Varış yeri (Kars merkez ya da
 // Sarıkamış konaklama) başına ayrı tablo; fiyatlar GRUP BAŞINA TOPLAMDIR (TL). Boş
 // bırakılan hücrede o nokta/kişi grubu için transfer sunulmaz.
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { Check, LoaderCircle, Plane } from "lucide-react";
 import { post } from "../../lib/api";
 import {
@@ -60,11 +60,22 @@ export function TransferEditor({
   tourName,
   config,
   onSaved,
+  endpoint,
+  enabledLabel,
+  title = "Transfer fiyatları",
+  extra,
+  children,
 }: {
   tourId: string;
   tourName: string;
   config: TransferConfig;
   onSaved: (c: TransferConfig) => void;
+  // Turdan bağımsız online transfer ayarı aynı tabloyu başka uçla kaydeder.
+  endpoint?: string;
+  enabledLabel?: string;
+  title?: string;
+  extra?: Record<string, unknown>;
+  children?: ReactNode;
 }) {
   const [enabled, setEnabled] = useState(config.enabled),
     // Başlıktaki durum kayıtlı hâli gösterir (kaydedilmemiş işaret değil).
@@ -124,7 +135,8 @@ export function TransferEditor({
     setError("");
     setNotice("");
     try {
-      const saved = await post<TransferConfig>(`/admin/operations/${tourId}/transfer`, {
+      const saved = await post<TransferConfig>(endpoint || `/admin/operations/${tourId}/transfer`, {
+        ...extra,
         enabled,
         oneWay: toTable(draft.oneWay),
         roundTrip: toTable(draft.roundTrip),
@@ -183,7 +195,7 @@ export function TransferEditor({
   return (
     <details className="operation-transfer" open={config.enabled || undefined}>
       <summary>
-        <Plane size={15} /> Transfer fiyatları {savedEnabled ? "· satışta" : "· kapalı"}
+        <Plane size={15} /> {title} {savedEnabled ? "· satışta" : "· kapalı"}
       </summary>
       <form onSubmit={save}>
         <p className="muted">
@@ -192,8 +204,9 @@ export function TransferEditor({
         </p>
         <label className="checkbox-label">
           <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
-          <span>{tourName} rezervasyonlarında transfer sunulsun</span>
+          <span>{enabledLabel || `${tourName} rezervasyonlarında transfer sunulsun`}</span>
         </label>
+        {children}
         {TRANSFER_DESTINATIONS.map((d) => (
           <div key={d.id}>
             {grid("oneWay", d.id, `${d.label} · tek yön (geliş ya da dönüş)`)}

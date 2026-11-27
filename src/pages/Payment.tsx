@@ -66,6 +66,8 @@ type Session = {
     paid: number;
     // Onaylanmış rezervasyonun kalan ödemesi (plan değiştirilemez).
     balance?: boolean;
+    // Online transfer: tam ödeme, koltuk yok.
+    kind?: "tour" | "transfer";
   };
   consented?: boolean;
   bookingConsentAt?: number | null;
@@ -123,10 +125,18 @@ export function PayDeposit({
             ? t("Kartla ödeme yakında")
             : balance
               ? t("Kalan tutarı kartla ödeyin.")
-              : t("Kaporanızı şimdi ödeyin.")}
+              : r.kind === "transfer"
+                ? t("Transfer bedelini şimdi ödeyin.")
+                : t("Kaporanızı şimdi ödeyin.")}
         </h2>
         <p>
-          {balance ? t("Kalan tutar") : r.deposit < r.total ? t("%30 kapora") : t("Tur bedeli")}{" "}
+          {balance
+            ? t("Kalan tutar")
+            : r.deposit < r.total
+              ? t("%30 kapora")
+              : r.kind === "transfer"
+                ? t("Transfer bedeli")
+                : t("Tur bedeli")}{" "}
           <strong>{currency(due)}</strong>.{" "}
           {balance
             ? t("Ödemeyi tur günü hareketten önce buradan kartla yapabilirsiniz; ödeme anında rezervasyonunuza işlenir.")
@@ -601,7 +611,7 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
         {sum && (
           <dl className="payment-summary">
             <div>
-              <dt>{t("Tur")}</dt>
+              <dt>{sum.kind === "transfer" ? t("Transfer") : t("Tur")}</dt>
               <dd>{sum.tourName}</dd>
             </div>
             <div>
@@ -613,12 +623,12 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
             <div>
               <dt>{t("Yolcu")}</dt>
               <dd>
-                {t("{count} kişi", { count: sum.count })} ·{" "}
-                {t("Koltuk {n}", { n: sum.seats.join(", ") })}
+                {t("{count} kişi", { count: sum.count })}
+                {sum.seats.length > 0 && <> · {t("Koltuk {n}", { n: sum.seats.join(", ") })}</>}
               </dd>
             </div>
             <div>
-              <dt>{t("Toplam tur bedeli")}</dt>
+              <dt>{sum.kind === "transfer" ? t("Transfer bedeli") : t("Toplam tur bedeli")}</dt>
               <dd>{currency(sum.total)}</dd>
             </div>
             <div className="is-due">
@@ -643,7 +653,7 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
             )}
           </dl>
         )}
-        {open && sum && !sum.paid && !sum.balance && ["deposit", "full"].includes(sum.paymentMode) && (
+        {open && sum && !sum.paid && !sum.balance && sum.kind !== "transfer" && ["deposit", "full"].includes(sum.paymentMode) && (
           <fieldset className="payment-choices payment-plan" disabled={modeBusy || busy}>
             <legend>{t("Ödeme planı")}</legend>
             {(
@@ -699,6 +709,7 @@ export function CardPayment({ catalog }: { catalog: Catalog }) {
             beforePay={checkConsents}
             footer={
               <PaymentTerms
+                service={sum?.kind}
                 checked={terms}
                 onChange={(next) => {
                   setTerms(next);

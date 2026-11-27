@@ -25,6 +25,7 @@ import { createGuestReviews } from "./guest-reviews.mjs";
 import { describeRequest, formMailPerDay, REQUEST_KINDS, statusLabel } from "./requests.mjs";
 import { applyStandardTransfer, priceTransfer } from "./transfer.mjs";
 import { childrenRecord } from "./trip-info.mjs";
+import { createTransferBookings } from "./transfer-booking.mjs";
 import {
   applyAniMinibus,
   applyCustomerCorrections,
@@ -248,6 +249,14 @@ export async function openStore(
   });
   const interest = await createInterest(db, { clock, tx, departures, operations, notifications, env });
   const guestReviews = await createGuestReviews(db, { clock, tx, notifications, privacy, env });
+  await db.index("reservations", { kind: 1, service_date: 1 });
+  const transferBookings = await createTransferBookings(db, {
+    clock,
+    tx,
+    cleanup,
+    workflow,
+    env,
+  });
   const uetds = createUetds(db, {
     env,
     fetchImpl: uetdsFetch,
@@ -261,6 +270,7 @@ export async function openStore(
     operations,
     departures,
     workflow,
+    transferBookings,
     companions,
     uetds,
     interest,
@@ -722,9 +732,9 @@ export async function openStore(
           reference: r.reference,
           name: r.name,
           phone: r.phone,
-          tourName: tourName(r.tourId),
+          tourName: r.tourName || tourName(r.tourId),
           date: r.date,
-          seats: r.seats.length,
+          seats: r.seats.length || r.pax || 0,
           total: r.total,
           expiresAt: r.expires_at,
         }));

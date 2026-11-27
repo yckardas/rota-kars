@@ -1,0 +1,234 @@
+/* Online transfer rezervasyonu (VIP transfer sayfası). Kartpostal tasarım dilindeki
+   transfer seçicisini (postcard.css · .transfer-*) ve form alanlarını kullanır. */
+.transfer-booking {
+  padding-top: 44px;
+  padding-bottom: 12px;
+  scroll-margin-top: 90px;
+}
+.transfer-booking .tb-head {
+  max-width: 720px;
+  margin-bottom: 22px;
+}
+.transfer-booking .tb-head h2 {
+  font-size: clamp(28px, 2.8vw, 36px);
+}
+.transfer-booking .tb-head p {
+  margin-top: 8px;
+  font-size: 16px;
+  color: var(--kp-ink-2, #47536e);
+}
+.transfer-booking .tb-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  gap: 28px;
+  align-items: start;
+}
+.transfer-booking .tb-main,
+.transfer-booking .tb-form {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+.transfer-booking .tb-step {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 20px 22px 22px;
+  border: 1px solid var(--kp-rule, #c9d2dc);
+  border-radius: 5px;
+  background: var(--kp-card, #fff);
+  min-width: 0;
+}
+.transfer-booking .tb-step > legend,
+.transfer-booking .tb-confirm > h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  float: left;
+  width: 100%;
+  margin: 0 0 4px;
+  padding: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 22px;
+  color: var(--kp-ink, #1a2846);
+}
+.transfer-booking .tb-step > legend + * {
+  clear: both;
+}
+.transfer-booking .tb-step > legend span,
+.transfer-booking .tb-confirm > h3 span {
+  font-size: 24px;
+  line-height: 1;
+  color: var(--kp-red, #c2342b);
+}
+.transfer-booking .tb-step .field {
+  margin: 0;
+}
+.transfer-booking .tb-leg {
+  display: grid;
+  gap: 10px;
+}
+.transfer-booking .tb-leg + .tb-leg {
+  padding-top: 14px;
+  border-top: 1px solid var(--kp-hair, #e3e8ee);
+}
+.transfer-booking .tb-leg h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--kp-ink, #1a2846);
+}
+.transfer-booking .tb-leg-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.transfer-booking
+  .tb-leg-grid:not(.tb-contact):has(> :nth-child(2):last-child) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.transfer-booking .form-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--kp-ink-2, #47536e);
+}
+.transfer-booking .field textarea {
+  min-height: 64px;
+  padding: 10px 12px;
+}
+.transfer-booking .tb-next {
+  justify-self: start;
+}
+.transfer-booking .tb-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+}
+.transfer-booking .tb-confirm .legal-consents {
+  margin: 0;
+}
+/* Özet: masaüstünde yapışkan kartpostal kartı */
+.transfer-booking .tb-summary {
+  position: sticky;
+  top: 96px;
+  padding: 22px;
+  border-radius: 5px;
+  background: var(--kp-card, #fff);
+  box-shadow: var(--kp-shadow-sm, 0 1px 3px rgba(26, 40, 70, 0.12));
+  border-top: 3px solid var(--kp-red, #c2342b);
+}
+.transfer-booking .tb-summary h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--kp-ink-2, #47536e);
+}
+.transfer-booking .tb-route {
+  margin: 0 0 12px;
+  font-family: var(--display);
+  font-size: 21px;
+  line-height: 1.25;
+  color: var(--kp-ink, #1a2846);
+  overflow-wrap: anywhere;
+}
+.transfer-booking .tb-summary dl {
+  display: grid;
+  margin: 0;
+  border-top: 1px solid var(--kp-hair, #e3e8ee);
+}
+.transfer-booking .tb-summary dl > div {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr);
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--kp-hair, #e3e8ee);
+  font-size: 14px;
+}
+.transfer-booking .tb-summary dt {
+  color: var(--kp-ink-2, #47536e);
+}
+.transfer-booking .tb-summary dd {
+  margin: 0;
+  color: var(--kp-ink, #1a2846);
+  overflow-wrap: anywhere;
+}
+.transfer-booking .tb-price {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 14px 0 10px;
+}
+.transfer-booking .tb-price span {
+  font-size: 13px;
+  color: var(--kp-ink-2, #47536e);
+}
+.transfer-booking .tb-price strong {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 32px;
+  line-height: 1;
+  color: var(--kp-gold, #8a6128);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.transfer-booking .tb-facts {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--kp-ink-2, #47536e);
+}
+.transfer-booking .tb-facts li {
+  padding-left: 14px;
+  position: relative;
+}
+.transfer-booking .tb-facts li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--kp-red, #c2342b);
+}
+.transfer-booking .tb-done {
+  padding: 28px;
+  border-radius: 5px;
+  background: var(--kp-card, #fff);
+  box-shadow: var(--kp-shadow-sm, 0 1px 3px rgba(26, 40, 70, 0.12));
+}
+.transfer-booking .tb-done p {
+  margin: 10px 0 18px;
+  color: var(--kp-ink-2, #47536e);
+}
+@media (max-width: 900px) {
+  .transfer-booking .tb-layout {
+    grid-template-columns: 1fr;
+  }
+  /* Telefonda özet formun altında, ödeme adımının yanında; fiyat nokta kartlarında da görünür. */
+  .transfer-booking .tb-summary {
+    position: static;
+  }
+}
+@media (max-width: 640px) {
+  .transfer-booking .tb-step {
+    padding: 16px;
+  }
+  .transfer-booking .tb-leg-grid,
+  .transfer-booking
+    .tb-leg-grid:not(.tb-contact):has(> :nth-child(2):last-child) {
+    grid-template-columns: 1fr;
+  }
+  .transfer-booking .tb-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

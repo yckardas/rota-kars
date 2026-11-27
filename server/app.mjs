@@ -5,6 +5,7 @@ import express from "express";
 import QRCode from "qrcode";
 import compression from "compression";
 import { attachAdvancedApi, receipt, siteBase } from "./advanced-api.mjs";
+import { attachTransferApi } from "./transfer-api.mjs";
 import { readFileSync } from "node:fs";
 const photoCredits = JSON.parse(
   readFileSync(new URL("./photo-credits.json", import.meta.url), "utf8"),
@@ -225,6 +226,11 @@ const FIELD_LABELS = {
   pickupAddress: "alınış yeri",
   ages: "çocuk yaşları",
   note: "not",
+  // Online transfer formu.
+  pax: "kişi sayısı",
+  bags: "bagaj sayısı",
+  address: "otel / adres",
+  flight: "uçuş veya sefer bilgisi",
 };
 const validationMessage = (err) => {
   const issue = err.issues[0];
@@ -475,7 +481,7 @@ export function createApp(
               ? "card"
               : req.method === "POST" && req.path === "/holds"
               ? "hold"
-              : req.method === "POST" && req.path === "/reservations"
+              : req.method === "POST" && (req.path === "/reservations" || req.path === "/transfers/reservations")
                 ? "booking"
                 : // Yönetim paneli kendi sınırını kullanır: sefer düzenlerken art arda
                   // yüklemeler sitenin genel sınırını doldurup paneli (ve aynı ofis
@@ -986,6 +992,15 @@ export function createApp(
     requireAdmin,
     requireMember,
     schemas: { ymd, clean, email, phone },
+  });
+  attachTransferApi(app, {
+    store,
+    env,
+    payments,
+    route,
+    requireAdmin,
+    human,
+    schemas: { clean, email, phone },
   });
   // Railway/Docker sağlık kontrolü: veritabanına gerçekten ulaşılabiliyor mu?
   app.get("/api/health", async (_q, r) => {
