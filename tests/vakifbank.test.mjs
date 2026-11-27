@@ -858,7 +858,12 @@ test("kalan bakiye: kapora kartla ödenince kalan, acentenin gönderdiği bağla
   const link = await p.call(`/admin/reservations/${ref}/payment-link`, { body: {}, cookie: p.ops });
   assert.equal(link.status, 200, JSON.stringify(link.json));
   assert.equal(link.json.amount, rest);
-  assert.match(link.json.url, new RegExp(`/odeme/bakiye/${before.ticket_token}$`));
+  // Bağlantı bilet belirtecini değil, ödemeye özel ayrı belirteci taşır.
+  const payToken = link.json.url.split("/").pop();
+  assert.match(payToken, /^[a-f0-9]{48}$/);
+  assert.notEqual(payToken, before.ticket_token);
+  const again = await p.call(`/admin/reservations/${ref}/payment-link`, { body: {}, cookie: p.ops });
+  assert.equal(again.json.url, link.json.url, "aynı rezervasyona aynı bağlantı");
   const mail = await p.call(`/admin/reservations/${ref}/payment-link`, { body: { send: "email" }, cookie: p.ops });
   assert.equal(mail.status, 200);
   const outbox = (await p.store.db.find("notification_outbox")).find((m) => m.kind === "payment_link");
@@ -867,7 +872,12 @@ test("kalan bakiye: kapora kartla ödenince kalan, acentenin gönderdiği bağla
   // Geçersiz bağlantı ödeme açmaz.
   assert.equal((await p.api("/payments/start-ticket", { token: "x".repeat(32) })).status, 404);
   // Müşteri bağlantıyı açar: kalan tutar için oturum, plan değiştirilemez, kurulan sözleşme gösterilir.
-  const start = await p.api("/payments/start-ticket", { token: before.ticket_token });
+  // Bilet belirteci (QR) ödeme açmaz; Rezervasyonum'a (e-posta sorgusu) yönlenir.
+  const viaTicket = await p.api("/payments/start-ticket", { token: before.ticket_token });
+  assert.equal(viaTicket.status, 200);
+  const legacy = await viaTicket.json();
+  assert.deepEqual(legacy, { lookup: ref });
+  const start = await p.api("/payments/start-ticket", { token: payToken });
   assert.equal(start.status, 200);
   const started = await start.json();
   assert.equal(started.amount, rest);
@@ -892,7 +902,7 @@ test("kalan bakiye: kapora kartla ödenince kalan, acentenin gönderdiği bağla
   );
   // Ödenecek tutar kalmadı: bağlantı ve yeni ödeme açılmaz.
   assert.equal((await p.call(`/admin/reservations/${ref}/payment-link`, { body: {}, cookie: p.ops })).status, 409);
-  assert.equal((await p.api("/payments/start-ticket", { token: before.ticket_token })).status, 409);
+  assert.equal((await p.api("/payments/start-ticket", { token: payToken })).status, 409);
 });
 
 test("iptal penceresi: iade önerisi kurallara göre, kart iadesinin bugün yapılabilirliği söylenir", async (t) => {

@@ -63,6 +63,8 @@ export async function openStore(
     db.index("seat_locks", { expires_at: 1 }),
     db.index("reservations", { reference: 1 }, { unique: true }),
     db.index("reservations", { ticket_token: 1 }, { unique: true, sparse: true }),
+    // Acentenin ödeme bağlantısı için ayrı belirteç (bilet belirteci ödeme açmaz).
+    db.index("reservations", { pay_token: 1 }, { unique: true, sparse: true }),
     db.index("reservations", { status: 1, expires_at: 1 }),
     db.index("reservations", { departure_id: 1 }),
     db.index("reservations", { member_id: 1 }),

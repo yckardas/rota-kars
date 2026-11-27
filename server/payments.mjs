@@ -485,22 +485,38 @@ export function createPayments(
         );
       return openSession(r, lang);
     },
-    // Acentenin müşteriye gönderdiği ödeme bağlantısı (/odeme/bakiye/:token): bilet
-    // belirteci e-postayla zaten müşteriye gider; e-posta sorulmadan ödeme açılır.
+    // Acentenin müşteriye gönderdiği ödeme bağlantısı (/odeme/bakiye/:token). Bağlantı
+    // yalnız ödeme için üretilen ayrı belirteçle (pay_token) açılır; e-posta sorulmaz.
+    // Bilet belirteci (QR, basılı bilet) ödeme açmaz: ödeme ekranı kişisel veri içeren
+    // ön bilgilendirme metnini gösterdiğinden bileti gören herkes buna ulaşabilirdi.
+    // Eski bağlantılar (bilet belirteciyle gönderilmiş) Rezervasyonum'a yönlenir; orada
+    // e-posta doğrulanınca ödeme yapılabilir. Referans zaten bilet sayfasında görünür.
     async startByTicket(token, { lang = "tr" } = {}) {
-      const row = /^[A-Za-z0-9_-]{16,128}$/.test(String(token || ""))
-        ? await db.one("reservations", { ticket_token: String(token) })
-        : null;
-      if (!row) throw new AppError(404, "Ödeme bağlantısı geçersiz.");
-      return openSession(await workflow.get(row.reference), lang);
+      const t = String(token || "");
+      if (!/^[a-f0-9]{48}$/.test(t))
+        throw new AppError(404, "Ödeme bağlantısı geçersiz.");
+      const row = await db.one("reservations", { pay_token: t });
+      if (row) return openSession(await workflow.get(row.reference), lang);
+      const legacy = await db.one("reservations", { ticket_token: t });
+      if (legacy) return { lookup: legacy.reference };
+      throw new AppError(404, "Ödeme bağlantısı geçersiz.");
     },
     // Şu an online ödenebilecek tutar (0: ödenecek tutar yok veya ödeme alınamaz).
     dueAmount(r) {
       return payable(r) && !(r.status === "confirmed" && r.date < localDate(clock())) ? due(r) : 0;
     },
     // Ödeme bağlantısının adresi (panelde kopyalanır, WhatsApp / e-postayla gider).
-    paymentLink(r) {
-      return (resolved?.base || "") + "/odeme/bakiye/" + r.ticket_token;
+    // Belirteç ilk istekte üretilir ve sabit kalır; ödeme bitince, iptalde ya da tur
+    // tarihi geçince bağlantı ödeme açmaz (openSession).
+    async paymentLink(r) {
+      const row = await db.one("reservations", { reference: r.reference });
+      if (!row) throw new AppError(404, "Rezervasyon bulunamadı.");
+      let token = row.pay_token;
+      if (!token) {
+        token = randomBytes(24).toString("hex");
+        await db.update("reservations", { _id: row.id }, { pay_token: token });
+      }
+      return (resolved?.base || "") + "/odeme/bakiye/" + token;
     },
     async session(id) {
       const s = await getSession(id),
