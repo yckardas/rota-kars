@@ -163,3 +163,79 @@ test("chat: paid model calls stop at the daily per-visitor budget", async () => 
   await ask("c");
   assert.equal(calls, 3, "günlük toplam sınır");
 });
+
+test("yedek asistan: 5 kişi + tarih + iptal sorusu kişi sınırını ve 3 gün kuralını söyler", async () => {
+  const store = await openStore(":memory:");
+  try {
+    const chat = createChatService({}, null, { store });
+    const d = (await store.listDepartures("ani-cildir"))[0];
+    const month = [
+      "ocak",
+      "şubat",
+      "mart",
+      "nisan",
+      "mayıs",
+      "haziran",
+      "temmuz",
+      "ağustos",
+      "eylül",
+      "ekim",
+      "kasım",
+      "aralık",
+    ][Number(d.date.slice(5, 7)) - 1];
+    const r = await chat.reply([
+      user(
+        `5 kişiyiz, ${month} ayında Ani turuna katılabilir miyiz? İptal edersem param iade olur mu?`,
+      ),
+    ]);
+    assert.match(r.text, /en fazla 4 kişilik/);
+    assert.match(r.text, /WhatsApp/);
+    assert.match(r.text, /yurt içi/);
+    assert.match(r.text, /3 gün \(72 saat\)/);
+    assert.match(r.text, /kapora/);
+    assert.match(r.text, /boş koltuk/);
+    assert.equal(r.handoff, true);
+    assert.ok(r.actions.some((a) => a.href === "/bilgilendirme#iptal"));
+    // 4 kişi sınırını aşan grup için rezervasyon bağlantısı önerilmez.
+    assert.ok(!r.actions.some((a) => a.href.startsWith("/rezervasyon/")));
+  } finally {
+    await store.db.close();
+  }
+});
+test("yedek asistan: yurt dışı iptal 5 gün, çocuk, alınış ve açık ödeme kuralları", async () => {
+  const batum = await createChatService({}).reply([
+    user("Batum turunu iptal edersem ne kadar iade alırım?"),
+  ]);
+  assert.match(batum.text, /yurt dışı/);
+  assert.match(batum.text, /5 gün \(120 saat\)/);
+  const child = await createChatService({}).reply([
+    user("Çocuk indirimi var mı?"),
+  ]);
+  assert.match(child.text, /otomatik çocuk indirimi içermez/);
+  assert.doesNotMatch(child.text, /şans çarkı/i);
+  const pickup = await createChatService({}).reply([
+    user("Ani turunda bizi otelden alıyor musunuz?"),
+  ]);
+  assert.match(pickup.text, /08:30/);
+  assert.match(pickup.text, /otelinizden/);
+  const paid = await createChatService({ PAYMENT_PROVIDER: "test" }).reply([
+    user("Ödeme nasıl yapılır, taksit var mı?"),
+  ]);
+  assert.match(paid.text, /kartla online/);
+  assert.match(paid.text, /%30/);
+  assert.match(paid.text, /taksit seçeneği yok/);
+  assert.doesNotMatch(paid.text, /aktif değil/);
+});
+test("yapay zekâlı asistanın sistem bilgisi aynı kuralları içerir", async () => {
+  const { knowledgeFor } = await import("../server/chat.mjs");
+  const k = knowledgeFor({ PAYMENT_PROVIDER: "test" });
+  assert.match(k, /en fazla 4 kişilik/);
+  assert.match(
+    k,
+    /yurt içi turlarda hareketten 3 gün, yurt dışı turlarda 5 gün/,
+  );
+  assert.match(k, /Yurt dışı turlar \(5 gün kuralı\): .*Batum/);
+  assert.match(k, /kartla online ödenir/);
+  assert.match(k, /otomatik çocuk indirimi içermez/);
+  assert.doesNotMatch(k, /Ödeme henüz aktif değil/);
+});
