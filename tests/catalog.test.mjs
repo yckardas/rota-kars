@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
-import { tours } from "../server/catalog.mjs";
+import { tours, services } from "../server/catalog.mjs";
 import { en } from "../server/catalog-en.mjs";
 import { openStore } from "../server/store.mjs";
 import { tourTitle, pageMeta } from "../server/seo.mjs";
@@ -19,6 +19,20 @@ test("every tour image exists in both sizes", () => {
       if (src.startsWith("/images/tours/"))
         assert.ok(existsSync(file(src.replace(/\.webp$/, "-800.webp"))), `${t.id}: ${src} (800)`);
     }
+});
+
+test("every service vehicle has a name and its photos exist in both sizes", () => {
+  for (const s of services) {
+    assert.ok(s.vehicles?.length, `${s.id}: araç yok`);
+    for (const v of s.vehicles) {
+      assert.ok(v.name && v.photos.length, `${s.id}: ${v.name}`);
+      for (const src of v.photos) {
+        assert.match(src, /^\/images\/araclar\/[\w-]+\.webp$/);
+        assert.ok(existsSync(file(src)), `${s.id}: ${src}`);
+        assert.ok(existsSync(file(src.replace(/\.webp$/, "-800.webp"))), `${s.id}: ${src} (800)`);
+      }
+    }
+  }
 });
 
 test("every tour has an English version with the same shape", () => {

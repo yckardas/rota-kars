@@ -2222,6 +2222,58 @@ export function createApp(
     requireAdmin,
     route(async (q, r) => r.json(await store.content.saveAnnouncement(announcementContent.parse(q.body), q.admin))),
   );
+  // Hizmet sayfalarındaki araç kartları (sahip + operasyon, turlardaki fotoğraflar gibi).
+  const serviceContent = z.object({
+    vehicles: z
+      .array(
+        z.object({
+          name: line(60).min(2),
+          photos: z.array(imagePath).min(1).max(10),
+        }),
+      )
+      .max(8),
+  });
+  const serviceIssueMessage = (issue) => {
+    const [, index, part] = issue.path;
+    if (index === undefined) return issue.code === "too_big" ? "En fazla 8 araç eklenebilir." : "Araç listesi geçersiz.";
+    const label = `${index + 1}. araç`;
+    if (part === "name")
+      return issue.code === "too_big"
+        ? `${label}: adı en fazla 60 karakter olabilir.`
+        : `${label}: adını yazın (en az 2 karakter).`;
+    if (part === "photos") {
+      if (issue.code === "too_small") return `${label}: en az bir fotoğraf ekleyin.`;
+      if (issue.code === "too_big") return `${label}: en fazla 10 fotoğraf olabilir.`;
+      return `${label}: fotoğraflardan biri geçersiz.`;
+    }
+    return `${label} geçersiz.`;
+  };
+  const parseServiceContent = (body) => {
+    const result = serviceContent.safeParse(body);
+    if (result.success) return result.data;
+    throw new z.ZodError(result.error.issues.map((i) => ({ ...i, code: "custom", message: serviceIssueMessage(i) })));
+  };
+  const serviceParam = (q) => z.string().regex(TOUR_SLUG).max(60).parse(q.params.id);
+  app.get(
+    "/api/admin/content/services",
+    requireAdmin,
+    route(async (_q, r) => r.json(store.content.listServices())),
+  );
+  app.get(
+    "/api/admin/content/services/:id",
+    requireAdmin,
+    route(async (q, r) => r.json(await store.content.service(serviceParam(q)))),
+  );
+  app.post(
+    "/api/admin/content/services/:id",
+    requireAdmin,
+    route(async (q, r) => r.json(await store.content.saveService(serviceParam(q), parseServiceContent(q.body), q.admin))),
+  );
+  app.post(
+    "/api/admin/content/services/:id/reset",
+    requireAdmin,
+    route(async (q, r) => r.json(await store.content.resetService(serviceParam(q)))),
+  );
   app.post(
     "/api/admin/requests/:id",
     requireAdmin,

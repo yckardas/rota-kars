@@ -7429,6 +7429,32 @@ input[type="radio"] {
   display: flex;
   gap: 4px;
 }
+/* Panel: hizmet araçları. İlk fotoğraf kapak; araç araçları sağda. */
+.service-vehicle .content-gallery {
+  margin-top: 10px;
+}
+.service-vehicle-cover {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(12, 20, 38, 0.75);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+}
+.service-vehicle-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+.service-vehicle-tools .itinerary-tools {
+  grid-column: auto;
+}
 .content-gallery .icon-btn,
 .itinerary-tools .icon-btn {
   width: 36px;

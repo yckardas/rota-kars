@@ -3552,8 +3552,8 @@ html:has(.kp) {
   font-size: 16px;
   color: var(--kp-ink-2);
 }
-/* Hizmetteki araçlar: firmanın gönderdiği dikey kolajlar, kartpostal gibi beyaz
-   çerçeveli; tıklanınca tam ekran görüntüleyicide açılır. */
+/* Hizmetteki araçlar: her araç kartpostal gibi beyaz çerçeveli bir kart; kapakta ilk
+   fotoğraf, köşede fotoğraf sayısı. Tıklanınca aracın fotoğrafları tam ekran açılır. */
 .kp .service-fleet {
   padding-top: 44px;
 }
@@ -3574,6 +3574,7 @@ html:has(.kp) {
   box-shadow: var(--kp-shadow-sm);
 }
 .kp .service-fleet button {
+  position: relative;
   display: block;
   width: 100%;
   padding: 0;
@@ -3587,9 +3588,24 @@ html:has(.kp) {
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 4 / 3;
   object-fit: cover;
   transition: transform 0.4s ease;
+}
+.kp .service-fleet-count {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(12, 20, 38, 0.72);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
 }
 .kp .service-fleet button:hover img {
   transform: scale(1.02);

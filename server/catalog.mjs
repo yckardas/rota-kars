@@ -51,6 +51,8 @@ export const features = [
     text: "Misafirlerimizin Google değerlendirmeleri sitemizde.",
   },
 ];
+// Hizmet sayfasındaki "Bu hizmetteki araçlarımız" bölümü: her araç bir kart, ilk
+// fotoğraf kapak. Panelden değiştirilebilir (content.mjs, site_content "service:<id>").
 export const services = [
   {
     id: "turizm-tasimaciligi",
@@ -58,10 +60,31 @@ export const services = [
     image: "/images/rota-bus.webp",
     imageAlt: "Rota Kars Tur logolu turizm otobüsü",
     text: "Yerli ve yabancı misafirlerimizin transferlerinde zamanlama, konfor ve emniyeti ön planda tutan uzman bir kadro.",
-    gallery: [
-      { src: "/images/araclar/travego-06cpb673.webp", alt: "Mercedes-Benz Travego turizm otobüsü" },
-      { src: "/images/araclar/travego-61s610.webp", alt: "Mercedes-Benz Travego turizm otobüsü" },
-      { src: "/images/araclar/otokar-sultan.webp", alt: "Otokar Sultan midibüs, Kars Garı önünde" },
+    vehicles: [
+      {
+        name: "Mercedes-Benz Travego",
+        photos: [
+          "/images/araclar/travego-a-1.webp",
+          "/images/araclar/travego-a-2.webp",
+          "/images/araclar/travego-a-3.webp",
+        ],
+      },
+      {
+        name: "Mercedes-Benz Travego",
+        photos: [
+          "/images/araclar/travego-b-1.webp",
+          "/images/araclar/travego-b-2.webp",
+          "/images/araclar/travego-b-3.webp",
+        ],
+      },
+      {
+        name: "Otokar Sultan",
+        photos: [
+          "/images/araclar/otokar-sultan-1.webp",
+          "/images/araclar/otokar-sultan-2.webp",
+          "/images/araclar/otokar-sultan-3.webp",
+        ],
+      },
     ],
   },
   {
@@ -70,10 +93,29 @@ export const services = [
     image: "/images/rota-bus.webp",
     imageAlt: "Rota Kars Tur logolu turizm otobüsü",
     text: "Özel üretilmiş, prestijli ve konforlu VIP araç filomuzla dilediğiniz destinasyona eğitimli personelle ulaşım.",
-    gallery: [
-      { src: "/images/araclar/vito-vip-35bmt691.webp", alt: "Mercedes-Benz Vito lüks VIP araç" },
-      { src: "/images/araclar/vito-vip-34ehb934.webp", alt: "Mercedes-Benz Vito lüks VIP araç" },
-      { src: "/images/araclar/fiat-egea.webp", alt: "Fiat Egea Cross binek araç" },
+    vehicles: [
+      {
+        name: "Mercedes-Benz Vito VIP",
+        photos: [
+          "/images/araclar/vito-vip-a-1.webp",
+          "/images/araclar/vito-vip-a-2.webp",
+          "/images/araclar/vito-vip-a-3.webp",
+        ],
+      },
+      {
+        name: "Mercedes-Benz Vito VIP",
+        photos: [
+          "/images/araclar/vito-vip-b-1.webp",
+          "/images/araclar/vito-vip-b-2.webp",
+          "/images/araclar/vito-vip-b-3.webp",
+        ],
+      },
+      {
+        name: "Fiat Egea Cross",
+        photos: [
+          "/images/araclar/fiat-egea-1.webp",
+        ],
+      },
     ],
   },
   {
@@ -82,10 +124,32 @@ export const services = [
     image: "/images/rota-bus.webp",
     imageAlt: "Rota Kars Tur logolu turizm otobüsü",
     text: "Fuar, seminer ve toplantı katılımcılarınızın transferleri için dakik ve güvenilir çözüm ortağı.",
-    gallery: [
-      { src: "/images/araclar/otokar-midibus.webp", alt: "Otokar midibüs" },
-      { src: "/images/araclar/isuzu-midibus.webp", alt: "Isuzu midibüs" },
-      { src: "/images/araclar/vito-vip-34zf.webp", alt: "Mercedes-Benz Vito lüks VIP araç" },
+    vehicles: [
+      {
+        name: "Otokar midibüs",
+        photos: [
+          "/images/araclar/otokar-midibus-1.webp",
+          "/images/araclar/otokar-midibus-2.webp",
+          "/images/araclar/otokar-midibus-3.webp",
+          "/images/araclar/otokar-midibus-4.webp",
+        ],
+      },
+      {
+        name: "Isuzu midibüs",
+        photos: [
+          "/images/araclar/isuzu-midibus-1.webp",
+          "/images/araclar/isuzu-midibus-2.webp",
+          "/images/araclar/isuzu-midibus-3.webp",
+        ],
+      },
+      {
+        name: "Mercedes-Benz Vito VIP",
+        photos: [
+          "/images/araclar/vito-vip-c-1.webp",
+          "/images/araclar/vito-vip-c-2.webp",
+          "/images/araclar/vito-vip-c-3.webp",
+        ],
+      },
     ],
   },
   {
@@ -94,9 +158,25 @@ export const services = [
     image: "/images/tours/ani.webp",
     imageAlt: "Ani’de katedral ve bozkır",
     text: "Gezi, eğitim, kültür, sanat ve eğlence etkinlikleri için size özel planlanan ulaşım.",
-    gallery: [
-      { src: "/images/araclar/vw-crafter-36ea491.webp", alt: "Volkswagen Crafter minibüs" },
-      { src: "/images/araclar/vw-crafter-36ea484.webp", alt: "Volkswagen Crafter minibüs" },
+    vehicles: [
+      {
+        name: "Volkswagen Crafter",
+        photos: [
+          "/images/araclar/vw-crafter-a-1.webp",
+          "/images/araclar/vw-crafter-a-2.webp",
+          "/images/araclar/vw-crafter-a-3.webp",
+          "/images/araclar/vw-crafter-a-4.webp",
+        ],
+      },
+      {
+        name: "Volkswagen Crafter",
+        photos: [
+          "/images/araclar/vw-crafter-b-1.webp",
+          "/images/araclar/vw-crafter-b-2.webp",
+          "/images/araclar/vw-crafter-b-3.webp",
+          "/images/araclar/vw-crafter-b-4.webp",
+        ],
+      },
     ],
   },
 ];
