@@ -116,7 +116,7 @@ export function Reviews({ tourId }: { tourId?: string }) {
         ) : data?.reviews.length ? (
           <>
             <p className="review-order">
-              {data.sort}{" "}
+              {sortLabel(data, t, lang, locale)}{" "}
               {data.scope === "tour"
                 ? tourScopeNote(t, data)
                 : data.scope === "agency"
@@ -152,7 +152,8 @@ export function Reviews({ tourId }: { tourId?: string }) {
                         <strong>{r.author}</strong>
                       )}
                       <small>
-                        {r.relativeDate ||
+                        {(r.relativeDate &&
+                          relativeLabel(r.relativeDate, t, lang)) ||
                           new Date(r.date).toLocaleDateString(locale, {
                             month: "long",
                             year: "numeric",
@@ -221,6 +222,47 @@ export function Reviews({ tourId }: { tourId?: string }) {
     </section>
   );
 }
+type Translate = (
+  text: string,
+  vars?: Record<string, string | number>,
+) => string;
+// Sunucudan Türkçe gelen sıralama açıklaması; /en'de sözlükten (anlık görüntüde tarihli).
+function sortLabel(
+  data: ReviewsResponse,
+  t: Translate,
+  lang: string,
+  locale: string,
+) {
+  if (!data.sort || lang !== "en") return data.sort;
+  if (data.status === "snapshot" && data.fetchedAt)
+    return t(
+      "Google Haritalar’dan {date} tarihinde alınan en alakalı yorumlar.",
+      {
+        date: new Date(data.fetchedAt + "T12:00:00").toLocaleDateString(
+          locale,
+          {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          },
+        ),
+      },
+    );
+  return t(data.sort);
+}
+// Google'ın göreli tarihi ("5 ay önce", "bir yıl önce"); /en'de "5 months ago".
+function relativeLabel(text: string, t: Translate, lang: string) {
+  const m =
+    lang === "en"
+      ? text
+          .trim()
+          .match(/^(\d+|bir) (saniye|dakika|saat|gün|hafta|ay|yıl) önce$/i)
+      : null;
+  if (!m) return lang === "en" ? t(text) : text;
+  const n = m[1].toLocaleLowerCase("tr-TR") === "bir" ? 1 : Number(m[1]),
+    unit = m[2].toLocaleLowerCase("tr-TR");
+  return n === 1 ? t(`1 ${unit} önce`) : t(`{n} ${unit} önce`, { n });
+}
 type Term = { term: string; exact: boolean };
 // Tur sayfasındaki açıklama eşlemenin türüne göre yazılır: panelden elle bu tura eşlenen
 // yorumda tur adı geçmeyebilir, o yorumlar için "yorumunda geçen" denmez.
@@ -232,8 +274,13 @@ function tourScopeNote(
     m = data.textMatched ?? n,
     terms = termLabel(t, data.terms);
   if (m >= n)
-    return t("Yorumunda {terms} geçen {n} misafirimiz.", { terms, n });
-  if (m === 0) return t("Bu rotayı gezen {n} misafirimizin yorumu.", { n });
+    return n === 1
+      ? t("Yorumunda {terms} geçen 1 misafirimiz.", { terms })
+      : t("Yorumunda {terms} geçen {n} misafirimiz.", { terms, n });
+  if (m === 0)
+    return n === 1
+      ? t("Bu rotayı gezen 1 misafirimizin yorumu.")
+      : t("Bu rotayı gezen {n} misafirimizin yorumu.", { n });
   return t(
     "Bu rotayı gezen {n} misafirimizin yorumu; {m} yorumda {terms} geçiyor.",
     {
@@ -266,6 +313,18 @@ const display: Record<string, string> = {
   ahlat: "Ahlat",
   tatvan: "Tatvan",
   bitlis: "Bitlis",
+  antep: "Antep",
+  diyarbakir: "Diyarbakır",
+  gobeklitepe: "Göbeklitepe",
+  guneydogu: "Güneydoğu",
+  halfeti: "Halfeti",
+  mardin: "Mardin",
+  midyat: "Midyat",
+  sanliurfa: "Şanlıurfa",
+  urfa: "Urfa",
+  nahcivan: "Nahçıvan",
+  baku: "Bakü",
+  tiflis: "Tiflis",
 };
 function termLabel(tr: (text: string) => string, terms: Term[] = []) {
   const names = terms.slice(0, 3).map((t) => `“${display[t.term] || t.term}”`);
