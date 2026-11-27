@@ -70,14 +70,6 @@ export const services = [
         ],
       },
       {
-        name: "Mercedes-Benz Travego",
-        photos: [
-          "/images/araclar/travego-b-1.webp",
-          "/images/araclar/travego-b-2.webp",
-          "/images/araclar/travego-b-3.webp",
-        ],
-      },
-      {
         name: "Otokar Sultan",
         photos: [
           "/images/araclar/otokar-sultan-1.webp",
@@ -100,14 +92,6 @@ export const services = [
           "/images/araclar/vito-vip-a-1.webp",
           "/images/araclar/vito-vip-a-2.webp",
           "/images/araclar/vito-vip-a-3.webp",
-        ],
-      },
-      {
-        name: "Mercedes-Benz Vito VIP",
-        photos: [
-          "/images/araclar/vito-vip-b-1.webp",
-          "/images/araclar/vito-vip-b-2.webp",
-          "/images/araclar/vito-vip-b-3.webp",
         ],
       },
       {
