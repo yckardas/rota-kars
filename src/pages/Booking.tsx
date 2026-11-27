@@ -1988,7 +1988,7 @@ export function Booking({ catalog }: { catalog: Catalog }) {
               <Armchair size={15} />
               {count === 1 ? t("1 yolcu") : t("{n} yolcu", { n: count })} ·{" "}
               {vehicle.passengerSeats}+1{" "}
-              {vehicle.unit ? vehicle.unit.name : vehicle.name}
+              {vehicle.unit ? vehicle.unit.name : t(vehicle.name)}
             </p>
             {selected.length > 0 && (
               <p>

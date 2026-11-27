@@ -21,6 +21,11 @@ export const site: Record<string, string> = {
   "Merhaba, rotakarsturizm.com sitesinden yazıyorum.":
     "Hello, I’m writing from the rotakarsturizm.com website.",
   "Birlikte planlayalım": "Let’s plan together",
+  // Sohbet asistanı başlatıcısı (her sayfada)
+  "Yolculuğunuzu birlikte planlayalım": "Let’s plan your trip together",
+  "WhatsApp ile yazın": "Message us on WhatsApp",
+  "Asistanla sohbet et": "Chat with our assistant",
+  "Asistanı kapat": "Close the assistant",
   "Menüyü kapat": "Close menu",
   "Menüyü aç": "Open menu",
   "Rotayı biz biliyoruz.": "We know the way.",
@@ -48,6 +53,15 @@ export const site: Record<string, string> = {
   "Vitrini durdur": "Pause the carousel",
   "Vitrini sürdür": "Resume the carousel",
   "Tur türleri": "Tour types",
+  // Araç tipleri (sefer ve koltuk planında; araç adı verilerden gelir)
+  "VIP minibüs": "VIP minibus",
+  "Binek araç · Egea sınıfı": "Car · Egea class",
+  "VIP minibüs · Vito sınıfı": "VIP minibus · Vito class",
+  "VIP minibüs · Sprinter / Crafter sınıfı":
+    "VIP minibus · Sprinter / Crafter class",
+  "Turizm midibüsü · Otokar Sultan sınıfı":
+    "Tour midibus · Otokar Sultan class",
+  "Turizm otobüsü · Travego sınıfı": "Tour coach · Travego class",
   "{n} rota": "{n} routes",
   "1 rota": "1 route",
   "TÜRSAB A Grubu {no}": "TÜRSAB Group A {no}",

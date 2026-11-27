@@ -2054,9 +2054,20 @@
   font-weight: 400;
   color: var(--muted);
 }
+.rk-admin .content-en-field .field {
+  margin-bottom: 4px;
+}
 .rk-admin .content-en-note .checkbox-label {
+  margin: 0;
+  align-items: center;
   font-size: 13px;
   color: var(--ink);
+}
+.rk-admin .content-en-note .checkbox-label input {
+  margin: 0;
+}
+.rk-admin .content-en-note svg {
+  vertical-align: -2px;
 }
 .rk-admin .content-en .field small,
 .rk-admin .content-en-source {

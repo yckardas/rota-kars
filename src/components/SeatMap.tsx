@@ -202,7 +202,7 @@ export function SeatMap({
         {vehicle.passengerSeats}+{vehicle.driverSeats} ·{" "}
         {vehicle.unit
           ? `${vehicle.unit.name} (${vehicle.unit.year})`
-          : vehicle.name}{" "}
+          : t(vehicle.name)}{" "}
         <span>
           {t("{guests} misafir + {guides} rehber + {drivers} şoför", {
             guests: vehicle.sellableSeats,

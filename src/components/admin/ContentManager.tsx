@@ -778,8 +778,10 @@ function TourEnglish({
     if (own && info.enStale?.includes(k))
       return (
         <span className="content-en-note is-warn">
-          <AlertTriangle size={14} /> Türkçe metin İngilizceden sonra değişti.
-          İngilizceyi güncelleyin
+          <span>
+            <AlertTriangle size={14} /> Türkçe metin İngilizceden sonra değişti;
+            İngilizceyi güncelleyin.
+          </span>
           <label className="checkbox-label">
             <input
               type="checkbox"
@@ -798,8 +800,10 @@ function TourEnglish({
     if ((own || fallback) && trChanged)
       return (
         <span className="content-en-note is-warn">
-          <AlertTriangle size={14} /> Türkçeyi değiştirdiniz; İngilizcesini de
-          güncelleyin.
+          <span>
+            <AlertTriangle size={14} /> Türkçeyi değiştirdiniz; İngilizcesini de
+            güncelleyin.
+          </span>
         </span>
       );
     if (fallback)
@@ -808,7 +812,8 @@ function TourEnglish({
           Eski çeviri kullanılıyor; değiştirebilirsiniz.
         </span>
       );
-    if (!own && !draft[k].length)
+    // Boş ya da yalnız saat/sayı olan Türkçe metin için not gerekmez.
+    if (!own && !draft[k].length && !/^[\d\s:.,·–-]*$/.test(trText(k)))
       return (
         <span className="content-en-note">
           Boş: İngilizce sayfada Türkçesi görünür.
@@ -825,37 +830,41 @@ function TourEnglish({
     max: number,
     long = false,
   ) => (
-    <label className="field">
-      {EN_LABELS[k]} (İngilizce)
-      {long ? (
-        <textarea
-          rows={k === "summary" ? 4 : 2}
-          maxLength={max}
-          value={draft[k]}
-          onChange={(e) => setEn(k, e.target.value)}
-        />
-      ) : (
-        <input
-          value={draft[k]}
-          maxLength={max}
-          onChange={(e) => setEn(k, e.target.value)}
-        />
-      )}
-      <small className="muted">Türkçe: {trText(k) || "—"}</small>
+    <div className="content-en-field">
+      <label className="field">
+        {EN_LABELS[k]} (İngilizce)
+        {long ? (
+          <textarea
+            rows={k === "summary" ? 4 : 2}
+            maxLength={max}
+            value={draft[k]}
+            onChange={(e) => setEn(k, e.target.value)}
+          />
+        ) : (
+          <input
+            value={draft[k]}
+            maxLength={max}
+            onChange={(e) => setEn(k, e.target.value)}
+          />
+        )}
+        <small className="muted">Türkçe: {trText(k) || "—"}</small>
+      </label>
       {status(k)}
-    </label>
+    </div>
   );
   const list = (k: (typeof LIST_KEYS)[number]) => (
-    <label className="field">
-      {EN_LABELS[k]} (İngilizce, her satıra bir madde)
-      <textarea
-        rows={5}
-        value={draft[k]}
-        onChange={(e) => setEn(k, e.target.value)}
-      />
-      <small className="muted">Türkçe: {trText(k) || "—"}</small>
+    <div className="content-en-field">
+      <label className="field">
+        {EN_LABELS[k]} (İngilizce, her satıra bir madde)
+        <textarea
+          rows={5}
+          value={draft[k]}
+          onChange={(e) => setEn(k, e.target.value)}
+        />
+        <small className="muted">Türkçe: {trText(k) || "—"}</small>
+      </label>
       {status(k)}
-    </label>
+    </div>
   );
   const rows = Math.max(f.itinerary.length, draft.itinerary.length),
     steps = Array.from(
