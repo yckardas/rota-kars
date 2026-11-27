@@ -59,6 +59,13 @@ const DEFAULT_TOURS = new Map(
   tours.map((t) => [t.id, { minParticipants: 0, minNoticeHours: 0, documents: [], cardLabel: "", ...pick(t, TOUR_FIELDS) }]),
 );
 const DEFAULT_BUSINESS = pick(business, BUSINESS_FIELDS);
+// Siteden kaldırılan araçlar (34 BEH 934 Vito, 61 S 6101 Travego). Panelde daha
+// önce kaydedilmiş listelerde kalmış olsalar da sitede ve panelde gösterilmez.
+const RETIRED_PHOTO = /^\/images\/araclar\/(?:vito-vip-b|travego-b)-/;
+const withoutRetired = (vehicles = []) =>
+  vehicles
+    .map((v) => ({ ...v, photos: v.photos.filter((p) => !RETIRED_PHOTO.test(p)) }))
+    .filter((v) => v.photos.length > 0);
 const DEFAULT_SERVICES = new Map(services.map((s) => [s.id, { vehicles: [], ...pick(s, SERVICE_FIELDS) }]));
 // Kod içindeki turlar; panelden kopyalanan turlar (custom_tours) bunlara eklenir.
 const BUILT_IN = new Set(tours.map((t) => t.id));
@@ -259,6 +266,7 @@ export async function createContent(db, { clock = Date.now } = {}) {
     }
     for (const service of services)
       Object.assign(service, structuredClone(DEFAULT_SERVICES.get(service.id)), docs.get("service:" + service.id)?.fields || {});
+    for (const service of services) service.vehicles = withoutRetired(service.vehicles);
     Object.assign(business, structuredClone(DEFAULT_BUSINESS), docs.get("business")?.fields || {});
     Object.assign(announcement, structuredClone(DEFAULT_ANNOUNCEMENT), docs.get("announcement")?.fields || {});
   }

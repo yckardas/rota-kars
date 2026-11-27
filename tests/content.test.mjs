@@ -175,6 +175,20 @@ test("service vehicles: operations edit from the panel, validated, reset and sur
   assert.deepEqual((await vip()).vehicles, before.defaults.vehicles);
 });
 
+test("service vehicles: retired vehicles stay hidden even in an older panel save", async (t) => {
+  const { store, call, ops } = await fixture(t);
+  const old = "/images/araclar/vito-vip-b-1.webp";
+  await store.content.saveService(
+    "vip-transfer",
+    { vehicles: [{ name: "Eski Vito", photos: [old] }, { name: "Karışık", photos: [old, "/images/araclar/vito-vip-a-1.webp"] }] },
+    "Operasyon",
+  );
+  const vip = (await call("/catalog")).json.services.find((s) => s.id === "vip-transfer");
+  assert.deepEqual(vip.vehicles, [{ name: "Karışık", photos: ["/images/araclar/vito-vip-a-1.webp"] }]);
+  const panel = (await call("/admin/content/services/vip-transfer", { cookie: ops })).json;
+  assert.deepEqual(panel.current.vehicles, vip.vehicles);
+});
+
 test("monthly CSV opens in Excel (BOM, semicolons) and neutralises formulas", async (t) => {
   const { store, owner, root } = await fixture(t);
   const d = await store.departures.save({

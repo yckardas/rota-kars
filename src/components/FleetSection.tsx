@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import {
   Bus,
   ChevronLeft,
@@ -92,17 +92,28 @@ export function FleetSection({ catalog }: { catalog: Catalog }) {
               aria-roledescription={t("slayt gösterisi")}
               aria-label={t("Araç fotoğrafları")}
             >
-              {slides.map((s, k) => (
-                <img
-                  key={s.photo}
-                  {...responsive(s.photo, "(max-width: 950px) 100vw, 55vw")}
-                  alt={s.label}
-                  data-active={k === active || undefined}
-                  aria-hidden={k !== active || undefined}
-                  loading={k === 0 ? undefined : "lazy"}
-                  decoding="async"
-                />
-              ))}
+              {/* Fotoğrafların oranı farklı (dikey, yatay); araç kırpılmadan
+                  tam görünür, kalan boşluğu aynı fotoğrafın bulanık hali doldurur. */}
+              {slides.map((s, k) => {
+                const img = responsive(s.photo, "(max-width: 950px) 100vw, 55vw"),
+                  bg = img.srcSet ? s.photo.replace(/\.webp$/, "-800.webp") : s.photo;
+                return (
+                  <div
+                    key={s.photo}
+                    className="fleet-slide"
+                    data-active={k === active || undefined}
+                    aria-hidden={k !== active || undefined}
+                    style={{ "--fleet-bg": `url("${bg}")` } as CSSProperties}
+                  >
+                    <img
+                      {...img}
+                      alt={s.label}
+                      loading={k === 0 ? undefined : "lazy"}
+                      decoding="async"
+                    />
+                  </div>
+                );
+              })}
               <p
                 className="fleet-slide-caption"
                 aria-live={running ? "off" : "polite"}
