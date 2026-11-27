@@ -6942,6 +6942,55 @@ input[type="radio"] {
 .passenger-notes {
   color: #8a5a12;
 }
+/* Yolcu listesi: müşterinin yazdığı alınış yeri ve sefer bazında alınış listesi */
+.passenger-pickup {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.passenger-pickup svg {
+  flex: none;
+  margin-top: 2px;
+}
+.pickup-summary {
+  margin: 14px 0 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: white;
+  font-size: 13px;
+}
+.pickup-summary summary {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pickup-summary ol {
+  margin: 10px 0 4px;
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+}
+.passenger-list .pickup-summary li {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: none;
+  overflow-wrap: anywhere;
+}
+.pickup-summary li small {
+  display: block;
+  color: var(--muted);
+}
+.pickup-summary .muted {
+  margin: 6px 0 0;
+}
 .passenger-list li > small {
   display: block;
   color: var(--muted);

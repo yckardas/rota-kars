@@ -7,6 +7,7 @@ import { tours } from "./catalog.mjs";
 import { localDate } from "./departures.mjs";
 import { siteBase as configuredBase } from "./seo.mjs";
 import { maskDetails, passengerDetail } from "./passenger-id.mjs";
+import { pickupAddressSchema } from "./trip-info.mjs";
 export const siteBase = (q, env) => configuredBase(env, q);
 // customer: true → müşteriye dönen yanıt; tahsilat satırları (personel adı, dekont
 // notu, iç referans) ve kaydı açan yöneticinin kimliği çıkarılır. Toplamlar kalır.
@@ -395,6 +396,26 @@ export function attachAdvancedApi(
         })
         .parse(q.body);
       r.json(await store.workflow.passengers(q.params.reference, input.names, input.details));
+    }),
+  );
+  // Müşteri alınış yerini sonradan iletirse (WhatsApp/telefon) operasyon panelden yazar.
+  app.post(
+    "/api/admin/reservations/:reference/pickup",
+    requireAdmin,
+    route(async (q, r) => {
+      const input = z
+        .object({ pickupAddress: pickupAddressSchema })
+        .parse(q.body);
+      r.json(
+        await receipt(
+          await store.workflow.setPickup(
+            q.params.reference,
+            input.pickupAddress,
+          ),
+          q,
+          env,
+        ),
+      );
     }),
   );
   for (const [path, kind] of [

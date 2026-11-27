@@ -70,6 +70,9 @@ ${confirmed ? "" : `<div style="display:inline-block;margin:0 0 10px;padding:3px
 <div style="font:15px Arial,Helvetica,sans-serif;color:#c2342b;margin:4px 0 6px">${escape(longDate(t.date, t.time))}</div>
 ${row(cell("Buluşma", escape(t.pickup)))}
 ${t.transfer ? row(cell("Transfer", escape(t.transfer))) : ""}
+${t.pickupAddress ? row(cell("Alınış yeri", escape(t.pickupAddress))) : ""}
+${t.children ? row(cell("Çocuk", escape(t.children.charAt(0).toLocaleUpperCase("tr-TR") + t.children.slice(1)))) : ""}
+${t.note ? row(cell("Notunuz", escape(t.note).replace(/\n/g, "<br>"))) : ""}
 ${row(cell((t.seats || []).length > 1 ? "Koltuklar" : "Koltuk", escape((t.seats || []).join(", "))), cell("Rezervasyon", escape(t.reference)))}
 ${amounts.length ? row(...amounts) : ""}
 ${
@@ -140,6 +143,9 @@ async function renderTicketMail({ recipient, subject, url, ticket: t, documents 
     `${longDate(t.date, t.time)} · Koltuk: ${(t.seats || []).join(", ")}`,
     t.pickup ? `Buluşma: ${t.pickup}` : "",
     t.transfer || "",
+    t.pickupAddress ? `Alınış yeri: ${t.pickupAddress}` : "",
+    t.children ? `Çocuk: ${t.children}` : "",
+    t.note ? `Notunuz: ${t.note}` : "",
     amountText,
     url || "",
     names.length ? `Ekler: ${names.join(", ")} (PDF)` : "",

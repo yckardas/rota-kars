@@ -23,6 +23,7 @@ import { articleSeed } from "./articles-seed.mjs";
 import { createInterest } from "./interest.mjs";
 import { describeRequest, formMailPerDay, REQUEST_KINDS, statusLabel } from "./requests.mjs";
 import { applyStandardTransfer, priceTransfer } from "./transfer.mjs";
+import { childrenRecord } from "./trip-info.mjs";
 import { applyAniMinibus, applyCustomerCorrections, removeTestReservations } from "./corrections.mjs";
 export class AppError extends Error {
   constructor(status, message) {
@@ -417,6 +418,10 @@ export async function openStore(
       legal = null,
       transfer = null,
       confirmNow = false,
+      // Müşterinin yazdığı yolculuk bilgileri (server/trip-info.mjs); fiyatı değiştirmez.
+      pickupAddress = "",
+      children = null,
+      note = "",
     }) {
       return tx(async () => {
         await cleanup();
@@ -513,6 +518,10 @@ export async function openStore(
           notes: String(notes || "").slice(0, 500),
           transfer: pricedTransfer,
           transfer_amount: pricedTransfer?.amount || 0,
+          // Alınış yeri ve not kimlik numaraları gibi şifreli saklanır.
+          pickup_address: pii.seal(pickupAddress || ""),
+          children: childrenRecord(children),
+          customer_note: pii.seal(note || ""),
         });
 
         await db.updateMany(

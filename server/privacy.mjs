@@ -6,6 +6,8 @@
 //   10 yıl saklanır; süre dolunca anonimleştirilir.
 // - Tahsilatı olmayan iptal/süresi dolmuş ön rezervasyonlar 1 yıl sonra anonimleşir.
 // - Talepler 2 yıl, gönderilmiş bildirimler 90 gün, yönetici denetim kaydı 2 yıl.
+// - Yolcu kimlik numaraları ile müşterinin yazdığı alınış yeri, çocuk bilgisi ve
+//   rezervasyon notu tur tarihinden 1 yıl sonra silinir (RETENTION_PASSENGER_ID_DAYS).
 // Süreler ortam değişkenleriyle değiştirilebilir. Metinler hukuki danışmanla
 // teyit edilmelidir.
 import { randomUUID, createHash } from "node:crypto";
@@ -77,6 +79,10 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx, pii
         contract_text: null,
         // Transferde müşterinin yazdığı uçuş/sefer bilgisi silinir; tutar ve nokta kalır.
         ...(r.transfer ? { transfer: { ...r.transfer, info: "" } } : {}),
+        // Müşterinin yazdığı alınış yeri, çocuk bilgisi ve not silinir.
+        pickup_address: "",
+        children: null,
+        customer_note: "",
         anonymized_at: clock(),
       },
     );
@@ -142,6 +148,9 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx, pii
       phone: r.phone,
       passengers: r.passengers,
       passengerDetails: pii ? pii.openDetails(r.passenger_details) : r.passenger_details || [],
+      pickupAddress: (pii ? pii.open(r.pickup_address) : r.pickup_address) || null,
+      children: r.children || null,
+      note: (pii ? pii.open(r.customer_note) : r.customer_note) || null,
       seats: r.seats,
       total: r.total / 100,
       createdAt: new Date(r.created_at).toISOString(),
@@ -287,9 +296,15 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx, pii
         }
       });
       // Kimlik numaraları: tur tarihinden passengerIdDays gün sonra silinir; uyruk
-      // ve cinsiyet (tek başına kimlik belirtmez) istatistik için kalır.
+      // ve cinsiyet (tek başına kimlik belirtmez) istatistik için kalır. Turdan sonra
+      // gerekmeyen alınış yeri, çocuk bilgisi ve müşteri notu da aynı anda silinir.
       const withIds = await db.find("reservations", {
-        "passenger_details.0": { $exists: true },
+        $or: [
+          { "passenger_details.0": { $exists: true } },
+          { pickup_address: { $nin: ["", null] } },
+          { customer_note: { $nin: ["", null] } },
+          { children: { $ne: null } },
+        ],
         ids_purged_at: { $exists: false },
       });
       const dates = await departureDates(withIds),
@@ -302,7 +317,16 @@ export function createPrivacy(db, { clock = Date.now, env = process.env, tx, pii
           "reservations",
           { _id: r.id },
           {
-            passenger_details: r.passenger_details.map((p) => (p ? { ...p, idNumber: "" } : null)),
+            ...(Array.isArray(r.passenger_details)
+              ? {
+                  passenger_details: r.passenger_details.map((p) =>
+                    p ? { ...p, idNumber: "" } : null,
+                  ),
+                }
+              : {}),
+            pickup_address: "",
+            children: null,
+            customer_note: "",
             ids_purged_at: now,
           },
         );
