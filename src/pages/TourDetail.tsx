@@ -613,7 +613,6 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
           tourName={t.name}
           dates={demandDates}
           initialDateId={prereg.dateId}
-          allowUndated={t.mode === "demand"}
           onClose={() => setPrereg(null)}
         />
       )}

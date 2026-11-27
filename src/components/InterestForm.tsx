@@ -18,7 +18,6 @@ export function InterestForm({
   initialCount = 1,
   dates = [],
   initialDateId,
-  allowUndated = true,
   onClose,
 }: {
   kind: "prereg" | "waitlist";
@@ -27,11 +26,10 @@ export function InterestForm({
   departureId?: string;
   departureLabel?: string;
   initialCount?: number;
-  // Ön kayıt: talep toplayan tarihler; seçilen tarih kayda bağlanır. "" = başka bir tarih
-  // (tarihsiz kayıt; yalnız tur talep toplama modundaysa).
+  // Ön kayıt: talep toplayan tarihler; müşteri yalnız bunlardan birini seçer ve kayıt o tarihe
+  // bağlanır. Tarih yoksa (talep turu) serbest "Tercih ettiğiniz dönem" kutusu görünür.
   dates?: DemandDate[];
   initialDateId?: string;
-  allowUndated?: boolean;
   onClose: () => void;
 }) {
   const { t } = useLang();
@@ -42,7 +40,7 @@ export function InterestForm({
   const waitlist = kind === "waitlist";
   const pickDate = !waitlist && dates.length > 0;
   const [dateId, setDateId] = useState(
-    initialDateId && dates.some((d) => d.id === initialDateId) ? initialDateId : allowUndated ? "" : dates[0]?.id || "",
+    initialDateId && dates.some((d) => d.id === initialDateId) ? initialDateId : dates[0]?.id || "",
   );
   const picked = dates.find((d) => d.id === dateId);
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -137,11 +135,10 @@ export function InterestForm({
                       {dateLabel(d.date)} · {d.start_time}
                     </option>
                   ))}
-                  {allowUndated && <option value="">{t("Başka bir tarih istiyorum")}</option>}
                 </select>
               </label>
             )}
-            {!waitlist && !(pickDate && dateId) && (
+            {!waitlist && !pickDate && (
               <label className="field">
                 {t("Tercih ettiğiniz dönem (isteğe bağlı)")}
                 <input name="preferredDate" maxLength={60} placeholder={t("Örn. Mart 2027, hafta sonu")} />
