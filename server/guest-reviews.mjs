@@ -85,7 +85,9 @@ export async function createGuestReviews(
     db.index("guest_reviews", { tour_id: 1, status: 1, created_at: -1 }),
     db.index("guest_reviews", { reservation_id: 1 }),
   ]);
-  const enabled = env.REVIEW_REQUESTS !== "0";
+  // Gerçek müşterilere e-posta gönderdiği için açıkça açılmalı (REVIEW_REQUESTS=1).
+  // KVKK aydınlatma metnine "tur sonrası yorum isteği" amacı eklenince açılır.
+  const enabled = env.REVIEW_REQUESTS === "1";
   const mapsUrl = () => {
     try {
       const u = new URL(env.GOOGLE_MAPS_URL || "");

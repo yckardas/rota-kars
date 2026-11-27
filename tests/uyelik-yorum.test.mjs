@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 import { once } from "node:events";
 import { createApp } from "../server/app.mjs";
 import { openStore } from "../server/store.mjs";
+// Yorum isteği e-postası varsayılan kapalı; bu testler açık hâlini sınar.
+process.env.REVIEW_REQUESTS = "1";
 import { displayName, tourEndDate } from "../server/guest-reviews.mjs";
 
 const DAY = 86400000;
