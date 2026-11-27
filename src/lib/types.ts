@@ -235,6 +235,10 @@ export type Reservation = {
   checked_in_at?: number;
   created_at?: number;
   notes?: string;
+  // Müşterinin rezervasyonda yazdığı yolculuk bilgileri (isteğe bağlı).
+  pickup_address?: string;
+  children?: { ages: string; seat: boolean } | null;
+  customer_note?: string;
   source?: string;
   ledger?: {
     id: string;

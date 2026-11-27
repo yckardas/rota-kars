@@ -2568,6 +2568,92 @@ html:has(.kp) {
   margin-top: 2px;
   color: var(--kp-ink);
 }
+/* 2. adım: yolculuk ayrıntıları (alınış yeri, çocuk, not); hepsi isteğe bağlı */
+.kp .trip-info .field {
+  margin: 12px 0;
+}
+.kp .trip-info-lead {
+  margin: -4px 0 4px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--kp-ink-2);
+}
+.kp .trip-hint {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--kp-ink-2);
+}
+.kp .trip-count {
+  align-self: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+.kp .trip-info > .checkbox-label {
+  margin: 14px 0 4px;
+}
+.kp .trip-children {
+  display: grid;
+  gap: 4px;
+  margin: 4px 0 8px;
+  padding: 2px 0 2px 16px;
+  border-left: 2px solid var(--kp-hair);
+}
+.kp .trip-children .field {
+  margin: 8px 0 4px;
+}
+/* 1. adım: tek rezervasyon sınırı ve grup talebi kısayolu */
+.kp .group-limit {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: -6px 0 14px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--kp-ink-2);
+}
+.kp .group-limit > svg {
+  flex: none;
+  margin-top: 3px;
+}
+.kp .group-limit p {
+  margin: 0;
+}
+.kp .group-limit .text-link {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 14px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.kp .group-limit .text-link svg {
+  vertical-align: -2px;
+}
+/* 3. adım: yolculuk ayrıntılarının özeti */
+.kp .confirmation-trip {
+  margin: 0 0 18px;
+  border-bottom: 1px solid var(--kp-hair);
+}
+.kp .confirmation-trip > div {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 2px 12px;
+  align-items: baseline;
+  padding: 10px 0;
+  font-size: 15px;
+}
+.kp .confirmation-trip > div + div {
+  border-top: 1px solid var(--kp-hair);
+}
+.kp .confirmation-trip dt {
+  color: var(--kp-ink-2);
+}
+.kp .confirmation-trip dd {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
 .kp .payment-choice {
   border: 1px solid var(--kp-rule);
   border-radius: 4px;
@@ -4017,6 +4103,37 @@ html:has(.kp) {
   font-size: 13px;
   line-height: 1.65;
   color: var(--kp-ink);
+}
+/* Tam metin varsayılan kapalı: başlık satırında "Formu oku" düğmesi. */
+.kp .pre-info:not(.is-open) .pre-info-head {
+  border-bottom: 0;
+}
+.kp .pre-info-head {
+  flex-wrap: wrap;
+}
+/* Dar ekranda düğme metnin altına iner (metin sütunu daralmaz). */
+.kp .pre-info-head > div {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.kp .pre-info-toggle {
+  flex: none;
+  align-self: center;
+  margin-left: 30px;
+}
+.kp .pre-info-error {
+  margin: 0;
+  padding: 0 18px 14px;
+  font-size: 14px;
+}
+.kp .pre-info:not(.is-open) .pre-info-late {
+  margin-bottom: 16px;
+}
+.kp .pre-info:not(.is-open) .pre-info-lang {
+  padding-bottom: 14px;
+}
+.kp .pre-info-text[hidden] {
+  display: none;
 }
 .kp .pre-info-text:focus-visible {
   outline: 2px solid var(--kp-red);

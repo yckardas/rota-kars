@@ -8,6 +8,8 @@ import { Link, localPath, useLang } from "../lib/i18n";
 import { TourLink } from "../lib/tour-transition";
 import { TransferPicker } from "../components/TransferPicker";
 import { InterestForm } from "../components/InterestForm";
+import { RequestForm } from "../components/RequestForm";
+import { whatsappLink } from "../lib/whatsapp";
 import { offersTransfer, type PricedTransfer, type TransferChoice } from "../lib/transfer";
 import {
   ArrowLeft,
@@ -26,6 +28,8 @@ import {
   FileText,
   CreditCard,
   FileCheck2,
+  MessageCircle,
+  Users,
 } from "lucide-react";
 import { api, post, ApiError } from "../lib/api";
 import {
@@ -63,6 +67,32 @@ import { countryName, countryOptions } from "../lib/countries";
 import type { Companion } from "../components/Companions";
 // Tek rezervasyonda en fazla bu kadar koltuk (sunucudaki GUEST_MAX_SEATS ile aynı).
 const MAX_SEATS = 4;
+// Yolcu sayısı listesindeki "daha kalabalık grup" seçeneği: seçilince grup talebi açılır.
+const GROUP_OPTION = "group";
+// Yolculuk bilgileri (isteğe bağlı; fiyatı değiştirmez). Sınırlar sunucudaki
+// server/trip-info.mjs ile aynı.
+const PICKUP_MAX = 200,
+  CHILD_AGES_MAX = 60,
+  NOTE_MAX = 500;
+type TripInfo = {
+  pickupAddress: string;
+  hasChildren: boolean;
+  childAges: string;
+  childSeat: boolean;
+  note: string;
+};
+const emptyTrip: TripInfo = {
+  pickupAddress: "",
+  hasChildren: false,
+  childAges: "",
+  childSeat: false,
+  note: "",
+};
+// Seferin buluşma bilgisi evden/otelden alma vaat ediyorsa "Sizi nereden alalım?" sorulur
+// (varsayılan: "Kars merkezde ev, otel ve yakın noktalardan alıp bırakma"). Sabit bir
+// buluşma noktası yazılan seferde sorulmaz.
+const offersPickup = (pickup?: string) =>
+  Boolean(pickup && /otel|alıp|alınış|evden|\bev\b/i.test(pickup));
 // Kart ekranına geçilen son ön rezervasyon: müşteri geri tuşuyla dönerse
 // yeni kayıt açmak yerine ödemesine dönebilsin (ödeme oturumu 30 dakika açık).
 const PENDING_KEY = "rk-pending-booking";
@@ -126,6 +156,11 @@ export function Booking({ catalog }: { catalog: Catalog }) {
     [passengers, setPassengers] = useState<string[]>([]),
     [ids, setIds] = useState<IdForm[]>([]),
     [contact, setContact] = useState({ name: "", email: "", phone: "" }),
+    [trip, setTrip] = useState<TripInfo>(emptyTrip),
+    // 5 kişi ve üzeri: tur ve tarih dolu grup talebi formu.
+    [groupRequest, setGroupRequest] = useState(false),
+    // Ön bilgilendirme formunun tam metni varsayılan kapalı; "Formu oku" ile açılır.
+    [preInfoOpen, setPreInfoOpen] = useState(false),
     [consents, setConsents] = useState<Consents>(noConsents),
     [consentError, setConsentError] = useState(""),
     [othersDeclaration, setOthersDeclaration] = useState(false),
@@ -419,7 +454,10 @@ export function Booking({ catalog }: { catalog: Catalog }) {
   }, [barShown]);
   const departure = departures.find((d) => sameRow(d, departureId)),
     subtotal = (departure?.price || demandPick?.price || tour?.price || 0) * count,
-    total = quote?.total ?? subtotal;
+    total = quote?.total ?? subtotal,
+    pickupOffered = offersPickup(departure?.pickup);
+  const setTripField = (patch: Partial<TripInfo>) =>
+    setTrip((current) => ({ ...current, ...patch }));
   useEffect(() => {
     let active = true;
     setLoaded(false);
@@ -626,6 +664,13 @@ export function Booking({ catalog }: { catalog: Catalog }) {
         marketingConsent,
         ...(couponId ? { couponId } : {}),
         ...(transfer ? { transfer } : {}),
+        ...(pickupOffered && trip.pickupAddress.trim()
+          ? { pickupAddress: trip.pickupAddress.trim() }
+          : {}),
+        ...(trip.hasChildren
+          ? { children: { ages: trip.childAges.trim(), seat: trip.childSeat } }
+          : {}),
+        ...(trip.note.trim() ? { note: trip.note.trim() } : {}),
         turnstileToken: human.token,
       });
       holdRef.current = null;
@@ -941,10 +986,16 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   <select
                     value={count}
                     onChange={(e) => {
+                      // Son seçenek bir sayı değil: grup talebini açar, seçim değişmez.
+                      if (e.target.value === GROUP_OPTION) {
+                        setGroupRequest(true);
+                        return;
+                      }
                       setCount(Number(e.target.value));
                       setSelected([]);
                     }}
                     aria-label={t("Yolcu sayısı")}
+                    aria-describedby="group-limit"
                   >
                     {Array.from(
                       { length: Math.min(vehicle.sellableSeats, MAX_SEATS) },
@@ -954,8 +1005,57 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                         </option>
                       ),
                     )}
+                    <option value={GROUP_OPTION}>
+                      {t("{n} kişi ve üzeri: grup talebi", {
+                        n: MAX_SEATS + 1,
+                      })}
+                    </option>
                   </select>
                 </label>
+              </div>
+              {/* Tek rezervasyon sınırı listenin hemen altında; kalabalık grup tek dokunuşla talebe geçer. */}
+              <div className="group-limit" id="group-limit">
+                <Users size={16} aria-hidden="true" />
+                <p>
+                  {t("Tek rezervasyonda en fazla {n} kişi.", { n: MAX_SEATS })}{" "}
+                  {t("{n} kişi ve üzeri gruplar için:", { n: MAX_SEATS + 1 })}{" "}
+                  <button
+                    type="button"
+                    className="text-link"
+                    onClick={() => setGroupRequest(true)}
+                  >
+                    {t("Grup talebi bırakın")}
+                  </button>
+                  {catalog.business.whatsapp && (
+                    <>
+                      {" · "}
+                      <a
+                        className="text-link"
+                        href={whatsappLink(
+                          catalog.business.whatsapp,
+                          departure
+                            ? t(
+                                "Merhaba, {tour} turuna {date} tarihinde {n} kişiden kalabalık bir grupla katılmak istiyoruz.",
+                                {
+                                  tour: tour.name,
+                                  date: dateLabel(departure.date),
+                                  n: MAX_SEATS,
+                                },
+                              )
+                            : t(
+                                "Merhaba, {tour} turuna {n} kişiden kalabalık bir grupla katılmak istiyoruz.",
+                                { tour: tour.name, n: MAX_SEATS },
+                              ),
+                        )}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <MessageCircle size={14} aria-hidden="true" />{" "}
+                        {t("WhatsApp’tan yazın")}
+                      </a>
+                    </>
+                  )}
+                </p>
               </div>
               {dateNotice && (
                 <div className="info-note" role="status">
@@ -1437,6 +1537,102 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   />
                 </label>
               </div>
+              {/* Yolculuk ayrıntıları: hepsi isteğe bağlı, fiyatı değiştirmez. Acente
+                  her rezervasyondan sonra bunları sormak için aramak zorunda kalmasın. */}
+              <div
+                className="trip-info"
+                role="group"
+                aria-labelledby="trip-info-title"
+              >
+                <h3 className="contact-heading" id="trip-info-title">
+                  {t("Yolculuk ayrıntıları")}
+                </h3>
+                <p className="trip-info-lead">
+                  {t(
+                    "Hepsi isteğe bağlı. Yazdıklarınız ekibimizin turunuzu sizi aramadan hazırlamasına yardım eder.",
+                  )}
+                </p>
+                {pickupOffered && (
+                  <label className="field">
+                    {t("Sizi nereden alalım?")}
+                    <input
+                      value={trip.pickupAddress}
+                      onChange={(e) =>
+                        setTripField({ pickupAddress: e.target.value })
+                      }
+                      maxLength={PICKUP_MAX}
+                      placeholder={t("Otel adı ya da adres")}
+                      autoComplete="street-address"
+                      aria-describedby="pickup-hint"
+                    />
+                    <small className="trip-hint" id="pickup-hint">
+                      {t(
+                        "Kars merkezde evinizden, otelinizden ya da yakın bir noktadan alırız. Henüz bilmiyorsanız boş bırakın; sonra WhatsApp’tan da iletebilirsiniz.",
+                      )}
+                    </small>
+                  </label>
+                )}
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={trip.hasChildren}
+                    onChange={(e) =>
+                      setTripField({ hasChildren: e.target.checked })
+                    }
+                  />
+                  <span>{t("Yanımızda çocuk var")}</span>
+                </label>
+                {trip.hasChildren && (
+                  <div className="trip-children">
+                    <label className="field">
+                      {t("Çocukların yaşları")}
+                      <input
+                        value={trip.childAges}
+                        onChange={(e) =>
+                          setTripField({ childAges: e.target.value })
+                        }
+                        maxLength={CHILD_AGES_MAX}
+                        placeholder={t("Örn. 4 ve 9")}
+                        autoComplete="off"
+                      />
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={trip.childSeat}
+                        onChange={(e) =>
+                          setTripField({ childSeat: e.target.checked })
+                        }
+                      />
+                      <span>{t("Çocuk koltuğu gerekiyor")}</span>
+                    </label>
+                    <small className="trip-hint">
+                      {t(
+                        "Koltuk kullanan her çocuk yolcu sayısına dahildir. Fiyat bu adımda değişmez; çocuk indirimi ve çocuk koltuğu için acentemiz sizinle iletişime geçer.",
+                      )}
+                    </small>
+                  </div>
+                )}
+                <label className="field">
+                  {t("Eklemek istedikleriniz")}
+                  <textarea
+                    value={trip.note}
+                    onChange={(e) => setTripField({ note: e.target.value })}
+                    rows={3}
+                    maxLength={NOTE_MAX}
+                    placeholder={t(
+                      "Örn. özel bir isteğiniz ya da bilmemiz gereken bir durum",
+                    )}
+                    aria-describedby="note-count"
+                  />
+                  <small className="trip-hint trip-count" id="note-count">
+                    {t("{n} / {max} karakter", {
+                      n: trip.note.length,
+                      max: NOTE_MAX,
+                    })}
+                  </small>
+                </label>
+              </div>
               {tour?.transfer && offersTransfer(tour.transfer) && (
                 <TransferPicker
                   config={tour.transfer}
@@ -1487,6 +1683,41 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   </div>
                 ))}
               </div>
+              {(Boolean(pickupOffered && trip.pickupAddress.trim()) ||
+                trip.hasChildren ||
+                Boolean(trip.note.trim())) && (
+                <dl className="confirmation-trip">
+                  {pickupOffered && trip.pickupAddress.trim() && (
+                    <div>
+                      <dt>{t("Alınış yeri")}</dt>
+                      <dd>{trip.pickupAddress.trim()}</dd>
+                    </div>
+                  )}
+                  {trip.hasChildren && (
+                    <div>
+                      <dt>{t("Çocuk")}</dt>
+                      <dd>
+                        {[
+                          trip.childAges.trim()
+                            ? t("Yaşları {ages}", {
+                                ages: trip.childAges.trim(),
+                              })
+                            : t("Yaş belirtilmedi"),
+                          trip.childSeat && t("çocuk koltuğu gerekiyor"),
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </dd>
+                    </div>
+                  )}
+                  {trip.note.trim() && (
+                    <div>
+                      <dt>{t("Notunuz")}</dt>
+                      <dd>{trip.note.trim()}</dd>
+                    </div>
+                  )}
+                </dl>
+              )}
               <div className="payment-choices">
                 {[
                   // Kapora sunucuda hesaplanır; teklif gelmeden gösterilmez.
@@ -1557,7 +1788,12 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                   )}
                 </div>
               </div>
-              <section className="pre-info" aria-labelledby="pre-info-title">
+              {/* Uzun yasal metin varsayılan kapalı (telefonda kaydırma kısalsın); içerik ve
+                  onay kutuları aynen durur. Metin onay kutusundaki bağlantıdan da açılır. */}
+              <section
+                className={"pre-info" + (preInfoOpen ? " is-open" : "")}
+                aria-labelledby="pre-info-title"
+              >
                 <div className="pre-info-head">
                   <FileText size={18} aria-hidden="true" />
                   <div>
@@ -1568,6 +1804,15 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                       )}
                     </p>
                   </div>
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-small pre-info-toggle"
+                    aria-expanded={preInfoOpen}
+                    aria-controls="pre-info-text"
+                    onClick={() => setPreInfoOpen((open) => !open)}
+                  >
+                    {preInfoOpen ? t("Formu gizle") : t("Formu oku")}
+                  </button>
                 </div>
                 {lang === "en" && (
                   <p className="pre-info-lang">
@@ -1588,12 +1833,19 @@ export function Booking({ catalog }: { catalog: Catalog }) {
                     </p>
                   </div>
                 )}
+                {preInfoError && !preInfoOpen && (
+                  <p className="error pre-info-error" role="alert">
+                    {preInfoError}
+                  </p>
+                )}
                 <div
                   className="pre-info-text"
+                  id="pre-info-text"
                   tabIndex={0}
                   role="region"
                   aria-label={t("Ön Bilgilendirme Formu metni")}
                   lang="tr"
+                  hidden={!preInfoOpen}
                 >
                   {preInfo
                     ? preInfo.text
@@ -1855,6 +2107,27 @@ export function Booking({ catalog }: { catalog: Catalog }) {
           </div>
         </aside>
       </div>
+      {groupRequest && (
+        <RequestForm
+          kind="tour-info"
+          tourId={tour.id}
+          tourName={tour.name}
+          initialCheckIn={departure?.date || demandPick?.date}
+          initialGuests={MAX_SEATS + 1}
+          initialNotes={t(
+            "Grup rezervasyonu: {date} seferi için {n} kişi ve üzeri.",
+            {
+              date: departure
+                ? `${dateLabel(departure.date)} · ${departure.start_time}`
+                : demandPick
+                  ? dateLabel(demandPick.date)
+                  : t("tarih belirtilmedi"),
+              n: MAX_SEATS + 1,
+            },
+          )}
+          onClose={() => setGroupRequest(false)}
+        />
+      )}
       {interest && tour && (
         <InterestForm
           kind={interest}

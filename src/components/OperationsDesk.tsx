@@ -17,6 +17,7 @@ import {
   UserMinus,
   Trash2,
   Send,
+  MapPin,
 } from "lucide-react";
 import { TicketScanner } from "./admin/TicketScanner";
 import { UetdsPanel } from "./admin/UetdsPanel";
@@ -790,6 +791,7 @@ const AUDIT_LABELS: Record<string, string> = {
   cancelled: "İptal edildi",
   moved: "Tarih/koltuk değiştirildi",
   passengers_updated: "Yolcu adları güncellendi",
+  pickup_updated: "Alınış yeri güncellendi",
   passengers_removed: "Yolcu çıkarıldı",
   completed: "Tur tamamlandı",
   checked_in: "Bilet okutuldu (bindi)",
@@ -905,7 +907,25 @@ export function ReservationManager({
       );
   function exportCsv() {
     downloadCsv("rezervasyonlar-" + today() + ".csv", [
-      ["Referans", "Durum", "Tur", "Tarih", "Saat", "Koltuk", "Müşteri", "Telefon", "E-posta", "Yolcular", "Toplam", "Net tahsilat", "Kalan", "Not"],
+      [
+        "Referans",
+        "Durum",
+        "Tur",
+        "Tarih",
+        "Saat",
+        "Koltuk",
+        "Müşteri",
+        "Telefon",
+        "E-posta",
+        "Yolcular",
+        "Toplam",
+        "Net tahsilat",
+        "Kalan",
+        "Not",
+        "Alınış yeri",
+        "Çocuk",
+        "Müşteri notu",
+      ],
       ...rows.map((r) => [
         r.reference,
         statusLabels[r.status] || r.status,
@@ -921,6 +941,9 @@ export function ReservationManager({
         ((r.net_paid || 0) / 100).toFixed(2),
         ((r.balance_due || 0) / 100).toFixed(2),
         r.notes,
+        r.pickup_address || "",
+        childrenText(r.children),
+        r.customer_note || "",
       ]),
     ]);
   }
@@ -1040,6 +1063,7 @@ export function ReservationManager({
                       <small>{r.passengers.join(", ")}</small>
                     )}
                     {r.notes && <small className="row-note">Not: {r.notes}</small>}
+                    <TripInfoNotes booking={r} as="small" />
                     {r.transfer && (
                       <small className="row-note">
                         Transfer: {r.transfer.pointLabel}
@@ -1109,6 +1133,121 @@ export function ReservationManager({
 type AuditRow = { id: string; event: string; details: Record<string, unknown>; created_at: number };
 // Kapora altı verilen onayın tutarları (sunucu "confirmed" kaydına yazar).
 const belowDeposit = (d?: Record<string, unknown>) => d?.belowDeposit as { paid: number; deposit: number } | undefined;
+// Müşterinin rezervasyonda yazdığı yolculuk bilgileri: alınış yeri, çocuk, not.
+function childrenText(children: Reservation["children"]) {
+  if (!children) return "";
+  return [
+    children.ages ? `yaşları ${children.ages}` : "yaş belirtilmedi",
+    children.seat && "çocuk koltuğu gerekiyor",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+function TripInfoNotes({
+  booking: r,
+  as: Tag,
+  pickup = true,
+}: {
+  booking: Reservation;
+  as: "small" | "p";
+  pickup?: boolean;
+}) {
+  return (
+    <>
+      {pickup && r.pickup_address && (
+        <Tag className="row-note">Alınış: {r.pickup_address}</Tag>
+      )}
+      {r.children && (
+        <Tag className="row-note">Çocuk: {childrenText(r.children)}</Tag>
+      )}
+      {r.customer_note && (
+        <Tag className="row-note row-note-pre">
+          Müşteri notu: {r.customer_note}
+        </Tag>
+      )}
+    </>
+  );
+}
+// Alınış yeri: müşteri sonradan WhatsApp/telefonla iletirse operasyon buraya yazar.
+function PickupEditor({
+  booking: r,
+  busy,
+  action,
+}: {
+  booking: Reservation;
+  busy: boolean;
+  action: (
+    ref: string,
+    path: string,
+    body?: unknown,
+    done?: string,
+  ) => Promise<boolean>;
+}) {
+  const [editing, setEditing] = useState(false),
+    [value, setValue] = useState(r.pickup_address || "");
+  useEffect(() => {
+    setValue(r.pickup_address || "");
+  }, [r.pickup_address]);
+  const editable = ["pending_agency", "confirmed"].includes(r.status);
+  if (!editing)
+    return r.pickup_address || editable ? (
+      <p className="row-note pickup-line">
+        <MapPin size={14} aria-hidden="true" /> Alınış:{" "}
+        {r.pickup_address || <em>belirtilmedi</em>}
+        {editable && (
+          <button
+            type="button"
+            className="text-link"
+            onClick={() => setEditing(true)}
+          >
+            {r.pickup_address ? "Değiştir" : "Ekle"}
+          </button>
+        )}
+      </p>
+    ) : null;
+  return (
+    <form
+      className="pickup-edit"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (
+          await action(
+            r.reference,
+            "pickup",
+            { pickupAddress: value.trim() },
+            "Alınış yeri kaydedildi.",
+          )
+        )
+          setEditing(false);
+      }}
+    >
+      <label className="field">
+        Alınış yeri (otel adı ya da adres)
+        <input
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          maxLength={200}
+          autoFocus
+        />
+      </label>
+      <div className="button-row">
+        <button className="btn btn-small" disabled={busy}>
+          Kaydet
+        </button>
+        <button
+          type="button"
+          className="text-link"
+          onClick={() => {
+            setValue(r.pickup_address || "");
+            setEditing(false);
+          }}
+        >
+          Vazgeç
+        </button>
+      </div>
+    </form>
+  );
+}
 function BookingControls({
   booking: r,
   tourName,
@@ -1277,6 +1416,8 @@ function BookingControls({
               </ul>
             )}
             {r.notes && <p className="row-note">Not: {r.notes}</p>}
+            <PickupEditor booking={r} busy={busy} action={action} />
+            <TripInfoNotes booking={r} as="p" pickup={false} />
             {r.transfer && (
               <p className="row-note">
                 Transfer: {r.transfer.pointLabel}

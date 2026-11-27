@@ -8,6 +8,7 @@ import { tours, business } from "./catalog.mjs";
 import { LEGAL_VERSION, cancellationQuote, contractText, legalDataFromReservation, preInfoText } from "./legal.mjs";
 import { countryName } from "./passenger-id.mjs";
 import { buildFinance, tourRows } from "./finance.mjs";
+import { childrenDetail, tripInfoLines } from "./trip-info.mjs";
 const longExpiry = (now) => now + 365 * 86400000;
 const MANUAL_METHODS = ["cash", "bank_transfer", "pos"];
 const tl = (kurus) => (kurus / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 });
@@ -49,6 +50,10 @@ export async function createWorkflow(
       passenger_details: pii
         ? pii.openDetails(fromJson(r.passenger_details, []))
         : fromJson(r.passenger_details, []),
+      // Müşterinin yazdığı alınış yeri ve not şifreli saklanır.
+      pickup_address: pii ? pii.open(r.pickup_address) : r.pickup_address || "",
+      customer_note: pii ? pii.open(r.customer_note) : r.customer_note || "",
+      children: r.children || null,
       vehicle: fromJson(r.vehicle_json, null) || d.vehicle,
       date: d.date,
       tourId: d.tour_id,
@@ -101,6 +106,9 @@ export async function createWorkflow(
       body:
         `Merhaba ${r.name},\n${r.reference} · ${tourName(r)}\nTarih: ${r.date} · Saat: ${r.start_time}\nBuluşma: ${r.pickup}\n${text}\n${extra ? extra + "\n" : ""}Koltuklar: ${r.seats.join(", ")}.` +
         (r.transfer ? `\n${transferLine(r.transfer)}.` : "") +
+        tripInfoLines(r, { customer: true })
+          .map((line) => "\n" + line)
+          .join("") +
         (documents?.length ? `\nEkler: ${documents.map((d) => d.title).join(", ")} (PDF).` : ""),
       actionUrl: (env.PUBLIC_BASE_URL || "") + "/bilet/" + r.ticket_token,
       kind: event,
@@ -116,6 +124,9 @@ export async function createWorkflow(
             seats: r.seats,
             reference: r.reference,
             transfer: r.transfer ? transferLine(r.transfer) : null,
+            pickupAddress: r.pickup_address || null,
+            children: childrenDetail(r.children) || null,
+            note: r.customer_note || null,
             total: r.total,
             paid: r.net_paid || 0,
             balance: r.balance_due ?? r.total,
@@ -147,6 +158,7 @@ export async function createWorkflow(
         `Tutar: ${(r.total / 100).toFixed(2)} TL · Durum: ${r.status}`,
         r.transfer && `${transferLine(r.transfer)} · ${(r.transfer.amount / 100).toFixed(2)} TL`,
         waLink(r.phone) && `WhatsApp: ${waLink(r.phone)}`,
+        ...tripInfoLines(r),
       ]
         .filter(Boolean)
         .join("\n"),
@@ -695,6 +707,22 @@ export async function createWorkflow(
         return api.get(reference);
       });
     },
+    // Müşteri alınış yerini sonradan (WhatsApp/telefon) iletirse panelden yazılır.
+    async setPickup(reference, pickupAddress) {
+      return tx(async () => {
+        const r = await api.get(reference);
+        if (!["pending_agency", "confirmed"].includes(r.status))
+          throw new AppError(409, "Bu kaydın alınış yeri değiştirilemez.");
+        await db.update(
+          "reservations",
+          { _id: r.id },
+          { pickup_address: pii ? pii.seal(pickupAddress) : pickupAddress },
+        );
+        // Adres denetim kaydına yazılmaz; yalnız değiştiği bilinir.
+        await audit(r, "pickup_updated", { filled: Boolean(pickupAddress) });
+        return api.get(reference);
+      });
+    },
     // Yolcu çıkarma (kısmi iptal) önizlemesi: panel penceresi ve işlemin kendisi aynı
     // hesabı kullanır. Müşteri isteği (kurallara göre) ve acente kararı (kesintisiz) ayrı döner.
     async removalQuote(reference, seats) {
@@ -1041,6 +1069,10 @@ export async function createWorkflow(
           notes: r.notes || "",
           // Rehberin telefonunda: karşılanacak misafirler (havalimanı/otogar/gar).
           transfer: r.transfer ? transferLine(r.transfer) : "",
+          // Operasyon: sizi nereden alalım, çocuk koltuğu ve müşterinin notu.
+          pickupAddress: r.pickup_address || "",
+          children: childrenDetail(r.children),
+          customerNote: r.customer_note || "",
           checkedIn: Boolean(r.checked_in_at),
           ticketToken: r.status === "confirmed" ? r.ticket_token : null,
         })),
@@ -1070,6 +1102,9 @@ export async function createWorkflow(
           "İletişim kişisi",
           "Telefon",
           "Durum",
+          "Alınış yeri",
+          "Çocuk",
+          "Müşteri notu",
         ],
       ];
       for (const r of bookings)
@@ -1089,6 +1124,10 @@ export async function createWorkflow(
             r.name,
             r.phone,
             r.status,
+            // Rezervasyon bilgisi yalnız ilk yolcunun satırında (aynı kayıt tekrar yazılmaz).
+            i === 0 ? r.pickup_address || "" : "",
+            i === 0 ? childrenDetail(r.children) : "",
+            i === 0 ? r.customer_note || "" : "",
           ]),
         );
       const cell = (v) => {

@@ -34,6 +34,16 @@ export const booking: Record<string, string> = {
   "Yolcu sayısı": "Number of passengers",
   "1 kişi": "1 person",
   "{n} kişi": "{n} people",
+  "{n} kişi ve üzeri: grup talebi": "{n}+ people: group request",
+  "{n} kişi ve üzeri gruplar için:": "For groups of {n} or more:",
+  "Grup talebi bırakın": "Send a group request",
+  "Merhaba, {tour} turuna {date} tarihinde {n} kişiden kalabalık bir grupla katılmak istiyoruz.":
+    "Hello, we'd like to join the {tour} tour on {date} as a group of more than {n} people.",
+  "Merhaba, {tour} turuna {n} kişiden kalabalık bir grupla katılmak istiyoruz.":
+    "Hello, we'd like to join the {tour} tour as a group of more than {n} people.",
+  "Grup rezervasyonu: {date} seferi için {n} kişi ve üzeri.":
+    "Group booking: {n} or more people for the {date} departure.",
+  "tarih belirtilmedi": "no date chosen",
   "Seçtiğiniz tarihte sefer yok, en yakın sefer gösteriliyor.":
     "There's no departure on the date you chose, so we're showing the nearest one.",
   "Bu rota için açık bir tarih bulunmuyor.":
@@ -79,9 +89,31 @@ export const booking: Record<string, string> = {
   "Adınız soyadınız": "Your full name",
   "E-posta adresiniz": "Your email",
   "Telefon numaranız": "Your phone number",
+  "Yolculuk ayrıntıları": "Trip details",
+  "Hepsi isteğe bağlı. Yazdıklarınız ekibimizin turunuzu sizi aramadan hazırlamasına yardım eder.":
+    "All optional. What you share helps our team prepare your tour without having to call you.",
+  "Sizi nereden alalım?": "Where should we pick you up?",
+  "Otel adı ya da adres": "Hotel name or address",
+  "Kars merkezde evinizden, otelinizden ya da yakın bir noktadan alırız. Henüz bilmiyorsanız boş bırakın; sonra WhatsApp’tan da iletebilirsiniz.":
+    "In central Kars we pick you up from your home, hotel or a nearby spot. Not sure yet? Leave it blank and send it to us on WhatsApp later.",
+  "Yanımızda çocuk var": "We're travelling with children",
+  "Çocukların yaşları": "Children's ages",
+  "Örn. 4 ve 9": "E.g. 4 and 9",
+  "Çocuk koltuğu gerekiyor": "We need a child seat",
+  "Koltuk kullanan her çocuk yolcu sayısına dahildir. Fiyat bu adımda değişmez; çocuk indirimi ve çocuk koltuğu için acentemiz sizinle iletişime geçer.":
+    "Every child who takes a seat counts as a passenger. The price doesn't change at this step; our agency will contact you about child discounts and child seats.",
+  "Örn. özel bir isteğiniz ya da bilmemiz gereken bir durum":
+    "E.g. a special request or anything we should know",
+  "{n} / {max} karakter": "{n} / {max} characters",
   "Koltuk seçimine dön": "Back to seat selection",
   "Özeti incele": "Review summary",
   "Son bir kez göz atalım.": "One last look.",
+  "Alınış yeri": "Pick-up point",
+  Çocuk: "Children",
+  "Yaşları {ages}": "Ages {ages}",
+  "Yaş belirtilmedi": "Ages not given",
+  "çocuk koltuğu gerekiyor": "child seat needed",
+  Notunuz: "Your note",
   "%30 kapora": "30% deposit",
   "Tam ödeme": "Full payment",
   "Acente onayından sonra": "After agency confirmation",
@@ -325,6 +357,8 @@ export const booking: Record<string, string> = {
     "Pre-information form text",
   "Form hazırlanıyor…":
     "Preparing the form…",
+  "Formu oku": "Read the form",
+  "Formu gizle": "Hide the form",
   "Ön Bilgilendirme Formu'nu, {contract} ve {cancel} okudum, onaylıyorum. Online ödeme yaparsam rezervasyonun ödemeyle birlikte kesinleşeceğini, havale veya nakit ödemede sözleşmenin acente onayıyla kurulacağını biliyorum.":
     "I have read and accept the pre-information form, the {contract} and the {cancel}. I understand that if I pay online the booking is confirmed with the payment, and that with bank transfer or cash the contract is formed when the agency confirms.",
   "Tur Hizmet Sözleşmesi'ni":

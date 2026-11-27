@@ -636,6 +636,32 @@
 .rk-admin .row-note {
   color: var(--ochre) !important;
 }
+.rk-admin .row-note-pre {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+/* Rezervasyon kartı: alınış yeri satırı ve düzenleme formu */
+.rk-admin .pickup-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  align-items: center;
+  overflow-wrap: anywhere;
+}
+.rk-admin .pickup-line em {
+  font-style: normal;
+  color: var(--muted);
+}
+.rk-admin .pickup-line .text-link {
+  font-size: 13px;
+}
+.rk-admin .pickup-edit {
+  max-width: 460px;
+  margin: 6px 0 10px;
+}
+.rk-admin .pickup-edit .field {
+  margin: 0 0 8px;
+}
 /* Telefon rezervasyonu: kimliği alınmamış yolcu, dokununca Yolcular sekmesi açılır. */
 .rk-admin .passenger-ids .id-missing {
   margin-left: 8px;
@@ -1277,6 +1303,18 @@
 .rk-admin .passenger-list li.boarded {
   border-color: #b7c9ac;
   background: #f1f5ee;
+}
+/* Sefer bazında alınış yerleri: yolcu kartlarının çerçevesini almaz */
+.rk-admin .passenger-list .pickup-summary {
+  border-color: var(--mortar);
+  border-radius: 4px;
+  background: var(--surface);
+}
+.rk-admin .passenger-list .pickup-summary li {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: none;
 }
 .rk-admin .boarded-tag {
   color: var(--lichen);

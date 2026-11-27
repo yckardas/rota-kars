@@ -54,6 +54,7 @@ import { createPayments, depositFor, VAKIFBANK_RETURN_PATH } from "./payments.mj
 import { attachBankSimulator } from "./bank-simulator.mjs";
 import { ARTICLE_CATEGORIES } from "./articles.mjs";
 import { priceTransfer, transferChoiceSchema, transferConfigSchema } from "./transfer.mjs";
+import { tripInfoSchema } from "./trip-info.mjs";
 const clean = z.string().trim().min(2).max(100),
   email = z.string().trim().email().max(254),
   phone = z
@@ -147,6 +148,8 @@ const bookingSchema = z.object({
     .optional(),
   // İsteğe bağlı transfer (havalimanı / otogar / gar); fiyat sunucuda hesaplanır.
   transfer: transferChoiceSchema.optional(),
+  // İsteğe bağlı yolculuk bilgileri: alınış yeri, çocuklar ve not (fiyatı değiştirmez).
+  ...tripInfoSchema,
 });
 // Sitedeki görseller: paketlenmiş /images dosyaları veya bucket'a yüklenen /media dosyaları.
 const localImage = /^(\/images\/(?:[\w-]+\/)*[\w-][\w.-]*|\/media\/[a-f0-9-]{36}\.(jpg|png|webp|avif))$/;
@@ -185,6 +188,9 @@ const FIELD_LABELS = {
   checkIn: "tarih",
   checkOut: "çıkış tarihi",
   guests: "kişi sayısı",
+  pickupAddress: "alınış yeri",
+  ages: "çocuk yaşları",
+  note: "not",
 };
 const validationMessage = (err) => {
   const issue = err.issues[0];

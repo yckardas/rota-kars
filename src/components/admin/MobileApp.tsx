@@ -4,6 +4,7 @@ import {
   Check,
   Download,
   LoaderCircle,
+  MapPin,
   MessageCircle,
   MonitorSmartphone,
   Phone,
@@ -402,6 +403,10 @@ type PassengerData = {
     passengerDetails?: { nationality: string; idNumber: string; gender: "K" | "E" }[];
     notes: string;
     transfer?: string;
+    // Müşterinin yazdığı alınış yeri, çocuk bilgisi ve not (boş olabilir).
+    pickupAddress?: string;
+    children?: string;
+    customerNote?: string;
     checkedIn: boolean;
     ticketToken: string | null;
   }[];
@@ -431,7 +436,18 @@ function printManifest(data: PassengerData) {
           contact: i === 0 ? `${b.name} · ${b.phone}` : "",
           reference: b.reference,
           status: STATUS[b.status] || b.status,
-          notes: i === 0 ? [b.notes, b.transfer].filter(Boolean).join(" · ") : "",
+          pickup: i === 0 ? b.pickupAddress || "" : "",
+          notes:
+            i === 0
+              ? [
+                  b.notes,
+                  b.transfer,
+                  b.children && "Çocuk: " + b.children,
+                  b.customerNote && "Müşteri notu: " + b.customerNote,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
+              : "",
         })),
       )
       .sort((a, b) => a.seat - b.seat);
@@ -440,8 +456,8 @@ function printManifest(data: PassengerData) {
 table{width:100%;border-collapse:collapse}th,td{border:1px solid #999;padding:6px 8px;text-align:left;vertical-align:top}
 th{background:#eee}td.sign{width:110px}@media print{body{margin:10mm}}</style></head><body>
 <h1>${esc(d.tourName)}</h1><p>${esc(dateLabel(d.date))} · ${esc(d.startTime)} · ${esc(d.pickup)} · Rehber: ${esc(d.guideName || "-")} · ${rows.length} yolcu</p>
-<table><thead><tr><th>Koltuk</th><th>Yolcu</th><th>Kimlik</th><th>İrtibat</th><th>Referans</th><th>Durum</th><th>Not</th><th>İmza</th></tr></thead><tbody>
-${rows.map((r) => `<tr><td>${r.seat}</td><td>${esc(r.passenger)}</td><td>${esc(r.identity)}</td><td>${esc(r.contact)}</td><td>${esc(r.reference)}</td><td>${esc(r.status)}</td><td>${esc(r.notes)}</td><td class="sign"></td></tr>`).join("")}
+<table><thead><tr><th>Koltuk</th><th>Yolcu</th><th>Kimlik</th><th>İrtibat</th><th>Alınış yeri</th><th>Referans</th><th>Durum</th><th>Not</th><th>İmza</th></tr></thead><tbody>
+${rows.map((r) => `<tr><td>${r.seat}</td><td>${esc(r.passenger)}</td><td>${esc(r.identity)}</td><td>${esc(r.contact)}</td><td>${esc(r.pickup)}</td><td>${esc(r.reference)}</td><td>${esc(r.status)}</td><td>${esc(r.notes)}</td><td class="sign"></td></tr>`).join("")}
 </tbody></table></body></html>`);
   w.document.close();
   // Satır içi betik CSP'ye takılır: yazdırma bu pencereden başlatılır.
@@ -504,6 +520,37 @@ export function PassengerList({ departureId, onClose }: { departureId: string; o
             )}
           </header>
           {data.bookings.length === 0 && <p className="muted">Bu seferde rezervasyon yok.</p>}
+          {/* Şoför/rehber için: sefer bazında alınış yerleri tek listede. */}
+          {data.bookings.some((b) => b.pickupAddress) && (
+            <details className="pickup-summary">
+              <summary>
+                <MapPin size={15} aria-hidden="true" /> Alınış yerleri (
+                {data.bookings.filter((b) => b.pickupAddress).length} /{" "}
+                {data.bookings.length} rezervasyon)
+              </summary>
+              <ol>
+                {data.bookings
+                  .filter((b) => b.pickupAddress)
+                  .map((b) => (
+                    <li key={b.reference}>
+                      <strong>{b.pickupAddress}</strong>
+                      <small>
+                        Koltuk {b.seats.join(", ")} · {b.name} · {b.phone}
+                      </small>
+                    </li>
+                  ))}
+              </ol>
+              {data.bookings.some((b) => !b.pickupAddress) && (
+                <p className="muted">
+                  Alınış yeri yazmayan:{" "}
+                  {data.bookings
+                    .filter((b) => !b.pickupAddress)
+                    .map((b) => b.name)
+                    .join(", ")}
+                </p>
+              )}
+            </details>
+          )}
           <ul>
             {data.bookings.map((b) => (
               <li key={b.reference} className={b.checkedIn ? "boarded" : ""}>
@@ -534,8 +581,21 @@ export function PassengerList({ departureId, onClose }: { departureId: string; o
                 ) : (
                   b.passengers.length > 1 && <p className="passenger-names">{b.passengers.join(" · ")}</p>
                 )}
+                {b.pickupAddress && (
+                  <p className="passenger-pickup">
+                    <MapPin size={14} aria-hidden="true" /> {b.pickupAddress}
+                  </p>
+                )}
                 {b.notes && <p className="passenger-notes">Not: {b.notes}</p>}
                 {b.transfer && <p className="passenger-notes">{b.transfer}</p>}
+                {b.children && (
+                  <p className="passenger-notes">Çocuk: {b.children}</p>
+                )}
+                {b.customerNote && (
+                  <p className="passenger-notes">
+                    Müşteri notu: {b.customerNote}
+                  </p>
+                )}
                 <small>{b.reference}</small>
                 <div className="passenger-actions">
                   <a className="btn btn-outline btn-small" href={"tel:" + b.phone.replace(/[^\d+]/g, "")}>
