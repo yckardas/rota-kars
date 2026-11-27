@@ -242,6 +242,14 @@ export function Layout({
             <LangSwitch className="lang-switch-menu" />
           </nav>
           <div className="header-actions">
+            <Link
+              to="/rezervasyonum"
+              className="reservation-link"
+              aria-label={t("Rezervasyonum")}
+            >
+              <Ticket size={18} />
+              <span>{t("Rezervasyonum")}</span>
+            </Link>
             <LangSwitch className="lang-switch-header" />
             <Link
               to={member ? "/hesabim" : "/uyelik"}
@@ -250,14 +258,6 @@ export function Layout({
             >
               <UserRound size={18} />
               <span>{member ? t("Hesabım") : t("Üye ol / Giriş")}</span>
-            </Link>
-            <Link
-              to="/rezervasyonum"
-              className="reservation-link"
-              aria-label={t("Rezervasyonum")}
-            >
-              <Ticket size={18} />
-              <span>{t("Rezervasyonum")}</span>
             </Link>
             <a
               className="btn btn-small header-cta"

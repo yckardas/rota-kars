@@ -3213,9 +3213,9 @@ html:has(.kp .site-header) {
 }
 
 /* ---------- Başlık: dil seçici ve üye girişi hap düğme ----------
-   "Birlikte planlayalım" ile aynı hap dili, ama renkte ona üstünlük vermeden:
-   üye girişi koyu mürekkep dolgulu, dil seçici açık zeminli iki parçalı anahtar
-   (etkin dil koyu dolgulu). Kırmızı yalnız asıl eylemde kalır. */
+   "Birlikte planlayalım" ile aynı turuncu-kırmızı hap: üye girişi dolgulu
+   düğme, dil seçici dolgulu iki parçalı anahtar (etkin dil beyaz). Renkli üçlü
+   en sağda yan yana; "Rezervasyonum" düz bağlantı olarak onların solunda. */
 .kp .header-actions {
   gap: 10px;
 }
@@ -3237,8 +3237,8 @@ html:has(.kp .site-header) {
   gap: 2px;
   padding: 4px;
   border-radius: 999px;
-  background: #eef0f4;
-  box-shadow: inset 0 0 0 1px var(--kp-rule);
+  background: var(--rk-flame);
+  box-shadow: 0 14px 26px -16px rgba(214, 58, 18, 0.75);
 }
 .kp .lang-switch-header a {
   display: inline-grid;
@@ -3247,7 +3247,7 @@ html:has(.kp .site-header) {
   min-height: 34px;
   padding: 0 8px;
   border-radius: 999px;
-  color: var(--kp-ink-2);
+  color: rgba(255, 255, 255, 0.85);
   font-weight: 600;
   text-decoration: none;
   transition:
@@ -3255,42 +3255,42 @@ html:has(.kp .site-header) {
     color 0.2s ease;
 }
 .kp .lang-switch-header a:hover {
-  color: var(--kp-ink);
-  background: #fff;
+  color: #fff;
+  background: var(--rk-flame-d);
 }
 .kp .lang-switch-header a[aria-current] {
-  background: var(--kp-ink);
-  color: #fff;
+  background: #fff;
+  color: var(--rk-flame);
   text-decoration: none;
-  box-shadow: 0 6px 14px -8px rgba(27, 31, 42, 0.7);
+  box-shadow: 0 4px 10px -6px rgba(120, 30, 8, 0.6);
 }
 .kp .member-header-link {
   min-height: 42px;
   padding: 0 18px 0 14px;
   border-radius: 999px;
-  background: var(--kp-ink);
+  background: var(--rk-flame);
   color: #fff;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   gap: 8px;
-  box-shadow: 0 14px 26px -16px rgba(27, 31, 42, 0.75);
+  box-shadow: 0 14px 26px -14px rgba(214, 58, 18, 0.75);
   transition:
     transform 0.3s var(--rk-ease),
     background 0.2s ease,
     box-shadow 0.3s var(--rk-ease);
 }
 .kp .member-header-link:hover {
-  background: var(--rk-night);
+  background: var(--rk-flame-d);
   color: #fff;
   transform: translateY(-2px);
-  box-shadow: 0 18px 30px -14px rgba(22, 34, 74, 0.8);
+  box-shadow: 0 18px 30px -14px rgba(214, 58, 18, 0.85);
 }
 .kp .member-header-link:active {
   transform: translateY(0) scale(0.98);
 }
 .kp .member-header-link:focus-visible,
 .kp .lang-switch-header a:focus-visible {
-  outline: 2px solid var(--rk-flame);
+  outline: 2px solid var(--kp-ink);
   outline-offset: 2px;
 }
 /* Yazı gizlendiğinde (1050px altı) üye girişi yuvarlak simge düğmesi olur. */
