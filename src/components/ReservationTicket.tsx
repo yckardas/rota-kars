@@ -4,6 +4,7 @@ import { Check, Info, X } from "lucide-react";
 import { responsive } from "../lib/images";
 import { placeName } from "../lib/place";
 import { Postmark } from "./Postmark";
+import { TicketActions } from "./TicketActions";
 import { useLang } from "../lib/i18n";
 import {
   currency,
@@ -18,7 +19,17 @@ const statusLabels: Record<string, string> = {
   cancelled: "İptal edildi",
   expired: "Süresi doldu",
   no_show: "Katılım olmadı",
+  // Belgede gösterilen durum: etkin kayıtta müşterinin iptal talebi bekliyor.
+  cancellation_requested: "İptal talebi alındı",
 };
+// İptal talebi bekleyen etkin kayıt, belgede "İptal talebi alındı" olarak görünür.
+export const shownStatus = (
+  r: Pick<Reservation, "status" | "cancellation_requested_at">,
+) =>
+  r.cancellation_requested_at &&
+  ["pending_agency", "confirmed"].includes(r.status)
+    ? "cancellation_requested"
+    : r.status;
 // Biletin üst satırı: Rota Kars logosu ve site adresi. Ekranda, yazdırılan/PDF
 // bilette ve QR doğrulama sayfasında aynı görünür (yazdırmada site başlığı gizlenir).
 export function TicketBrand() {
@@ -35,7 +46,7 @@ export function StatusStamp({ status }: { status: string }) {
   const { t } = useLang();
   const tone = ["confirmed", "completed"].includes(status)
     ? "is-ok"
-    : status === "pending_agency"
+    : status === "pending_agency" || status === "cancellation_requested"
       ? "is-pending"
       : "is-void";
   return (
@@ -52,17 +63,21 @@ export function StatusStamp({ status }: { status: string }) {
 export function ReservationTicket({
   reservation: r,
   catalog,
+  actions = true,
 }: {
   reservation: Reservation;
   catalog: Catalog;
+  // Takvime ekle / paylaş düğmeleri (ödeme sonucu sayfası kendi kartında gösterir).
+  actions?: boolean;
 }) {
   const { t } = useLang();
-  const tour = catalog.tours.find((x) => x.id === r.tourId);
+  const tour = catalog.tours.find((x) => x.id === r.tourId),
+    status = shownStatus(r);
   return (
     <article className="reservation-ticket">
       <div className="ticket-message">
         <TicketBrand />
-        <StatusStamp status={r.status} />
+        <StatusStamp status={status} />
         <h2>{tour?.name || r.tourId}</h2>
         <div className="ticket-reference">
           <span>{t("Referans numarası")}</span>
@@ -122,6 +137,9 @@ export function ReservationTicket({
               </button>
             </div>
           </div>
+        )}
+        {actions && status === "confirmed" && (
+          <TicketActions reservation={r} tour={tour} />
         )}
       </div>
       <div className="ticket-divider" aria-hidden="true" />
@@ -185,7 +203,11 @@ export function ReservationTicket({
       <div className="ticket-bottom">
         <Info size={16} />
         <p>
-          {r.status === "confirmed" || r.status === "completed"
+          {status === "cancellation_requested"
+            ? t(
+                "İptal talebiniz alındı ve acente değerlendirmesini bekliyor. Bu süreçte ödeme alınmaz.",
+              )
+            : r.status === "confirmed" || r.status === "completed"
             ? t(
                 "Rezervasyonunuz onaylandı. Güncel ödeme ve hareket bilgileri yukarıda.",
               )

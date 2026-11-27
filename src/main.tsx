@@ -214,7 +214,7 @@ function App() {
             path="odeme/kart/:id"
             element={<CardPayment catalog={shown!} />}
           />
-          <Route path="odeme/sonuc/:id" element={<PaymentResult />} />
+          <Route path="odeme/sonuc/:id" element={<PaymentResult catalog={shown!} />} />
           <Route path="hesabim" element={<Account />} />
           <Route path="turlar" element={<Tours catalog={shown!} />} />
           <Route

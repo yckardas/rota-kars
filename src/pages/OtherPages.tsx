@@ -18,10 +18,30 @@ import {
 } from "lucide-react";
 import { RequestForm } from "../components/RequestForm";
 import { ReservationTicket } from "../components/ReservationTicket";
-import { PayDeposit } from "./Payment";
+import { PayDeposit, stampLabel } from "./Payment";
 import { api, post } from "../lib/api";
 import { telHref } from "../lib/phone";
-import type { Catalog, Hotel, Reservation } from "../lib/types";
+import {
+  currency,
+  dateLabel,
+  type Catalog,
+  type Hotel,
+  type Reservation,
+} from "../lib/types";
+// Ön kayıt / bekleme listesi kaydı (BK-…): rezervasyon değildir (server/interest.mjs lookup).
+type InterestRecord = {
+  reference: string;
+  kind: "prereg" | "waitlist" | "notify";
+  status: "waiting" | "notified" | "converted" | "cancelled";
+  tourId: string;
+  tourName: string;
+  date: string | null;
+  startTime: string | null;
+  preferredDate: string;
+  count: number;
+  createdAt: number;
+};
+const isInterestRef = (s: string) => /^BK-/i.test(s.trim());
 export function Hotels({ catalog }: { catalog: Catalog }) {
   const [hotels, setHotels] = useState<Hotel[]>([]),
     [request, setRequest] = useState(false),
@@ -140,6 +160,7 @@ export function Lookup({ catalog }: { catalog: Catalog }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [result, setResult] = useState<Reservation | null>(null),
+    [interest, setInterest] = useState<InterestRecord | null>(null),
     [credentials, setCredentials] = useState({
       reference: (params.get("ref") || "").slice(0, 30),
       email: member?.email || "",
@@ -157,9 +178,16 @@ export function Lookup({ catalog }: { catalog: Catalog }) {
     setBusy(true);
     setError("");
     setResult(null);
+    setInterest(null);
     setConfirm(false);
     try {
-      setResult(await post<Reservation>("/reservations/lookup", credentials));
+      // Ücretsiz ön kayıt ve bekleme listesi numarası BK- ile başlar; durumu ayrı gösterilir.
+      if (isInterestRef(credentials.reference))
+        setInterest(
+          await post<InterestRecord>("/interest/lookup", credentials),
+        );
+      else
+        setResult(await post<Reservation>("/reservations/lookup", credentials));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -181,7 +209,9 @@ export function Lookup({ catalog }: { catalog: Catalog }) {
     <div className="container lookup-page">
       <h1>{t("Rezervasyonunuz burada.")}</h1>
       <p className="muted">
-        {t("Ön rezervasyon referansınız ve e-posta adresinizle sorgulayın.")}
+        {t(
+          "Rezervasyon (RK-…) ya da ücretsiz ön kayıt (BK-…) numaranız ve e-posta adresinizle sorgulayın.",
+        )}
       </p>
       <form className="lookup-form" onSubmit={lookup}>
         <label className="field">
@@ -222,8 +252,20 @@ export function Lookup({ catalog }: { catalog: Catalog }) {
           {error}
         </p>
       )}
+      {interest && <InterestStatus record={interest} />}
       {result && (
         <>
+          {Boolean(result.cancellation_requested_at) &&
+            result.status !== "cancelled" && (
+              <div className="notice-success cancel-pending" role="status">
+                <p>
+                  <strong>
+                    {t("İptal talebiniz acente değerlendirmesini bekliyor.")}
+                  </strong>{" "}
+                  <RefundSummary reservation={result} pending />
+                </p>
+              </div>
+            )}
           <PayDeposit
             catalog={catalog}
             reservation={result}
@@ -231,24 +273,21 @@ export function Lookup({ catalog }: { catalog: Catalog }) {
           />
           <ReservationTicket reservation={result} catalog={catalog} />
           <ReservationDocuments reservation={result} />
-          {Boolean(result.cancellation_requested_at) &&
-            result.status !== "cancelled" && (
-              <p className="notice-success">
-                {t("İptal talebiniz acente değerlendirmesini bekliyor.")}
-              </p>
-            )}
           {["pending_agency", "confirmed"].includes(result.status) &&
             !result.cancellation_requested_at &&
             (confirm ? (
               <div className="cancel-confirm">
                 <p>
-                  {result.net_paid
-                    ? t(
-                        "İptal talebiniz acenteye iletilecek. Ödenen tutarların iadesi acente tarafından ayrıca değerlendirilir; otomatik iade yapılmaz.",
-                      )
-                    : t(
-                        "Ön rezervasyon iptal edilecek ve koltuklarınız serbest bırakılacak.",
-                      )}
+                  {result.status === "pending_agency" && !result.net_paid ? (
+                    t(
+                      "Ön rezervasyon iptal edilecek ve koltuklarınız serbest bırakılacak.",
+                    )
+                  ) : (
+                    <>
+                      {t("İptal talebiniz acenteye iletilecek.")}{" "}
+                      <RefundSummary reservation={result} />
+                    </>
+                  )}
                 </p>
                 <div className="button-row">
                   <button
@@ -466,6 +505,170 @@ export function Contact({ catalog }: { catalog: Catalog }) {
   );
 }
 // Rezervasyona kaydedilen, müşterinin onayladığı belgeler (bağlayıcı metin Türkçe).
+// İptal penceresi ve bekleyen talep: iptal ve iade koşullarına göre iade (sunucu hesaplar).
+function RefundSummary({
+  reservation: r,
+  pending = false,
+}: {
+  reservation: Reservation;
+  pending?: boolean;
+}) {
+  const { t } = useLang();
+  const q = r.cancellation_quote;
+  if (!q) return null;
+  const how = t(
+    "İade, acente iptali onayladıktan sonra en geç {days} gün içinde ödemenin yapıldığı yönteme (kartla ödediyseniz aynı karta) yapılır.",
+    { days: q.refund_days },
+  );
+  if (!q.net_paid)
+    return (
+      <>
+        {pending
+          ? null
+          : t("Ödeme yapmadığınız için iade edilecek bir tutar yok.")}
+      </>
+    );
+  if (pending)
+    return (
+      <>
+        {q.refund
+          ? t("İptal ve iade koşullarına göre iade edilecek tutar: {refund}.", {
+              refund: currency(q.refund),
+            }) +
+            " " +
+            how
+          : t(
+              "Talebiniz kesintisiz iptal süresi dolduktan sonra ulaştığı için iptal ve iade koşullarına göre kapora ({retained}) iade edilmez.",
+              { retained: currency(q.retained) },
+            )}
+      </>
+    );
+  if (!q.late)
+    return (
+      <>
+        <strong>
+          {t(
+            "Bugün iptal ederseniz ödediğiniz tutarın tamamı ({paid}) iade edilir.",
+            {
+              paid: currency(q.net_paid),
+            },
+          )}
+        </strong>{" "}
+        {t("Kesintisiz iptal süresinin sonu: {deadline}.", {
+          deadline: stampLabel(q.free_until),
+        })}{" "}
+        {how}
+      </>
+    );
+  return (
+    <>
+      <strong>
+        {q.refund
+          ? t(
+              "Kesintisiz iptal süresi doldu: kapora ({retained}) iade edilmez, {refund} iade edilir.",
+              {
+                retained: currency(q.retained),
+                refund: currency(q.refund),
+              },
+            )
+          : t(
+              "Kesintisiz iptal süresi doldu: ödediğiniz {paid} kapora kapsamında kaldığı için iade edilmez.",
+              {
+                paid: currency(q.net_paid),
+              },
+            )}
+      </strong>{" "}
+      {q.refund ? how : null}
+    </>
+  );
+}
+const interestStatus: Record<InterestRecord["status"], string> = {
+  waiting: "Bekliyor",
+  notified: "Rezervasyon açıldı",
+  converted: "Rezervasyona dönüştü",
+  cancelled: "Listeden çıkıldı",
+};
+// Ön kayıt / bekleme listesi kaydı: rezervasyon olmadığını ve nasıl ilerleyeceğini söyler.
+function InterestStatus({ record: x }: { record: InterestRecord }) {
+  const { t } = useLang();
+  const prereg = x.kind === "prereg",
+    notify = x.kind === "notify";
+  return (
+    <article className="ticket-check interest-status" aria-live="polite">
+      <span
+        className={
+          "status-stamp " +
+          (x.status === "cancelled" ? "is-void" : "is-pending")
+        }
+      >
+        {prereg ? t("Ücretsiz ön kayıt") : notify ? t("Haber listesi") : t("Bekleme listesi")}
+      </span>
+      <h2>{t(x.tourName)}</h2>
+      <div className="ticket-reference">
+        <span>
+          {prereg
+            ? t("Ön kayıt numarası")
+            : notify
+              ? t("Haber listesi numarası")
+              : t("Bekleme listesi numarası")}
+        </span>
+        <strong>{x.reference}</strong>
+      </div>
+      <dl className="ticket-lines">
+        <div>
+          <dt>{t("Durum")}</dt>
+          <dd>{t(interestStatus[x.status])}</dd>
+        </div>
+        <div>
+          <dt>{t("Tarih")}</dt>
+          <dd>
+            {x.date
+              ? dateLabel(x.date) + (x.startTime ? " · " + x.startTime : "")
+              : x.preferredDate || t("Tarih henüz belli değil")}
+          </dd>
+        </div>
+        <div>
+          <dt>{t("Kişi")}</dt>
+          <dd>{x.count}</dd>
+        </div>
+      </dl>
+      <p className="ticket-check-note">
+        {t("Bu bir rezervasyon değildir: koltuk tutulmaz, ödeme alınmaz.")}{" "}
+        {x.status === "notified"
+          ? t(
+              "Rezervasyon açıldı ve size e-postayla haber verdik. Koltuklar ilk rezervasyonu tamamlayana ayrılır.",
+            )
+          : x.status === "converted"
+            ? t(
+                "Bu kayıtla rezervasyon yaptınız; rezervasyonunuzu RK- ile başlayan numaranızla sorgulayın.",
+              )
+            : x.status === "cancelled"
+              ? t(
+                  "Bu listeden çıktınız; size bu konuda e-posta göndermeyeceğiz.",
+                )
+              : prereg
+                ? t(
+                    "Yeterli talep oluşunca tur kesinleşir; rezervasyon açıldığında size e-postayla haber veririz.",
+                  )
+                : t(
+                    "Bu seferde yer açılınca size e-postayla haber veririz. Yer, ilk rezervasyonu tamamlayana ayrılır.",
+                  )}
+      </p>
+      {x.status === "notified" ? (
+        <Link
+          className="btn"
+          to={"/rezervasyon/" + x.tourId + (x.date ? "?date=" + x.date : "")}
+        >
+          {t("Rezervasyon yap")} <ArrowRight size={17} />
+        </Link>
+      ) : x.status !== "cancelled" ? (
+        <Link className="btn btn-outline" to={"/turlar/" + x.tourId}>
+          {t("Turu incele")}
+        </Link>
+      ) : null}
+    </article>
+  );
+}
 function ReservationDocuments({ reservation }: { reservation: Reservation }) {
   const { t } = useLang();
   const docs = [

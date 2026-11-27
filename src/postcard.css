@@ -3097,6 +3097,68 @@ html:has(.kp) {
 .kp .payment-card .button-row {
   margin-top: 22px;
 }
+/* Ödeme sonucu: tutarlar, buluşma, sonraki adımlar; bilet kartın altında */
+.kp .payment-page.has-ticket {
+  padding-bottom: 32px;
+}
+.kp .payment-figures dd {
+  font-variant-numeric: tabular-nums;
+}
+.kp .ticket-check .payment-next-title {
+  font-size: 22px;
+  color: var(--kp-ink);
+  margin: 28px 0 8px;
+}
+.kp .payment-next {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 15px;
+  color: var(--kp-ink-2);
+}
+.kp .payment-next li {
+  margin: 6px 0;
+  padding-left: 4px;
+}
+.kp .payment-ticket {
+  max-width: 980px;
+  padding-bottom: 90px;
+}
+/* Onaylı bilette takvime ekleme ve paylaşma */
+.kp .ticket-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.kp .reservation-ticket .ticket-actions {
+  padding-bottom: 26px;
+}
+.kp .ticket-check .ticket-actions {
+  margin-top: 14px;
+}
+.kp .ticket-check .ticket-actions .btn {
+  margin-top: 0;
+}
+/* Rezervasyonum: iptal talebi bekliyor notu ve ön kayıt (BK-…) kaydı */
+.kp .cancel-pending {
+  max-width: 980px;
+  margin: 0 0 24px;
+  font-size: 15px;
+}
+.kp .cancel-pending p {
+  margin: 0;
+}
+.kp .interest-status {
+  max-width: 720px;
+}
+.kp .interest-status h2 {
+  margin-top: 18px;
+}
+@media print {
+  .kp .ticket-actions,
+  .kp .payment-page.has-ticket {
+    display: none;
+  }
+}
 .kp .payment-test-flag {
   display: inline-block;
   margin: 0 0 10px;

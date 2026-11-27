@@ -39,8 +39,10 @@ import {
   preInfoText,
   contractText,
   cancellationRules,
+  cancellationQuote,
   isLateBooking,
   freeCancelDays,
+  REFUND_DAYS,
 } from "./legal.mjs";
 import { announcement, currentEn, TOUR_SLUG } from "./content.mjs";
 import { attachSocialAuth, cookieValue } from "./social-auth.mjs";
@@ -50,7 +52,12 @@ import { normalizeInstagramUrl, createInstagramFeed } from "./instagram.mjs";
 import { AppError, REQUEST_STATUS } from "./store.mjs";
 import { BUDGETS, ROOM_TYPES } from "./requests.mjs";
 import { createReviewsService } from "./reviews.mjs";
-import { createPayments, depositFor, VAKIFBANK_RETURN_PATH } from "./payments.mjs";
+import {
+  createPayments,
+  depositFor,
+  DEPOSIT_PERCENT,
+  VAKIFBANK_RETURN_PATH,
+} from "./payments.mjs";
 import { attachBankSimulator } from "./bank-simulator.mjs";
 import { ARTICLE_CATEGORIES } from "./articles.mjs";
 import { priceTransfer, transferChoiceSchema, transferConfigSchema } from "./transfer.mjs";
@@ -1234,6 +1241,34 @@ export function createApp(
       r.status(204).end();
     }),
   );
+  // Müşteriye dönen rezervasyon belgesi. Etkin kayıtta "Rezervasyonum"daki iptal penceresi
+  // için iade hesabı eklenir: iptal ve iade koşullarıyla aynı kural (server/legal.mjs);
+  // iptal talebi varsa talebin ulaştığı ana göre.
+  const customerReceipt = async (res, q) => {
+    const out = await receipt(res, q, env, { customer: true });
+    if (!["pending_agency", "confirmed"].includes(res.status)) return out;
+    const quote = cancellationQuote({
+      tour: tours.find((t) => t.id === res.tourId),
+      date: res.date,
+      startTime: res.start_time,
+      total: res.total,
+      netPaid: res.net_paid,
+      requestedAt: res.cancellation_requested_at || null,
+      now: (store.clock || Date.now)(),
+      depositPercent: DEPOSIT_PERCENT,
+    });
+    return {
+      ...out,
+      cancellation_quote: {
+        net_paid: quote.netPaid,
+        refund: quote.customer.refund,
+        retained: quote.customer.retained,
+        late: quote.late,
+        free_until: quote.freeUntil,
+        refund_days: REFUND_DAYS,
+      },
+    };
+  };
   app.post(
     "/api/reservations",
     route(async (q, r) => {
@@ -1285,7 +1320,7 @@ export function createApp(
         await store.privacy.recordConsent({ email: input.email, memberId: q.member?.id, type: "others_declaration", source: "booking" });
       if (input.marketingConsent)
         await store.privacy.recordConsent({ email: input.email, memberId: q.member?.id, type: "marketing", source: "booking" });
-      r.status(201).json(await receipt(reservation, q, env, { customer: true }));
+      r.status(201).json(await customerReceipt(reservation, q));
     }),
   );
   app.post(
@@ -1298,7 +1333,10 @@ export function createApp(
         })
         .parse(q.body);
       r.json(
-        await receipt(await store.lookup(input.reference, input.email), q, env, { customer: true }),
+        await customerReceipt(
+          await store.lookup(input.reference, input.email),
+          q,
+        ),
       );
     }),
   );
@@ -1312,7 +1350,10 @@ export function createApp(
         })
         .parse(q.body);
       r.json(
-        await receipt(await store.cancel(input.reference, input.email), q, env, { customer: true }),
+        await customerReceipt(
+          await store.cancel(input.reference, input.email),
+          q,
+        ),
       );
     }),
   );
@@ -1472,6 +1513,19 @@ export function createApp(
       ),
     ),
   );
+  // Ödeme sonucu sayfasındaki bilet: ödenmiş oturumun kimliğiyle, e-posta sorulmadan.
+  app.get(
+    "/api/payments/sessions/:id/reservation",
+    route(async (q, r) => {
+      r.set("Cache-Control", "no-store");
+      r.json(
+        await customerReceipt(
+          await payments.paidReservation(paymentSessionId.parse(q.params.id)),
+          q,
+        ),
+      );
+    }),
+  );
   // Deneme sağlayıcısı: deneme sayfası sonucu, gerçek sağlayıcının imzalı
   // sunucu bildirimi gibi işlenir. Yalnız PAYMENT_PROVIDER=test iken açıktır.
   app.post(
@@ -1606,6 +1660,20 @@ export function createApp(
       });
     }),
   );
+  // Müşteri iptalden vazgeçti (acente teyit etti): talep kaldırılır, ödeme yolu yeniden açılır.
+  app.post(
+    "/api/admin/reservations/:reference/cancellation-request/dismiss",
+    requireAdmin,
+    route(async (q, r) =>
+      r.json(
+        await receipt(
+          await store.workflow.dismissCancellation(q.params.reference),
+          q,
+          env,
+        ),
+      ),
+    ),
+  );
   // Yolcu çıkarma (kısmi iptal) penceresi: seçilen koltuklara göre yeni bedel ve iade önerisi.
   const seatList = z
     .array(z.number().int().min(1).max(60))
@@ -1659,6 +1727,8 @@ export function createApp(
       if (!payments.provider) throw new AppError(503, "Online kartla ödeme şu an kapalı.");
       const res = await store.workflow.get(q.params.reference),
         amount = payments.dueAmount(res);
+      if (res.cancellation_requested_at && ["pending_agency", "confirmed"].includes(res.status))
+        throw new AppError(409, "Müşterinin iptal talebi bekliyor; ödeme bağlantısı gönderilemez. Talep geri alınırsa ödeme yeniden açılır.");
       if (!amount) throw new AppError(409, "Bu rezervasyonda kartla ödenecek tutar yok.");
       // PUBLIC_BASE_URL yoksa (yerel) adres isteğin geldiği siteden tamamlanır.
       const link = payments.paymentLink(res),
@@ -1726,6 +1796,16 @@ export function createApp(
         .parse(q.body);
       await human(q, "request");
       r.status(201).json(await store.interest.add(input));
+    }),
+  );
+  // "Rezervasyonum"da ön kayıt / bekleme listesi numarası (BK-…) ve e-postayla durum sorgusu.
+  app.post(
+    "/api/interest/lookup",
+    route(async (q, r) => {
+      const input = z
+        .object({ reference: referenceInput, email })
+        .parse(q.body);
+      r.json(await store.interest.lookup(input.reference, input.email));
     }),
   );
   // E-postadaki "listeden çık" bağlantısı: tek tıkla, giriş gerektirmeden.
