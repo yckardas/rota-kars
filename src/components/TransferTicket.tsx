@@ -2,7 +2,7 @@
 // kartı düzeni; koltuk yerine geliş / dönüş bacakları, kişi, bagaj ve adres.
 import { Info } from "lucide-react";
 import { Postmark } from "./Postmark";
-import { StatusStamp, TicketBrand } from "./ReservationTicket";
+import { shownStatus, StatusStamp, TicketBrand } from "./ReservationTicket";
 import { useLang } from "../lib/i18n";
 import { TRANSFER_POINTS, transferRoute } from "../lib/transfer";
 import { currency, dateLabel, type Reservation } from "../lib/types";
@@ -31,7 +31,7 @@ export function TransferTicket({
     <article className="reservation-ticket transfer-ticket">
       <div className="ticket-message">
         <TicketBrand />
-        <StatusStamp status={r.status} />
+        <StatusStamp status={shownStatus(r)} />
         <h2>{t("VIP transfer")}</h2>
         <p className="muted">{transferRoute(b, t)}</p>
         <div className="ticket-reference">
