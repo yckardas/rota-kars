@@ -175,7 +175,9 @@ export function Lookup({ catalog }: { catalog: Catalog }) {
   }, [member]);
   // Üyelik sayfasından gelen üye için bilet e-posta sorulmadan açılır: sahipliği
   // sunucu üye oturumundan doğrular. Olmazsa sorgulama formu olduğu gibi kalır.
-  const memberRef = member ? (params.get("ref") || "").slice(0, 30) : "";
+  const refParam = (params.get("ref") || "").slice(0, 30);
+  // BK- (ön kayıt/haber listesi) rezervasyon değildir; e-postayla sorgulanır.
+  const memberRef = member && !isInterestRef(refParam) ? refParam : "";
   useEffect(() => {
     if (!memberRef) return;
     let alive = true;
