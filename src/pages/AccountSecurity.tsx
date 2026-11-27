@@ -152,6 +152,10 @@ type TicketInfo = {
   status: string;
   valid: boolean;
   checkedIn: boolean;
+  // Online transfer: geliş / dönüş satırları ve kişi sayısı (koltuk yok).
+  kind?: "tour" | "transfer";
+  transferLines?: string[];
+  pax?: number;
 };
 export function TicketVerification() {
   const { token } = useParams(),
@@ -221,12 +225,19 @@ export function TicketVerification() {
                   {dateLabel(data.date)} · {data.startTime}
                 </dd>
               </div>
+              {data.kind === "transfer" ? (
+                <div>
+                  <dt>{t("Transfer")}</dt>
+                  <dd>{data.transferLines?.join(" / ")}</dd>
+                </div>
+              ) : (
+                <div>
+                  <dt>{t("Koltuklar")}</dt>
+                  <dd>{data.seats.join(", ")}</dd>
+                </div>
+              )}
               <div>
-                <dt>{t("Koltuklar")}</dt>
-                <dd>{data.seats.join(", ")}</dd>
-              </div>
-              <div>
-                <dt>{t("Buluşma")}</dt>
+                <dt>{data.kind === "transfer" ? t("Alınış") : t("Buluşma")}</dt>
                 <dd>{data.pickup}</dd>
               </div>
             </dl>

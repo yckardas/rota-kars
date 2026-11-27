@@ -89,14 +89,17 @@ const METHOD_KEYS = { cash: "cash", bank_transfer: "bankTransfer", pos: "pos", "
 // Tur bazında satış (Finans ve Aylık rapor ortak): katalog sırası, sonra katalogdan kalkmış turlar.
 // reservations: dönemdeki canlı rezervasyonlar; departures: dönemdeki seferler.
 export function tourRows({ tours, departures, reservations }) {
-  const name = (id) => tours.find((t) => t.id === id)?.name || id;
+  // Katalogda olmayan hizmet (online transfer, kaldırılmış tur): adı kayıttan.
+  const name = (id) =>
+    tours.find((t) => t.id === id)?.name ||
+    (id === "transfer" ? "Online transfer" : id);
   const ids = [...tours.map((t) => t.id), ...new Set(reservations.map((r) => r.tourId).filter((id) => !tours.some((t) => t.id === id)))];
   return ids
     .map((id) => {
       const tds = departures.filter((d) => d.tour_id === id),
         trs = reservations.filter((r) => r.tourId === id),
         capacity = sum(tds, (d) => d.vehicle?.sellableSeats || 0),
-        guests = sum(trs, (r) => r.seats.length);
+        guests = sum(trs, (r) => r.seats.length || r.pax || 0);
       return {
         tourId: id,
         tourName: name(id),

@@ -58,13 +58,25 @@ const ITEMS: Record<
     anchor: "kvkk",
   },
 };
+// Turdan bağımsız online transferde sözleşmenin adı farklıdır.
+export type LegalService = "tour" | "transfer";
+const itemFor = (key: ConsentKey, service: LegalService = "tour") =>
+  service === "transfer" && key === "contract"
+    ? {
+        ...ITEMS.contract,
+        link: "Transfer Hizmet Sözleşmesi'ni (Mesafeli Satış Sözleşmesi)",
+        title: "Transfer Hizmet Sözleşmesi",
+      }
+    : ITEMS[key];
 export function LegalConsents({
   value,
   onChange,
   documents,
   error,
   disabled = false,
+  service = "tour",
 }: {
+  service?: LegalService;
   value: Consents;
   onChange: (next: Consents) => void;
   documents?: LegalDocuments | null;
@@ -92,7 +104,7 @@ export function LegalConsents({
         )}
       </p>
       {ORDER.map((key) => {
-        const item = ITEMS[key],
+        const item = itemFor(key, service),
           body = text(key),
           missing = Boolean(error) && !value[key];
         return (
@@ -147,7 +159,11 @@ export function LegalConsents({
         </p>
       )}
       {open && (
-        <Modal title={t(ITEMS[open].title)} onClose={() => setOpen(null)} wide>
+        <Modal
+          title={t(itemFor(open, service).title)}
+          onClose={() => setOpen(null)}
+          wide
+        >
           <div className="legal-doc" tabIndex={0} lang="tr">
             {text(open)}
           </div>
@@ -190,7 +206,9 @@ export function PaymentTerms({
   acceptedAt,
   error,
   disabled = false,
+  service = "tour",
 }: {
+  service?: LegalService;
   checked: boolean;
   onChange: (next: boolean) => void;
   documents?: LegalDocuments | null;
@@ -225,11 +243,11 @@ export function PaymentTerms({
           setOpen(key);
         }}
       >
-        {t(ITEMS[key].title)}
+        {t(itemFor(key, service).title)}
       </button>
     ) : (
       <Link key={k} to={"/bilgilendirme#" + ITEMS[key].anchor} target="_blank">
-        {t(ITEMS[key].title)}
+        {t(itemFor(key, service).title)}
       </Link>
     );
   return (
@@ -287,7 +305,11 @@ export function PaymentTerms({
           )}
       </p>
       {open && (
-        <Modal title={t(ITEMS[open].title)} onClose={() => setOpen(null)} wide>
+        <Modal
+          title={t(itemFor(open, service).title)}
+          onClose={() => setOpen(null)}
+          wide
+        >
           <div className="legal-doc" tabIndex={0} lang="tr">
             {text(open)}
           </div>

@@ -245,7 +245,9 @@ export async function createMembers(db, { clock, tx, campaigns }) {
           }),
         },
         reservations: reservations.map((r) => {
-          const tourId = departures.get(r.departure_id)?.tour_id;
+          const tourId =
+            departures.get(r.departure_id)?.tour_id ??
+            (r.kind === "transfer" ? "transfer" : undefined);
           return {
             reference: r.reference,
             total: r.total,
@@ -255,9 +257,12 @@ export async function createMembers(db, { clock, tx, campaigns }) {
               r.cancellation_requested_at && r.status !== "cancelled",
             ),
             created_at: r.created_at,
-            date: departures.get(r.departure_id)?.date,
+            date: departures.get(r.departure_id)?.date ?? r.service_date,
             tourId,
-            tourName: tours.find((t) => t.id === tourId)?.name || "",
+            tourName:
+              r.kind === "transfer"
+                ? "Online transfer"
+                : tours.find((t) => t.id === tourId)?.name || "",
           };
         }),
       };

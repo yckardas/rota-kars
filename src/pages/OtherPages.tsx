@@ -695,7 +695,12 @@ function InterestStatus({ record: x }: { record: InterestRecord }) {
 function ReservationDocuments({ reservation }: { reservation: Reservation }) {
   const { t } = useLang();
   const docs = [
-    [t("Tur Hizmet Sözleşmesi"), reservation.contract_text],
+    [
+      reservation.kind === "transfer"
+        ? t("Transfer Hizmet Sözleşmesi")
+        : t("Tur Hizmet Sözleşmesi"),
+      reservation.contract_text,
+    ],
     [t("Ön Bilgilendirme Formu"), reservation.pre_info_text],
   ].filter((d): d is [string, string] => Boolean(d[1]));
   if (!docs.length) return null;

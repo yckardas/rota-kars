@@ -1,0 +1,18 @@
+/* Panel · turdan bağımsız online transfer ayarı (tur kartlarıyla aynı kart). */
+.transfer-service-settings {
+  margin-bottom: 25px;
+}
+.transfer-service-settings h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+.transfer-service-settings > .muted,
+.transfer-service-settings > .error {
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.transfer-service-settings .transfer-lead {
+  max-width: 260px;
+  margin: 0;
+}

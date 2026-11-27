@@ -1,5 +1,9 @@
 import { localeOf } from "./i18n";
-import type { PricedTransfer, TransferConfig } from "./transfer";
+import type {
+  PricedTransfer,
+  TransferBooking,
+  TransferConfig,
+} from "./transfer";
 // decisionDate: kesinleşme kararının en geç verileceği gün (hareket − asgari katılımcı bildirim süresi).
 export type DemandDate = {
   id: string;
@@ -264,6 +268,11 @@ export type Reservation = {
   discount_amount?: number;
   transfer?: PricedTransfer | null;
   transfer_amount?: number;
+  // Turdan bağımsız online transfer: koltuk yok (seats boş), kişi ve güzergâh ayrıntısı.
+  kind?: "transfer";
+  pax?: number;
+  tourName?: string;
+  transfer_booking?: TransferBooking | null;
   // Yolcu çıkarmada kesilen kapora payı; toplama dahildir.
   cancellation_fee?: number;
   reference: string;

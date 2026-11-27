@@ -5,6 +5,7 @@ import { responsive } from "../lib/images";
 import { placeName } from "../lib/place";
 import { Postmark } from "./Postmark";
 import { TicketActions } from "./TicketActions";
+import { TransferTicket } from "./TransferTicket";
 import { useLang } from "../lib/i18n";
 import {
   currency,
@@ -73,6 +74,8 @@ export function ReservationTicket({
   const { t } = useLang();
   const tour = catalog.tours.find((x) => x.id === r.tourId),
     status = shownStatus(r);
+  // Turdan bağımsız online transferin kendi belgesi var.
+  if (r.kind === "transfer") return <TransferTicket reservation={r} />;
   return (
     <article className="reservation-ticket">
       <div className="ticket-message">

@@ -14,6 +14,7 @@ import { responsive } from "../lib/images";
 import { RequestForm } from "../components/RequestForm";
 import { FleetSection } from "../components/FleetSection";
 import { Lightbox } from "../components/Lightbox";
+import { TransferBooking } from "../components/TransferBooking";
 const details: Record<
   string,
   {
@@ -232,6 +233,8 @@ export function Services({ catalog }: { catalog: Catalog }) {
           </div>
         </div>
       </section>
+      {/* Online transfer satışı açıksa (panel + kartla ödeme) form burada; kapalıyken görünmez. */}
+      {service.id === "vip-transfer" && <TransferBooking />}
       {vehicles.length > 0 && (
         <section
           className="container service-fleet"

@@ -775,6 +775,7 @@ const STATUS_FILTERS = [
   ["pending_agency", "Onay bekleyen"],
   ["flag:cancel_request", "İptal talebi"],
   ["flag:balance", "Bakiyesi kalan"],
+  ["flag:transfer", "Online transfer"],
   ["confirmed", "Onaylı"],
   ["completed", "Tamamlandı"],
   ["no_show", "Gelmedi"],
@@ -814,6 +815,15 @@ const methodLabel = (m: string) =>
 // Panelin kendi ürettiği iç referans (PANEL-…) gösterilmez.
 const receiptText = (p: { note?: string; external_reference: string }) =>
   p.note || (p.external_reference.startsWith("PANEL-") ? "" : p.external_reference);
+// Online transfer satırı (CSV): bacaklar ve adres.
+const transferSummary = (r: Reservation) =>
+  [
+    ...(r.transfer_booking?.legs || []).map(
+      (l) => `${l.type === "arrival" ? "Geliş" : "Dönüş"} ${l.date} ${l.time}${l.flight ? " " + l.flight : ""}`,
+    ),
+    `${r.transfer_booking?.bags || 0} bagaj`,
+    r.transfer_booking?.address || "",
+  ].join(" / ");
 const stamp = (ms?: number) =>
   ms
     ? new Date(ms).toLocaleString("tr-TR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
@@ -900,8 +910,13 @@ export function ReservationManager({
     }
   }
   const tourName = (id: string) => catalog.tours.find((t) => t.id === id)?.name || id;
+  const serviceName = (r: Reservation) => (r.kind === "transfer" ? r.tourName || "Online transfer" : tourName(r.tourId));
   // "Tümü"nde iptal ve süresi dolan kayıtlar en sona iner (kendi içinde en yeni üstte kalır).
-  const ordered = filter
+  // Online transfer listesi gün görünümü gibi: alınış tarihi ve saatine göre.
+  const ordered =
+    filter === "flag:transfer"
+      ? [...rows].sort((a, b) => (a.date + (a.start_time || "")).localeCompare(b.date + (b.start_time || "")))
+      : filter
     ? rows
     : [...rows].sort(
         (a, b) => Number(["cancelled", "expired"].includes(a.status)) - Number(["cancelled", "expired"].includes(b.status)),
@@ -930,10 +945,10 @@ export function ReservationManager({
       ...rows.map((r) => [
         r.reference,
         statusLabels[r.status] || r.status,
-        tourName(r.tourId),
+        serviceName(r),
         r.date,
         r.start_time,
-        r.seats.join(" "),
+        r.kind === "transfer" ? `${r.pax} kişi` : r.seats.join(" "),
         r.name,
         r.phone,
         r.email,
@@ -941,7 +956,7 @@ export function ReservationManager({
         (r.total / 100).toFixed(2),
         ((r.net_paid || 0) / 100).toFixed(2),
         ((r.balance_due || 0) / 100).toFixed(2),
-        r.notes,
+        [r.notes, r.kind === "transfer" ? transferSummary(r) : ""].filter(Boolean).join(" · "),
         r.pickup_address || "",
         childrenText(r.children),
         r.customer_note || "",
@@ -1065,7 +1080,7 @@ export function ReservationManager({
                     )}
                     {r.notes && <small className="row-note">Not: {r.notes}</small>}
                     <TripInfoNotes booking={r} as="small" />
-                    {r.transfer && (
+                    {r.transfer && r.kind !== "transfer" && (
                       <small className="row-note">
                         Transfer: {r.transfer.pointLabel}
                         {r.transfer.destinationLabel
@@ -1076,13 +1091,28 @@ export function ReservationManager({
                       </small>
                     )}
                   </td>
-                  <td>
-                    {tourName(r.tourId)}
-                    <small>
-                      {dateLabel(r.date)} · {r.start_time}
-                    </small>
-                    <small>Koltuk: {r.seats.join(", ")}</small>
-                  </td>
+                  {r.kind === "transfer" ? (
+                    <td>
+                      {serviceName(r)}
+                      {r.transfer_booking?.legs.map((l) => (
+                        <small key={l.type}>
+                          {l.type === "arrival" ? "Geliş" : "Dönüş"}: {dateLabel(l.date)} · {l.time}
+                          {l.flight ? ` · ${l.flight}` : ""}
+                        </small>
+                      ))}
+                      <small>
+                        {r.pax} kişi · {r.transfer_booking?.bags || 0} bagaj · {r.transfer_booking?.address}
+                      </small>
+                    </td>
+                  ) : (
+                    <td>
+                      {tourName(r.tourId)}
+                      <small>
+                        {dateLabel(r.date)} · {r.start_time}
+                      </small>
+                      <small>Koltuk: {r.seats.join(", ")}</small>
+                    </td>
+                  )}
                   <td>
                     {currency(r.total)}
                     <small>Net tahsilat: {currency(r.net_paid || 0)}</small>
@@ -1120,7 +1150,7 @@ export function ReservationManager({
         <BookingControls
           key={booking.reference}
           booking={booking}
-          tourName={tourName(booking.tourId)}
+          tourName={serviceName(booking)}
           busy={busy}
           action={action}
           reload={load}
@@ -1373,8 +1403,9 @@ function BookingControls({
         ["payment", "Tahsilat", activeBooking && Number(r.balance_due) > 0],
         // Kartla tahsilat varsa net tahsilat sıfırlansa da açık kalır: askıdaki iadeler burada sonuçlanır.
         ["refund", "İade", Number(r.net_paid) > 0 || hasCard],
-        ["move", "Tarih / koltuk", activeBooking],
-        ["passengers", "Yolcular ve kimlik", activeBooking],
+        // Online transferde sefer, koltuk ve yolcu kimliği yoktur.
+        ["move", "Tarih / koltuk", activeBooking && r.kind !== "transfer"],
+        ["passengers", "Yolcular ve kimlik", activeBooking && r.kind !== "transfer"],
         ["history", "Geçmiş", true],
       ] as const
     ).filter((m) => m[2]),
@@ -1387,12 +1418,34 @@ function BookingControls({
             <h2>
               {r.name} <span className={"status-tag status-" + r.status}>{statusLabels[r.status] || r.status}</span>
             </h2>
-            <p className="muted">
-              {dateLabel(r.date)} · {r.start_time} · Koltuk {r.seats.join(", ")} · {r.passengers.length} kişi
-            </p>
+            {r.kind === "transfer" ? (
+              <ul className="passenger-ids">
+                {r.transfer_booking?.legs.map((l) => (
+                  <li key={l.type}>
+                    <span>{l.type === "arrival" ? "Geliş" : "Dönüş"}</span> {dateLabel(l.date)} · {l.time}
+                    <small>
+                      {l.type === "arrival"
+                        ? `${r.transfer?.pointLabel} → ${r.transfer_booking?.address}`
+                        : `${r.transfer_booking?.address} → ${r.transfer?.pointLabel}`}
+                      {l.flight ? ` · uçuş/sefer ${l.flight}` : ""}
+                    </small>
+                  </li>
+                ))}
+                <li>
+                  <span>Yolcu</span> {r.pax} kişi · {r.transfer_booking?.bags || 0} bagaj
+                  <small>
+                    {r.transfer?.destinationLabel} · {r.transfer?.tierLabel}
+                  </small>
+                </li>
+              </ul>
+            ) : (
+              <p className="muted">
+                {dateLabel(r.date)} · {r.start_time} · Koltuk {r.seats.join(", ")} · {r.passengers.length} kişi
+              </p>
+            )}
             {/* Yolcu kimlikleri (U-ETDS bildirimi için); yalnız panelde tam görünür. */}
             {/* Kimliği alınmamış yolcu (telefon rezervasyonu) "kimlik eksik" ile işaretlenir. */}
-            {(Boolean(r.passenger_details?.length) || activeBooking) && (
+            {r.kind !== "transfer" && (Boolean(r.passenger_details?.length) || activeBooking) && (
               <ul className="passenger-ids">
                 {r.seats.map((seat, i) => {
                   const p = r.passenger_details?.[i];
@@ -1417,9 +1470,9 @@ function BookingControls({
               </ul>
             )}
             {r.notes && <p className="row-note">Not: {r.notes}</p>}
-            <PickupEditor booking={r} busy={busy} action={action} />
+            {r.kind !== "transfer" && <PickupEditor booking={r} busy={busy} action={action} />}
             <TripInfoNotes booking={r} as="p" pickup={false} />
-            {r.transfer && (
+            {r.transfer && r.kind !== "transfer" && (
               <p className="row-note">
                 Transfer: {r.transfer.pointLabel}
                 {r.transfer.destinationLabel
@@ -1494,7 +1547,7 @@ function BookingControls({
             <strong>{currency(r.balance_due || 0)}</strong>
           </div>
           <div>
-            <span>Onay için kapora</span>
+            <span>{r.kind === "transfer" ? "Tam ödeme (online)" : "Onay için kapora"}</span>
             <strong>{currency(r.deposit)}</strong>
           </div>
         </div>

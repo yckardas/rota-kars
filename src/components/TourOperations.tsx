@@ -6,6 +6,7 @@ import { SeatMap } from "./SeatMap";
 import type { Tour, VehicleModel } from "../lib/types";
 import { TransferEditor } from "./admin/TransferEditor";
 import { emptyTransfer } from "../lib/transfer";
+import { TransferServiceSettings } from "./admin/TransferServiceSettings";
 export function TourOperations({ onChange }: { onChange: () => void }) {
   const [tours, setTours] = useState<Tour[]>([]),
     [models, setModels] = useState<VehicleModel[]>([]),
@@ -65,6 +66,7 @@ export function TourOperations({ onChange }: { onChange: () => void }) {
   }
   return (
     <>
+      <TransferServiceSettings />
       <div className="operations-intro">
         <Bus size={23} />
         <p>
