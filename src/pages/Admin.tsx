@@ -56,7 +56,7 @@ import {
   PushSettings,
   SessionList,
 } from "../components/admin/MobileApp";
-import { disablePush, enablePush, isNativeApp, onAppNotificationOpen, registerAppWorker } from "../lib/native";
+import { disablePush, enablePush, onAppNotificationOpen, registerAppWorker } from "../lib/native";
 import { TourOperations } from "../components/TourOperations";
 import { InstagramManager } from "../components/InstagramManager";
 import {
@@ -360,17 +360,20 @@ function AdminPanel({
   return (
     <div className={"admin-shell" + (moreOpen ? " more-open" : "")}>
       <aside className="admin-sidebar" id="admin-more-menu">
-        {isNativeApp() ? (
-          <span className="admin-wordmark">
-            ROTA KARS
-            <small>Acente yönetimi</small>
-          </span>
-        ) : (
-          <Link to="/" className="admin-wordmark" aria-label="Rota Kars ana sayfa">
-            ROTA KARS
-            <small>Acente yönetimi</small>
-          </Link>
-        )}
+        {/* Logo panelin açılış sekmesine döner (siteye değil); yeni sekmede açma çalışmaya devam eder. */}
+        <Link
+          to={"/yonetim?sekme=" + tabs[0][0]}
+          className="admin-wordmark"
+          aria-label="Yönetim paneli ana sayfa"
+          onClick={(e) => {
+            if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            e.preventDefault();
+            pick(tabs[0][0]);
+          }}
+        >
+          ROTA KARS
+          <small>Acente yönetimi</small>
+        </Link>
         <button className="admin-search-button" onClick={() => setPalette(true)}>
           <Search size={16} />
           <span>Ara veya git…</span>
