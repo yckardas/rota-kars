@@ -3211,3 +3211,123 @@ html:has(.kp .site-header) {
     padding: 18px;
   }
 }
+
+/* ---------- Başlık: dil seçici ve üye girişi hap düğme ----------
+   "Birlikte planlayalım" ile aynı hap dili, ama renkte ona üstünlük vermeden:
+   üye girişi koyu mürekkep dolgulu, dil seçici açık zeminli iki parçalı anahtar
+   (etkin dil koyu dolgulu). Kırmızı yalnız asıl eylemde kalır. */
+.kp .header-actions {
+  gap: 10px;
+}
+@media (min-width: 1351px) {
+  .kp .main-nav {
+    gap: 16px;
+  }
+}
+/* Menü ile düğmelerin yan yana sığmakta zorlandığı tablet aralığı. */
+@media (min-width: 701px) and (max-width: 860px) {
+  .kp .header-inner {
+    gap: 12px;
+  }
+  .kp .main-nav {
+    gap: 8px;
+  }
+}
+.kp .lang-switch-header {
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: #eef0f4;
+  box-shadow: inset 0 0 0 1px var(--kp-rule);
+}
+.kp .lang-switch-header a {
+  display: inline-grid;
+  place-items: center;
+  min-width: 36px;
+  min-height: 34px;
+  padding: 0 8px;
+  border-radius: 999px;
+  color: var(--kp-ink-2);
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+.kp .lang-switch-header a:hover {
+  color: var(--kp-ink);
+  background: #fff;
+}
+.kp .lang-switch-header a[aria-current] {
+  background: var(--kp-ink);
+  color: #fff;
+  text-decoration: none;
+  box-shadow: 0 6px 14px -8px rgba(27, 31, 42, 0.7);
+}
+.kp .member-header-link {
+  min-height: 42px;
+  padding: 0 18px 0 14px;
+  border-radius: 999px;
+  background: var(--kp-ink);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  gap: 8px;
+  box-shadow: 0 14px 26px -16px rgba(27, 31, 42, 0.75);
+  transition:
+    transform 0.3s var(--rk-ease),
+    background 0.2s ease,
+    box-shadow 0.3s var(--rk-ease);
+}
+.kp .member-header-link:hover {
+  background: var(--rk-night);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 18px 30px -14px rgba(22, 34, 74, 0.8);
+}
+.kp .member-header-link:active {
+  transform: translateY(0) scale(0.98);
+}
+.kp .member-header-link:focus-visible,
+.kp .lang-switch-header a:focus-visible {
+  outline: 2px solid var(--rk-flame);
+  outline-offset: 2px;
+}
+/* Yazı gizlendiğinde (1050px altı) üye girişi yuvarlak simge düğmesi olur. */
+@media (max-width: 1050px) {
+  .kp .header-actions {
+    gap: 8px;
+  }
+  .kp .member-header-link {
+    width: 38px;
+    min-height: 38px;
+    padding: 0;
+    justify-content: center;
+  }
+  .kp .lang-switch-header {
+    padding: 3px;
+    font-size: 12px;
+  }
+  .kp .lang-switch-header a {
+    min-width: 30px;
+    min-height: 30px;
+    padding: 0 6px;
+  }
+}
+@media (max-width: 700px) {
+  .kp .member-header-link {
+    width: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    margin: 0 4px 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kp .member-header-link,
+  .kp .lang-switch-header a {
+    transition: none;
+  }
+  .kp .member-header-link:hover {
+    transform: none;
+  }
+}
