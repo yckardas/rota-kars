@@ -71,9 +71,9 @@ export const services = [
     imageAlt: "Rota Kars Tur logolu turizm otobüsü",
     text: "Özel üretilmiş, prestijli ve konforlu VIP araç filomuzla dilediğiniz destinasyona eğitimli personelle ulaşım.",
     gallery: [
-      { src: "/images/araclar/mercedes-sprinter.webp", alt: "Mercedes-Benz Sprinter VIP minibüs" },
+      { src: "/images/araclar/vito-vip-35bmt691.webp", alt: "Mercedes-Benz Vito lüks VIP araç" },
+      { src: "/images/araclar/vito-vip-34ehb934.webp", alt: "Mercedes-Benz Vito lüks VIP araç" },
       { src: "/images/araclar/fiat-egea.webp", alt: "Fiat Egea Cross binek araç" },
-      { src: "/images/araclar/renault-fluence.webp", alt: "Renault Fluence binek araç" },
     ],
   },
   {
@@ -85,6 +85,7 @@ export const services = [
     gallery: [
       { src: "/images/araclar/otokar-midibus.webp", alt: "Otokar midibüs" },
       { src: "/images/araclar/isuzu-midibus.webp", alt: "Isuzu midibüs" },
+      { src: "/images/araclar/vito-vip-34zf.webp", alt: "Mercedes-Benz Vito lüks VIP araç" },
     ],
   },
   {
