@@ -117,6 +117,11 @@ export function InterestForm({
               ? t("Bu seferde yer açılınca size hemen e-posta göndereceğiz. Yer, ilk rezervasyonu tamamlayana ayrılır.")
               : t("Yeterli talep oluşunca tur kesinleşir; tarihleri ve rezervasyon bağlantısını e-postanıza göndeririz.")}
           </p>
+          <p className="muted">
+            {t(
+              "Bu numara bir rezervasyon değildir. Kaydınızın durumunu Rezervasyonum sayfasında bu numara ve e-posta adresinizle görebilirsiniz.",
+            )}
+          </p>
           <button className="btn" onClick={onClose}>
             {t("Tamam")}
           </button>

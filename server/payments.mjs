@@ -35,6 +35,8 @@ const SESSION_MS = 30 * 60 * 1000;
 // Kartı veren bankada (SMS adımı) geçen süre için oturum en az bu kadar açık kalır.
 const BANK_STEP_MS = 15 * 60 * 1000;
 const ATTEMPTS_PER_RESERVATION = 6;
+// Ödeme sonucu sayfasındaki bilet, ödemeden sonra bu süre e-posta sorulmadan açılır.
+const PAID_TICKET_MS = 24 * 3600000;
 // Tam doğrulanmış kart sahibi: Visa/Troy 05, Mastercard 02.
 const FULL_AUTH_ECI = ["05", "02"];
 export const ATTEMPT_ID = /^PY[0-9A-F]{24}$/;
@@ -175,7 +177,13 @@ export function createPayments(
   };
   // Online ödenebilecek tutar: ön rezervasyonda kalan kapora, onaylanmış
   // rezervasyonda kalan bakiye (kapora ödendikten sonra "kalanı kartla öde").
-  const payable = (r) => ["pending_agency", "confirmed"].includes(r.status);
+  // İptal talebi bekleyen rezervasyonda ödeme alınmaz (acente talebi sonuçlandırana
+  // kadar); talep geri alınırsa ödeme yeniden açılır.
+  const cancelPending = (r) =>
+    Boolean(r.cancellation_requested_at) &&
+    ["pending_agency", "confirmed"].includes(r.status);
+  const payable = (r) =>
+    ["pending_agency", "confirmed"].includes(r.status) && !cancelPending(r);
   const due = (r) =>
     r.status === "confirmed"
       ? Math.max(0, r.balance_due)
@@ -426,6 +434,11 @@ export function createPayments(
   const openSession = async (r, lang) => {
     const kind = provider ?? (config.preview ? previewProvider : null);
     if (!kind) throw new AppError(503, config.message);
+    if (cancelPending(r))
+      throw new AppError(
+        409,
+        "İptal talebiniz acente değerlendirmesini bekliyor; bu sırada ödeme alınmaz.",
+      );
     if (!payable(r))
       throw new AppError(409, "Bu rezervasyon için online ödeme alınamaz.");
     if (r.status === "confirmed" && r.date < localDate(clock()))
@@ -548,6 +561,18 @@ export function createPayments(
               }
             : null,
       };
+    },
+    // Ödeme sonrası bilet: ödenmiş oturumun sahibi (oturum kimliği yalnız ödemeyi yapan
+    // tarayıcıdadır, 192 bit rastgele) e-posta yazmadan rezervasyonunu görür. Kişisel
+    // veri içerdiğinden ödemeden sonra yalnız sınırlı bir süre açıktır.
+    async paidReservation(id) {
+      const s = await getSession(id);
+      if (s.status !== "paid" || !(s.finished_at >= clock() - PAID_TICKET_MS))
+        throw new AppError(
+          404,
+          "Bilet bu bağlantıyla artık açılamıyor. Rezervasyonum sayfasından sorgulayın.",
+        );
+      return workflow.get(s.reference);
     },
     // Ödeme ekranında ödeme planı değişir (kapora ↔ tam ödeme): rezervasyonun
     // kaporası ve oturumun tutarı güncellenir; metinler değiştiği için ödeme
@@ -880,7 +905,12 @@ export function createPayments(
         s = await getSession(result.sessionId);
       if (s.status !== "pending")
         return { status: s.status, reference: s.reference };
-      if (!result.paid || s.expires_at < clock()) {
+      // Oturum açıldıktan sonra iptal talebi geldiyse (ya da iptal edildiyse) ödeme işlenmez.
+      if (
+        !result.paid ||
+        s.expires_at < clock() ||
+        !payable(await workflow.get(s.reference))
+      ) {
         await db.update(
           "payment_sessions",
           { _id: s.id },

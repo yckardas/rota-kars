@@ -235,8 +235,8 @@ export const site: Record<string, string> = {
   "Bilgi alın": "Ask us",
   // Rezervasyonum
   "Rezervasyonunuz burada.": "Your booking is right here.",
-  "Ön rezervasyon referansınız ve e-posta adresinizle sorgulayın.":
-    "Look it up with your pre-booking reference and email address.",
+  "Rezervasyon (RK-…) ya da ücretsiz ön kayıt (BK-…) numaranız ve e-posta adresinizle sorgulayın.":
+    "Look it up with your booking (RK-…) or free pre-registration (BK-…) number and your email address.",
   "Referans numarası": "Reference number",
   "E-posta adresiniz": "Your email address",
   Sorgula: "Look up",
@@ -249,6 +249,55 @@ export const site: Record<string, string> = {
   "İptali onayla": "Confirm cancellation",
   Vazgeç: "Never mind",
   "İptal talebi oluşturmak istiyorum": "I’d like to request a cancellation",
+  "İptal talebiniz acenteye iletilecek.":
+    "Your cancellation request will be sent to the agency.",
+  "Bugün iptal ederseniz ödediğiniz tutarın tamamı ({paid}) iade edilir.":
+    "If you cancel today, everything you paid ({paid}) is refunded.",
+  "Kesintisiz iptal süresinin sonu: {deadline}.":
+    "Free cancellation ends: {deadline}.",
+  "Kesintisiz iptal süresi doldu: kapora ({retained}) iade edilmez, {refund} iade edilir.":
+    "The free cancellation period is over: the deposit ({retained}) is not refunded; {refund} is refunded.",
+  "Kesintisiz iptal süresi doldu: ödediğiniz {paid} kapora kapsamında kaldığı için iade edilmez.":
+    "The free cancellation period is over: the {paid} you paid is within the deposit, so it is not refunded.",
+  "İade, acente iptali onayladıktan sonra en geç {days} gün içinde ödemenin yapıldığı yönteme (kartla ödediyseniz aynı karta) yapılır.":
+    "Once the agency approves the cancellation, the refund is made within {days} days at the latest, using the original payment method (to the same card if you paid by card).",
+  "Ödeme yapmadığınız için iade edilecek bir tutar yok.":
+    "You haven’t paid anything, so there is nothing to refund.",
+  "İptal ve iade koşullarına göre iade edilecek tutar: {refund}.":
+    "Refund due under the cancellation and refund terms: {refund}.",
+  "Talebiniz kesintisiz iptal süresi dolduktan sonra ulaştığı için iptal ve iade koşullarına göre kapora ({retained}) iade edilmez.":
+    "Your request arrived after the free cancellation period, so under the cancellation and refund terms the deposit ({retained}) is not refunded.",
+  "İptal talebi alındı": "Cancellation requested",
+  "İptal talebiniz alındı ve acente değerlendirmesini bekliyor. Bu süreçte ödeme alınmaz.":
+    "We’ve received your cancellation request and it is awaiting agency review. No payments are taken in the meantime.",
+  "İptal talebiniz acente değerlendirmesini bekliyor; bu sırada ödeme alınmaz.":
+    "Your cancellation request is awaiting agency review; no payments are taken in the meantime.",
+  // Rezervasyonum: ücretsiz ön kayıt / bekleme listesi (BK-…)
+  "Bekleme listesi": "Waiting list",
+  "Ön kayıt numarası": "Pre-registration number",
+  "Bekleme listesi numarası": "Waiting list number",
+  Durum: "Status",
+  Kişi: "Guests",
+  "Tarih henüz belli değil": "Date not set yet",
+  Bekliyor: "Waiting",
+  "Rezervasyon açıldı": "Booking is open",
+  "Rezervasyona dönüştü": "Booked",
+  "Listeden çıkıldı": "Left the list",
+  "Bu bir rezervasyon değildir: koltuk tutulmaz, ödeme alınmaz.":
+    "This is not a booking: no seat is held and no payment is taken.",
+  "Rezervasyon açıldı ve size e-postayla haber verdik. Koltuklar ilk rezervasyonu tamamlayana ayrılır.":
+    "Booking is open and we’ve emailed you. Seats go to whoever completes their booking first.",
+  "Bu kayıtla rezervasyon yaptınız; rezervasyonunuzu RK- ile başlayan numaranızla sorgulayın.":
+    "You’ve booked from this registration; look up your booking with your number starting RK-.",
+  "Bu listeden çıktınız; size bu konuda e-posta göndermeyeceğiz.":
+    "You’ve left this list; we won’t email you about it.",
+  "Yeterli talep oluşunca tur kesinleşir; rezervasyon açıldığında size e-postayla haber veririz.":
+    "The tour is confirmed once there is enough demand; we’ll email you when booking opens.",
+  "Bu seferde yer açılınca size e-postayla haber veririz. Yer, ilk rezervasyonu tamamlayana ayrılır.":
+    "We’ll email you when a seat opens on this departure. The seat goes to whoever completes their booking first.",
+  "Rezervasyon yap": "Book now",
+  "Bu numara bir rezervasyon değildir. Kaydınızın durumunu Rezervasyonum sayfasında bu numara ve e-posta adresinizle görebilirsiniz.":
+    "This number is not a booking. You can check your registration on the My booking page with this number and your email address.",
   // Hakkımızda
   "Bu coğrafyanın": "We are part",
   "bir parçasıyız.": "of this land.",
@@ -296,6 +345,27 @@ export const site: Record<string, string> = {
     "It cannot be used as a confirmed ticket until payment and agency approval are complete.",
   "Katılım kaydedildi": "Attendance recorded",
   "Yönetici: katılımı kaydet": "Admin: record attendance",
+  // Onaylı bilet ve ödeme sonucu: takvim, paylaşım, sonraki adımlar
+  "Takvime ekle": "Add to calendar",
+  "WhatsApp'tan paylaş": "Share on WhatsApp",
+  "Rota Kars Turizm ile {tour} turuna katılıyorum: {date}, hareket {time}.":
+    "I’m joining the {tour} tour with Rota Kars Turizm: {date}, departing {time}.",
+  "Buluşma: {pickup}.": "Meeting point: {pickup}.",
+  Biletiniz: "Your ticket",
+  "Bu ödeme": "This payment",
+  "Toplam ödenen": "Total paid",
+  "{paid} / toplam {total}": "{paid} of {total}",
+  "Yok, tamamı ödendi": "None, paid in full",
+  "Hareket ve buluşma": "Departure and meeting point",
+  "Şimdi ne olacak?": "What happens next?",
+  "E-posta adresinize onay e-postası, tur hizmet sözleşmesi ve ön bilgilendirme formu gönderilir. QR kodlu biletiniz bu sayfada da hazır.":
+    "A confirmation email with the tour service contract and pre-information form is sent to your address. Your QR ticket is also ready on this page.",
+  "Kalan {amount} tur günü hareketten önce ödenir: Rezervasyonum sayfasından kartla ya da nakit veya havale/EFT ile.":
+    "The remaining {amount} is due on the tour day before departure: by card from the My booking page, or in cash or by bank transfer.",
+  "Tur günü hareket saati {time}. Buluşma noktasında hazır olun; binişte rehberimiz QR kodlu biletinizi okutur.":
+    "Departure on the tour day is at {time}. Please be ready at the meeting point; our guide scans your QR ticket at boarding.",
+  "Planınız değişirse Rezervasyonum sayfasından iptal talebi oluşturabilirsiniz; süresi içinde ödediğiniz tutarın tamamı iade edilir. Kesintisiz iptal süresinin sonu: {deadline}.":
+    "If your plans change, you can request a cancellation from the My booking page; within the free period everything you paid is refunded. Free cancellation ends: {deadline}.",
   // Yorumlar
   "Müşterilerimizin gözünden Rota Kars": "Rota Kars through our guests’ eyes",
   "Rota Kars ile yola çıkanların gözünden":

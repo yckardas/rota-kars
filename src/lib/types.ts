@@ -232,6 +232,15 @@ export type Reservation = {
   pickup?: string;
   guide_name?: string;
   cancellation_requested_at?: number;
+  // Müşteri iptal ederse iptal ve iade koşullarına göre iade (server/app.mjs customerReceipt).
+  cancellation_quote?: {
+    net_paid: number;
+    refund: number;
+    retained: number;
+    late: boolean;
+    free_until: number;
+    refund_days: number;
+  };
   checked_in_at?: number;
   created_at?: number;
   notes?: string;

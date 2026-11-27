@@ -7,6 +7,8 @@ import { business } from "./catalog.mjs";
 
 export const LEGAL_VERSION = "2026-11-16";
 export const DEFAULT_DEPOSIT_PERCENT = 30;
+// İptal kesinleştikten sonra iadenin en geç yapılacağı süre (gün).
+export const REFUND_DAYS = 14;
 
 export const tl = (kurus) =>
   (Number(kurus || 0) / 100).toLocaleString("tr-TR", {
@@ -111,7 +113,7 @@ export function cancellationRules(
     "Haber vermeden tura katılmazsanız veya buluşma saatinde hazır bulunmazsanız (gelmeme) ödediğiniz tutar iade edilmez.",
     "Süre, iptal talebinizin bize ulaştığı an ile turun hareket saati arasında hesaplanır. İptal talebi Rezervasyonum sayfasından, e-postayla veya telefonla iletilebilir.",
     "Turu biz iptal edersek (asgari katılımcıya ulaşılamaması, hava, yol, sınır koşulları veya resmî karar) ödediğiniz tutarın tamamını kesintisiz geri alırsınız ya da dilerseniz başka bir tarihe geçersiniz.",
-    "İadeler, iptal kesinleştikten sonra en geç 14 gün içinde ödemenin yapıldığı yönteme uygun olarak yapılır: kartla ödendiyse aynı karta, havale ile ödendiyse bildirdiğiniz IBAN'a. Karta iadenin hesaba yansıma süresi bankanıza bağlıdır. Kesintisiz iade hâllerinde hiçbir kesinti yapılmaz.",
+    `İadeler, iptal kesinleştikten sonra en geç ${REFUND_DAYS} gün içinde ödemenin yapıldığı yönteme uygun olarak yapılır: kartla ödendiyse aynı karta, havale ile ödendiyse bildirdiğiniz IBAN'a. Karta iadenin hesaba yansıma süresi bankanıza bağlıdır. Kesintisiz iade hâllerinde hiçbir kesinti yapılmaz.`,
   ];
 }
 

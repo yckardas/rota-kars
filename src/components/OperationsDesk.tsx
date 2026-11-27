@@ -788,6 +788,7 @@ const AUDIT_LABELS: Record<string, string> = {
   payment: "Tahsilat kaydedildi",
   refund: "İade kaydedildi",
   cancellation_requested: "Müşteri iptal talep etti",
+  cancellation_dismissed: "İptal talebi geri alındı",
   cancelled: "İptal edildi",
   moved: "Tarih/koltuk değiştirildi",
   passengers_updated: "Yolcu adları güncellendi",
@@ -1433,7 +1434,29 @@ function BookingControls({
               <p className="row-note">Yolcu çıkarma kesintisi (toplama dahil): {currency(r.cancellation_fee || 0)}</p>
             )}
             {Boolean(r.cancellation_requested_at) && r.status !== "cancelled" && (
-              <p className="error">Müşteri iptal talep etti ({stamp(r.cancellation_requested_at)}).</p>
+              <p className="error">
+                Müşteri iptal talep etti ({stamp(r.cancellation_requested_at)}). Talep sonuçlanana kadar kartla
+                ödeme alınmaz.{" "}
+                {["pending_agency", "confirmed"].includes(r.status) && (
+                  <button
+                    type="button"
+                    className="text-link"
+                    disabled={busy}
+                    onClick={async () => {
+                      if (
+                        await feedback.confirm({
+                          title: "İptal talebi geri alınsın mı?",
+                          body: "Müşteri iptalden vazgeçtiyse talebi kaldırın. Rezervasyon olduğu gibi kalır; kalan ödeme Rezervasyonum'dan ve ödeme bağlantısıyla yeniden yapılabilir.",
+                          confirmLabel: "Talebi geri al",
+                        })
+                      )
+                        await action(r.reference, "cancellation-request/dismiss", {}, "İptal talebi geri alındı.");
+                    }}
+                  >
+                    Talebi geri al
+                  </button>
+                )}
+              </p>
             )}
           </div>
           <div className="booking-contact">
@@ -1539,9 +1562,12 @@ function BookingControls({
             </button>
           </div>
         )}
-        {current === "payment" && paymentsOn && ["pending_agency", "confirmed"].includes(r.status) && Number(r.balance_due) > 0 && (
-          <PaymentLink booking={r} />
-        )}
+        {current === "payment" &&
+          paymentsOn &&
+          ["pending_agency", "confirmed"].includes(r.status) &&
+          Number(r.balance_due) > 0 &&
+          // İptal talebi bekleyen kayda ödeme bağlantısı verilmez (sunucu da reddeder).
+          !r.cancellation_requested_at && <PaymentLink booking={r} />}
         {current === "refund" && hasCard && refundKind === "card" ? (
           // Kayıtlar değişince (iptal penceresinden iade gibi) kart ödemeleri yeniden yüklenir.
           <CardRefunds key={r.ledger?.length || 0} reference={r.reference} onChange={reload} />

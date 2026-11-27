@@ -16,8 +16,17 @@ import {
 } from "../lib/i18n";
 import { CreditCard, LoaderCircle, LockKeyhole, ShieldCheck } from "lucide-react";
 import { api, post } from "../lib/api";
-import { currency, type Catalog, type Reservation } from "../lib/types";
-import { StatusStamp } from "../components/ReservationTicket";
+import {
+  currency,
+  dateLabel,
+  type Catalog,
+  type Reservation,
+} from "../lib/types";
+import {
+  ReservationTicket,
+  StatusStamp,
+} from "../components/ReservationTicket";
+import { TicketActions } from "../components/TicketActions";
 import { Modal } from "../components/Modal";
 import {
   PAYMENT_TERMS_MISSING,
@@ -81,9 +90,11 @@ export function PayDeposit({
     ? Math.max(0, r.balance_due ?? r.total - (r.net_paid || 0))
     : Math.max(0, r.deposit - (r.net_paid || 0));
   const preview = !catalog.payment.enabled && catalog.payment.preview;
+  // İptal talebi bekleyen kayıtta ödeme alınmaz (sunucu da reddeder).
   if (
     !(catalog.payment.enabled || preview) ||
     !(r.status === "pending_agency" || balance) ||
+    r.cancellation_requested_at ||
     !due
   )
     return null;
@@ -907,10 +918,13 @@ export function BalancePayment() {
     </section>
   );
 }
-export function PaymentResult() {
+export function PaymentResult({ catalog }: { catalog: Catalog }) {
   const { t } = useLang();
   const { id } = useParams(),
     [s, setS] = useState<Session | null>(null),
+    // Ödenmiş oturumun bileti: oturum kimliğiyle, e-posta sorulmadan (24 saat).
+    [ticket, setTicket] = useState<Reservation | null>(null),
+    ticketRef = useRef<HTMLElement>(null),
     [error, setError] = useState("");
   useEffect(() => {
     let alive = true,
@@ -932,72 +946,202 @@ export function PaymentResult() {
   }, [id]);
   const paid = s?.status === "paid",
     unverified = s?.status === "unverified";
+  useEffect(() => {
+    if (!paid) return;
+    api<Reservation>("/payments/sessions/" + id + "/reservation")
+      .then(setTicket)
+      .catch(() => setTicket(null));
+  }, [paid, id]);
+  const sum = s?.summary,
+    rest = ticket
+      ? Math.max(0, ticket.balance_due ?? 0)
+      : sum
+        ? Math.max(0, sum.total - sum.paid)
+        : 0,
+    quote = ticket?.cancellation_quote,
+    tour = catalog.tours.find((x) => x.id === ticket?.tourId),
+    canShare =
+      ticket?.status === "confirmed" && !ticket.cancellation_requested_at;
   return (
-    <section className="container payment-page">
-      <article className="ticket-check payment-card">
-        <div className="ticket-check-head">
-          {s && (
-            <StatusStamp
-              status={
-                paid
-                  ? s.reservationStatus
-                  : s.status === "failed"
-                    ? "expired"
-                    : "pending_agency"
-              }
-            />
+    <>
+      <section
+        className={"container payment-page" + (ticket ? " has-ticket" : "")}
+      >
+        <article className="ticket-check payment-card">
+          <div className="ticket-check-head">
+            {s && (
+              <StatusStamp
+                status={
+                  paid
+                    ? s.reservationStatus
+                    : s.status === "failed"
+                      ? "expired"
+                      : "pending_agency"
+                }
+              />
+            )}
+          </div>
+          <h1>
+            {!s
+              ? t("Ödemeniz kontrol ediliyor…")
+              : paid
+                ? t("Ödemeniz alındı.")
+                : unverified
+                  ? t("Ödemeniz kontrol ediliyor.")
+                  : s.status === "failed" || s.expired
+                    ? t("Ödeme tamamlanamadı.")
+                    : t("Ödemeniz bekleniyor…")}
+          </h1>
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
           )}
-        </div>
-        <h1>
-          {!s
-            ? t("Ödemeniz kontrol ediliyor…")
-            : paid
-              ? t("Ödemeniz alındı.")
-              : unverified
-                ? t("Ödemeniz kontrol ediliyor.")
-                : s.status === "failed" || s.expired
-                ? t("Ödeme tamamlanamadı.")
-                : t("Ödemeniz bekleniyor…")}
-        </h1>
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
-        {s && (
-          <p className="muted">
-            {paid
-              ? s.summary?.balance
-                ? t("{amount} tahsil edildi. {reference} numaralı rezervasyonunuzun kalan ödemesi tamamlandı.", {
-                    amount: currency(s.amount),
-                    reference: s.reference,
-                  })
-                : t(
-                    "{amount} tahsil edildi. {reference} numaralı rezervasyonunuz onaylandı; QR kodlu biletiniz artık geçerli.",
-                    { amount: currency(s.amount), reference: s.reference },
-                  )
-              : unverified
-                ? t(
-                    "Bankadan ödemenizin sonucu alınamadı. Kartınızdan çekim yapıldıysa rezervasyonunuz korunuyor; ekibimiz kontrol edip sizi arayacak.",
-                  )
-                : s.status === "failed" || s.expired
-                ? t(
-                    "Kartınızdan para çekilmedi. Rezervasyonum sayfasından yeniden deneyebilir ya da bizi arayabilirsiniz.",
-                  )
-                : t(
-                    "Ödeme kuruluşundan onay bekleniyor; bu sayfa kendiliğinden yenilenir.",
+          {s && (
+            <p className="muted">
+              {paid
+                ? s.summary?.balance
+                  ? t(
+                      "{amount} tahsil edildi. {reference} numaralı rezervasyonunuzun kalan ödemesi tamamlandı.",
+                      {
+                        amount: currency(s.amount),
+                        reference: s.reference,
+                      },
+                    )
+                  : t(
+                      "{amount} tahsil edildi. {reference} numaralı rezervasyonunuz onaylandı; QR kodlu biletiniz artık geçerli.",
+                      { amount: currency(s.amount), reference: s.reference },
+                    )
+                : unverified
+                  ? t(
+                      "Bankadan ödemenizin sonucu alınamadı. Kartınızdan çekim yapıldıysa rezervasyonunuz korunuyor; ekibimiz kontrol edip sizi arayacak.",
+                    )
+                  : s.status === "failed" || s.expired
+                    ? t(
+                        "Kartınızdan para çekilmedi. Rezervasyonum sayfasından yeniden deneyebilir ya da bizi arayabilirsiniz.",
+                      )
+                    : t(
+                        "Ödeme kuruluşundan onay bekleniyor; bu sayfa kendiliğinden yenilenir.",
+                      )}
+            </p>
+          )}
+          {paid && sum && (
+            <>
+              <dl className="ticket-lines payment-figures">
+                <div>
+                  <dt>{t("Bu ödeme")}</dt>
+                  <dd>{currency(s.amount)}</dd>
+                </div>
+                <div>
+                  <dt>{t("Toplam ödenen")}</dt>
+                  <dd>
+                    {t("{paid} / toplam {total}", {
+                      paid: currency(ticket?.net_paid ?? sum.paid),
+                      total: currency(ticket?.total ?? sum.total),
+                    })}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{t("Kalan ödeme")}</dt>
+                  <dd>{rest ? currency(rest) : t("Yok, tamamı ödendi")}</dd>
+                </div>
+                <div>
+                  <dt>{t("Hareket ve buluşma")}</dt>
+                  <dd>
+                    {dateLabel(sum.date)} · {sum.startTime}
+                    {sum.pickup && (
+                      <>
+                        <br />
+                        {sum.pickup}
+                      </>
+                    )}
+                  </dd>
+                </div>
+              </dl>
+              <h2 className="payment-next-title">{t("Şimdi ne olacak?")}</h2>
+              <ol className="payment-next">
+                {!sum.balance && (
+                  <li>
+                    {t(
+                      "E-posta adresinize onay e-postası, tur hizmet sözleşmesi ve ön bilgilendirme formu gönderilir. QR kodlu biletiniz bu sayfada da hazır.",
+                    )}
+                  </li>
+                )}
+                {rest > 0 && (
+                  <li>
+                    {t(
+                      "Kalan {amount} tur günü hareketten önce ödenir: Rezervasyonum sayfasından kartla ya da nakit veya havale/EFT ile.",
+                      { amount: currency(rest) },
+                    )}
+                  </li>
+                )}
+                <li>
+                  {t(
+                    "Tur günü hareket saati {time}. Buluşma noktasında hazır olun; binişte rehberimiz QR kodlu biletinizi okutur.",
+                    { time: sum.startTime },
                   )}
-          </p>
-        )}
-        {s && (
-          <Link
-            className="btn"
-            to={"/rezervasyonum?ref=" + encodeURIComponent(s.reference)}
-          >
-            {paid ? t("Biletimi göster") : t("Rezervasyonuma dön")}
-          </Link>
-        )}
-      </article>
-    </section>
+                </li>
+                {quote && !quote.late && (
+                  <li>
+                    {t(
+                      "Planınız değişirse Rezervasyonum sayfasından iptal talebi oluşturabilirsiniz; süresi içinde ödediğiniz tutarın tamamı iade edilir. Kesintisiz iptal süresinin sonu: {deadline}.",
+                      { deadline: stampLabel(quote.free_until) },
+                    )}
+                  </li>
+                )}
+              </ol>
+            </>
+          )}
+          {s &&
+            (paid && ticket ? (
+              <button
+                className="btn"
+                onClick={() =>
+                  ticketRef.current?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  })
+                }
+              >
+                {t("Biletimi göster")}
+              </button>
+            ) : (
+              <Link
+                className="btn"
+                to={"/rezervasyonum?ref=" + encodeURIComponent(s.reference)}
+              >
+                {paid ? t("Biletimi göster") : t("Rezervasyonuma dön")}
+              </Link>
+            ))}
+          {ticket && canShare && (
+            <TicketActions reservation={ticket} tour={tour} />
+          )}
+        </article>
+      </section>
+      {ticket && (
+        <section
+          className="container payment-ticket"
+          id="bilet"
+          ref={ticketRef}
+          aria-label={t("Biletiniz")}
+        >
+          <ReservationTicket
+            reservation={ticket}
+            catalog={catalog}
+            actions={false}
+          />
+        </section>
+      )}
+    </>
   );
 }
+// Kesintisiz iptal süresinin sonu (Türkiye saatiyle gün, ay, saat).
+export const stampLabel = (ms: number) =>
+  new Date(ms).toLocaleString(localeOf(), {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Istanbul",
+  });

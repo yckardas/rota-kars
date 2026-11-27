@@ -162,6 +162,7 @@ export async function createInterest(db, { clock, tx, departures, operations, no
             body: en
               ? `Hello,\nYou've been added to the list for ${tourNameEn(input.tourId)} as ${input.count} ${input.count === 1 ? "person" : "people"}. Reference: ${reference}\n\n` +
                 "We'll email you as soon as new dates open or pre-registration starts for this tour. It's free; no seat is held and no payment is taken." +
+                `\n\nThis number is not a booking. You can check the status of your registration on the My booking page with this number and your email address: ${base()}/en/rezervasyonum?ref=${reference}` +
                 `\n\nIf you're no longer interested, leave the list here: ${cancelUrl(row)}`
               : `Merhaba,\n${what} ${input.count} kişi olarak eklendiniz. Referans: ${reference}\n\n` +
                 (input.kind === "notify"
@@ -172,6 +173,7 @@ export async function createInterest(db, { clock, tx, departures, operations, no
                       (departure
                         ? ` Bu tarih ${ops.demand.threshold} kişiye ulaşınca kesinleşir; kararı en geç ${longDate(localDate(decisionAt(input.tourId, departure)))} tarihinde bildiririz.`
                         : "")) +
+                `\n\nBu numara bir rezervasyon değildir. Kaydınızın durumunu Rezervasyonum sayfasında bu numara ve e-posta adresinizle görebilirsiniz: ${base()}/rezervasyonum?ref=${reference}` +
                 `\n\nArtık ilgilenmiyorsanız listeden çıkmak için: ${cancelUrl(row)}`,
             kind: "interest_" + input.kind,
             dedupeKey: "interest:" + row.id,
@@ -199,6 +201,42 @@ export async function createInterest(db, { clock, tx, departures, operations, no
         }
         return { reference, status: "waiting", updated: Boolean(existing) };
       });
+    },
+    // "Rezervasyonum": ön kayıt / bekleme numarası (BK- + kaydın ilk 8 hanesi) ve e-postayla
+    // kaydın durumu. Numara rezervasyon değildir; e-posta eşleşmeden bilgi verilmez.
+    async lookup(reference, email) {
+      const prefix = /^BK-([0-9A-F]{8})$/.exec(
+        String(reference).toUpperCase(),
+      )?.[1];
+      const row = prefix
+        ? await db.one("interest_list", {
+            email: String(email).trim().toLowerCase(),
+            _id: { $regex: "^" + prefix.toLowerCase() },
+          })
+        : null;
+      if (!row)
+        throw new AppError(
+          404,
+          "Bu numara ve e-posta ile bir ön kayıt bulunamadı.",
+        );
+      const d = row.departure_id
+        ? await departures
+            .get(row.departure_id, { allowClosed: true, allowPast: true })
+            .catch(() => null)
+        : null;
+      return {
+        reference: "BK-" + prefix,
+        kind: row.kind,
+        status: row.status,
+        tourId: row.tour_id,
+        tourName: tourName(row.tour_id),
+        date: d?.date || row.departure_date || null,
+        startTime: d?.start_time || null,
+        preferredDate: row.preferred_date || "",
+        count: row.count,
+        createdAt: row.created_at,
+        notifiedAt: row.notified_at || null,
+      };
     },
     // Talep toplama özeti (site ve panel): bekleyen ön kayıtların toplam kişi sayısı.
     // Tarih verilmezse yalnız tarihsiz kayıtlar sayılır; tarihli sayaçlar tarih başınadır.

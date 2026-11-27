@@ -523,6 +523,27 @@ export async function createWorkflow(
         return updated;
       });
     },
+    // Acente, müşterinin iptalden vazgeçtiğini teyit edince talebi kaldırır; kalan ödeme
+    // (Rezervasyonum, ödeme bağlantısı) yeniden açılır.
+    async dismissCancellation(reference) {
+      return tx(async () => {
+        const r = await api.get(reference);
+        if (
+          !r.cancellation_requested_at ||
+          !["pending_agency", "confirmed"].includes(r.status)
+        )
+          throw new AppError(409, "Bu kayıtta bekleyen bir iptal talebi yok.");
+        await db.update(
+          "reservations",
+          { _id: r.id },
+          { cancellation_requested_at: null },
+        );
+        await audit(r, "cancellation_dismissed", {
+          requestedAt: r.cancellation_requested_at,
+        });
+        return api.get(reference);
+      });
+    },
     // refundNote: panelde iptalle birlikte iade de yapılıyorsa müşteriye giden e-postada
     // "iade ayrıca yürütülür" yerine yazılır.
     async cancel(reference, { refundNote = "" } = {}) {
