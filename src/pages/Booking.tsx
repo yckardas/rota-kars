@@ -1863,7 +1863,6 @@ export function Booking({ catalog }: { catalog: Catalog }) {
           departureId={interest === "waitlist" ? departure?.id : undefined}
           dates={interest === "prereg" ? demandDates : undefined}
           initialDateId={demandPick?.id}
-          allowUndated={tour.mode === "demand"}
           departureLabel={departure ? `${dateLabel(departure.date)} · ${departure.start_time}` : undefined}
           initialCount={count}
           onClose={() => setInterest(null)}
