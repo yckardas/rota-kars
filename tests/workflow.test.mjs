@@ -466,6 +466,53 @@ test("phone passenger list shows bookings by seat with WhatsApp and boarding sta
   assert.equal((await s.workflow.passengerList(d.id)).bookings[0].checkedIn, true);
   await s.workflow.cancel(r.reference).catch(() => {});
 });
+test("QR check-in boards the ticket's seats one by one and the seat list follows", async (t) => {
+  const { s } = await setup(t),
+    d = await departure(s),
+    h = await s.hold(d.id, [3, 4, 5]),
+    r = await s.reserve({
+      holdToken: h.token,
+      name: "Test Yolcu",
+      email: "koltuk@example.com",
+      phone: "05550000000",
+      passengers: ["Ayşe", "Mehmet", "Can"],
+      paymentMode: "deposit",
+    });
+  await pay(s, r);
+  await s.workflow.confirm(r.reference);
+  let info = await s.workflow.ticketDetail(r.ticket_token);
+  assert.deepEqual(info.boardedSeats, []);
+  assert.deepEqual(info.passengers.map((p) => p.boarded), [false, false, false]);
+  // Koltuk verilmezse biletteki tüm koltuklar binmiş sayılır (eski uygulama sürümleri).
+  await s.workflow.checkIn(r.ticket_token);
+  info = await s.workflow.ticketDetail(r.ticket_token);
+  assert.deepEqual(info.boardedSeats, [3, 4, 5]);
+  assert.equal(info.checkedIn, true);
+  // Biri gelmediyse onun koltuğu çıkarılır; kayıt hâlâ "bindi".
+  await s.workflow.checkIn(r.ticket_token, [5, 3]);
+  info = await s.workflow.ticketDetail(r.ticket_token);
+  assert.deepEqual(info.boardedSeats, [3, 5]);
+  assert.deepEqual(info.passengers.map((p) => p.boarded), [true, false, true]);
+  let list = await s.workflow.passengerList(d.id);
+  assert.deepEqual(list.bookings[0].boardedSeats, [3, 5]);
+  // Aynı koltuklar tekrar gönderilirse yeni kayıt düşmez.
+  await s.workflow.checkIn(r.ticket_token, [3, 5]);
+  const events = (await s.workflow.audit(r.reference)).map((a) => a.event);
+  assert.equal(events.filter((e) => e === "checked_in").length, 1);
+  assert.equal(events.filter((e) => e === "boarding_updated").length, 1);
+  // Bilette olmayan koltuk kaydedilmez.
+  await assert.rejects(s.workflow.checkIn(r.ticket_token, [7]), /bilette/);
+  // Yanlış okutma geri alınır: kimse binmemiş olur, "gelmedi" yeniden işaretlenebilir.
+  await s.workflow.checkIn(r.ticket_token, []);
+  info = await s.workflow.ticketDetail(r.ticket_token);
+  assert.equal(info.checkedIn, false);
+  assert.deepEqual(info.boardedSeats, []);
+  // Çıkarılan yolcunun koltuğu binenlerden de düşer.
+  await s.workflow.checkIn(r.ticket_token, [4, 5]);
+  await s.workflow.removePassengers(r.reference, [5], { waive: true });
+  list = await s.workflow.passengerList(d.id);
+  assert.deepEqual(list.bookings[0].boardedSeats, [4]);
+});
 test("seat swap on the same departure keeps the agreed total after the tour price rises", async (t) => {
   const { s } = await setup(t),
     // Fiyatı verilmeyen sefer turun fiyatını izler.

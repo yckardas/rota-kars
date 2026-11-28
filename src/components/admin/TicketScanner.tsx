@@ -10,7 +10,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import { api, post } from "../../lib/api";
-import { currency, dateLabel } from "../../lib/types";
+import { currency, dateLabel, today } from "../../lib/types";
 import { Modal } from "../Modal";
 
 // /api/admin/tickets/:token: rehber ve operasyonun okutma ekranında gördüğü bilet.
@@ -24,6 +24,8 @@ export type TicketDetail = {
   status: string;
   valid: boolean;
   checkedIn: boolean;
+  // Binen koltuklar (okutmada biletten otomatik gelir; gelmeyen çıkarılabilir).
+  boardedSeats: number[];
   contactName: string;
   phone: string;
   whatsapp: string | null;
@@ -32,6 +34,7 @@ export type TicketDetail = {
     name: string;
     nationality: string;
     idLast4: string;
+    boarded: boolean;
   }[];
   notes: string;
   transfer: string;
@@ -49,10 +52,6 @@ const STATUS: Record<string, string> = {
   cancelled: "İptal edildi",
   expired: "Süresi doldu",
   no_show: "Gelmedi",
-};
-const today = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 const time = (ms: number) =>
   new Date(ms).toLocaleTimeString("tr-TR", {
@@ -74,7 +73,6 @@ export function TicketScanner({ onClose }: { onClose: () => void }) {
       token: string;
       info: TicketDetail;
     } | null>(null),
-    [busy, setBusy] = useState(false),
     [done, setDone] = useState(false),
     [round, setRound] = useState(0);
   useEffect(() => {
@@ -113,10 +111,18 @@ export function TicketScanner({ onClose }: { onClose: () => void }) {
             stopped = true;
             stream?.getTracks().forEach((t) => t.stop());
             try {
-              setTicket({
-                token,
-                info: await api<TicketDetail>("/admin/tickets/" + token),
-              });
+              let info = await api<TicketDetail>("/admin/tickets/" + token);
+              // Bugünün onaylı biletinde koltuklar biletten okunur ve hemen "bindi" kaydedilir;
+              // gelmeyen yolcu kartta koltuğuna dokunularak çıkarılır.
+              if (canBoard(info) && !info.checkedIn) {
+                try {
+                  info = await post<TicketDetail>(`/admin/tickets/${token}/check-in`, { seats: info.seats });
+                  setDone(true);
+                } catch (e) {
+                  setMessage((e as Error).message);
+                }
+              }
+              setTicket({ token, info });
               setState("found");
             } catch (e) {
               setMessage((e as Error).message);
@@ -143,20 +149,6 @@ export function TicketScanner({ onClose }: { onClose: () => void }) {
       stream?.getTracks().forEach((t) => t.stop());
     };
   }, [round]);
-  async function checkIn() {
-    if (!ticket) return;
-    setBusy(true);
-    setMessage("");
-    try {
-      const info = await post<TicketDetail>(`/admin/tickets/${ticket.token}/check-in`, {});
-      setTicket({ ...ticket, info });
-      setDone(true);
-    } catch (e) {
-      setMessage((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
   const again = () => {
     setTicket(null);
     setDone(false);
@@ -190,22 +182,25 @@ export function TicketScanner({ onClose }: { onClose: () => void }) {
           </button>
         </div>
       )}
-      {state === "found" && ticket && <TicketCard info={ticket.info} message={message} justBoarded={done} />}
+      {state === "found" && ticket && (
+        <TicketCard
+          token={ticket.token}
+          info={ticket.info}
+          message={message}
+          justBoarded={done}
+          onSaved={(info) => {
+            setMessage("");
+            setTicket({ ...ticket, info });
+          }}
+        />
+      )}
       {state === "found" && ticket && (
         <div className="scan-actions">
-          {ticket.info.checkedIn || done ? (
+          {ticket.info.checkedIn && (
             <p className="boarded-tag">
-              <Check size={18} /> Bindi olarak işaretli
+              <Check size={18} /> {boardedLabel(ticket.info)}
               {ticket.info.checkedInAt ? ` · ${time(ticket.info.checkedInAt)}` : ""}
             </p>
-          ) : (
-            ticket.info.status === "confirmed" &&
-            ticket.info.date === today() && (
-              <button className="btn" onClick={checkIn} disabled={busy}>
-                {busy ? <LoaderCircle className="spin" size={16} /> : <UserCheck size={16} />}
-                Bindi olarak işaretle
-              </button>
-            )
           )}
           <button className="btn btn-outline" onClick={again}>
             Sonraki bileti okut
@@ -217,7 +212,19 @@ export function TicketScanner({ onClose }: { onClose: () => void }) {
 }
 
 // Okutulan biletin kartı: önce geçerli/değil, sonra yolcular, irtibat ve ödeme.
-function TicketCard({ info, message, justBoarded }: { info: TicketDetail; message: string; justBoarded: boolean }) {
+function TicketCard({
+  token,
+  info,
+  message,
+  justBoarded,
+  onSaved,
+}: {
+  token: string;
+  info: TicketDetail;
+  message: string;
+  justBoarded: boolean;
+  onSaved: (info: TicketDetail) => void;
+}) {
   const notToday = info.valid && info.status === "confirmed" && info.date !== today(),
     verdict = !info.valid
       ? {
@@ -231,7 +238,7 @@ function TicketCard({ info, message, justBoarded }: { info: TicketDetail; messag
             tone: "ok",
             icon: <CircleCheck size={30} />,
             title: "Biniş kaydedildi",
-            text: `${info.passengers.length} yolcu bindi.`,
+            text: boardedLabel(info),
           }
         : info.checkedIn
           ? {
@@ -272,21 +279,14 @@ function TicketCard({ info, message, justBoarded }: { info: TicketDetail; messag
       </div>
       <section className="scan-block">
         <h3>
-          Yolcular <span>{info.passengers.length} kişi</span>
+          Yolcular{" "}
+          <span>
+            {info.checkedIn && info.passengers.length
+              ? `${info.boardedSeats.length}/${info.passengers.length} bindi`
+              : `${info.passengers.length} kişi`}
+          </span>
         </h3>
-        <ul className="scan-passengers">
-          {info.passengers.map((p) => (
-            <li key={p.seat}>
-              <span className="scan-seat">{p.seat}</span>
-              <strong>{p.name || "İsim girilmemiş"}</strong>
-              {p.idLast4 && (
-                <small>
-                  {p.nationality === "TR" || !p.nationality ? "T.C." : p.nationality} …{p.idLast4}
-                </small>
-              )}
-            </li>
-          ))}
-        </ul>
+        <SeatBoarding token={token} info={info} onSaved={onSaved} />
       </section>
       <section className="scan-block">
         <h3>İrtibat</h3>
@@ -341,6 +341,137 @@ function TicketCard({ info, message, justBoarded }: { info: TicketDetail; messag
       {message && (
         <p className="error" role="alert">
           {message}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// Biniş yalnız bugünün onaylı biletinde kaydedilir (sunucu da aynı kuralı uygular).
+export const canBoard = (info: Pick<TicketDetail, "status" | "date" | "valid">) =>
+  info.valid && info.status === "confirmed" && info.date === today();
+
+export const boardedLabel = (info: TicketDetail) =>
+  !info.passengers.length
+    ? "Bindi olarak işaretli"
+    : `Koltuk ${info.boardedSeats.join(", ")} bindi`;
+
+const sameSeats = (a: number[], b: number[]) => [...a].sort((x, y) => x - y).join() === [...b].sort((x, y) => x - y).join();
+
+// Biletteki yolcular koltuklarıyla: dokununca binen/binmeyen değişir, kaydet sunucuya yazar.
+// Okutma ekranında ve QR bilet sayfasında (yönetici/rehber oturumu) aynı bileşen.
+export function SeatBoarding({
+  token,
+  info,
+  onSaved,
+}: {
+  token: string;
+  info: TicketDetail;
+  onSaved: (info: TicketDetail) => void;
+}) {
+  const editable = canBoard(info),
+    saved = info.checkedIn ? info.boardedSeats : [],
+    // Henüz binmemiş bilette biletteki tüm koltuklar hazır seçilir.
+    initial = info.checkedIn ? info.boardedSeats : info.seats,
+    [picked, setPicked] = useState<number[]>(initial),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  useEffect(() => {
+    setPicked(info.checkedIn ? info.boardedSeats : info.seats);
+  }, [info]);
+  const changed = !info.checkedIn || !sameSeats(picked, saved),
+    seatless = !info.passengers.length;
+  async function save() {
+    setBusy(true);
+    setError("");
+    try {
+      onSaved(
+        await post<TicketDetail>(
+          `/admin/tickets/${token}/check-in`,
+          seatless && !info.checkedIn ? {} : { seats: picked },
+        ),
+      );
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  const toggle = (seat: number) =>
+    setPicked((cur) => (cur.includes(seat) ? cur.filter((n) => n !== seat) : [...cur, seat]));
+  const on = (seat: number) => (editable ? picked.includes(seat) : saved.includes(seat));
+  return (
+    <div className="seat-board">
+      {!seatless && (
+        <ul className="scan-passengers">
+          {info.passengers.map((p) => {
+            const row = (
+              <>
+                <span className="scan-seat">{p.seat}</span>
+                <span className="seat-board-who">
+                  <strong>{p.name || "İsim girilmemiş"}</strong>
+                  {p.idLast4 && (
+                    <small>
+                      {p.nationality === "TR" || !p.nationality ? "T.C." : p.nationality} …{p.idLast4}
+                    </small>
+                  )}
+                </span>
+                {(editable || info.checkedIn) && (
+                  <span className="seat-board-state">
+                    {on(p.seat) ? (
+                      <>
+                        <Check size={15} aria-hidden="true" /> {editable && !info.checkedIn ? "Binecek" : "Bindi"}
+                      </>
+                    ) : (
+                      "Binmedi"
+                    )}
+                  </span>
+                )}
+              </>
+            );
+            return (
+              <li key={p.seat} className={on(p.seat) ? "is-on" : ""}>
+                {editable ? (
+                  <button
+                    type="button"
+                    aria-pressed={on(p.seat)}
+                    aria-label={`Koltuk ${p.seat}, ${p.name || "isim girilmemiş"}: ${on(p.seat) ? "biniyor" : "binmedi"}`}
+                    onClick={() => toggle(p.seat)}
+                  >
+                    {row}
+                  </button>
+                ) : (
+                  <div>{row}</div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {editable && changed && (
+        <button
+          type="button"
+          className={"btn seat-board-save" + (info.checkedIn && !picked.length ? " btn-outline" : "")}
+          onClick={save}
+          disabled={busy || (!info.checkedIn && !seatless && !picked.length)}
+        >
+          {busy ? <LoaderCircle className="spin" size={16} /> : <UserCheck size={16} />}
+          {seatless
+            ? info.checkedIn
+              ? "Binişi geri al"
+              : "Bindi olarak işaretle"
+            : !info.checkedIn
+              ? picked.length
+                ? `Koltuk ${[...picked].sort((a, b) => a - b).join(", ")} · bindi kaydet`
+                : "Binen yolcuyu seçin"
+              : picked.length
+                ? `Binişi güncelle · Koltuk ${[...picked].sort((a, b) => a - b).join(", ")}`
+                : "Binişi geri al (kimse binmedi)"}
+        </button>
+      )}
+      {error && (
+        <p className="error" role="alert">
+          {error}
         </p>
       )}
     </div>

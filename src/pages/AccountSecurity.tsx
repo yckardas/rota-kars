@@ -5,7 +5,7 @@ import { api, post } from "../lib/api";
 import { useMember } from "../lib/member";
 import { useEffect } from "react";
 import { currency, dateLabel } from "../lib/types";
-import type { TicketDetail } from "../components/admin/TicketScanner";
+import { SeatBoarding, type TicketDetail } from "../components/admin/TicketScanner";
 import { Postmark } from "../components/Postmark";
 import { Link, useLang, useLocalNavigate } from "../lib/i18n";
 import { StatusStamp, TicketBrand } from "../components/ReservationTicket";
@@ -242,16 +242,29 @@ export function TicketVerification() {
               </div>
             </dl>
             {detail && (
+              <div className="ticket-staff ticket-boarding">
+                {/* Rehber/yönetici: koltuklar biletten okunur; kaydet, yolcuları o koltuklara bindirir. */}
+                <h2>
+                  Biniş kontrolü
+                  {detail.checkedIn && detail.passengers.length > 0 && (
+                    <span>
+                      {detail.boardedSeats.length}/{detail.passengers.length} bindi
+                    </span>
+                  )}
+                </h2>
+                <SeatBoarding
+                  token={token!}
+                  info={detail}
+                  onSaved={(next) => {
+                    setData(next);
+                    setDetail(next);
+                    setError("");
+                  }}
+                />
+              </div>
+            )}
+            {detail && (
               <dl className="ticket-lines ticket-staff">
-                {detail.passengers.map((p) => (
-                  <div key={p.seat}>
-                    <dt>Koltuk {p.seat}</dt>
-                    <dd>
-                      {p.name || "İsim girilmemiş"}
-                      {p.idLast4 && ` · ${p.nationality === "TR" || !p.nationality ? "T.C." : p.nationality} …${p.idLast4}`}
-                    </dd>
-                  </div>
-                ))}
                 <div>
                   <dt>İrtibat</dt>
                   <dd>
@@ -287,7 +300,7 @@ export function TicketVerification() {
                       "Ödeme ve acente onayı tamamlanmadan kesin bilet olarak kullanılamaz.",
                     )}
             </p>
-            {admin && data.status === "confirmed" && (
+            {admin && !detail && data.status === "confirmed" && (
               <button
                 className="btn"
                 disabled={data.checkedIn}

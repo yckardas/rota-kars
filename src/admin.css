@@ -1964,6 +1964,103 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+/* Biniş: biletteki koltuklar satır satır; dokununca binen/binmeyen değişir */
+.rk-admin .seat-board .scan-passengers li {
+  display: block;
+}
+.rk-admin .seat-board .scan-passengers li > button,
+.rk-admin .seat-board .scan-passengers li > div {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 7px 10px;
+  border: 1px solid var(--mortar-soft);
+  border-radius: 4px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.rk-admin .seat-board .scan-passengers li > button {
+  cursor: pointer;
+  transition: background-color 160ms ease-out, border-color 160ms ease-out;
+}
+.rk-admin .seat-board .scan-passengers li > button:active {
+  transform: scale(0.985);
+}
+.rk-admin .seat-board .scan-passengers li.is-on > button,
+.rk-admin .seat-board .scan-passengers li.is-on > div {
+  border-color: #b7c9ac;
+  background: var(--lichen-wash);
+}
+.rk-admin .seat-board li.is-on .scan-seat {
+  background: var(--lichen);
+  color: #fff;
+}
+.rk-admin .seat-board-who {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.rk-admin .seat-board-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.rk-admin .seat-board li.is-on .seat-board-state {
+  color: var(--lichen);
+}
+.rk-admin .seat-board-save {
+  width: 100%;
+  margin-top: 10px;
+}
+/* Telefondaki yolcu listesi: koltuk satırı dokunulabilir, binen koltuk yeşil */
+.rk-admin .passenger-list .passenger-id-rows li {
+  grid-template-columns: 28px minmax(0, 1fr) auto auto;
+}
+.rk-admin .passenger-list .passenger-id-rows li:has(> button) {
+  display: block;
+  padding: 0;
+}
+.rk-admin .passenger-list .passenger-id-rows li > button {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: baseline;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 6px;
+  border: 0;
+  border-radius: 3px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rk-admin .passenger-list .passenger-id-rows li > button:hover {
+  background: var(--surface-2);
+}
+.rk-admin .passenger-id-rows em {
+  font-style: normal;
+  color: var(--muted);
+  min-width: 16px;
+  text-align: center;
+}
+.rk-admin .passenger-id-rows em.is-on {
+  color: var(--lichen);
+}
+.rk-admin .passenger-id-rows li.is-on span {
+  color: var(--lichen);
+  font-weight: 700;
+}
 .rk-admin .scan-contact {
   display: flex;
   flex-wrap: wrap;
