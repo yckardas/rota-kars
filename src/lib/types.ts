@@ -372,6 +372,9 @@ export type Article = {
   publishedAt: number | null;
   updatedAt: number;
   body?: string;
+  // Gösterilen dil (/en'de İngilizcesi yoksa "tr" gelir) ve paneldeki İngilizce sürüm.
+  lang?: "tr" | "en";
+  en?: { title: string; summary: string; body: string } | null;
   status?: "draft" | "published";
   author?: string | null;
 };

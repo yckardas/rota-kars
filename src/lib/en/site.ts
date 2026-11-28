@@ -963,8 +963,8 @@ export const site: Record<string, string> = {
     "Get to know Kars.",
   "Buzun üstünde atlı kızaktan Sarıkamış’ın ormanlarına, Ani’nin taşlarından kış hazırlığına: ekibimizden gezi notları.":
     "From horse sleighs on the ice to the forests of Sarıkamış, the stones of Ani and winter packing tips: travel notes from our team.",
-  "Rehber yazılarımız şimdilik yalnız Türkçe.":
-    "Our guide articles are in Turkish for now.",
+  "Bu yazının İngilizcesi henüz yok; Türkçe sürümünü gösteriyoruz.":
+    "This article is not available in English yet; we are showing the Turkish version.",
   "Konu":
     "Topic",
   "Yeni yazılar yolda. Bu arada turlarımıza göz atabilirsiniz.":

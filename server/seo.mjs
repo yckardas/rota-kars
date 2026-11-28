@@ -229,6 +229,11 @@ const EN_STATIC = {
     title: `About us | ${SITE}`,
     description: `Rota Kars Turizm, a TÜRSAB-licensed (No. ${business.tursabNo}) group A travel agency serving Kars since ${business.founded}.`,
   },
+  "/rehber": {
+    title: `Kars guide: activities, travel notes and tips | ${SITE}`,
+    description:
+      "Horse sleighs on frozen Lake Çıldır, snowmobiles in Sarıkamış and getting ready for a Kars winter: travel guides and tips from the Rota Kars team.",
+  },
   "/kesfet/ani": {
     title: `Ani ruins: history, walking route and travel tips | ${SITE}`,
     description:
@@ -256,6 +261,8 @@ export function pageMeta(path, base) {
     const inner = pageMeta(stripEn(path), base);
     if (inner.status !== 200) return { ...inner, path: path };
     const tr = inner.path,
+      // Rehber yazısı: İngilizcesi varsa kendi başlığıyla İngilizce dizine girer.
+      articleEn = publishedArticle(tr.match(/^\/rehber\/([a-z0-9-]+)$/)?.[1] || "")?.en,
       tourId = tr.match(/^\/turlar\/([^/]+)$/)?.[1],
       tour = tourId && currentEn().tours[tourId],
       fixed = EN_STATIC[tr];
@@ -265,15 +272,17 @@ export function pageMeta(path, base) {
       path: tr === "/" ? "/en" : "/en" + tr,
       alternate: tr,
       // Çevrilmemiş sayfalar İngilizce dizine girmez.
-      index: inner.index && Boolean(fixed || tour),
+      index: inner.index && Boolean(fixed || tour || articleEn),
       title:
         fixed?.title ||
+        (articleEn && `${articleEn.title} | ${SITE}`) ||
         (tour
           ? `${tour.name}: ${tour.subtitle} | ${SITE}`
           : EN_PRIVATE[inner.title.split(" | ")[0]]
             ? `${EN_PRIVATE[inner.title.split(" | ")[0]]} | ${SITE}`
             : inner.title),
-      description: fixed?.description || (tour ? clip(tour.summary) : inner.description),
+      description:
+        fixed?.description || (articleEn && clip(articleEn.summary)) || (tour ? clip(tour.summary) : inner.description),
     };
   }
   let end = Math.min(path.length, 512);
@@ -388,6 +397,8 @@ export function pageMeta(path, base) {
       status: 200,
       index: true,
       path: p,
+      // İngilizcesi olan yazının Türkçe ve İngilizce sürümleri birbirini gösterir.
+      alternate: article.en ? "/en" + p : null,
       type: "article",
       title: `${article.title} | ${SITE}`,
       description: clip(article.summary),
@@ -547,6 +558,9 @@ export function sitemapXml(base) {
     ...publicTours().map((t) => `/turlar/${t.id}`),
     ...services.map((s) => `/hizmetler/${s.id}`),
     ...publishedArticles().map((a) => `/rehber/${a.slug}`),
+    ...publishedArticles()
+      .filter((a) => a.en)
+      .map((a) => `/en/rehber/${a.slug}`),
     // İngilizce sürüm: çevrilmiş sayfalar.
     ...Object.keys(EN_STATIC).map((p) => (p === "/" ? "/en" : "/en" + p)),
     // Kopya turların İngilizcesi yok; /en sürümü site haritasına girmez.

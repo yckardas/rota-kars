@@ -29,6 +29,9 @@ export const slugify = (s) =>
     .slice(0, 80)
     .replace(/-+$/, "");
 
+// İngilizce sürüm (/en/rehber): yazının "en" alanında başlık, özet ve gövde. Üçü de
+// doluysa yazı İngilizce gösterilir; değilse Türkçe görünür ve sayfa İngilizce dizine girmez.
+const enOf = (a) => (a.en?.title && a.en?.summary && a.en?.body ? a.en : null);
 const summaryOf = (a) => ({
   id: a.id,
   slug: a.slug,
@@ -40,7 +43,21 @@ const summaryOf = (a) => ({
   publishedAt: a.published_at,
   updatedAt: a.updated_at,
 });
-const fullOf = (a) => ({ ...summaryOf(a), body: a.body, status: a.status, author: a.author || null });
+const fullOf = (a) => ({
+  ...summaryOf(a),
+  body: a.body,
+  en: a.en || null,
+  status: a.status,
+  author: a.author || null,
+});
+// Ziyaretçiye giden hâl: istenen dilde metin; lang gerçekten gösterilen dildir.
+const localized = (a, lang, withBody) => {
+  const en = lang === "en" ? enOf(a) : null;
+  const base = { ...summaryOf(a), lang: en ? "en" : "tr" };
+  if (en) Object.assign(base, { title: en.title, summary: en.summary });
+  if (withBody) base.body = en ? en.body : a.body;
+  return base;
+};
 
 // İlk yayında panelde inceleme için taslak olarak eklenen yazılar (bkz. articles-seed.mjs).
 export async function createArticles(db, { clock, seed = [] }) {
@@ -62,6 +79,7 @@ export async function createArticles(db, { clock, seed = [] }) {
           cover: a.cover,
           body: a.body,
           tour_ids: a.tourIds || [],
+          en: a.en || null,
           status: "draft",
           published_at: null,
           created_at: clock(),
@@ -86,23 +104,42 @@ export async function createArticles(db, { clock, seed = [] }) {
     }
     await db.upsert("integration_settings", publishMarker, { id: publishMarker, body: { appliedAt: clock(), published }, updated_at: clock() });
   }
+  // Kasım 2026: ilk yazıların İngilizcesi. Yalnız İngilizcesi boş olan yazıya yazılır;
+  // panelde girilmiş bir çeviriye dokunulmaz. Her veritabanında bir kez çalışır.
+  const enMarker = "articles_en_2026_11";
+  if (seed.length && !(await db.one("integration_settings", { _id: enMarker }))) {
+    let translated = 0;
+    for (const a of seed) {
+      const row = a.en && (await db.one("articles", { slug: a.slug }));
+      if (row && !(row.en?.title || row.en?.summary || row.en?.body)) {
+        await db.update("articles", { _id: row.id }, { en: a.en });
+        translated++;
+      }
+    }
+    await db.upsert("integration_settings", enMarker, { id: enMarker, body: { appliedAt: clock(), translated }, updated_at: clock() });
+  }
   async function refresh() {
     const rows = await db.find("articles", { status: "published" }, { sort: { published_at: -1 } });
     published.clear();
-    for (const a of rows) published.set(a.slug, summaryOf(a));
+    for (const a of rows) {
+      const en = enOf(a);
+      published.set(a.slug, { ...summaryOf(a), en: en ? { title: en.title, summary: en.summary } : null });
+    }
   }
   await refresh();
   return {
     refresh,
-    async listPublic({ category, tourId } = {}) {
-      return publishedArticles().filter(
-        (a) => (!category || a.category === category) && (!tourId || a.tourIds.includes(tourId)),
-      );
+    async listPublic({ category, tourId, lang = "tr" } = {}) {
+      return publishedArticles()
+        .filter((a) => (!category || a.category === category) && (!tourId || a.tourIds.includes(tourId)))
+        .map(({ en, ...a }) =>
+          lang === "en" && en ? { ...a, title: en.title, summary: en.summary, lang: "en" } : { ...a, lang: "tr" },
+        );
     },
-    async getPublic(slug) {
+    async getPublic(slug, { lang = "tr" } = {}) {
       const a = await db.one("articles", { slug, status: "published" });
       if (!a) throw new AppError(404, "Yazı bulunamadı.");
-      return fullOf(a);
+      return localized(a, lang, true);
     },
     async adminList() {
       return (await db.find("articles", {}, { sort: { updated_at: -1 } })).map(fullOf);
@@ -123,6 +160,11 @@ export async function createArticles(db, { clock, seed = [] }) {
         body: input.body,
         tour_ids: input.tourIds,
         status: input.status,
+        // İngilizce sürüm isteğe bağlı; üç alan da boşsa kaydedilmez.
+        en:
+          input.en && (input.en.title || input.en.summary || input.en.body)
+            ? { title: input.en.title || "", summary: input.en.summary || "", body: input.en.body || "" }
+            : null,
         // İlk yayın tarihi korunur; taslağa çekilince sitede görünmez.
         published_at: input.status === "published" ? old?.published_at || clock() : old?.published_at || null,
         updated_at: clock(),

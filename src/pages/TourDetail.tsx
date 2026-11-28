@@ -45,7 +45,7 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
   const { id } = useParams(),
     t = catalog.tours.find((t) => t.id === id);
   // t bu sayfada turun kendisi; çeviri işlevi tx.
-  const { t: tx } = useLang();
+  const { t: tx, lang } = useLang();
   const [request, setRequest] = useState(false),
     // Tur öncesi/sonrası konaklama talebi (anlaşmalı oteller listesiyle açılır).
     [stay, setStay] = useState<Hotel[] | null>(null),
@@ -84,10 +84,10 @@ export function TourDetail({ catalog }: { catalog: Catalog }) {
   }, [t]);
   useEffect(() => {
     if (!id) return;
-    api<Article[]>("/articles?tur=" + encodeURIComponent(id))
+    api<Article[]>("/articles?tur=" + encodeURIComponent(id) + (lang === "en" ? "&lang=en" : ""))
       .then(setArticles)
       .catch(() => setArticles([]));
-  }, [id]);
+  }, [id, lang]);
   if (!t)
     return (
       <div className="container empty-state">

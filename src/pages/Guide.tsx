@@ -21,10 +21,10 @@ export function Guide() {
     [category, setCategory] = useState<"" | Article["category"]>(""),
     [error, setError] = useState("");
   useEffect(() => {
-    api<Article[]>("/articles")
+    api<Article[]>("/articles" + (lang === "en" ? "?lang=en" : ""))
       .then(setItems)
       .catch((e) => setError(e.message));
-  }, []);
+  }, [lang]);
   const shown = (items || []).filter((a) => !category || a.category === category);
   const used = new Set((items || []).map((a) => a.category));
   return (
@@ -33,7 +33,6 @@ export function Guide() {
       <p className="muted guide-lead">
         {t("Buzun üstünde atlı kızaktan Sarıkamış’ın ormanlarına, Ani’nin taşlarından kış hazırlığına: ekibimizden gezi notları.")}
       </p>
-      {lang === "en" && <p className="info-note">{t("Rehber yazılarımız şimdilik yalnız Türkçe.")}</p>}
       {used.size > 1 && (
         <div className="status-filters guide-filters" role="group" aria-label={t("Konu")}>
           <button type="button" className={"chip" + (!category ? " active" : "")} aria-pressed={!category} onClick={() => setCategory("")}>
@@ -72,16 +71,16 @@ export function Guide() {
 
 export function ArticlePage({ catalog }: { catalog: Catalog }) {
   const { slug } = useParams(),
-    { t } = useLang();
+    { t, lang } = useLang();
   const [article, setArticle] = useState<Article | null>(null),
     [missing, setMissing] = useState(false);
   useEffect(() => {
     setArticle(null);
     setMissing(false);
-    api<Article>("/articles/" + slug)
+    api<Article>("/articles/" + slug + (lang === "en" ? "?lang=en" : ""))
       .then(setArticle)
       .catch(() => setMissing(true));
-  }, [slug]);
+  }, [slug, lang]);
   if (missing)
     return (
       <div className="container empty-state">
@@ -106,6 +105,9 @@ export function ArticlePage({ catalog }: { catalog: Catalog }) {
         <header className="article-head">
           <h1>{article.title}</h1>
           <p className="article-summary">{article.summary}</p>
+          {lang === "en" && article.lang === "tr" && (
+            <p className="info-note">{t("Bu yazının İngilizcesi henüz yok; Türkçe sürümünü gösteriyoruz.")}</p>
+          )}
           <p className="article-meta">
             {t(ARTICLE_CATEGORIES[article.category])} · {dateOf(article.publishedAt)}
           </p>
