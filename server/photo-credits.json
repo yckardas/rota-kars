@@ -585,5 +585,35 @@
     "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
     "source": "https://commons.wikimedia.org/wiki/File:Gobustan_mud_volcanoes_08.jpg",
     "changes": "Resized and converted to WebP; displayed cropped to card."
+  },
+  {
+    "id": "sarikamis-orman",
+    "path": "/images/kesfet/sarikamis-orman.webp",
+    "title": "Sarıkamış ormanları",
+    "author": "Karagozerkan",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Sar%C4%B1kam%C4%B1%C5%9F_ormanlar%C4%B1.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped."
+  },
+  {
+    "id": "sarikamis-anma",
+    "path": "/images/kesfet/sarikamis-anma.webp",
+    "title": "Sarıkamış ormanlarında anma yürüyüşü",
+    "author": "Karagozerkan",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Sar%C4%B1kam%C4%B1%C5%9F_ormanlar%C4%B1nda_anma_y%C3%BCr%C3%BCy%C3%BC%C5%9F%C3%BC.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped."
+  },
+  {
+    "id": "sarikamis-katerina",
+    "path": "/images/kesfet/sarikamis-katerina.webp",
+    "title": "Sarıkamış katerina köşkü",
+    "author": "Karagozerkan",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Sar%C4%B1kam%C4%B1%C5%9F_katerina_k%C3%B6%C5%9Fk%C3%BC.jpg",
+    "changes": "Resized and converted to WebP; displayed cropped."
   }
 ]

@@ -11,6 +11,8 @@ import { responsive } from "../lib/images";
 import { develop, useReveal } from "../lib/reveal";
 import { TourCard } from "../components/TourCard";
 import type { Catalog } from "../lib/types";
+import { PLACES } from "../lib/discover-places";
+import { DiscoverPlace } from "./DiscoverPlace";
 
 const TIMELINE = [
   { year: "961", title: "Başkent Ani", text: "Bagratlı Krallığı başkentini Ani’ye taşır. İpek Yolu üzerindeki şehir hızla büyür." },
@@ -44,16 +46,17 @@ const TIPS = [
 export function Discover({ catalog }: { catalog: Catalog }) {
   const { slug } = useParams(),
     { t } = useLang();
-  if (slug !== "ani")
-    return (
+  if (slug === "ani") return <AniPage catalog={catalog} />;
+  const place = slug ? PLACES[slug] : undefined;
+  if (place) return <DiscoverPlace key={place.slug} place={place} catalog={catalog} />;
+  return (
       <div className="container empty-state">
         <h1>{t("Bu sayfa bulunamadı.")}</h1>
         <Link className="btn" to="/turlar">
           {t("Turlara dön")}
         </Link>
       </div>
-    );
-  return <AniPage catalog={catalog} />;
+  );
 }
 
 function AniPage({ catalog }: { catalog: Catalog }) {

@@ -17,5 +17,21 @@ export const DISCOVER_PAGES: DiscoverPage[] = [
     image: "/images/tours/ani.webp",
     tourIds: ["ani-cildir"],
   },
+  {
+    slug: "cildir",
+    name: "Çıldır Gölü",
+    linkLabel: "Çıldır’ı keşfet",
+    teaser: "Buzun üstünde atlı kızak, buz balıkçıları ve gölün mevsim takvimi.",
+    image: "/images/rehber/cildir-kizak.webp",
+    tourIds: ["ani-cildir"],
+  },
+  {
+    slug: "sarikamis",
+    name: "Sarıkamış",
+    linkLabel: "Sarıkamış’ı keşfet",
+    teaser: "Sarıçam ormanları, kristal kar, kısa tarihi ve kayak dışında yapılacaklar.",
+    image: "/images/kesfet/sarikamis-orman.webp",
+    tourIds: ["sarikamis"],
+  },
 ];
 export const discoverFor = (tourId: string) => DISCOVER_PAGES.filter((p) => p.tourIds.includes(tourId));
