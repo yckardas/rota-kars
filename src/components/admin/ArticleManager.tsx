@@ -19,7 +19,10 @@ type Draft = {
   body: string;
   tourIds: string[];
   status: "draft" | "published";
+  // İngilizce sürüm (/en/rehber); üçü dolunca sitede İngilizce görünür.
+  en: { title: string; summary: string; body: string };
 };
+const blankEn = () => ({ title: "", summary: "", body: "" });
 const blank = (): Draft => ({
   slug: "",
   title: "",
@@ -29,6 +32,7 @@ const blank = (): Draft => ({
   body: "",
   tourIds: [],
   status: "draft",
+  en: blankEn(),
 });
 const toDraft = (a: Article): Draft => ({
   id: a.id,
@@ -40,6 +44,7 @@ const toDraft = (a: Article): Draft => ({
   body: a.body || "",
   tourIds: a.tourIds,
   status: a.status || "draft",
+  en: { ...blankEn(), ...(a.en || {}) },
 });
 const HELP = "## Ara başlık · - madde · 1. numaralı madde · > alıntı · **kalın** · [bağlantı](/turlar/ani-cildir) · ![açıklama](/images/kars.webp)";
 
@@ -56,6 +61,9 @@ export function ArticleManager({ catalog }: { catalog: Catalog }) {
     load().catch((e) => setError(e.message));
   }, []);
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft((d) => (d ? { ...d, [k]: v } : d));
+  const setEn = (k: keyof Draft["en"], v: string) => setDraft((d) => (d ? { ...d, en: { ...d.en, [k]: v } } : d));
+  const enState = (d: Draft) =>
+    d.en.title && d.en.summary && d.en.body ? "hazır" : d.en.title || d.en.summary || d.en.body ? "eksik" : "yok";
   async function save(e: FormEvent, status: Draft["status"]) {
     e.preventDefault();
     if (!draft) return;
@@ -183,6 +191,36 @@ export function ArticleManager({ catalog }: { catalog: Catalog }) {
               </div>
             </div>
           </div>
+          <details className="article-en" open={enState(draft) !== "yok" || undefined}>
+            <summary>
+              İngilizce sürüm (/en/rehber) ·{" "}
+              {enState(draft) === "hazır"
+                ? "sitede İngilizce görünür"
+                : enState(draft) === "eksik"
+                  ? "eksik: başlık, özet ve yazının üçü de dolmalı"
+                  : "yok, İngilizce sitede Türkçesi görünür"}
+            </summary>
+            <label className="field">
+              İngilizce başlık
+              <input value={draft.en.title} maxLength={140} onChange={(e) => setEn("title", e.target.value)} />
+            </label>
+            <label className="field">
+              İngilizce özet
+              <textarea rows={2} value={draft.en.summary} maxLength={320} onChange={(e) => setEn("summary", e.target.value)} />
+            </label>
+            <div className="article-body-editor">
+              <label className="field">
+                İngilizce yazı (bağlantılar Türkçedeki gibi yazılır; /en ön eki kendiliğinden eklenir)
+                <textarea rows={16} value={draft.en.body} maxLength={30000} onChange={(e) => setEn("body", e.target.value)} />
+              </label>
+              <div className="article-preview" aria-label="İngilizce önizleme">
+                <small>Önizleme</small>
+                <div className="article-body">
+                  <Markdown source={draft.en.body} />
+                </div>
+              </div>
+            </div>
+          </details>
           <div className="article-actions">
             {draft.id && (
               <button type="button" className="text-link danger" onClick={remove}>

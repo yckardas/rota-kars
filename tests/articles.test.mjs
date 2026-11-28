@@ -110,3 +110,42 @@ test("panel validates articles and keeps addresses unique", async (t) => {
   assert.equal((await call("/admin/articles/" + created.json.id, null, "DELETE")).status, 204);
   assert.equal((await call("/articles/kars-kalesinden-gun-batimi")).status, 404);
 });
+
+test("English versions: /en shows the translation, falls back to Turkish, and is indexed only when complete", async (t) => {
+  const { store, call, html, root } = await fixture(t);
+  const list = (await call("/articles?lang=en")).json;
+  assert.equal(list.length, 3);
+  assert.ok(list.every((a) => a.lang === "en"));
+  assert.ok(list.some((a) => a.title === "Horse sleighs on Lake Çıldır: a winter tradition on the ice"));
+  assert.equal((await call("/articles")).json.find((a) => a.slug === "cildir-golunde-atli-kizak").lang, "tr");
+  const en = (await call("/articles/cildir-golunde-atli-kizak?lang=en")).json;
+  assert.equal(en.lang, "en");
+  assert.match(en.body, /## When to go/);
+  assert.equal(en.en, undefined, "ziyaretçiye ham çeviri alanı gitmez");
+
+  const page = await (await html("/en/rehber/cildir-golunde-atli-kizak")).text();
+  assert.match(page, /<title>Horse sleighs on Lake Çıldır/);
+  assert.match(page, /<meta name="robots" content="index/);
+  assert.match(await (await html("/en/rehber")).text(), /<title>Kars guide: activities/);
+  const sitemap = await (await fetch(root + "/sitemap.xml")).text();
+  assert.match(sitemap, /\/en\/rehber\/cildir-golunde-atli-kizak/);
+
+  // Eksik çeviri: İngilizce sitede Türkçesi görünür, İngilizce dizine girmez.
+  const admin = (await call("/admin/articles")).json.find((a) => a.slug === "sarikamista-kar-motoru");
+  assert.equal(admin.en.title, "Snowmobiling in Sarıkamış: winter among the Scots pines");
+  const partial = await call("/admin/articles", { ...admin, en: { title: "Only a title", summary: "", body: "" } });
+  assert.equal(partial.status, 200, JSON.stringify(partial.json));
+  const fallback = (await call("/articles/sarikamista-kar-motoru?lang=en")).json;
+  assert.equal(fallback.lang, "tr");
+  assert.match(fallback.title, /^Sarıkamış'ta kar motoru/);
+  assert.match(await (await html("/en/rehber/sarikamista-kar-motoru")).text(), /noindex/);
+  assert.doesNotMatch(await (await fetch(root + "/sitemap.xml")).text(), /\/en\/rehber\/sarikamista-kar-motoru/);
+
+  // Tek seferlik çeviri yazımı panelde girilmiş İngilizceye dokunmaz.
+  const { createArticles } = await import("../server/articles.mjs");
+  const { articleSeed } = await import("../server/articles-seed.mjs");
+  await store.db.remove("integration_settings", { _id: "articles_en_2026_11" });
+  await createArticles(store.db, { clock: () => Date.now(), seed: articleSeed });
+  const kept = (await call("/admin/articles")).json.find((a) => a.slug === "sarikamista-kar-motoru");
+  assert.equal(kept.en.title, "Only a title");
+});

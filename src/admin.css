@@ -2827,3 +2827,19 @@
   line-height: 1.4;
   white-space: nowrap;
 }
+
+/* Rehber yazısı · İngilizce sürüm bölümü */
+.rk-admin .article-en {
+  display: grid;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--mortar);
+  border-radius: 4px;
+}
+.rk-admin .article-en summary {
+  cursor: pointer;
+  font-weight: 500;
+}
+.rk-admin .article-en[open] {
+  grid-template-columns: minmax(0, 1fr);
+}

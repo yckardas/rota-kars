@@ -1855,18 +1855,22 @@ export function createApp(
     ),
   );
   app.get("/api/hotels", async (_q, r) => r.json(await store.hotels()));
-  // Rehber yazıları (yalnız yayındakiler). ?kategori= ve ?tur= ile süzülür.
+  // Rehber yazıları (yalnız yayındakiler). ?kategori= ve ?tur= ile süzülür; ?lang=en
+  // İngilizcesi olan yazıyı İngilizce verir (yanıttaki lang gösterilen dildir).
+  const articleLang = (q) => (q.query.lang === "en" ? "en" : "tr");
   app.get(
     "/api/articles",
     route(async (q, r) => {
       const category = typeof q.query.kategori === "string" ? q.query.kategori : undefined,
         tourId = typeof q.query.tur === "string" ? q.query.tur : undefined;
-      r.json(await store.articles.listPublic({ category, tourId }));
+      r.json(await store.articles.listPublic({ category, tourId, lang: articleLang(q) }));
     }),
   );
   app.get(
     "/api/articles/:slug",
-    route(async (q, r) => r.json(await store.articles.getPublic(z.string().max(100).parse(q.params.slug)))),
+    route(async (q, r) =>
+      r.json(await store.articles.getPublic(z.string().max(100).parse(q.params.slug), { lang: articleLang(q) })),
+    ),
   );
   // Bekleme listesi (dolu sefer), talep toplama modundaki tura ücretsiz ön kayıt ve satışa
   // kapalı tur için "tarih açılınca haber ver".
@@ -2582,6 +2586,15 @@ export function createApp(
           body: z.string().trim().min(50).max(30000),
           tourIds: z.array(tourIdSchema).max(10).default([]),
           status: z.enum(["draft", "published"]),
+          // İsteğe bağlı İngilizce sürüm (/en/rehber); üçü dolunca İngilizce gösterilir.
+          en: z
+            .object({
+              title: z.string().trim().max(140).default(""),
+              summary: z.string().trim().max(320).default(""),
+              body: z.string().trim().max(30000).default(""),
+            })
+            .nullable()
+            .optional(),
         })
         .parse(q.body);
       r.json(await store.articles.save(input, q.admin));
