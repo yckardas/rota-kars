@@ -12,10 +12,11 @@ import {
   Share,
   Smartphone,
   UserCheck,
+  Wallet,
   X,
 } from "lucide-react";
 import { api, post } from "../../lib/api";
-import { dateLabel, today as localToday } from "../../lib/types";
+import { currency, dateLabel, today as localToday } from "../../lib/types";
 import {
   canInstallApp,
   checkAppUpdate,
@@ -410,6 +411,8 @@ type PassengerData = {
     checkedIn: boolean;
     // Binen koltuklar (QR okutunca biletten gelir; listede koltuğa dokunarak düzeltilir).
     boardedSeats: number[];
+    // Kapıda tahsil edilecek kalan tutar (kuruş).
+    balanceDue?: number;
     ticketToken: string | null;
   }[];
 };
@@ -609,6 +612,11 @@ export function PassengerList({ departureId, onClose }: { departureId: string; o
                     );
                   })}
                 </ul>
+                {(b.balanceDue ?? 0) > 0 && (
+                  <p className="passenger-due">
+                    <Wallet size={14} aria-hidden="true" /> Tahsil edilecek: <strong>{currency(b.balanceDue!)}</strong>
+                  </p>
+                )}
                 {b.pickupAddress && (
                   <p className="passenger-pickup">
                     <MapPin size={14} aria-hidden="true" /> {b.pickupAddress}

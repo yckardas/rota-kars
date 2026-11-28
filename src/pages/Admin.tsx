@@ -538,7 +538,7 @@ function AdminPanel({
           <DepartureManager key={key("dep")} catalog={catalog} startCreating={Boolean(nav.create)} openId={nav.ref || ""} />
         )}
         {tab === "campaigns" && <CampaignManager key={key("camp")} catalog={catalog} />}
-        {tab === "daily" && <DailyReport key={key("daily")} catalog={catalog} />}
+        {tab === "daily" && <DailyReport key={key("daily")} catalog={catalog} guide={me.user.role === "guide"} />}
         {tab === "finance" && <FinancePanel key={key("fin")} onReservation={(ref) => pick("reservations", { ref })} />}
         {tab === "reports" && <MonthReport key={key("rep")} />}
         {tab === "notifications" && <NotificationManager key={key("notif")} />}

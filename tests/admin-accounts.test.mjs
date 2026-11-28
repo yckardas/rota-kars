@@ -105,7 +105,12 @@ test("roles: guide sees reports and check-in only, operations cannot manage user
   assert.equal((await call("/admin/reservations", { cookie: guide })).status, 403);
   assert.equal((await call("/admin/dashboard", { cookie: guide })).status, 403);
   const today = new Date().toISOString().slice(0, 10);
-  assert.equal((await call(`/admin/reports?date=${today}`, { cookie: guide })).status, 200);
+  const guideReport = await call(`/admin/reports?date=${today}`, { cookie: guide });
+  assert.equal(guideReport.status, 200);
+  // Rehber kasa rakamlarını görmez; operasyon görür.
+  assert.equal(guideReport.json.netCollected, undefined);
+  assert.equal(guideReport.json.refunded, undefined);
+  assert.equal(typeof (await call(`/admin/reports?date=${today}`, { cookie: ops })).json.netCollected, "number");
   assert.equal((await call("/admin/me", { cookie: guide })).json.user.role, "guide");
 });
 

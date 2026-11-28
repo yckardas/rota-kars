@@ -2940,3 +2940,108 @@
 .rk-admin .article-en[open] {
   grid-template-columns: minmax(0, 1fr);
 }
+
+/* Günlük operasyon, bugün: sefer başına biniş kartı (rehberin ana ekranı) */
+.rk-admin .boarding-board {
+  margin: 4px 0 22px;
+}
+.rk-admin .boarding-board h2 {
+  margin: 0 0 10px;
+  font-size: 18px;
+}
+.rk-admin .boarding-board ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 12px;
+}
+.rk-admin .boarding-card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--mortar);
+  border-radius: 4px;
+  background: var(--surface);
+}
+.rk-admin .boarding-card.is-done {
+  border-color: #b7c9ac;
+  background: #f1f5ee;
+}
+.rk-admin .boarding-head {
+  display: grid;
+  gap: 2px;
+}
+.rk-admin .boarding-head strong {
+  font-size: 16px;
+  color: var(--ink-strong);
+}
+.rk-admin .boarding-head small {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.rk-admin .boarding-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.rk-admin .boarding-progress span {
+  display: block;
+  height: 100%;
+  width: var(--done, 0%);
+  border-radius: inherit;
+  background: var(--lichen);
+  transition: width 300ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.rk-admin .boarding-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.rk-admin .boarding-count strong {
+  color: var(--ink-strong);
+  font-variant-numeric: tabular-nums;
+}
+.rk-admin .boarding-card.is-done .boarding-count,
+.rk-admin .boarding-card.is-done .boarding-count strong {
+  color: var(--lichen);
+}
+.rk-admin .boarding-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.rk-admin .boarding-actions .btn {
+  justify-content: center;
+  min-height: 44px;
+}
+.rk-admin .boarding-actions .btn:only-child {
+  grid-column: 1 / -1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rk-admin .boarding-progress span {
+    transition: none;
+  }
+}
+/* Yolcu listesi modalda kenara yapışmasın (başlık ve kartlar) */
+.rk-admin .modal .passenger-list {
+  padding: 16px 18px 20px;
+}
+/* Yolcu listesi: kapıda tahsil edilecek kalan ödeme */
+.rk-admin .passenger-list .passenger-due {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 2px;
+  font-size: 14px;
+  color: var(--red);
+}
+.rk-admin .passenger-list .passenger-due strong {
+  font-variant-numeric: tabular-nums;
+}

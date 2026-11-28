@@ -26,6 +26,8 @@ export type TicketDetail = {
   checkedIn: boolean;
   // Binen koltuklar (okutmada biletten otomatik gelir; gelmeyen çıkarılabilir).
   boardedSeats: number[];
+  // Biletin seferi (transferde yok): sefere bağlı okutmada karşılaştırılır.
+  departureId: string | null;
   contactName: string;
   phone: string;
   whatsapp: string | null;
@@ -65,7 +67,14 @@ type DetectorCtor = new (o: { formats: string[] }) => Detector;
 export const ticketToken = (text: string) => text.match(/\/bilet\/([a-f0-9]{48})(?:[/?#]|$)/)?.[1] || null;
 
 // Kamerayla bilet QR'ı okutup yolcuyu "bindi" işaretler (rehber ve operasyon).
-export function TicketScanner({ onClose }: { onClose: () => void }) {
+// departure verilirse okutma o sefere bağlıdır: başka seferin bileti bindirilmez, uyarılır.
+export function TicketScanner({
+  onClose,
+  departure,
+}: {
+  onClose: () => void;
+  departure?: { id: string; label: string };
+}) {
   const video = useRef<HTMLVideoElement>(null),
     [state, setState] = useState<"starting" | "scanning" | "found" | "error">("starting"),
     [message, setMessage] = useState(""),
@@ -114,7 +123,7 @@ export function TicketScanner({ onClose }: { onClose: () => void }) {
               let info = await api<TicketDetail>("/admin/tickets/" + token);
               // Bugünün onaylı biletinde koltuklar biletten okunur ve hemen "bindi" kaydedilir;
               // gelmeyen yolcu kartta koltuğuna dokunularak çıkarılır.
-              if (canBoard(info) && !info.checkedIn) {
+              if (canBoard(info) && !info.checkedIn && !(departure && info.departureId !== departure.id)) {
                 try {
                   info = await post<TicketDetail>(`/admin/tickets/${token}/check-in`, { seats: info.seats });
                   setDone(true);
@@ -157,7 +166,7 @@ export function TicketScanner({ onClose }: { onClose: () => void }) {
     setRound((n) => n + 1);
   };
   return (
-    <Modal title="Bilet okut" onClose={onClose}>
+    <Modal title={departure ? "Bilet okut · " + departure.label : "Bilet okut"} onClose={onClose}>
       {(state === "starting" || state === "scanning") && (
         <div className="scanner">
           <video ref={video} playsInline muted />
@@ -188,6 +197,7 @@ export function TicketScanner({ onClose }: { onClose: () => void }) {
           info={ticket.info}
           message={message}
           justBoarded={done}
+          otherDeparture={Boolean(departure && ticket.info.departureId !== departure.id)}
           onSaved={(info) => {
             setMessage("");
             setTicket({ ...ticket, info });
@@ -217,12 +227,14 @@ function TicketCard({
   info,
   message,
   justBoarded,
+  otherDeparture,
   onSaved,
 }: {
   token: string;
   info: TicketDetail;
   message: string;
   justBoarded: boolean;
+  otherDeparture: boolean;
   onSaved: (info: TicketDetail) => void;
 }) {
   const notToday = info.valid && info.status === "confirmed" && info.date !== today(),
@@ -233,7 +245,14 @@ function TicketCard({
           title: "Geçersiz bilet",
           text: STATUS[info.status] || info.status,
         }
-      : info.checkedIn && justBoarded
+      : otherDeparture
+        ? {
+            tone: "bad",
+            icon: <CircleX size={30} />,
+            title: "Bu bilet bu seferin değil",
+            text: `${info.tourName} · ${dateLabel(info.date)} · ${info.startTime}. Yolcuyu doğru araca yönlendirin.`,
+          }
+        : info.checkedIn && justBoarded
         ? {
             tone: "ok",
             icon: <CircleCheck size={30} />,
@@ -286,7 +305,7 @@ function TicketCard({
               : `${info.passengers.length} kişi`}
           </span>
         </h3>
-        <SeatBoarding token={token} info={info} onSaved={onSaved} />
+        <SeatBoarding token={token} info={info} onSaved={onSaved} locked={otherDeparture} />
       </section>
       <section className="scan-block">
         <h3>İrtibat</h3>
@@ -364,12 +383,15 @@ export function SeatBoarding({
   token,
   info,
   onSaved,
+  locked = false,
 }: {
   token: string;
   info: TicketDetail;
   onSaved: (info: TicketDetail) => void;
+  // Başka seferin bileti: yolcular görünür, biniş kaydedilmez.
+  locked?: boolean;
 }) {
-  const editable = canBoard(info),
+  const editable = canBoard(info) && !locked,
     saved = info.checkedIn ? info.boardedSeats : [],
     // Henüz binmemiş bilette biletteki tüm koltuklar hazır seçilir.
     initial = info.checkedIn ? info.boardedSeats : info.seats,
