@@ -6551,6 +6551,98 @@ html:has(.kp) {
   color: var(--kp-red);
   font-weight: 600;
 }
+/* Doğrulama sayfası, yönetici/rehber: biniş kontrolü (koltuklar biletten gelir) */
+.kp .ticket-boarding {
+  margin-top: 22px;
+}
+.kp .ticket-check .ticket-boarding h2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0 0 12px;
+  font-size: 20px;
+  color: var(--kp-ink);
+}
+.kp .ticket-boarding h2 span {
+  font-size: 15px;
+  color: var(--stamp-ok, #1f7a43);
+  font-variant-numeric: tabular-nums;
+}
+.kp .seat-board .scan-passengers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.kp .seat-board .scan-passengers li > button,
+.kp .seat-board .scan-passengers li > div {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 12px;
+  border: 1px solid var(--kp-rule);
+  border-radius: 4px;
+  background: var(--kp-card);
+  color: var(--kp-ink);
+  font: inherit;
+  text-align: left;
+}
+.kp .seat-board .scan-passengers li > button {
+  cursor: pointer;
+  transition: background-color 160ms ease-out, border-color 160ms ease-out;
+}
+.kp .seat-board .scan-passengers li > button:active {
+  transform: scale(0.985);
+}
+.kp .seat-board li.is-on > button,
+.kp .seat-board li.is-on > div {
+  border-color: #1f7a43;
+  background: #e8f2ea;
+}
+.kp .seat-board .scan-seat {
+  display: grid;
+  place-items: center;
+  height: 32px;
+  border-radius: 4px;
+  background: var(--kp-hair);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.kp .seat-board li.is-on .scan-seat {
+  background: #1f7a43;
+  color: #fff;
+}
+.kp .seat-board-who {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.kp .seat-board-who small {
+  color: var(--kp-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.kp .seat-board-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--kp-ink-2);
+  white-space: nowrap;
+}
+.kp .seat-board li.is-on .seat-board-state {
+  color: #1f7a43;
+}
+.kp .ticket-check .seat-board-save {
+  width: 100%;
+  margin-top: 14px;
+}
 /* Sorgulama/doğrulama sayfasında damga sonucun kendisi: daha iri basılır */
 .kp .ticket-check-head .status-stamp {
   position: relative;

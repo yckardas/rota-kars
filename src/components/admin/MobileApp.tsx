@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { api, post } from "../../lib/api";
-import { dateLabel } from "../../lib/types";
+import { dateLabel, today as localToday } from "../../lib/types";
 import {
   canInstallApp,
   checkAppUpdate,
@@ -408,6 +408,8 @@ type PassengerData = {
     children?: string;
     customerNote?: string;
     checkedIn: boolean;
+    // Binen koltuklar (QR okutunca biletten gelir; listede koltuğa dokunarak düzeltilir).
+    boardedSeats: number[];
     ticketToken: string | null;
   }[];
 };
@@ -477,11 +479,12 @@ export function PassengerList({ departureId, onClose }: { departureId: string; o
   useEffect(() => {
     load();
   }, [departureId]);
-  async function checkIn(token: string, reference: string) {
+  // seats verilmezse rezervasyondaki tüm koltuklar biner.
+  async function checkIn(token: string, reference: string, seats?: number[]) {
     setBusy(reference);
     setError("");
     try {
-      await post(`/admin/tickets/${encodeURIComponent(token)}/check-in`, {});
+      await post(`/admin/tickets/${encodeURIComponent(token)}/check-in`, seats ? { seats } : {});
       await load();
     } catch (e) {
       setError((e as Error).message);
@@ -490,7 +493,8 @@ export function PassengerList({ departureId, onClose }: { departureId: string; o
     }
   }
   const seatsTotal = data?.bookings.reduce((n, b) => n + b.seats.length, 0) || 0,
-    boarded = data?.bookings.filter((b) => b.checkedIn).reduce((n, b) => n + b.seats.length, 0) || 0;
+    boarded = data?.bookings.reduce((n, b) => n + (b.boardedSeats?.length ?? (b.checkedIn ? b.seats.length : 0)), 0) || 0,
+    boardingDay = data?.departure.date === localToday();
   return (
     <Modal title="Yolcu listesi" onClose={onClose} wide>
       {!data && !error && (
@@ -560,27 +564,51 @@ export function PassengerList({ departureId, onClose }: { departureId: string; o
                   </strong>
                   <span className={"status-tag status-" + b.status}>{STATUS[b.status] || b.status}</span>
                 </div>
-                {/* Binişte kimlik eşleştirme: her yolcu, uyruğu ve kimliğin son haneleri. */}
-                {b.passengerDetails?.length ? (
-                  <ul className="passenger-id-rows">
-                    {b.seats.map((seat, i) => {
-                      const p = b.passengerDetails?.[i];
-                      return (
-                        <li key={seat}>
+                {/* Binişte kimlik eşleştirme: her koltuk, yolcu, kimliğin son haneleri ve biniş durumu.
+                    Bugünün onaylı kaydında koltuğa dokunmak o yolcunun binişini açar/kapatır. */}
+                <ul className="passenger-id-rows">
+                  {b.seats.map((seat, i) => {
+                    const p = b.passengerDetails?.[i],
+                      on = (b.boardedSeats ?? (b.checkedIn ? b.seats : [])).includes(seat),
+                      cells = (
+                        <>
                           <span>{seat}</span>
                           <strong>{b.passengers[i] || b.name}</strong>
-                          {p?.idNumber && (
+                          {p?.idNumber ? (
                             <small>
                               {p.nationality === "TR" ? "T.C." : p.nationality} …{p.idNumber.slice(-4)}
                             </small>
+                          ) : (
+                            <small />
                           )}
+                          {b.checkedIn && (
+                            <em className={on ? "is-on" : ""}>{on ? <Check size={14} aria-label="Bindi" /> : "—"}</em>
+                          )}
+                        </>
+                      );
+                    if (!(b.ticketToken && boardingDay))
+                      return (
+                        <li key={seat} className={on ? "is-on" : ""}>
+                          {cells}
                         </li>
                       );
-                    })}
-                  </ul>
-                ) : (
-                  b.passengers.length > 1 && <p className="passenger-names">{b.passengers.join(" · ")}</p>
-                )}
+                    const current = b.boardedSeats ?? (b.checkedIn ? b.seats : []),
+                      next = !b.checkedIn ? [seat] : on ? current.filter((n) => n !== seat) : [...current, seat];
+                    return (
+                      <li key={seat} className={on ? "is-on" : ""}>
+                        <button
+                          type="button"
+                          aria-pressed={on}
+                          aria-label={`Koltuk ${seat}, ${b.passengers[i] || b.name}: ${on ? "bindi, geri almak için dokunun" : "binmedi, bindirmek için dokunun"}`}
+                          disabled={busy === b.reference}
+                          onClick={() => checkIn(b.ticketToken!, b.reference, next)}
+                        >
+                          {cells}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
                 {b.pickupAddress && (
                   <p className="passenger-pickup">
                     <MapPin size={14} aria-hidden="true" /> {b.pickupAddress}
@@ -609,7 +637,7 @@ export function PassengerList({ departureId, onClose }: { departureId: string; o
                   {b.ticketToken && !b.checkedIn && (
                     <button
                       className="btn btn-small"
-                      onClick={() => checkIn(b.ticketToken!, b.reference)}
+                      onClick={() => checkIn(b.ticketToken!, b.reference, b.seats)}
                       disabled={busy === b.reference}
                     >
                       {busy === b.reference ? <LoaderCircle className="spin" size={15} /> : <UserCheck size={15} />}
@@ -619,6 +647,9 @@ export function PassengerList({ departureId, onClose }: { departureId: string; o
                   {b.checkedIn && (
                     <span className="boarded-tag">
                       <Check size={15} /> Bindi
+                      {b.boardedSeats && b.boardedSeats.length < b.seats.length
+                        ? ` · ${b.boardedSeats.length}/${b.seats.length}`
+                        : ""}
                     </span>
                   )}
                 </div>

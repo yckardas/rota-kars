@@ -797,6 +797,8 @@ const AUDIT_LABELS: Record<string, string> = {
   passengers_removed: "Yolcu çıkarıldı",
   completed: "Tur tamamlandı",
   checked_in: "Bilet okutuldu (bindi)",
+  boarding_updated: "Biniş güncellendi",
+  check_in_undone: "Biniş geri alındı",
   no_show: "Gelmedi olarak işaretlendi",
   payment_link_sent: "Kartla ödeme bağlantısı e-postayla gönderildi",
 };
@@ -1638,6 +1640,10 @@ function BookingControls({
                       {AUDIT_LABELS[a.event] || a.event}
                       {typeof a.details?.amount === "number" && " · " + currency(a.details.amount)}
                       {Array.isArray(a.details?.names) && " · " + a.details.names.join(", ")}
+                      {["checked_in", "boarding_updated", "check_in_undone"].includes(a.event) &&
+                        Array.isArray(a.details?.seats) &&
+                        a.details.seats.length > 0 &&
+                        " · koltuk " + a.details.seats.join(", ")}
                       {typeof a.details?.fee === "number" && a.details.fee > 0 && ` · kesinti ${currency(a.details.fee)}`}
                       {low && ` · kapora altı (tahsilat ${currency(low.paid)}, kapora ${currency(low.deposit)})`}
                     </span>

@@ -473,7 +473,11 @@ export function attachAdvancedApi(
     "/api/admin/tickets/:token/check-in",
     requireAdmin,
     route(async (q, r) => {
-      await store.workflow.checkIn(q.params.token);
+      // Okutma ekranı biletteki koltukları gönderir; gövde yoksa tüm koltuklar biner.
+      const { seats } = z
+        .object({ seats: z.array(z.number().int().min(1).max(99)).max(99).optional() })
+        .parse(q.body || {});
+      await store.workflow.checkIn(q.params.token, seats);
       r.json(await store.workflow.ticketDetail(q.params.token));
     }),
   );

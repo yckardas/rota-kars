@@ -20,6 +20,13 @@ import { buildFinance, tourRows } from "./finance.mjs";
 import { childrenDetail, tripInfoLines } from "./trip-info.mjs";
 const longExpiry = (now) => now + 365 * 86400000;
 const MANUAL_METHODS = ["cash", "bank_transfer", "pos"];
+// Binen koltuklar: eski kayıtlarda (koltuk listesi yokken) okutulan biletin tüm
+// koltukları; çıkarılan/taşınan koltuklar düşer.
+const boardedSeats = (r) => {
+  if (!r.checked_in_at) return [];
+  const list = fromJson(r.boarded_seats, null);
+  return Array.isArray(list) ? r.seats.filter((n) => list.includes(n)) : [...r.seats];
+};
 const tl = (kurus) => (kurus / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 });
 export async function createWorkflow(
   db,
@@ -728,6 +735,10 @@ export async function createWorkflow(
           {
             departure_id: d.id,
             seats,
+            // Binmiş yolcu yeni koltuğunda da binmiş sayılır.
+            ...(r.checked_in_at
+              ? { boarded_seats: seats.filter((_, i) => boardedSeats(r).includes(r.seats[i])) }
+              : {}),
             vehicle_json: d.vehicle,
             subtotal,
             discount_amount: subtotal - tourTotal,
@@ -981,6 +992,7 @@ export async function createWorkflow(
         status: r.status,
         valid: ["confirmed", "completed"].includes(r.status),
         checkedIn: Boolean(r.checked_in_at),
+        boardedSeats: boardedSeats(r),
       };
     },
     // Rehber/operasyon bileti okutunca: yolcular, irtibat, ödeme ve notlar.
@@ -1000,6 +1012,7 @@ export async function createWorkflow(
             name: r.passengers[i] || (i === 0 ? r.name : ""),
             nationality: p?.nationality || "",
             idLast4: p?.idNumber ? String(p.idNumber).slice(-4) : "",
+            boarded: info.boardedSeats.includes(seat),
           };
         }),
         notes: r.notes || "",
@@ -1017,7 +1030,9 @@ export async function createWorkflow(
         checkedInAt: r.checked_in_at || null,
       };
     },
-    async checkIn(token) {
+    // Biniş koltuk bazında kaydedilir: koltuk verilmezse biletteki tüm koltuklar,
+    // verilirse yalnız onlar biner; boş liste yanlış okutmayı geri alır.
+    async checkIn(token, seats) {
       return tx(async () => {
         await cleanup();
         const info = await api.ticket(token);
@@ -1030,14 +1045,33 @@ export async function createWorkflow(
             409,
             "Katılım yalnız bugünkü onaylı tur için kaydedilebilir.",
           );
-        const r = await api.get(info.reference);
-        if (!r.checked_in_at) {
+        const r = await api.get(info.reference),
+          wanted = seats === undefined ? r.seats : [...new Set(seats)];
+        if (wanted.some((n) => !r.seats.includes(n)))
+          throw new AppError(400, "Bu koltuk bu bilette yok.");
+        const next = r.seats.filter((n) => wanted.includes(n)),
+          before = boardedSeats(r),
+          // Koltuksuz kayıt (transfer) bütün olarak biner; boş liste geri alır.
+          board = seats === undefined || next.length > 0;
+        if (!board) {
+          if (r.checked_in_at) {
+            await db.update(
+              "reservations",
+              { _id: r.id },
+              { checked_in_at: null, boarded_seats: [] },
+            );
+            await audit(r, "check_in_undone", { seats: before });
+          }
+        } else if (!r.checked_in_at) {
           await db.update(
             "reservations",
             { _id: r.id },
-            { checked_in_at: clock() },
+            { checked_in_at: clock(), boarded_seats: next },
           );
-          await audit(r, "checked_in", {});
+          await audit(r, "checked_in", { seats: next });
+        } else if (next.join() !== before.join()) {
+          await db.update("reservations", { _id: r.id }, { boarded_seats: next });
+          await audit(r, "boarding_updated", { seats: next, before });
         }
         return api.ticket(token);
       });
@@ -1219,6 +1253,7 @@ export async function createWorkflow(
           children: childrenDetail(r.children),
           customerNote: r.customer_note || "",
           checkedIn: Boolean(r.checked_in_at),
+          boardedSeats: boardedSeats(r),
           ticketToken: r.status === "confirmed" ? r.ticket_token : null,
         })),
       };
