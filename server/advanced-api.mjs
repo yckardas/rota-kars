@@ -488,8 +488,14 @@ export function attachAdvancedApi(
     "/api/admin/reports",
     requireAdmin,
     route(async (q, r) => {
-      const date = ymd.parse(q.query.date);
-      r.json(await store.workflow.report(date));
+      const date = ymd.parse(q.query.date),
+        rep = await store.workflow.report(date);
+      // Rehber sefer ve biniş bilgisini görür; kasa rakamları (tahsilat, iade) ona gitmez.
+      if (q.admin?.role === "guide") {
+        delete rep.netCollected;
+        delete rep.refunded;
+      }
+      r.json(rep);
     }),
   );
   const month = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Ay YYYY-AA biçiminde olmalı.");

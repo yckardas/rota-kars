@@ -20,6 +20,7 @@ import {
   MapPin,
 } from "lucide-react";
 import { TicketScanner } from "./admin/TicketScanner";
+import { BoardingBoard } from "./admin/BoardingBoard";
 import { UetdsPanel } from "./admin/UetdsPanel";
 import { PassengerIdFields, detailFrom, draftFrom, idProblem, type IdDraft } from "./admin/PassengerIdFields";
 import { useFeedback } from "./admin/feedback";
@@ -2006,34 +2007,53 @@ export function CampaignManager({ catalog }: { catalog: Catalog }) {
     </>
   );
 }
-export function DailyReport({ catalog }: { catalog: Catalog }) {
+export function DailyReport({ catalog, guide = false }: { catalog: Catalog; guide?: boolean }) {
   const [date, setDate] = useState(today()),
     [data, setData] = useState<{
       departures: (Departure & {
         confirmedGuests: number;
+        boardedGuests: number;
         reservations: number;
       })[];
       guests: number;
       reservations: number;
-      netCollected: number;
-      refunded: number;
+      // Rehbere gönderilmez.
+      netCollected?: number;
+      refunded?: number;
     } | null>(null),
     [error, setError] = useState(""),
     [passengers, setPassengers] = useState(""),
-    [scanning, setScanning] = useState(false);
-  const reportSizes = groupSizes(data?.departures || []);
-  useEffect(() => {
+    // true: herhangi bir bilet; nesne: o sefere bağlı okutma (biniş kartından).
+    [scanning, setScanning] = useState<boolean | { id: string; label: string }>(false);
+  const reportSizes = groupSizes(data?.departures || []),
+    isToday = date === today();
+  const load = () => {
     setError("");
-    api<NonNullable<typeof data>>("/admin/reports?date=" + date)
+    return api<NonNullable<typeof data>>("/admin/reports?date=" + date)
       .then(setData)
       .catch((e) => setError(e.message));
+  };
+  useEffect(() => {
+    load();
   }, [date]);
   return (
     <>
-      <button className="btn scan-button" onClick={() => setScanning(true)}>
-        <QrCode size={17} /> Bilet okut
+      <button
+        className={"btn scan-button" + (isToday && data?.departures.length ? " btn-outline" : "")}
+        onClick={() => setScanning(true)}
+      >
+        <QrCode size={17} /> {isToday && data?.departures.length ? "Herhangi bir bileti okut" : "Bilet okut"}
       </button>
-      {scanning && <TicketScanner onClose={() => setScanning(false)} />}
+      {scanning && (
+        <TicketScanner
+          departure={typeof scanning === "object" ? scanning : undefined}
+          onClose={() => {
+            setScanning(false);
+            // Okutulan biletler kartlardaki biniş ilerlemesini günceller.
+            load();
+          }}
+        />
+      )}
       <label className="field report-date">
         Operasyon günü
         <input
@@ -2045,7 +2065,21 @@ export function DailyReport({ catalog }: { catalog: Catalog }) {
       </label>
       {error && <p className="error">{error}</p>}
       {passengers && (
-        <PassengerList departureId={passengers} onClose={() => setPassengers("")} />
+        <PassengerList
+          departureId={passengers}
+          onClose={() => {
+            setPassengers("");
+            load();
+          }}
+        />
+      )}
+      {data && isToday && data.departures.length > 0 && (
+        <BoardingBoard
+          catalog={catalog}
+          departures={data.departures}
+          onScan={(d) => setScanning(d)}
+          onPassengers={setPassengers}
+        />
       )}
       {data && (
         <>
@@ -2060,15 +2094,21 @@ export function DailyReport({ catalog }: { catalog: Catalog }) {
                 {data.reservations} / {data.guests}
               </strong>
             </div>
-            <div>
-              <span>Seçili seferlerin net tahsilatı</span>
-              <strong>{currency(data.netCollected)}</strong>
-            </div>
-            <div>
-              <span>İade kaydı</span>
-              <strong>{currency(data.refunded)}</strong>
-            </div>
+            {data.netCollected !== undefined && (
+              <div>
+                <span>Seçili seferlerin net tahsilatı</span>
+                <strong>{currency(data.netCollected)}</strong>
+              </div>
+            )}
+            {data.refunded !== undefined && (
+              <div>
+                <span>İade kaydı</span>
+                <strong>{currency(data.refunded)}</strong>
+              </div>
+            )}
           </div>
+          {/* Rehber bugün biniş kartlarıyla çalışır; aynı seferleri tekrar eden tablo gizlenir. */}
+          {!(guide && isToday && data.departures.length > 0) && (
           <div className="desk-table-wrap">
             <table className="desk-table">
               <thead>
@@ -2141,6 +2181,7 @@ export function DailyReport({ catalog }: { catalog: Catalog }) {
             </table>
             {!data.departures.length && <p className="admin-empty">Bu gün için sefer yok.</p>}
           </div>
+          )}
         </>
       )}
     </>

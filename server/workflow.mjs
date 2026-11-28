@@ -1002,6 +1002,8 @@ export async function createWorkflow(
         r = await api.get(info.reference);
       return {
         ...info,
+        // Sefere bağlı okutmada başka seferin bileti ayırt edilir.
+        departureId: r.departure_id || null,
         contactName: r.name,
         phone: r.phone,
         whatsapp: waLink(r.phone) || null,
@@ -1143,6 +1145,14 @@ export async function createWorkflow(
                 ["confirmed", "completed"].includes(r.status),
             )
             .reduce((n, r) => n + r.seats.length, 0),
+          // Biniş ekranının ilerlemesi: okutulup binen yolcu (koltuk) sayısı.
+          boardedGuests: rs
+            .filter(
+              (r) =>
+                r.departure_id === d.id &&
+                ["confirmed", "completed"].includes(r.status),
+            )
+            .reduce((n, r) => n + boardedSeats(r).length, 0),
         })),
         reservations: rs.length,
         guests: rs
@@ -1254,6 +1264,8 @@ export async function createWorkflow(
           customerNote: r.customer_note || "",
           checkedIn: Boolean(r.checked_in_at),
           boardedSeats: boardedSeats(r),
+          // Kapıda tahsil edilecek kalan tutar (kuruş).
+          balanceDue: r.balance_due || 0,
           ticketToken: r.status === "confirmed" ? r.ticket_token : null,
         })),
       };

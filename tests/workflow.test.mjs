@@ -458,6 +458,8 @@ test("phone passenger list shows bookings by seat with WhatsApp and boarding sta
   assert.equal(list.bookings[0].reference, r.reference);
   assert.match(list.bookings[0].whatsapp, /^https:\/\/wa\.me\/90\d{10}$/);
   assert.equal(list.bookings[0].ticketToken, null, "onaysız rezervasyonda biniş işaretlenmez");
+  // Rehber kapıda tahsil edeceği tutarı listede görür.
+  assert.equal(list.bookings[0].balanceDue, r.total);
   await pay(s, r);
   await s.workflow.confirm(r.reference);
   list = await s.workflow.passengerList(d.id);
@@ -512,6 +514,31 @@ test("QR check-in boards the ticket's seats one by one and the seat list follows
   await s.workflow.removePassengers(r.reference, [5], { waive: true });
   list = await s.workflow.passengerList(d.id);
   assert.deepEqual(list.bookings[0].boardedSeats, [4]);
+});
+test("daily report counts boarded guests per departure and the ticket names its departure", async (t) => {
+  const { s } = await setup(t),
+    d = await departure(s),
+    other = await departure(s, { startTime: "15:00" }),
+    h = await s.hold(d.id, [1, 2]),
+    r = await s.reserve({
+      holdToken: h.token,
+      name: "Test Yolcu",
+      email: "rapor@example.com",
+      phone: "05550000000",
+      passengers: ["Ayşe", "Mehmet"],
+      paymentMode: "deposit",
+    });
+  await pay(s, r);
+  await s.workflow.confirm(r.reference);
+  let row = (await s.workflow.report(d.date)).departures.find((x) => x.id === d.id);
+  assert.equal(row.confirmedGuests, 2);
+  assert.equal(row.boardedGuests, 0);
+  await s.workflow.checkIn(r.ticket_token, [2]);
+  const rep = await s.workflow.report(d.date);
+  assert.equal(rep.departures.find((x) => x.id === d.id).boardedGuests, 1);
+  assert.equal(rep.departures.find((x) => x.id === other.id).boardedGuests, 0);
+  // Okutma ekranı bileti hangi sefere ait olduğuyla karşılaştırır.
+  assert.equal((await s.workflow.ticketDetail(r.ticket_token)).departureId, d.id);
 });
 test("seat swap on the same departure keeps the agreed total after the tour price rises", async (t) => {
   const { s } = await setup(t),
