@@ -6675,3 +6675,168 @@ html:has(.kp) {
     height: 16px;
   }
 }
+
+/* ---------- Keşif · mevsim takvimi (Çıldır, Sarıkamış) ---------- */
+.kp .discover-seasons .muted {
+  margin: 0 0 20px;
+  font-size: 15px;
+}
+.kp .season-chart {
+  display: grid;
+  gap: 10px;
+}
+.kp .season-months,
+.kp .season-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.9fr) minmax(0, 2fr);
+  gap: 14px;
+  align-items: center;
+}
+.kp .season-months {
+  font-size: 11px;
+  color: var(--kp-ink-2);
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+.kp .season-month-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+.kp .season-label {
+  font-size: 14px;
+  color: var(--kp-ink);
+  line-height: 1.35;
+}
+.kp .season-track {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  height: 14px;
+  border-radius: 3px;
+  background: repeating-linear-gradient(90deg, var(--kp-hair) 0 1px, transparent 1px calc(100% / 12)), #f1f4f7;
+}
+.kp .season-track i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--kp-red);
+  transform-origin: left center;
+}
+/* Ekrana girince çubuklar soldan dolar (satır satır). */
+.js-motion .kp .season-chart.kp-await:not(.is-in) .season-track i {
+  transform: scaleX(0);
+}
+.kp .season-chart.kp-await.is-in .season-track i {
+  animation: kp-season-fill 0.7s calc(0.15s + var(--i, 0) * 0.16s) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.kp .season-row {
+  --i: 0;
+}
+@keyframes kp-season-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* ---------- Keşif · tarih ve fotoğraf (fotoğraf solda) ---------- */
+.kp .discover-story .discover-photo {
+  float: left;
+  margin: 6px 32px 18px 0;
+  transform: rotate(-0.8deg);
+}
+
+/* ---------- Keşif · "neler yapılır" kartları ---------- */
+.kp .discover-highlights h2,
+.kp .discover-articles h2 {
+  margin: 0 0 16px;
+}
+.kp .highlight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 16px;
+}
+.kp .highlight-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 22px;
+  background: var(--kp-card);
+  border-radius: 5px;
+  box-shadow: var(--kp-shadow-sm);
+  border-top: 3px solid var(--kp-red);
+}
+.kp .highlight-card.has-image {
+  padding-top: 10px;
+  border-top: 0;
+}
+.kp .highlight-image {
+  display: block;
+  aspect-ratio: 16 / 10;
+  margin: 0 -12px 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: #dde5eb;
+}
+.kp .highlight-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.kp .highlight-card h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 21px;
+}
+.kp .highlight-card p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--kp-ink-2);
+}
+/* Kartlar sırayla yerine oturur (baştan görünür, yalnız konum değişir). */
+.js-motion .kp .highlight-grid.kp-await:not(.is-in) .highlight-card {
+  transform: translateY(14px);
+}
+.kp .highlight-grid.kp-await.is-in .highlight-card {
+  animation: kp-card-rise 0.6s calc(var(--i, 0) * 0.12s) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes kp-card-rise {
+  from {
+    transform: translateY(14px);
+  }
+  to {
+    transform: none;
+  }
+}
+@media (max-width: 640px) {
+  .kp .season-months,
+  .kp .season-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+  .kp .season-months {
+    font-size: 10px;
+  }
+  .kp .season-months > span:first-child {
+    display: none;
+  }
+  .kp .season-row {
+    margin-bottom: 6px;
+  }
+}
+@media (max-width: 760px) {
+  .kp .discover-story .discover-photo {
+    float: none;
+    width: 100%;
+    margin: 0 0 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .js-motion .kp .season-chart.kp-await:not(.is-in) .season-track i,
+  .js-motion .kp .highlight-grid.kp-await:not(.is-in) .highlight-card {
+    transform: none;
+  }
+}

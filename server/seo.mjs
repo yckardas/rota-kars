@@ -140,6 +140,28 @@ const tourLd = (base, t) => ({
   } : undefined,
 });
 
+// Keşif sayfalarının anlattığı yerler (yapılandırılmış veri için).
+const ATTRACTIONS = {
+  "/kesfet/ani": {
+    name: "Ani Arkeolojik Alanı",
+    alternateName: "Ani Harabeleri",
+    geo: [40.5075, 43.5728],
+    address: { addressLocality: "Ocaklı, Merkez", addressRegion: "Kars" },
+    isAccessibleForFree: false,
+  },
+  "/kesfet/cildir": {
+    name: "Çıldır Gölü",
+    alternateName: "Lake Çıldır",
+    geo: [41.05, 43.25],
+    address: { addressLocality: "Çıldır", addressRegion: "Ardahan" },
+  },
+  "/kesfet/sarikamis": {
+    name: "Sarıkamış",
+    alternateName: "Sarıkamış Kayak Merkezi",
+    geo: [40.3333, 42.5833],
+    address: { addressLocality: "Sarıkamış", addressRegion: "Kars" },
+  },
+};
 const STATIC = {
   "/": {
     title: `${SITE} | Kars turları, Ani ve Çıldır, VIP transfer`,
@@ -192,6 +214,20 @@ const STATIC = {
     crumb: "Ani'yi keşfet",
     image: "/images/tours/ani.webp",
   },
+  "/kesfet/cildir": {
+    title: `Çıldır Gölü: atlı kızak, buz balıkçılığı ve gezi ipuçları | ${SITE}`,
+    description:
+      "Kışın donan Çıldır Gölü'nde atlı kızak ve buz balıkçıları, göl kıyısında bir gün, ay ay Çıldır takvimi ve gitmeden bilmeniz gerekenler.",
+    crumb: "Çıldır'ı keşfet",
+    image: "/images/rehber/cildir-kizak.webp",
+  },
+  "/kesfet/sarikamis": {
+    title: `Sarıkamış: kristal kar, sarıçam ormanları ve kısa tarihi | ${SITE}`,
+    description:
+      "Sarıçam ormanlarının arasındaki pistler, kar motoru, Katerina Köşkü, Sarıkamış Harekâtı'nın hatırası ve kış gezisi için ipuçları.",
+    crumb: "Sarıkamış'ı keşfet",
+    image: "/images/kesfet/sarikamis-orman.webp",
+  },
   "/gorsel-kaynaklari": {
     title: `Görsel kaynakları | ${SITE}`,
     description:
@@ -238,6 +274,16 @@ const EN_STATIC = {
     title: `Ani ruins: history, walking route and travel tips | ${SITE}`,
     description:
       "Ani, the city of a thousand and one churches: a thousand-year story from the Bagratids to the Seljuks, a sample walking route from the Lion Gate to the Mosque of Manuchihr, and tips before you go.",
+  },
+  "/kesfet/cildir": {
+    title: `Lake Çıldır: horse sleighs, ice fishing and travel tips | ${SITE}`,
+    description:
+      "Horse sleighs and ice fishermen on frozen Lake Çıldır, a day on the shore, the lake's month-by-month calendar and what to know before you go.",
+  },
+  "/kesfet/sarikamis": {
+    title: `Sarıkamış: crystal snow, Scots pine forests and a short history | ${SITE}`,
+    description:
+      "Ski runs among Scots pine forests, snowmobiles, the Katerina Lodge, the memory of the Sarıkamış Operation and tips for a winter trip.",
   },
   "/iletisim": {
     title: `Contact and address | ${SITE}`,
@@ -301,17 +347,17 @@ export function pageMeta(path, base) {
         publisher: { "@id": base + "/#agency" },
       });
     if (m.crumb) graph.push(crumbs(base, [{ name: m.crumb, path: p }]));
-    if (p === "/kesfet/ani")
+    // Keşif sayfaları: yerin kendisi (TouristAttraction).
+    const place = ATTRACTIONS[p];
+    if (place)
       graph.push({
         "@type": "TouristAttraction",
-        name: "Ani Arkeolojik Alanı",
-        alternateName: "Ani Harabeleri",
+        ...place,
         description: m.description,
-        image: base + "/images/tours/ani.webp",
+        image: base + m.image,
         url: base + p,
-        geo: { "@type": "GeoCoordinates", latitude: 40.5075, longitude: 43.5728 },
-        address: { "@type": "PostalAddress", addressLocality: "Ocaklı, Merkez", addressRegion: "Kars", addressCountry: "TR" },
-        isAccessibleForFree: false,
+        geo: { "@type": "GeoCoordinates", latitude: place.geo[0], longitude: place.geo[1] },
+        address: { "@type": "PostalAddress", ...place.address, addressCountry: "TR" },
       });
     if (p === "/turlar")
       graph.push({
@@ -459,7 +505,7 @@ export function pageMeta(path, base) {
 
 // Sayfanın en büyük görseli JS beklenmeden indirilmeye başlasın (LCP). İstemcideki
 // srcset ile aynı varyantlar verilir; tarayıcı ikinci kez indirmez.
-const RESPONSIVE = /^\/images\/((?:tours|rehber)\/[\w-]+|ani|rota-bus|stay)\.webp$/;
+const RESPONSIVE = /^\/images\/((?:tours|rehber|kesfet)\/[\w-]+|ani|rota-bus|stay)\.webp$/;
 const preloadTag = (src) =>
   RESPONSIVE.test(src)
     ? `<link rel="preload" as="image" fetchpriority="high" href="${attr(src)}" imagesrcset="${attr(src.replace(/\.webp$/, "-800.webp"))} 800w, ${attr(src)} 1400w" imagesizes="100vw">`

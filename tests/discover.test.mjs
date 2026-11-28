@@ -25,3 +25,25 @@ test("Ani discovery page has its own SEO, structured data and sitemap entry", ()
   assert.match(sitemap, /<loc>https:\/\/rotakarsturizm\.com\/kesfet\/ani<\/loc>/);
   assert.match(sitemap, /<loc>https:\/\/rotakarsturizm\.com\/en\/kesfet\/ani<\/loc>/);
 });
+
+test("Çıldır and Sarıkamış discovery pages: own SEO, place data, English and sitemap", () => {
+  for (const [path, name, title, en] of [
+    ["/kesfet/cildir", "Çıldır Gölü", /^Çıldır Gölü: atlı kızak/, /^Lake Çıldır: horse sleighs/],
+    ["/kesfet/sarikamis", "Sarıkamış", /^Sarıkamış: kristal kar/, /^Sarıkamış: crystal snow/],
+  ]) {
+    const m = pageMeta(path, BASE);
+    assert.equal(m.status, 200);
+    assert.equal(m.index, true);
+    assert.match(m.title, title);
+    const place = m.graph.find((g) => g["@type"] === "TouristAttraction");
+    assert.equal(place.name, name);
+    assert.equal(place.geo["@type"], "GeoCoordinates");
+    assert.equal(place.image, BASE + m.image);
+    const e = pageMeta("/en" + path, BASE);
+    assert.equal(e.index, true);
+    assert.match(e.title, en);
+    const sitemap = sitemapXml(BASE);
+    assert.ok(sitemap.includes(`<loc>${BASE}${path}</loc>`));
+    assert.ok(sitemap.includes(`<loc>${BASE}/en${path}</loc>`));
+  }
+});

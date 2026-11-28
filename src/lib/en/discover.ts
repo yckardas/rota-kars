@@ -136,4 +136,234 @@ export const discover: Record<string, string> = {
     "A church in snow-covered Ani",
   "Kışın Ani: karın altında bin yıllık taşlar.":
     "Ani in winter: thousand-year-old stones under the snow.",
+  "Çıldır’ı keşfet":
+    "Discover Çıldır",
+  "Buzun üstünde atlı kızak, buz balıkçıları ve gölün mevsim takvimi.":
+    "Horse sleighs on the ice, ice fishermen and the lake’s seasonal calendar.",
+  "Sarıkamış’ı keşfet":
+    "Discover Sarıkamış",
+  "Sarıçam ormanları, kristal kar, kısa tarihi ve kayak dışında yapılacaklar.":
+    "Scots pine forests, crystal snow, a short history and things to do besides skiing.",
+  "Yükseklik":
+    "Altitude",
+  "Buz zamanı":
+    "Ice season",
+  "Kayak sezonu":
+    "Ski season",
+  "Kar":
+    "Snow",
+  "Buzun üstünde bir kış masalı.":
+    "A winter tale on the ice.",
+  "Donmuş Çıldır Gölü’nde iki atlı kızak":
+    "Two horse sleighs on frozen Lake Çıldır",
+  "Fotoğraf: Linda M Caldwell, CC BY-SA 4.0":
+    "Photo: Linda M Caldwell, CC BY-SA 4.0",
+  "Kars ile Ardahan arasında, Doğu Anadolu’nun en büyük göllerinden":
+    "Between Kars and Ardahan, one of the largest lakes in Eastern Anatolia",
+  "Kars’a yaklaşık 1 saat":
+    "About 1 hour from Kars",
+  "Yaklaşık 1.960 m":
+    "About 1,960 m",
+  "Genellikle ocak–mart":
+    "Usually January–March",
+  "Kışın beyaz bir ovaya dönen göl.":
+    "A lake that turns into a white plain in winter.",
+  "Çıldır Gölü, Kars ile Ardahan arasında, deniz seviyesinden yaklaşık iki bin metre yükseklikte uzanır. Yazın kıyıları yeşillenir, göçmen kuşlar konaklar; kışın ise göl baştan sona donar ve uçsuz bucaksız beyaz bir ovaya dönüşür.":
+    "Lake Çıldır lies between Kars and Ardahan, almost two thousand metres above sea level. In summer its shores turn green and migrating birds stop over; in winter the lake freezes from end to end and becomes an endless white plain.",
+  "Buz tuttuğunda kıyıdaki köylerden atlı kızaklar göle iner, balıkçılar buzu açıp ağ atar. Rüzgârın sesi ve atların nefesi dışında hiçbir şey duyulmaz. Kars’a kışın gelenlerin en çok anlattığı anlardan biri budur.":
+    "Once the ice holds, horse sleighs come down from the villages on the shore and fishermen open the ice to cast their nets. Nothing can be heard but the wind and the breath of the horses. It is one of the moments winter visitors to Kars talk about most.",
+  "Karla kaplı Çıldır Gölü’nde kızak ve gezginler":
+    "A sleigh and travellers on snow-covered Lake Çıldır",
+  "Buz tutunca göl, kızakların ve yürüyüşçülerin olur.":
+    "Once it freezes, the lake belongs to sleighs and walkers.",
+  "Göl kıyısında bir gün":
+    "A day on the shore",
+  "Varış":
+    "Arrival",
+  "Beyaz ova":
+    "The white plain",
+  "Ani’den sonra göle varılır. Önce kıyıdan buzun genişliğini seyredin.":
+    "After Ani you reach the lake. First take in the sheer size of the ice from the shore.",
+  "Buz üstü":
+    "On the ice",
+  "Atlı kızak":
+    "Horse sleigh",
+  "Kıyıdan kalkan kızaklar göl üstünde kısa bir tur atar. Kızak ücreti yerinde ödenir.":
+    "Sleighs leave from the shore for a short ride across the lake. The sleigh fee is paid on site.",
+  "Kıyıda":
+    "On the shore",
+  "Buz balıkçıları":
+    "Ice fishermen",
+  "Balıkçılar buzu açıp ağlarını atar; uzaktan izlemek bile ayrı bir deneyim.":
+    "Fishermen open the ice and cast their nets; even watching from a distance is an experience.",
+  "Öğle":
+    "Midday",
+  "Göl balığı":
+    "Lake fish",
+  "Kıyıdaki lokantalarda göl balığı ve Kars mutfağından tatlar.":
+    "Lake fish and Kars dishes at the restaurants on the shore.",
+  "Akşamüstü":
+    "Late afternoon",
+  "Kars’a dönüş":
+    "Back to Kars",
+  "Gün batarken buzun rengi değişir; ardından Kars şehir gezisine geçilir.":
+    "The colour of the ice changes as the sun sets; then it is on to the Kars city tour.",
+  "Çıldır’ın takvimi":
+    "Çıldır through the year",
+  "Buzun tutması her yıl havaya göre değişir; tarihler yaklaşıktır.":
+    "When the ice forms depends on each year’s weather; dates are approximate.",
+  "Buz, atlı kızak ve buz balıkçılığı":
+    "Ice, horse sleighs and ice fishing",
+  "Kar manzarası":
+    "Snowy scenery",
+  "Göçmen kuşlar":
+    "Migrating birds",
+  "Yeşil kıyılar ve göl yürüyüşü":
+    "Green shores and lakeside walks",
+  "Gölde neler yapılır?":
+    "What to do at the lake",
+  "Kıyıdan kalkan kızaklarla donmuş gölün üstünde kısa bir yolculuk.":
+    "A short ride across the frozen lake by sleigh from the shore.",
+  "Buz altı balıkçılığı":
+    "Ice fishing",
+  "Çıldır’ın balıkçıları buzu açıp ağ atar; kışın gölün en eski geleneklerinden.":
+    "Çıldır’s fishermen open the ice and cast their nets, one of the lake’s oldest winter traditions.",
+  "Akçakale Adası":
+    "Akçakale Island",
+  "Gölün içindeki adada Orta Çağ’dan kale kalıntıları bulunur; kıyıdan seyredilir.":
+    "The island in the lake holds the ruins of a medieval castle, best seen from the shore.",
+  "Göl kenarında sofra":
+    "A table by the lake",
+  "Göl balığı, sıcak çorba ve Kars peynirleriyle uzun bir öğle molası.":
+    "A long lunch with lake fish, hot soup and Kars cheeses.",
+  "Buz genellikle ocak–mart arasında tutar ama her yıl değişir. Turdan önce güncel durumu bizden öğrenin.":
+    "The ice usually holds from January to March but varies every year. Ask us about the current conditions before your tour.",
+  "Göl üstünde rüzgâr kıyıdan çok daha serttir. Bere, eldiven, boyunluk ve su geçirmez bot şart.":
+    "The wind on the lake is much stronger than on the shore. A hat, gloves, a neck warmer and waterproof boots are a must.",
+  "Buz güvenliği":
+    "Ice safety",
+  "Buzun durumu günden güne değişir. Kızak sürücülerine ve rehberinize uyun, kendi başınıza buzun içlerine yürümeyin.":
+    "Ice conditions change from day to day. Follow the sleigh drivers and your guide, and do not walk out onto the ice on your own.",
+  "Ücretler":
+    "Costs",
+  "Atlı kızak ve göl kenarındaki yemek tur fiyatına dahil değildir; yerinde ödenir.":
+    "The horse sleigh and the lakeside meal are not included in the tour price and are paid on site.",
+  "Fotoğraf":
+    "Photography",
+  "Karın yansıması güçlüdür; güneş gözlüğü hem gözü hem kadrajı korur. Telefon pilleri soğukta çabuk biter.":
+    "The glare from the snow is strong; sunglasses help both your eyes and your shots. Phone batteries drain quickly in the cold.",
+  "Çıldır’ı rehberle gezin.":
+    "See Çıldır with a guide.",
+  "Ani, Çıldır Gölü ve Kars şehir turunu tek günde birleştiren rotamızda kışın buzun üstüne de çıkarsınız.":
+    "On our route combining Ani, Lake Çıldır and a Kars city tour in one day, in winter you also get out onto the ice.",
+  "Sarıçamların arasında kristal kar.":
+    "Crystal snow among the Scots pines.",
+  "Sarıkamış’ta güneşte parlayan karlı sarıçamlar":
+    "Snow-covered Scots pines shining in the sun in Sarıkamış",
+  "Fotoğraf: Karagozerkan, CC BY-SA 4.0":
+    "Photo: Karagozerkan, CC BY-SA 4.0",
+  "Allahuekber Dağları’nın eteğinde, Kars’ın batısında":
+    "At the foot of the Allahuekber Mountains, west of Kars",
+  "Kars’a yaklaşık 55 km":
+    "About 55 km from Kars",
+  "Genellikle aralık–nisan":
+    "Usually December–April",
+  "Kuru, toz kıvamında “kristal kar”":
+    "Dry, powdery “crystal snow”",
+  "Ormanın içinden inen pistler.":
+    "Ski runs through the forest.",
+  "Sarıkamış, Kars’ın batısında, Allahuekber Dağları’nın eteğinde kurulmuş bir orman kasabasıdır. Çevresini saran sarıçam ormanları, kışın karla birlikte bambaşka bir manzaraya dönüşür.":
+    "Sarıkamış is a forest town at the foot of the Allahuekber Mountains, west of Kars. The Scots pine forests around it turn into a completely different landscape under winter snow.",
+  "Kayak merkezinin pistleri ormanın arasından iner. Buranın kuru, toz kıvamındaki karı kayakçıların dilinde “kristal kar” diye anılır. Kayak yapmayanlar için de kar motoru, kızak ve orman yürüyüşüyle kış burada çok renklidir.":
+    "The ski resort’s runs come down between the trees, and skiers call its dry, powdery snow “crystal snow”. For non-skiers too, winter here is full of colour, with snowmobiles, sledges and forest walks.",
+  "Allahuekber Dağları’nda karlı yamaçlar":
+    "Snowy slopes in the Allahuekber Mountains",
+  "Allahuekber Dağları: kışın kar, yazın yayla.":
+    "The Allahuekber Mountains: snow in winter, highland pastures in summer.",
+  "Sarıkamış’ın kısa hikâyesi":
+    "A short history of Sarıkamış",
+  "Rus yönetimi":
+    "Russian rule",
+  "Kars ve çevresi kırk yıl Rus yönetiminde kalır; Sarıkamış bu dönemde bir garnizon kasabasına dönüşür.":
+    "Kars and its surroundings remain under Russian rule for forty years; in this period Sarıkamış becomes a garrison town.",
+  "Aralık 1914":
+    "December 1914",
+  "Sarıkamış Harekâtı":
+    "The Sarıkamış Operation",
+  "Allahuekber Dağları’nda ağır kış koşullarında on binlerce asker hayatını kaybeder.":
+    "Tens of thousands of soldiers lose their lives in harsh winter conditions in the Allahuekber Mountains.",
+  "Yeniden yurt":
+    "Home again",
+  "Kars ve Sarıkamış yeniden Türkiye’nin olur.":
+    "Kars and Sarıkamış become part of Turkey again.",
+  "Her ocak":
+    "Every January",
+  "Anma yürüyüşü":
+    "Remembrance walk",
+  "Binlerce kişi şehitleri anmak için karlı ormanlarda yürür.":
+    "Thousands of people walk through the snowy forests to remember the fallen.",
+  "Bugün":
+    "Today",
+  "Kış merkezi":
+    "A winter destination",
+  "Sarıçam ormanlarının arasındaki kayak merkezi, Doğu Anadolu’nun sevilen kış rotalarından biridir.":
+    "The ski resort among the Scots pines is one of the best-loved winter destinations in Eastern Anatolia.",
+  "Sarıkamış’ın takvimi":
+    "Sarıkamış through the year",
+  "Kayak sezonu kar durumuna göre değişir; tarihler yaklaşıktır.":
+    "The ski season depends on the snow; dates are approximate.",
+  "Kayak, snowboard ve kar motoru":
+    "Skiing, snowboarding and snowmobiles",
+  "Orman ve yayla yürüyüşü":
+    "Forest and highland walks",
+  "Sonbahar renkleri":
+    "Autumn colours",
+  "Ormanların hatırladığı kış.":
+    "The winter the forests remember.",
+  "1914 kışında Sarıkamış Harekâtı’nda Allahuekber Dağları’nın karlı geçitlerinde on binlerce asker hayatını kaybetti. Bu acı, kasabanın ve Kars’ın belleğinde bugün de yaşar.":
+    "In the winter of 1914, during the Sarıkamış Operation, tens of thousands of soldiers lost their lives in the snowy passes of the Allahuekber Mountains. That grief still lives on in the memory of the town and of Kars.",
+  "Her yıl ocak ayında binlerce kişi, şehitleri anmak için karlı ormanlarda yürür. Kasabadaki şehitlik ve anıtlar ziyaretçilere açıktır; sessizce gezmek yeter.":
+    "Every January, thousands of people walk through the snowy forests to remember the fallen. The town’s memorial and monuments are open to visitors; a quiet visit is all it takes.",
+  "Sarıkamış ormanlarında karlı yolda anma yürüyüşü":
+    "A remembrance walk on a snowy road in the Sarıkamış forests",
+  "Sarıkamış ormanlarında anma yürüyüşü.":
+    "A remembrance walk in the Sarıkamış forests.",
+  "Sarıkamış’ta neler yapılır?":
+    "What to do in Sarıkamış",
+  "Kayak ve snowboard":
+    "Skiing and snowboarding",
+  "Ormanın arasından inen pistlerde kristal karın tadını çıkarın; turda ekipman dahildir.":
+    "Enjoy the crystal snow on runs through the forest; equipment is included on the tour.",
+  "Kar motoru":
+    "Snowmobile",
+  "Kayak merkezindeki işletmelerin parkurlarında, eğitmen eşliğinde sarıçamların arasından.":
+    "Through the Scots pines with an instructor, on routes run by operators at the ski resort.",
+  "Katerina Köşkü":
+    "Katerina Lodge",
+  "Rus döneminden kalma, ormanın önündeki tarihi av köşkü; dışarıdan görmeye değer.":
+    "A historic hunting lodge from the Russian era in front of the forest, worth seeing from outside.",
+  "Orman yürüyüşü":
+    "Forest walk",
+  "Kayak yapmayanlar için karlı patikalarda sakin bir yürüyüş ve sıcak bir çay.":
+    "For non-skiers, a quiet walk on snowy paths and a hot cup of tea.",
+  "Kayak için aralıktan nisana; kar durumuna göre değişir. Yazın serin yayla havası ve orman yürüyüşleri vardır.":
+    "December to April for skiing, depending on the snow. In summer there is cool highland air and forest walks.",
+  "Ekipman":
+    "Equipment",
+  "Turda kayak, kıyafet ve kask dahildir. Bere, eldiven ve kayak gözlüğünüzü yanınıza alın.":
+    "Skis, clothing and a helmet are included on the tour. Bring your own hat, gloves and ski goggles.",
+  "Teleferik çıkışları ve kar motoru gibi etkinlikler tur fiyatına dahil değildir.":
+    "Cable car rides and activities such as snowmobiling are not included in the tour price.",
+  "Soğuk ve yükseklik":
+    "Cold and altitude",
+  "Pistlerde hava kasabadan soğuktur. Katmanlı giyinin, su için ve molaları atlamayın.":
+    "It is colder on the slopes than in town. Dress in layers, drink water and do not skip breaks.",
+  "Kayak yapmayanlar":
+    "Non-skiers",
+  "Grubunuzda kayak yapmayanlar kar motoru, kızak ya da orman yürüyüşüyle günü geçirebilir.":
+    "Non-skiers in your group can spend the day snowmobiling, sledging or walking in the forest.",
+  "Sarıkamış’a birlikte gidelim.":
+    "Let’s go to Sarıkamış together.",
+  "Kars çıkışlı kayak turumuzda ulaşım, kayak, kıyafet, kask ve öğle yemeği dahildir; siz yalnız karın tadını çıkarın.":
+    "Our ski tour from Kars includes transport, skis, clothing, a helmet and lunch; all you have to do is enjoy the snow.",
 };
